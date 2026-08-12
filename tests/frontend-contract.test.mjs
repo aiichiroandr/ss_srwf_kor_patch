@@ -274,7 +274,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260812-3";
+  const revision = "20260813-1";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -426,6 +426,192 @@ test("same-folder output creation uses a high-entropy fresh filename", async () 
 
   const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
   assert.doesNotMatch(appSource, /\.removeEntry\s*\(/);
+});
+
+test("merged-image CUE content names the generated IMG and preserves Saturn track syntax", () => {
+  // Redump 29151: 101493 / 142823 / 1650 sectors with 225- and 150-sector pregaps.
+  assert.equal(
+    __testHooks.buildMergedImageCue("srwf-kor-v5-r001-0123456789abcdef01234567.img"),
+    "CATALOG 0000000000000\r\n"
+      + "FILE \"srwf-kor-v5-r001-0123456789abcdef01234567.img\" BINARY\r\n"
+      + "  TRACK 01 MODE1/2352\r\n"
+      + "    INDEX 01 00:00:00\r\n"
+      + "  TRACK 02 MODE2/2352\r\n"
+      + "    INDEX 00 22:33:18\r\n"
+      + "    INDEX 01 22:36:18\r\n"
+      + "  TRACK 03 AUDIO\r\n"
+      + "    INDEX 00 54:17:41\r\n"
+      + "    INDEX 01 54:19:41\r\n",
+  );
+  assert.throws(
+    () => __testHooks.buildMergedImageCue("patched.img\"\r\nFILE \"other.img"),
+    (error) => error?.code === "MANIFEST_INVALID",
+  );
+});
+
+test("CUE writer creates a fresh sibling file and commits its complete contents", async () => {
+  const writes = [];
+  let closeCount = 0;
+  let abortCount = 0;
+  const directoryHandle = {
+    async getFileHandle(name, options) {
+      assert.match(name, /^srwf-kor-v5-r001-[a-f0-9]{24}\.cue$/);
+      assert.deepEqual(options, { create: true });
+      return {
+        name,
+        async getFile() {
+          return { size: 0 };
+        },
+        async createWritable(options) {
+          assert.deepEqual(options, { keepExistingData: false });
+          return {
+            async write(value) {
+              writes.push(value);
+            },
+            async close() {
+              closeCount += 1;
+            },
+            async abort() {
+              abortCount += 1;
+            },
+          };
+        },
+      };
+    },
+  };
+
+  const cueHandle = await __testHooks.writeCueFile(
+    directoryHandle,
+    "srwf-kor-v5-r001.cue",
+    "srwf-kor-v5-r001-feedfacefeedfacefeedface.img",
+  );
+
+  assert.match(cueHandle.name, /^srwf-kor-v5-r001-[a-f0-9]{24}\.cue$/);
+  assert.deepEqual(writes, [
+    "CATALOG 0000000000000\r\n"
+      + "FILE \"srwf-kor-v5-r001-feedfacefeedfacefeedface.img\" BINARY\r\n"
+      + "  TRACK 01 MODE1/2352\r\n"
+      + "    INDEX 01 00:00:00\r\n"
+      + "  TRACK 02 MODE2/2352\r\n"
+      + "    INDEX 00 22:33:18\r\n"
+      + "    INDEX 01 22:36:18\r\n"
+      + "  TRACK 03 AUDIO\r\n"
+      + "    INDEX 00 54:17:41\r\n"
+      + "    INDEX 01 54:19:41\r\n",
+  ]);
+  assert.equal(closeCount, 1);
+  assert.equal(abortCount, 0);
+});
+
+test("CUE writer aborts write and close failures without masking the original error", async (t) => {
+  for (const failurePoint of ["write", "close"]) {
+    await t.test(failurePoint, async () => {
+      const operationFailure = new Error(`synthetic CUE ${failurePoint} failure`);
+      let abortReason = null;
+      let writeCount = 0;
+      let closeCount = 0;
+      const directoryHandle = {
+        async getFileHandle(name) {
+          return {
+            name,
+            async getFile() {
+              return { size: 0 };
+            },
+            async createWritable() {
+              return {
+                async write() {
+                  writeCount += 1;
+                  if (failurePoint === "write") throw operationFailure;
+                },
+                async close() {
+                  closeCount += 1;
+                  if (failurePoint === "close") throw operationFailure;
+                },
+                async abort(reason) {
+                  abortReason = reason;
+                  throw new Error("synthetic CUE abort failure");
+                },
+              };
+            },
+          };
+        },
+      };
+
+      await assert.rejects(
+        () => __testHooks.writeCueFile(
+          directoryHandle,
+          "srwf-kor-v5-r001.cue",
+          "srwf-kor-v5-r001-feedfacefeedfacefeedface.img",
+        ),
+        (error) => error === operationFailure,
+      );
+      assert.equal(abortReason, operationFailure);
+      assert.equal(writeCount, 1);
+      assert.equal(closeCount, failurePoint === "close" ? 1 : 0);
+    });
+  }
+});
+
+test("successful patch completion auto-saves CUE and exposes retry only after CUE failure", async () => {
+  const [html, appSource, css] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/style.css", import.meta.url), "utf8"),
+  ]);
+
+  const cueButtonMarkup = html.match(
+    /<button\b[^>]*\bid="cueButton"[^>]*>[\s\S]*?<\/button>/,
+  )?.[0];
+  assert.ok(cueButtonMarkup, "the CUE retry button must remain in the document");
+  assert.match(cueButtonMarkup, /\bhidden(?:\s|>|=)/);
+  assert.match(cueButtonMarkup, /CUE 파일 다시 저장/);
+  assert.match(css, /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/s);
+
+  const completionStart = appSource.indexOf("function handleOperationComplete(");
+  const completionEnd = appSource.indexOf("\nfunction handleOperationFailure(", completionStart);
+  assert.ok(completionStart >= 0 && completionEnd > completionStart);
+  const completionSource = appSource.slice(completionStart, completionEnd);
+  const applyBranch = completionSource.indexOf('if (operation === "APPLY_PATCH")');
+  const completionFlag = completionSource.indexOf("state.patchCompleted = true", applyBranch);
+  const automaticCueSave = completionSource.indexOf("void saveCueFile();", completionFlag);
+  assert.ok(
+    applyBranch >= 0 && completionFlag > applyBranch && automaticCueSave > completionFlag,
+    "a verified APPLY_PATCH completion must trigger automatic CUE saving",
+  );
+  assert.equal([...completionSource.matchAll(/void saveCueFile\(\);/g)].length, 1);
+  assert.match(appSource, /elements\.cueButton\.addEventListener\("click", saveCueFile\);/);
+
+  const retryVisibilityAssignments = [
+    ...appSource.matchAll(/elements\.cueButton\.hidden\s*=\s*([^;]+);/g),
+  ];
+  assert.ok(retryVisibilityAssignments.length > 1);
+  assert.ok(retryVisibilityAssignments.every((match) => /^(?:true|false)$/.test(match[1].trim())));
+  const revealAssignments = retryVisibilityAssignments.filter(
+    (match) => match[1].trim() === "false",
+  );
+  assert.equal(revealAssignments.length, 1);
+  const failureFunctionStart = appSource.indexOf("function showCueFailure(");
+  const nextFunctionStart = appSource.indexOf("\nfunction ", failureFunctionStart + 1);
+  assert.ok(failureFunctionStart >= 0, "showCueFailure must own the retry UI");
+  assert.ok(
+    revealAssignments[0].index > failureFunctionStart
+      && revealAssignments[0].index < nextFunctionStart,
+    "only CUE failure may reveal the retry button",
+  );
+  assert.doesNotMatch(
+    appSource,
+    /elements\.cueButton\.(?:removeAttribute|toggleAttribute)\(\s*["']hidden["']/,
+  );
+  assert.match(appSource, /const interactionBusy = state\.busy \|\| state\.cueSaving;/);
+  assert.match(appSource, /function canChooseSource\(\)[\s\S]*?!state\.busy && !state\.cueSaving/);
+  assert.match(appSource, /function warnWhileBusy\(event\)[\s\S]*?!state\.busy && !state\.cueSaving/);
+
+  const cueSaveStart = appSource.indexOf("async function saveCueFile(");
+  const cueSaveEnd = appSource.indexOf("\nfunction buildMergedImageCue(", cueSaveStart);
+  const cueSaveSource = appSource.slice(cueSaveStart, cueSaveEnd);
+  assert.match(cueSaveSource, /state\.cueSaving = true;[\s\S]*?updateControls\(\);/);
+  assert.match(cueSaveSource, /elements\.errorPanel\.hidden = true;/);
+  assert.match(cueSaveSource, /finally \{[\s\S]*?state\.cueSaving = false;[\s\S]*?updateControls\(\);/);
 });
 
 test("the patcher is a single-screen workspace instead of a scrolling landing page", async () => {

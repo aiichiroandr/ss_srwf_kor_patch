@@ -2,9 +2,9 @@ import { sha256Hex } from "./sha256.mjs";
 import {
   getPatchNotesForRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260812-3";
+} from "./release-notes.mjs?v=20260813-1";
 
-const STATIC_ASSET_REVISION = "20260812-3";
+const STATIC_ASSET_REVISION = "20260813-1";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -121,6 +121,8 @@ const state = {
   outputHandle: null,
   outputDirectoryHandle: null,
   patchCompleted: false,
+  cueSaving: false,
+  cueSaveSequence: 0,
   worker: null,
   busy: false,
   operation: null,
@@ -952,55 +954,104 @@ function createOutputSuffix() {
 }
 
 async function saveCueFile() {
+  const cueFilename = state.release?.target.cueFilename;
+  const outputHandle = state.outputHandle;
+  const outputDirectoryHandle = state.outputDirectoryHandle;
   if (
-    !state.release?.target.cueFilename
+    !cueFilename
     || !state.patchCompleted
-    || !state.outputHandle
-    || !state.outputDirectoryHandle
+    || !outputHandle
+    || !outputDirectoryHandle
+    || state.cueSaving
   ) {
     return;
   }
 
+  const cueSaveSequence = ++state.cueSaveSequence;
+  state.cueSaving = true;
   elements.cueButton.disabled = true;
+  elements.cueButton.hidden = true;
+  elements.cueAction.hidden = false;
   elements.cueStatus.textContent = "패치 IMG와 같은 폴더에 CUE를 만들고 있습니다.";
-  let cueHandle;
+  updateControls();
   try {
-    cueHandle = await createUnusedFileHandle(
-      state.outputDirectoryHandle,
-      state.release.target.cueFilename,
+    const cueHandle = await writeCueFile(
+      outputDirectoryHandle,
+      cueFilename,
+      outputHandle.name,
     );
+    if (
+      state.cueSaveSequence === cueSaveSequence
+      && state.patchCompleted
+      && state.outputHandle === outputHandle
+    ) {
+      elements.errorPanel.hidden = true;
+      elements.successPanel.hidden = false;
+      elements.cueButton.disabled = true;
+      elements.cueButton.hidden = true;
+      elements.cueStatus.textContent = `${cueHandle.name}도 자동으로 저장했습니다.`;
+      announce(`${cueHandle.name}도 패치 IMG와 같은 폴더에 자동으로 저장했습니다.`);
+    }
   } catch (error) {
-    elements.cueButton.disabled = false;
-    showCueFailure("패치 IMG 폴더에 CUE 파일을 만들 수 없습니다. IMG 패치 결과에는 영향이 없습니다.");
-    return;
+    if (
+      state.cueSaveSequence === cueSaveSequence
+      && state.patchCompleted
+      && state.outputHandle === outputHandle
+    ) {
+      showCueFailure("CUE 파일을 자동으로 저장하지 못했습니다. 이미 검증된 IMG는 그대로 유지됩니다.");
+    }
+  } finally {
+    if (state.cueSaveSequence === cueSaveSequence) {
+      state.cueSaving = false;
+      updateControls();
+    }
   }
+}
 
-  const cueText = `FILE "${state.outputHandle.name}" BINARY\r\n  TRACK 01 MODE1/2352\r\n    INDEX 01 00:00:00\r\n`;
+function buildMergedImageCue(imageName) {
+  requireSafeFilename(imageName, "CUE image filename");
+  if (!IMG_FILENAME_PATTERN.test(imageName)) {
+    throw new PatcherError("CUE_IMAGE_INVALID", "CUE image filename must be a safe IMG basename");
+  }
+  return `CATALOG 0000000000000\r\n`
+    + `FILE "${imageName}" BINARY\r\n`
+    + "  TRACK 01 MODE1/2352\r\n"
+    + "    INDEX 01 00:00:00\r\n"
+    + "  TRACK 02 MODE2/2352\r\n"
+    + "    INDEX 00 22:33:18\r\n"
+    + "    INDEX 01 22:36:18\r\n"
+    + "  TRACK 03 AUDIO\r\n"
+    + "    INDEX 00 54:17:41\r\n"
+    + "    INDEX 01 54:19:41\r\n";
+}
+
+async function writeCueFile(directoryHandle, desiredName, imageName) {
+  const cueHandle = await createUnusedFileHandle(directoryHandle, desiredName);
   let writable = null;
   try {
     writable = await cueHandle.createWritable({ keepExistingData: false });
-    await writable.write(cueText);
+    await writable.write(buildMergedImageCue(imageName));
     await writable.close();
     writable = null;
-    elements.cueButton.disabled = true;
-    elements.cueButton.textContent = "CUE 저장 완료";
-    elements.cueStatus.textContent = `${cueHandle.name}을 저장했습니다.`;
+    return cueHandle;
   } catch (error) {
     if (writable) {
       try {
         await writable.abort(error);
       } catch {
-        // Keep the original CUE write failure.
+        // Preserve the original CUE write or close failure.
       }
     }
-    elements.cueButton.disabled = false;
-    showCueFailure("CUE 파일을 저장하지 못했습니다. 이미 검증된 IMG는 그대로 유지됩니다.");
+    throw error;
   }
 }
 
 function showCueFailure(message) {
   showError("CUE 파일만 저장하지 못했습니다", message);
   elements.successPanel.hidden = false;
+  elements.cueAction.hidden = false;
+  elements.cueButton.hidden = false;
+  elements.cueButton.disabled = false;
   elements.cueStatus.textContent = message;
 }
 
@@ -1156,9 +1207,10 @@ function handleOperationComplete(message) {
     elements.applyState.className = "zone-state is-complete";
     elements.successMessage.textContent = `${state.outputHandle.name}에 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`;
     elements.cueAction.hidden = !state.release.target.cueFilename;
-    elements.cueButton.disabled = false;
-    elements.cueButton.textContent = "CUE 파일 저장";
-    elements.cueStatus.textContent = "에뮬레이터용 CUE도 패치 IMG와 같은 폴더에 만들 수 있습니다.";
+    elements.cueButton.hidden = true;
+    elements.cueButton.disabled = true;
+    elements.cueButton.textContent = "CUE 파일 다시 저장";
+    elements.cueStatus.textContent = "에뮬레이터용 3트랙 CUE를 같은 폴더에 자동으로 저장합니다.";
     elements.successPanel.hidden = false;
     elements.applyHint.textContent = "패치를 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
     setWorkflowPhase("complete");
@@ -1166,6 +1218,7 @@ function handleOperationComplete(message) {
     announce(
       `${state.outputHandle.name} 패치를 완료했습니다. 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`,
     );
+    void saveCueFile();
   }
 }
 
@@ -1449,6 +1502,8 @@ function resetFileWorkflow() {
   state.outputHandle = null;
   state.outputDirectoryHandle = null;
   state.patchCompleted = false;
+  state.cueSaveSequence += 1;
+  state.cueSaving = false;
   clearPatchNotes();
   elements.sourceSelection.hidden = true;
   elements.sourceSelection.classList.remove("is-verifying");
@@ -1457,8 +1512,9 @@ function resetFileWorkflow() {
   elements.errorPanel.hidden = true;
   elements.successPanel.hidden = true;
   elements.cueAction.hidden = true;
+  elements.cueButton.hidden = true;
   elements.cueButton.disabled = false;
-  elements.cueButton.textContent = "CUE 파일 저장";
+  elements.cueButton.textContent = "CUE 파일 다시 저장";
   elements.sourceState.textContent = "선택 대기";
   elements.sourceState.className = "zone-state";
   elements.applyState.textContent = "원본 대기";
@@ -1483,9 +1539,12 @@ function resetPreparedSource() {
   state.outputHandle = null;
   state.outputDirectoryHandle = null;
   state.patchCompleted = false;
+  state.cueSaveSequence += 1;
+  state.cueSaving = false;
   elements.errorPanel.hidden = true;
   elements.successPanel.hidden = true;
   elements.cueAction.hidden = true;
+  elements.cueButton.hidden = true;
   elements.sourceState.textContent = "원본 선택";
   elements.sourceState.className = "zone-state";
   elements.applyState.textContent = "원본 대기";
@@ -1505,20 +1564,21 @@ function resetSourceButtonLabel() {
 
 function updateControls() {
   const releaseReady = state.availability === "ready" && Boolean(state.release);
+  const interactionBusy = state.busy || state.cueSaving;
   const fileControls = deriveFileControlState({
     releaseReady,
     fileSystemSupported: state.fileSystemSupported,
     sourcePrepared: state.sourcePrepared,
     hasSourceHandle: Boolean(state.sourceHandle),
     hasPreparationToken: Boolean(state.preparationToken),
-    busy: state.busy,
+    busy: interactionBusy,
   });
-  elements.gameSelect.disabled = state.busy || state.games.size <= 1 || state.availability === "loading";
-  elements.releaseSelect.disabled = state.busy
+  elements.gameSelect.disabled = interactionBusy || state.games.size <= 1 || state.availability === "loading";
+  elements.releaseSelect.disabled = interactionBusy
     || state.visibleReleaseRows.length <= 1
     || state.availability === "loading"
     || state.availability === "preparing";
-  elements.patchNotesToggle.disabled = state.busy || !state.patchNotesReleaseId;
+  elements.patchNotesToggle.disabled = interactionBusy || !state.patchNotesReleaseId;
   elements.sourceButton.disabled = fileControls.sourceDisabled;
   elements.patchButton.disabled = fileControls.patchDisabled;
 
@@ -1547,7 +1607,7 @@ function deriveFileControlState({
 }
 
 function canChooseSource() {
-  return state.availability === "ready" && state.release && !state.busy;
+  return state.availability === "ready" && state.release && !state.busy && !state.cueSaving;
 }
 
 function canApplyPatch() {
@@ -1855,7 +1915,7 @@ function announce(message) {
 }
 
 function warnWhileBusy(event) {
-  if (!state.busy) {
+  if (!state.busy && !state.cueSaving) {
     return;
   }
   event.preventDefault();
@@ -1873,6 +1933,7 @@ class PatcherError extends Error {
 export const __testHooks = Object.freeze({
   activateGame,
   beginWorkerOperation,
+  buildMergedImageCue,
   createUnusedFileHandle,
   detectFileSystemSupport,
   deriveFileControlState,
@@ -1896,4 +1957,5 @@ export const __testHooks = Object.freeze({
   validateGames,
   validateReleaseRow,
   validateStockProfiles,
+  writeCueFile,
 });
