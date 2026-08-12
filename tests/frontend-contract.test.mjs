@@ -543,13 +543,8 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
     v11RamReferences.map((item) => item.id).sort(),
     ["disconnect-confirmation", "parts-window-width", "split-confirmation", "turn-end-boundary"],
   );
-  for (const requiredId of [
-    "sortie-count-position",
-    "protagonist-names-inherited",
-    "sortie-unit-pilot-names-inherited",
-  ]) {
-    assert.ok(v11Items.some((item) => item.id === requiredId), `v1.1 is missing ${requiredId}`);
-  }
+  assert.ok(v11Items.some((item) => item.id === "sortie-count-position"));
+  assert.equal(v11Items.some((item) => item.id.endsWith("-inherited")), false);
   const sortieCountPosition = v11Items.find((item) => item.id === "sortie-count-position");
   assert.match(sortieCountPosition.title, /NN기.*위치/);
   assert.match(sortieCountPosition.description, /출격유닛 선택.*붙어 있던 NN기.*반각 한 칸 오른쪽/);
@@ -568,15 +563,6 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
   assert.match(protagonistNames.description, /이미 한글화된.*설명과 항목명.*그대로.*8명분.*이름·애칭 표시 경로만.*한국어 데이터/);
   assert.match(protagonistNames.asIs.alt, /설명과 항목명은 한국어.*헥토르.*이름과 애칭은 일본어/);
   assert.match(protagonistNames.toBe.alt, /같은 주인공 설정.*헥토르.*한국어/);
-  const inheritedProtagonistNames = v11Items.find(
-    (item) => item.id === "protagonist-names-inherited",
-  );
-  assert.match(
-    inheritedProtagonistNames.description,
-    /이미 한글화된.*설명과 항목명.*그대로.*이름·애칭 표시 경로만.*v1\.1에도 그대로 포함/,
-  );
-  assert.equal(inheritedProtagonistNames.asIs.alt, protagonistNames.asIs.alt);
-  assert.equal(inheritedProtagonistNames.toBe.alt, protagonistNames.toBe.alt);
   assert.ok(v11Items.some((item) => item.evidenceType === "included"));
   assert.ok(v11Items.some((item) => item.evidenceType === "included-reference"));
   const v10Items = getPatchNotesForRelease("srwf-f-20260810-v1-0").items;
@@ -586,6 +572,14 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
   assert.equal(
     v10Items.every((item) => ["included", "included-reference"].includes(item.evidenceType)),
     true,
+  );
+  const v10ComparisonPairs = new Set(
+    v10Items.map((item) => `${item.asIs.src}\u0000${item.toBe.src}`),
+  );
+  assert.equal(
+    v11Items.some((item) => v10ComparisonPairs.has(`${item.asIs.src}\u0000${item.toBe.src}`)),
+    false,
+    "v1.1 must show only its own comparison cards instead of repeating v1.0 pairs",
   );
 
   assert.deepEqual(Object.keys(publicAssetAllowlist).sort(), [...referencedAssets.keys()].sort());

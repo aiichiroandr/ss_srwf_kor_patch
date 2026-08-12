@@ -57,42 +57,6 @@ export const PATCH_NOTES = Object.freeze({
         ),
       }),
       item({
-        id: "protagonist-names-inherited",
-        title: "주인공 8명 이름·애칭 표시 정리",
-        description: "v1.0부터 이미 한글화된 주인공 설정 화면의 설명과 항목명은 그대로 두고, 일부가 일본어로 남거나 잘못 연결되어 있던 기본 주인공 8명분의 이름·애칭 표시 경로만 한국어 데이터로 연결했으며 v1.1에도 그대로 포함됩니다.",
-        evidenceType: "included-reference",
-        asIs: image(
-          "assets/patch-notes/v1-0-protagonist-names-before.png",
-          "AS-IS 기능 화면: 설명과 항목명은 한국어지만 헥토르의 이름과 애칭은 일본어로 남아 있는 주인공 설정 화면",
-          330,
-          240,
-        ),
-        toBe: image(
-          "assets/patch-notes/v1-0-protagonist-names-after.png",
-          "TO-BE 기능 화면: 같은 주인공 설정에서 헥토르의 이름과 애칭도 한국어로 표시된 화면",
-          330,
-          240,
-        ),
-      }),
-      item({
-        id: "sortie-unit-pilot-names-inherited",
-        title: "출격 목록 기체·파일럿명",
-        description: "v1.0부터 출격 목록의 대표 기체명과 파일럿명을 한국어로 표시하며, 남은 고유명사·일본어 표기는 계속 검수합니다.",
-        evidenceType: "included-reference",
-        asIs: image(
-          "assets/patch-notes/v1-0-sortie-names-before.png",
-          "AS-IS 기능 화면: 기체명과 파일럿명이 일본어로 표시된 출격 목록",
-          330,
-          240,
-        ),
-        toBe: image(
-          "assets/patch-notes/v1-0-sortie-names-after.png",
-          "TO-BE 기능 화면: 대표 기체명과 파일럿명이 한국어로 표시된 출격 목록",
-          330,
-          240,
-        ),
-      }),
-      item({
         id: "parts-window-width",
         title: "강화파츠 선택창 폭",
         description: "긴 파츠명과 설명이 잘리지 않도록 창 폭과 선택 바를 넓히는 후속 RAM 배치안입니다.",
