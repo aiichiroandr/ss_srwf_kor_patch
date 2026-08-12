@@ -112,7 +112,7 @@ PNG_DIMENSION_MAX = 32_768
 # Add only a reviewed canonical repository path and its exact lowercase SHA-256.
 PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
     "assets/patch-notes/v1-0-protagonist-names-after.png": "6aa800e2f97e9d572af8de57393d79bfa991463a799e0d9b1ca03a6bc9be728b",
-    "assets/patch-notes/v1-0-protagonist-names-before.png": "4fcdc39b6a0bb5d0c77173f9e7c1289f768f48607d1fc4ea613f2fa482569d5a",
+    "assets/patch-notes/v1-0-protagonist-names-before.png": "6f3ee06e5091d36143243b592bbacf0123928fa45fa24b8aa08e9909acd0dd26",
     "assets/patch-notes/v1-0-preview-body-after.png": "ff5bbb34f33376d1444f93248e7aedee378259f75a13c9b2faa7f9ebff41dae9",
     "assets/patch-notes/v1-0-preview-body-before.png": "bc531af867d8ead30a25101b344828295621f31c20d8d6768d8405c5d069195d",
     "assets/patch-notes/v1-0-preview-heading-after.png": "f1fecef1beb5a573672b6aa9a1980c401ebc5a73aa308c27d6eb84d03294c2ec",
@@ -129,8 +129,8 @@ PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
     "assets/patch-notes/v1-1-ram-split-before.png": "6708283242c2ce95b6b24776593698c4a702d9f15a7c6a305421d67d49b55045",
     "assets/patch-notes/v1-1-ram-turn-end-after.png": "9fdd3dc824328746e42fbf164652569c44da752ce5376b8aa23f3e4f7fd988a8",
     "assets/patch-notes/v1-1-ram-turn-end-before.png": "60722fb4a8a46377a992e129daa4df1adfffdfd3523a16b6fb038a8abc42c540",
-    "assets/patch-notes/v1-1-sortie-count-after.png": "e44a0351526b65dcbd61af6661b8f55a7f009553c55fac5de081587a44a045d8",
-    "assets/patch-notes/v1-1-sortie-count-before.png": "aa4af74111abbb7f8601d938a666c492c55b4610139aa45566c61af8651be77d",
+    "assets/patch-notes/v1-1-sortie-count-after.png": "a209089b81d7d6a84a0d1af76cba2fd4dc5c93f64181b14937125af2b60bb2c9",
+    "assets/patch-notes/v1-1-sortie-count-before.png": "07d3c97544c5e4a33e91784bce96123468a809fe7226da478c399c802bf00b9d",
 }
 ACTIVE_WEB_SUFFIXES = {
     ".html", ".htm", ".shtml", ".xhtml", ".xht", ".svg",

@@ -41,6 +41,7 @@ const elements = {
   compatibilityBadge: byId("compatibilityBadge"),
   gameSelect: byId("gameSelect"),
   releaseSelect: byId("releaseSelect"),
+  releaseRegion: byId("releaseRegion"),
   releaseState: byId("releaseState"),
   patchNotesToggle: byId("patchNotesToggle"),
   patchNotesVersion: byId("patchNotesVersion"),
@@ -56,11 +57,14 @@ const elements = {
   sourceButton: byId("sourceButton"),
   sourceButtonText: byId("sourceButtonText"),
   sourceHelp: byId("sourceHelp"),
+  sourceRegion: byId("sourceRegion"),
   sourceState: byId("sourceState"),
   sourceSelection: byId("sourceSelection"),
   sourceName: byId("sourceName"),
   sourceMeta: byId("sourceMeta"),
   sourceCheck: byId("sourceCheck"),
+  patchRegion: byId("patchRegion"),
+  applyState: byId("applyState"),
   patchButton: byId("patchButton"),
   cancelButton: byId("cancelButton"),
   applyHint: byId("applyHint"),
@@ -81,12 +85,18 @@ const elements = {
   liveRegion: byId("liveRegion"),
 };
 
-const workflowSections = new Map(
-  [...document.querySelectorAll("[data-workflow-step]")].map((node) => [node.dataset.workflowStep, node]),
+const workflowZones = new Map(
+  [...document.querySelectorAll("[data-workflow-zone]")].map((node) => [node.dataset.workflowZone, node]),
 );
-const stepIndicators = new Map(
-  [...document.querySelectorAll("[data-step-indicator]")].map((node) => [node.dataset.stepIndicator, node]),
-);
+const WORKFLOW_ZONE_STATES = Object.freeze([
+  "is-pending",
+  "is-active",
+  "is-busy",
+  "is-complete",
+  "is-prepared",
+  "is-verifying",
+  "is-error",
+]);
 
 const state = {
   fileSystemSupported: detectFileSystemSupport(),
@@ -125,7 +135,8 @@ elements.cueButton.addEventListener("click", saveCueFile);
 window.addEventListener("beforeunload", warnWhileBusy);
 
 showBrowserCompatibility();
-setWorkflowPosition("release");
+setWorkflowPhase("release");
+setZoneState("release", "busy", { busy: true });
 updateControls();
 loadReleaseIndex().catch(handleIndexFailure);
 
@@ -156,7 +167,7 @@ function showBrowserCompatibility() {
   if (state.fileSystemSupported) {
     elements.compatibilityBadge.classList.add("is-supported");
     elements.compatibilityBadge.lastChild.textContent = " 패치 지원";
-    elements.sourceHelp.textContent = "원본은 읽기 전용으로 엽니다. 전체 SHA-256은 한 번의 읽기로 검사하고, STEP 3에서 확인한 원본 폴더에 새 IMG를 만듭니다.";
+    elements.sourceHelp.textContent = "원본은 읽기 전용으로 엽니다. 패치를 실행하는 한 번의 읽기에서 전체 SHA-256을 검사하고, 확인한 원본 폴더에 새 IMG를 만듭니다.";
     return;
   }
 
@@ -433,6 +444,8 @@ async function loadSelectedRelease(row) {
   const sequence = ++state.releaseLoadSequence;
   resetFileWorkflow();
   state.availability = "loading";
+  setWorkflowPhase("release");
+  setZoneState("release", "busy", { busy: true });
   elements.releaseSelect.disabled = true;
   elements.releaseState.textContent = "검증 중";
   elements.releaseState.classList.remove("is-ready");
@@ -462,9 +475,13 @@ async function loadSelectedRelease(row) {
   elements.targetName.textContent = release.target.filename;
   elements.publishedAt.textContent = formatPublishedAt(release.publishedAt);
   renderPatchNotesForRelease(release.id);
-  elements.applyHint.textContent = "정품 원본을 고르면 STEP 3에서 원본 폴더를 확인하고 새 IMG를 만들 수 있습니다.";
+  elements.sourceState.textContent = "원본 선택";
+  elements.sourceState.className = "zone-state";
+  elements.applyState.textContent = "원본 대기";
+  elements.applyState.className = "zone-state";
+  elements.applyHint.textContent = "정품 원본을 고르면 원본 폴더를 확인하고 새 IMG를 만들 수 있습니다.";
 
-  setWorkflowPosition("source");
+  setWorkflowPhase("source");
   updateControls();
   return true;
 }
@@ -676,7 +693,8 @@ function showPreparingState() {
   elements.publishedAt.textContent = "—";
   elements.applyHint.textContent = "검증과 승인을 마친 공개 패치가 등록되면 사용할 수 있습니다.";
   elements.sourceState.textContent = "준비 중";
-  setWorkflowPosition("release");
+  elements.applyState.textContent = "릴리스 대기";
+  setWorkflowPhase("release");
   updateControls();
 }
 
@@ -715,7 +733,9 @@ function handleIndexFailure(error) {
       ? "로컬 미리보기 서버 연결이 끊겼습니다. 서버를 실행한 뒤 페이지를 새로고침해 주세요."
       : "안전을 위해 파일 선택과 패치 실행을 잠갔습니다. 잠시 후 페이지를 다시 열어 주세요.",
   );
-  setWorkflowPosition("release");
+  elements.applyState.textContent = "차단됨";
+  setWorkflowPhase("release");
+  setZoneState("release", "error");
   updateControls();
 }
 
@@ -723,8 +743,8 @@ async function chooseSource() {
   if (!canChooseSource()) {
     return;
   }
-  clearMessages();
   if (!state.fileSystemSupported) {
+    clearMessages();
     showUnsupportedBrowser();
     return;
   }
@@ -744,7 +764,15 @@ async function chooseSource() {
     });
   } catch (error) {
     if (!isPickerCancellation(error)) {
-      showError("원본 파일을 열 수 없습니다", "브라우저의 파일 읽기 권한을 확인한 뒤 다시 선택해 주세요.");
+      if (state.sourcePrepared) {
+        announce("새 원본 파일을 열지 못했습니다. 기존 원본 선택은 그대로 유지합니다.");
+      } else {
+        clearMessages();
+        showError("원본 파일을 열 수 없습니다", "브라우저의 파일 읽기 권한을 확인한 뒤 다시 선택해 주세요.");
+        elements.sourceState.textContent = "열기 실패";
+        elements.sourceState.className = "zone-state is-error";
+        setZoneState("source", "error");
+      }
     }
     return;
   }
@@ -758,10 +786,19 @@ async function chooseSource() {
   try {
     sourceFile = await sourceHandle.getFile();
   } catch {
-    showError("원본 파일을 읽을 수 없습니다", "파일이 이동되었거나 읽기 권한이 없습니다. 다시 선택해 주세요.");
+    if (state.sourcePrepared) {
+      announce("새 원본 파일을 읽지 못했습니다. 기존 원본 선택은 그대로 유지합니다.");
+    } else {
+      clearMessages();
+      showError("원본 파일을 읽을 수 없습니다", "파일이 이동되었거나 읽기 권한이 없습니다. 다시 선택해 주세요.");
+      elements.sourceState.textContent = "읽기 실패";
+      elements.sourceState.className = "zone-state is-error";
+      setZoneState("source", "error");
+    }
     return;
   }
 
+  clearMessages();
   resetPreparedSource();
   state.sourceHandle = sourceHandle;
   state.sourceFile = sourceFile;
@@ -771,20 +808,21 @@ async function chooseSource() {
   elements.sourceName.textContent = sourceFile.name;
   elements.sourceMeta.textContent = `${formatBytes(sourceFile.size)} · 읽기 전용`;
   elements.sourceCheck.textContent = "…";
-  elements.sourceState.textContent = "준비 중";
-  elements.sourceState.className = "step-state is-working";
-  workflowSections.get("source")?.classList.add("is-active");
+  elements.sourceState.textContent = "파일 확인 중";
+  elements.sourceState.className = "zone-state is-working";
+  setZoneState("source", "busy", { busy: true });
 
   if (sourceFile.size !== state.release.source.size) {
     elements.sourceSelection.classList.remove("is-verifying");
     elements.sourceCheck.textContent = "×";
     elements.sourceState.textContent = "불일치";
-    elements.sourceState.className = "step-state is-error";
+    elements.sourceState.className = "zone-state is-error";
     showError(
       "원본 크기가 일치하지 않습니다",
       `이 릴리스는 ${formatBytes(state.release.source.size)} 원본만 지원합니다. 다른 IMG를 선택해 주세요.`,
     );
-    setWorkflowPosition("source");
+    setWorkflowPhase("source");
+    setZoneState("source", "error");
     updateControls();
     return;
   }
@@ -802,6 +840,9 @@ async function applyPatch() {
     return;
   }
   clearMessages();
+  setWorkflowPhase("patch");
+  elements.applyState.textContent = "저장 폴더 확인";
+  elements.applyState.className = "zone-state is-working";
 
   let outputDirectoryHandle;
   try {
@@ -809,11 +850,23 @@ async function applyPatch() {
   } catch (error) {
     if (!isPickerCancellation(error)) {
       showError("원본 폴더를 확인할 수 없습니다", "브라우저의 폴더 쓰기 권한을 확인한 뒤 다시 시도해 주세요.");
+      elements.applyState.textContent = "폴더 확인 실패";
+      elements.applyState.className = "zone-state is-error";
+      setZoneState("patch", "error");
+    } else {
+      elements.applyState.textContent = "실행 가능";
+      elements.applyState.className = "zone-state is-ready";
+      setWorkflowPhase("patch");
     }
+    updateControls();
     return;
   }
 
   if (!outputDirectoryHandle) {
+    elements.applyState.textContent = "실행 가능";
+    elements.applyState.className = "zone-state is-ready";
+    setWorkflowPhase("patch");
+    updateControls();
     return;
   }
 
@@ -826,10 +879,13 @@ async function applyPatch() {
     showError(
       parentMismatch ? "정품 원본이 있는 폴더를 선택해 주세요" : "새 패치 IMG를 만들 수 없습니다",
       parentMismatch
-        ? "STEP 2에서 고른 원본 IMG가 바로 들어 있는 폴더를 선택해야 합니다."
+        ? "앞에서 고른 원본 IMG가 바로 들어 있는 폴더를 선택해야 합니다."
         : "같은 이름의 기존 파일을 덮어쓰지 못하도록 차단했습니다. 폴더 권한과 여유 공간을 확인해 주세요.",
     );
-    setWorkflowPosition("patch");
+    elements.applyState.textContent = "저장 준비 실패";
+    elements.applyState.className = "zone-state is-error";
+    setWorkflowPhase("patch");
+    setZoneState("patch", "error");
     updateControls();
     return;
   }
@@ -963,6 +1019,20 @@ function beginWorkerOperation(type, payload) {
   state.busy = true;
   state.operation = type;
   state.jobId = jobId;
+  if (type === "PREPARE_SOURCE") {
+    setWorkflowPhase("source");
+    setZoneState("source", "busy", { busy: true });
+    elements.sourceState.textContent = "파일 확인 중";
+    elements.sourceState.className = "zone-state is-working";
+  } else {
+    setWorkflowPhase("patch");
+    setZoneState("source", "verifying", { busy: true });
+    setZoneState("patch", "busy", { busy: true });
+    elements.sourceState.textContent = "SHA-256 검증 중";
+    elements.sourceState.className = "zone-state is-working";
+    elements.applyState.textContent = "패치 실행 중";
+    elements.applyState.className = "zone-state is-working";
+  }
   elements.progressPanel.setAttribute("aria-busy", "true");
   elements.cancelButton.hidden = false;
   elements.cancelButton.disabled = false;
@@ -1024,11 +1094,17 @@ function handleWorkerMessage(event) {
       elements.sourceSelection.classList.remove("is-verifying");
       elements.sourceCheck.textContent = "—";
       elements.sourceState.textContent = "준비 중단";
-      elements.sourceState.className = "step-state";
-      setWorkflowPosition("source");
+      elements.sourceState.className = "zone-state";
+      elements.applyState.textContent = "원본 대기";
+      elements.applyState.className = "zone-state";
+      setWorkflowPhase("source");
     } else {
       void discardUncommittedOutput();
-      setWorkflowPosition("patch");
+      elements.sourceState.textContent = "크기 일치";
+      elements.sourceState.className = "zone-state is-prepared";
+      elements.applyState.textContent = "다시 실행 가능";
+      elements.applyState.className = "zone-state";
+      setWorkflowPhase("patch");
     }
     updateControls();
     announce("작업을 중단했습니다.");
@@ -1052,21 +1128,28 @@ function handleOperationComplete(message) {
     state.sourcePrepared = true;
     state.preparationToken = message.preparationToken;
     elements.sourceSelection.classList.remove("is-verifying");
-    elements.sourceCheck.textContent = "✓";
+    elements.sourceCheck.textContent = "→";
     elements.sourceMeta.textContent = `${formatBytes(state.sourceFile.size)} · 크기 일치 · 전체 검증 대기`;
-    elements.sourceState.textContent = "선택 완료";
-    elements.sourceState.className = "step-state is-complete";
-    workflowSections.get("source")?.classList.remove("is-active");
-    workflowSections.get("source")?.classList.add("is-complete");
-    setWorkflowPosition("patch");
-    elements.applyHint.textContent = "패치 시작을 누르면 원본 IMG가 있는 폴더의 확인창이 열립니다.";
+    elements.sourceState.textContent = "크기 일치";
+    elements.sourceState.className = "zone-state is-prepared";
+    elements.applyState.textContent = "실행 가능";
+    elements.applyState.className = "zone-state is-ready";
+    setWorkflowPhase("patch");
+    elements.applyHint.textContent = "패치 실행을 누르면 원본 IMG가 있는 폴더의 확인창이 열립니다.";
     updateControls();
-    announce("원본 크기가 일치합니다. 패치 시작을 누르면 원본 IMG 폴더 확인창이 열립니다.");
+    announce("원본 크기가 일치합니다. 전체 SHA-256은 패치를 실행하며 검증합니다.");
     return;
   }
 
   if (operation === "APPLY_PATCH") {
     state.patchCompleted = true;
+    elements.sourceSelection.classList.remove("is-verifying");
+    elements.sourceCheck.textContent = "✓";
+    elements.sourceMeta.textContent = `${formatBytes(state.sourceFile.size)} · 전체 SHA-256 일치 · 원본 보존`;
+    elements.sourceState.textContent = "SHA-256 일치";
+    elements.sourceState.className = "zone-state is-complete";
+    elements.applyState.textContent = "패치 완료";
+    elements.applyState.className = "zone-state is-complete";
     elements.successMessage.textContent = `${state.outputHandle.name}에 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`;
     elements.cueAction.hidden = !state.release.target.cueFilename;
     elements.cueButton.disabled = false;
@@ -1074,8 +1157,7 @@ function handleOperationComplete(message) {
     elements.cueStatus.textContent = "에뮬레이터용 CUE도 패치 IMG와 같은 폴더에 만들 수 있습니다.";
     elements.successPanel.hidden = false;
     elements.applyHint.textContent = "패치를 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
-    workflowSections.get("patch")?.classList.add("is-complete");
-    setWorkflowPosition("complete");
+    setWorkflowPhase("complete");
     updateControls();
     announce(
       `${state.outputHandle.name} 패치를 완료했습니다. 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`,
@@ -1108,11 +1190,19 @@ function handleOperationFailure(error, operation = state.operation) {
     elements.sourceSelection.classList.remove("is-verifying");
     elements.sourceCheck.textContent = "×";
     elements.sourceState.textContent = sourceMismatch ? "불일치" : "준비 실패";
-    elements.sourceState.className = "step-state is-error";
-    setWorkflowPosition("source");
+    elements.sourceState.className = "zone-state is-error";
+    elements.applyState.textContent = "원본 확인 필요";
+    elements.applyState.className = "zone-state";
+    setWorkflowPhase("source");
+    setZoneState("source", "error");
   } else {
     elements.applyHint.textContent = "출력 저장을 확정하지 않았습니다. 원인을 확인한 뒤 다시 시도해 주세요.";
-    setWorkflowPosition("patch");
+    elements.sourceState.textContent = "크기 일치";
+    elements.sourceState.className = "zone-state is-prepared";
+    elements.applyState.textContent = "실패 · 재시도";
+    elements.applyState.className = "zone-state is-error";
+    setWorkflowPhase("patch");
+    setZoneState("patch", "error");
   }
 
   showError(friendly.title, friendly.message);
@@ -1281,6 +1371,13 @@ function createPatchNoteCard(note, index) {
 
   const comparison = document.createElement("div");
   comparison.className = "patch-note-comparison";
+  if (
+    note.asIs.width / note.asIs.height >= 4
+    && note.toBe.width / note.toBe.height >= 4
+  ) {
+    comparison.classList.add("is-wide-strip");
+    card.classList.add("is-wide-strip-card");
+  }
   comparison.append(
     createPatchNoteFigure("AS-IS", note.asIs),
     createPatchNoteFigure("TO-BE", note.toBe),
@@ -1356,10 +1453,16 @@ function resetFileWorkflow() {
   elements.cueAction.hidden = true;
   elements.cueButton.disabled = false;
   elements.cueButton.textContent = "CUE 파일 저장";
-  elements.sourceState.textContent = "대기";
-  elements.sourceState.className = "step-state";
-  for (const section of workflowSections.values()) {
-    section.classList.remove("is-active", "is-complete");
+  elements.sourceState.textContent = "선택 대기";
+  elements.sourceState.className = "zone-state";
+  elements.applyState.textContent = "원본 대기";
+  elements.applyState.className = "zone-state";
+  for (const zone of workflowZones.values()) {
+    zone.classList.remove(...WORKFLOW_ZONE_STATES);
+    zone.classList.add("is-pending");
+    zone.dataset.state = "pending";
+    zone.setAttribute("aria-busy", "false");
+    zone.removeAttribute("aria-disabled");
   }
 }
 
@@ -1377,8 +1480,11 @@ function resetPreparedSource() {
   elements.errorPanel.hidden = true;
   elements.successPanel.hidden = true;
   elements.cueAction.hidden = true;
-  workflowSections.get("source")?.classList.remove("is-complete");
-  workflowSections.get("patch")?.classList.remove("is-active", "is-complete");
+  elements.sourceState.textContent = "원본 선택";
+  elements.sourceState.className = "zone-state";
+  elements.applyState.textContent = "원본 대기";
+  elements.applyState.className = "zone-state";
+  setWorkflowPhase("source");
 }
 
 function showSelectedSourceName(name) {
@@ -1450,38 +1556,43 @@ function showUnsupportedBrowser() {
   const message = "이 브라우저에는 원본 폴더에 약 579 MB의 새 IMG를 안전하게 만들 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.";
   elements.sourceHelp.textContent = message;
   elements.sourceState.textContent = "환경 확인";
-  elements.sourceState.className = "step-state is-error";
+  elements.sourceState.className = "zone-state is-error";
   elements.applyHint.textContent = message;
+  elements.applyState.textContent = "사용 불가";
+  elements.applyState.className = "zone-state";
   showError("이 기기에서는 패치 파일을 안전하게 저장할 수 없습니다", message);
-  setWorkflowPosition("source");
+  setWorkflowPhase("source");
+  setZoneState("source", "error");
   updateControls();
   announce(message);
 }
 
-function setWorkflowPosition(current) {
-  const order = ["release", "source", "patch"];
-  const currentIndex = current === "complete" ? order.length : order.indexOf(current);
-  for (const [name, indicator] of stepIndicators) {
-    const index = order.indexOf(name);
-    const isComplete = currentIndex > index;
-    const isCurrent = currentIndex === index;
-    indicator.classList.toggle("is-complete", isComplete);
-    indicator.classList.toggle("is-current", isCurrent);
-    if (isCurrent) {
-      indicator.setAttribute("aria-current", "step");
-    } else {
-      indicator.removeAttribute("aria-current");
-    }
-    const status = indicator.querySelector("[data-step-status]");
-    if (status) {
-      status.textContent = isComplete ? "완료" : isCurrent ? "현재 단계" : "대기";
-    }
+function setWorkflowPhase(current) {
+  const states = {
+    release: { release: "active", source: "pending", patch: "pending" },
+    source: { release: "complete", source: "active", patch: "pending" },
+    patch: { release: "complete", source: "prepared", patch: "active" },
+    complete: { release: "complete", source: "complete", patch: "complete" },
+  }[current];
+  if (!states) {
+    throw new Error(`Unknown workflow phase: ${current}`);
   }
-  for (const [name, section] of workflowSections) {
-    const isActive = name === current;
-    section.classList.toggle("is-active", isActive);
-    section.hidden = false;
+  for (const [name, zoneState] of Object.entries(states)) {
+    setZoneState(name, zoneState);
   }
+}
+
+function setZoneState(name, zoneState, { busy = false } = {}) {
+  const zone = workflowZones.get(name);
+  if (!zone || !WORKFLOW_ZONE_STATES.includes(`is-${zoneState}`)) {
+    throw new Error(`Unknown workflow zone state: ${name}/${zoneState}`);
+  }
+  zone.classList.remove(...WORKFLOW_ZONE_STATES);
+  zone.classList.add(`is-${zoneState}`);
+  zone.dataset.state = zoneState;
+  zone.hidden = false;
+  zone.setAttribute("aria-busy", String(busy));
+  zone.removeAttribute("aria-disabled");
 }
 
 function clearMessages() {
@@ -1773,7 +1884,8 @@ export const __testHooks = Object.freeze({
   renderPatchNotesForRelease,
   requireDirectParentDirectory,
   showUnsupportedBrowser,
-  setWorkflowPosition,
+  setWorkflowPhase,
+  setZoneState,
   validateReleaseIndex,
   validateGames,
   validateReleaseRow,

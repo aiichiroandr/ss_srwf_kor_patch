@@ -18,24 +18,24 @@ const release = (version, summary, items) => Object.freeze({
 export const PATCH_NOTES = Object.freeze({
   "srwf-f-20260812-v1-1": release(
     "v1.1",
-    "v1.0의 범위를 유지하면서 출격 수 간격, 턴 종료 확인창, 예고 본문 크기와 타이틀 메뉴 간격을 보완했습니다. RAM 시안은 후속 UI 작업 참고용입니다.",
+    "v1.0의 범위를 유지하면서 출격 유닛 수 위치, 턴 종료 확인창, 예고 본문 크기와 타이틀 메뉴 간격을 보완했습니다. RAM 시안은 후속 UI 작업 참고용입니다.",
     [
       item({
-        id: "sortie-count-spacing",
-        title: "출격 유닛 수 표기 간격",
-        description: "‘출격유닛 선택’과 동적 기체 수 사이에 공백을 넣어 ‘선택 13기’처럼 또렷하게 구분했습니다.",
+        id: "sortie-count-position",
+        title: "출격유닛 선택 옆 NN기 위치 보정",
+        description: "‘출격유닛 선택’에 붙어 있던 NN기를 반각 한 칸 오른쪽으로 옮겼습니다.",
         evidenceType: "included-reference",
         asIs: image(
           "assets/patch-notes/v1-1-sortie-count-before.png",
-          "AS-IS 기능 화면: 출격유닛 선택 문구와 13기 표기가 붙어 있는 화면",
-          330,
-          240,
+          "AS-IS 기능 화면 크롭: 출격유닛 선택 제목에 13기가 붙어 표시된 헤더",
+          188,
+          42,
         ),
         toBe: image(
           "assets/patch-notes/v1-1-sortie-count-after.png",
-          "TO-BE 기능 화면: 출격유닛 선택 문구와 13기 표기 사이에 간격을 둔 화면",
-          330,
-          240,
+          "TO-BE 기능 화면 크롭: 출격유닛 선택 제목과 13기 사이를 반각 한 칸 띄운 헤더",
+          188,
+          42,
         ),
       }),
       item({
@@ -58,18 +58,18 @@ export const PATCH_NOTES = Object.freeze({
       }),
       item({
         id: "protagonist-names-inherited",
-        title: "주인공 8명 이름 한글 표기",
-        description: "v1.0부터 주인공 선택 화면의 기본 이름·애칭과 관련 표시 경로를 8명 모두 한국어 데이터로 연결했습니다.",
+        title: "주인공 8명 이름·애칭 표시 정리",
+        description: "v1.0부터 이미 한글화된 주인공 설정 화면의 설명과 항목명은 그대로 두고, 일부가 일본어로 남거나 잘못 연결되어 있던 기본 주인공 8명분의 이름·애칭 표시 경로만 한국어 데이터로 연결했으며 v1.1에도 그대로 포함됩니다.",
         evidenceType: "included-reference",
         asIs: image(
           "assets/patch-notes/v1-0-protagonist-names-before.png",
-          "AS-IS 기능 화면: 일본어 기본 이름과 애칭이 표시된 주인공 설정 화면",
+          "AS-IS 기능 화면: 설명과 항목명은 한국어지만 헥토르의 이름과 애칭은 일본어로 남아 있는 주인공 설정 화면",
           330,
           240,
         ),
         toBe: image(
           "assets/patch-notes/v1-0-protagonist-names-after.png",
-          "TO-BE 기능 화면: 한국어 기본 이름과 애칭이 표시된 주인공 설정 화면",
+          "TO-BE 기능 화면: 같은 주인공 설정에서 헥토르의 이름과 애칭도 한국어로 표시된 화면",
           330,
           240,
         ),
@@ -172,18 +172,18 @@ export const PATCH_NOTES = Object.freeze({
     [
       item({
         id: "protagonist-names",
-        title: "주인공 8명 이름 한글 표기",
-        description: "주인공 선택 화면의 기본 이름·애칭과 관련 표시 경로를 8명 모두 한국어 데이터로 연결했습니다.",
+        title: "주인공 8명 이름·애칭 표시 정리",
+        description: "이미 한글화된 주인공 설정 화면의 설명과 항목명은 그대로 두고, 일부가 일본어로 남거나 잘못 연결되어 있던 기본 주인공 8명분의 이름·애칭 표시 경로만 한국어 데이터로 연결했습니다.",
         evidenceType: "included-reference",
         asIs: image(
           "assets/patch-notes/v1-0-protagonist-names-before.png",
-          "AS-IS 기능 화면: 일본어 기본 이름과 애칭이 표시된 주인공 설정 화면",
+          "AS-IS 기능 화면: 설명과 항목명은 한국어지만 헥토르의 이름과 애칭은 일본어로 남아 있는 주인공 설정 화면",
           330,
           240,
         ),
         toBe: image(
           "assets/patch-notes/v1-0-protagonist-names-after.png",
-          "TO-BE 기능 화면: 한국어 기본 이름과 애칭이 표시된 주인공 설정 화면",
+          "TO-BE 기능 화면: 같은 주인공 설정에서 헥토르의 이름과 애칭도 한국어로 표시된 화면",
           330,
           240,
         ),

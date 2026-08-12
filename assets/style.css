@@ -1860,6 +1860,11 @@ a:focus-visible {
   background: var(--white);
 }
 
+.patch-note-card.is-wide-strip-card {
+  grid-template-rows: auto auto auto;
+  align-content: start;
+}
+
 .patch-note-card-heading {
   min-width: 0;
   display: flex;
@@ -1902,6 +1907,20 @@ a:focus-visible {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.patch-note-comparison.is-wide-strip {
+  align-content: center;
+}
+
+.patch-note-comparison.is-wide-strip .patch-note-figure {
+  height: auto;
+  align-self: center;
+  grid-template-rows: auto auto;
+}
+
+.patch-note-comparison.is-wide-strip img {
+  height: auto;
 }
 
 .patch-note-figure {
@@ -2030,6 +2049,11 @@ a:focus-visible {
 
   .patch-note-card-heading h3 {
     font-size: 12px;
+  }
+
+  .patch-note-comparison.is-wide-strip {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(2, auto);
   }
 
   .patch-note-evidence {
@@ -2706,5 +2730,484 @@ main {
 
   .stage-placeholder strong {
     font-size: 15px;
+  }
+}
+
+/* Reactive workflow zones --------------------------------------------------- */
+
+.patch-console {
+  display: block;
+}
+
+.patch-workspace {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(245px, 0.82fr) minmax(300px, 1.06fr) minmax(320px, 1.12fr);
+  gap: 10px;
+  padding: 10px;
+}
+
+.workflow-zone {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+  box-shadow: 0 7px 20px rgba(16, 31, 47, 0.045);
+  transition:
+    border-color 220ms ease,
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    opacity 220ms ease;
+}
+
+.workflow-zone::after {
+  content: "";
+  position: absolute;
+  z-index: 8;
+  inset: -1px;
+  padding: 2px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, var(--blue), var(--mint), #e5a62c, var(--blue)) 0 0 / 260% 100%;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.workflow-zone.is-active,
+.workflow-zone.is-busy {
+  border-color: rgba(39, 93, 225, 0.58);
+  background: linear-gradient(145deg, #ffffff 8%, #edf3ff 100%);
+  box-shadow: 0 10px 28px rgba(39, 93, 225, 0.13);
+}
+
+.workflow-zone.is-active::after,
+.workflow-zone.is-busy::after {
+  opacity: 1;
+  animation: workflow-border-flow 2.1s linear infinite;
+}
+
+.workflow-zone.is-pending {
+  color: #667178;
+  background: linear-gradient(145deg, #fafaf7, #eff0ec);
+  opacity: 0.74;
+}
+
+.workflow-zone.is-prepared,
+.workflow-zone.is-verifying {
+  border-color: rgba(39, 93, 225, 0.42);
+  background: linear-gradient(145deg, #f9fbff, #e4edff);
+  box-shadow: 0 9px 25px rgba(39, 93, 225, 0.09);
+}
+
+.workflow-zone.is-complete {
+  border-color: rgba(8, 125, 104, 0.48);
+  background:
+    radial-gradient(circle at 100% 0, rgba(32, 196, 178, 0.2), transparent 44%),
+    linear-gradient(145deg, #f7fffc, #dcf5ec);
+  box-shadow: 0 10px 28px rgba(8, 125, 104, 0.11);
+}
+
+.workflow-zone.is-error {
+  border-color: rgba(200, 62, 67, 0.62);
+  background:
+    radial-gradient(circle at 100% 0, rgba(200, 62, 67, 0.13), transparent 42%),
+    linear-gradient(145deg, #fffafa, #ffe3e1);
+  box-shadow: 0 10px 28px rgba(200, 62, 67, 0.12);
+}
+
+@keyframes workflow-border-flow {
+  to {
+    background-position: 260% 0;
+  }
+}
+
+.release-card,
+.source-zone,
+.apply-card {
+  padding: 18px;
+}
+
+.release-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-heading,
+.zone-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-heading h3,
+.zone-heading h3 {
+  min-width: 0;
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.025em;
+}
+
+.state-chip,
+.zone-state {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: rgba(16, 31, 47, 0.07);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.zone-state.is-working,
+.zone-state.is-ready,
+.zone-state.is-prepared {
+  color: var(--blue-deep);
+  background: rgba(39, 93, 225, 0.11);
+}
+
+.zone-state.is-complete,
+.state-chip.is-ready {
+  color: var(--green);
+  background: rgba(32, 196, 178, 0.14);
+}
+
+.zone-state.is-error {
+  color: var(--red);
+  background: rgba(200, 62, 67, 0.12);
+}
+
+.release-card .field-label {
+  margin-top: 14px;
+}
+
+.release-facts {
+  margin-top: auto;
+}
+
+.source-zone {
+  display: flex;
+}
+
+.source-zone-body {
+  width: 100%;
+  min-width: 0;
+  align-self: center;
+}
+
+.source-zone-body > p {
+  margin: 14px 0 18px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.62;
+  word-break: keep-all;
+}
+
+.source-zone .file-button {
+  min-width: min(100%, 220px);
+}
+
+.apply-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 12px;
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--white);
+}
+
+.apply-main {
+  min-width: 0;
+}
+
+.apply-main > p {
+  margin: 10px 0 14px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.apply-actions {
+  width: 100%;
+}
+
+.apply-actions .primary-button {
+  width: 100%;
+  min-width: 0;
+}
+
+.patch-feedback {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-areas: "feedback";
+  align-items: stretch;
+}
+
+.patch-feedback > * {
+  grid-area: feedback;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+}
+
+.patch-feedback .progress-panel,
+.patch-feedback .message-panel {
+  position: relative;
+  z-index: 4;
+  overflow: hidden;
+  border-radius: 11px;
+}
+
+.patch-feedback .progress-panel {
+  padding: 14px;
+}
+
+.patch-feedback .message-panel {
+  align-self: stretch;
+  padding: 14px;
+}
+
+.workflow-zone.is-busy .apply-actions {
+  display: none;
+}
+
+.workflow-zone:focus-within {
+  box-shadow: 0 0 0 3px rgba(39, 93, 225, 0.17), 0 10px 28px rgba(16, 31, 47, 0.1);
+}
+
+@media (max-width: 980px) and (min-width: 761px) {
+  .patch-workspace {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 7px;
+    padding: 7px;
+  }
+
+  .release-card,
+  .source-zone,
+  .apply-card {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 760px) {
+  .patch-console {
+    display: block;
+    border-radius: 15px;
+  }
+
+  .patch-workspace {
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(128px, 0.92fr) minmax(104px, 0.78fr) minmax(158px, 1.3fr);
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .workflow-zone {
+    height: 100%;
+    border-radius: 11px;
+  }
+
+  .release-card,
+  .source-zone,
+  .apply-card {
+    padding: 7px 9px;
+  }
+
+  .card-heading h3,
+  .zone-heading h3 {
+    font-size: 13px;
+  }
+
+  .state-chip,
+  .zone-state {
+    padding: 4px 7px;
+    font-size: 9px;
+  }
+
+  .release-card .field-label {
+    margin: 3px 0 2px;
+    font-size: 8px;
+  }
+
+  .release-facts {
+    display: none;
+  }
+
+  .source-zone-body {
+    align-self: stretch;
+  }
+
+  .source-zone-body > p,
+  .apply-main > p {
+    display: none;
+  }
+
+  .source-zone .file-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    margin-top: 7px;
+  }
+
+  .file-selection {
+    display: none !important;
+  }
+
+  .apply-card {
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .apply-actions {
+    margin-top: 7px;
+  }
+
+  .apply-actions .primary-button {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .patch-feedback .progress-panel,
+  .patch-feedback .message-panel {
+    padding: 9px 10px;
+  }
+
+  .patch-feedback .message-panel {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .patch-feedback .message-panel > span {
+    width: 26px;
+    height: 26px;
+  }
+
+  .patch-feedback .message-panel.is-error {
+    overflow: auto;
+  }
+
+  .patch-feedback .message-panel p,
+  .patch-feedback .progress-panel p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .patch-feedback .message-panel.is-error p {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
+}
+
+@media (max-width: 360px) {
+  body {
+    grid-template-rows: 48px minmax(0, 1fr);
+  }
+
+  .site-header {
+    height: 48px;
+    padding: 0 8px;
+  }
+
+  .brand-copy strong {
+    max-width: 188px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .compatibility {
+    width: 30px;
+    min-width: 30px;
+    padding: 5px 8px;
+    overflow: hidden;
+    color: transparent;
+  }
+
+  .compatibility > span {
+    color: var(--green);
+  }
+
+  .station-intro {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media (max-height: 620px) and (max-width: 760px) {
+  .patch-section {
+    padding-top: 3px;
+    padding-bottom: 4px;
+  }
+
+  .station-intro {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .patch-workspace {
+    grid-template-rows: minmax(122px, 0.94fr) minmax(96px, 0.76fr) minmax(148px, 1.3fr);
+  }
+
+  .patch-feedback .progress-panel,
+  .patch-feedback .message-panel {
+    padding: 7px 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workflow-zone,
+  .workflow-zone::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .workflow-zone.is-active::after,
+  .workflow-zone.is-busy::after {
+    background: var(--blue);
+  }
+}
+
+@media (forced-colors: active) {
+  .workflow-zone.is-active,
+  .workflow-zone.is-busy {
+    outline: 3px solid Highlight;
+    outline-offset: -3px;
+  }
+
+  .workflow-zone.is-complete {
+    outline: 2px solid LinkText;
+    outline-offset: -2px;
+  }
+
+  .workflow-zone.is-error {
+    outline: 3px solid Mark;
+    outline-offset: -3px;
+  }
+
+  .workflow-zone::after {
+    display: none;
   }
 }

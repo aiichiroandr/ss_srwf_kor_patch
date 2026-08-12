@@ -126,22 +126,10 @@ const element = (id) => {
   return elements.get(id);
 };
 
-const workflowNames = ["source", "patch"];
-const workflowElements = workflowNames.map((name) => {
+const workflowZoneNames = ["release", "source", "patch"];
+const workflowZoneElements = workflowZoneNames.map((name) => {
   const node = new FakeElement();
-  node.dataset.workflowStep = name;
-  return node;
-});
-const stepNames = ["release", "source", "patch"];
-const stepElements = stepNames.map((name) => {
-  const status = new FakeElement();
-  status.textContent = name === "release" ? "현재 단계" : "대기";
-  const node = new FakeElement({ status });
-  node.dataset.stepIndicator = name;
-  if (name === "release") {
-    node.classList.add("is-current");
-    node.setAttribute("aria-current", "step");
-  }
+  node.dataset.workflowZone = name;
   return node;
 });
 
@@ -155,8 +143,7 @@ globalThis.document = {
   createTextNode: (value) => ({ children: [], textContent: String(value) }),
   getElementById: element,
   querySelectorAll(selector) {
-    if (selector === "[data-workflow-step]") return workflowElements;
-    if (selector === "[data-step-indicator]") return stepElements;
+    if (selector === "[data-workflow-zone]") return workflowZoneElements;
     return [];
   },
 };
@@ -264,16 +251,21 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.doesNotMatch(html, /검증된 공개 릴리스/);
   assert.match(html, /id="gameSelect"/);
   assert.doesNotMatch(html, /FABLE G25K/);
-  assert.match(html, /aria-current="step"/);
-  assert.match(html, /data-step-status/);
-  assert.match(html, /role="listitem"/);
+  assert.doesNotMatch(html, /\bSTEP(?:\s*[123])?\b/i);
+  assert.doesNotMatch(html, /PATCH FLOW/);
+  assert.doesNotMatch(html, /data-step-/);
+  assert.doesNotMatch(html, /aria-current="step"/);
+  assert.doesNotMatch(html, /class="[^"]*(?:step-rail|step-label|file-step-number)/);
+  for (const zone of ["release", "source", "patch"]) {
+    assert.match(html, new RegExp(`data-workflow-zone="${zone}"`));
+  }
   assert.match(html, /id="progressPanel"[\s\S]*?aria-busy="false"[\s\S]*?hidden/);
   assert.doesNotMatch(html, /class="patch-workspace"[^>]*aria-busy/);
   assert.match(html, /aria-labelledby="progressTitle"/);
   assert.match(html, /aria-describedby="progressDetail"/);
   assert.doesNotMatch(html, /출력 파일의 SHA-256까지 확인했습니다/);
-  assert.match(html, /전체 SHA-256은\s*\n?\s*패치 시작 후 새 IMG를 만들면서 한 번의 읽기로 검사/);
-  assert.match(html, /저장 확인 · 패치 시작/);
+  assert.match(html, /전체 SHA-256은\s*\n?\s*패치를 실행하며 새 IMG를 만드는 한 번의 읽기에서 검사/);
+  assert.match(html, /저장 확인 · 패치 실행/);
   assert.doesNotMatch(html, /선택 직후 전체 파일의 SHA-256/);
 });
 
@@ -358,7 +350,7 @@ test("unsupported mobile browsers expose guidance instead of a dead source CTA",
   assert.equal(element("sourceState").textContent, "환경 확인");
 });
 
-test("prepared source enables STEP 3 without a separate output step", async () => {
+test("prepared source enables patch execution without a separate output picker", async () => {
   const controls = __testHooks.deriveFileControlState({
     releaseReady: true,
     fileSystemSupported: true,
@@ -430,21 +422,30 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
 
   assert.doesNotMatch(html, /class="hero(?:\s|\")/);
   assert.doesNotMatch(html, /class="site-footer(?:\s|\")/);
-  assert.match(html, /class="task-stage"/);
-  assert.match(html, /data-workflow-step="source"/);
-  assert.match(html, /data-workflow-step="patch"/);
-  assert.doesNotMatch(html, /data-workflow-step="output"/);
+  assert.doesNotMatch(html, /class="task-stage"/);
+  assert.equal([...html.matchAll(/data-workflow-zone="[^"]+"/g)].length, 3);
+  for (const zone of ["release", "source", "patch"]) {
+    assert.match(html, new RegExp(`data-workflow-zone="${zone}"`));
+  }
+  assert.doesNotMatch(html, /data-workflow-(?:step|zone)="output"/);
   assert.doesNotMatch(html, /id="output(?:Button|ButtonText|State|Selection|Name)"/);
-  assert.doesNotMatch(html, /data-workflow-step="(?:source|patch)"[^>]*hidden/);
+  assert.doesNotMatch(html, /data-workflow-zone="(?:release|source|patch)"[^>]*hidden/);
   assert.match(css, /html,\s*\nbody\s*\{[^}]*height:\s*100%[^}]*overflow:\s*hidden/s);
   assert.match(css, /\.patch-section\s*\{[^}]*height:\s*100%[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)/s);
-  assert.match(css, /\.task-stage \[data-workflow-step\]\s*\{[^}]*height:\s*auto/s);
-  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.task-stage\s*\{[^}]*grid-template-rows:\s*repeat\(2, auto\)[^}]*align-content:\s*start/s);
+  assert.match(css, /\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(245px,[^}]*minmax\(300px,[^}]*minmax\(320px,/s);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*grid-template-rows:\s*minmax\(128px,/s);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.file-selection\s*\{[^}]*display:\s*none\s*!important/s);
+  assert.match(css, /@media \(max-width: 980px\) and \(min-width: 761px\)[\s\S]*?grid-template-columns:\s*minmax\(0,[^}]*minmax\(0,[^}]*minmax\(0,/s);
+  assert.match(css, /\.workflow-zone\.is-active::after,[\s\S]*?animation:\s*workflow-border-flow/);
+  assert.match(css, /\.workflow-zone\.is-complete\s*\{[^}]*linear-gradient/s);
+  assert.match(css, /\.workflow-zone\.is-error\s*\{[^}]*linear-gradient/s);
+  assert.doesNotMatch(css, /\.workflow-zone\.is-complete\s+\.apply-actions\s*\{[^}]*display:\s*none/s);
+  assert.match(css, /\.patch-feedback \.message-panel\.is-error p\s*\{[^}]*display:\s*block[^}]*overflow:\s*visible/s);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.workflow-zone::after\s*\{[^}]*animation:\s*none\s*!important/s);
   assert.match(html, /id="sourceButtonText"/);
 });
 
-test("patch notes sit between release selection and source selection without adding a fourth step", async () => {
+test("patch notes sit between release selection and source selection without adding another workflow zone", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   const releaseSelectPosition = html.indexOf('id="releaseSelect"');
   const patchNotesPosition = html.indexOf('id="patchNotesToggle"');
@@ -453,11 +454,8 @@ test("patch notes sit between release selection and source selection without add
   assert.ok(releaseSelectPosition >= 0, "release selector is missing");
   assert.ok(patchNotesPosition > releaseSelectPosition, "patch notes must follow the release selector");
   assert.ok(sourceButtonPosition > patchNotesPosition, "patch notes must precede the source picker");
-  assert.equal([...html.matchAll(/data-step-indicator="[^"]+"/g)].length, 3);
-  for (const step of ["release", "source", "patch"]) {
-    assert.match(html, new RegExp(`data-step-indicator="${step}"`));
-  }
-  assert.doesNotMatch(html, /data-step-indicator="(?:notes|output)"/);
+  assert.equal([...html.matchAll(/data-workflow-zone="[^"]+"/g)].length, 3);
+  assert.doesNotMatch(html, /data-workflow-zone="(?:notes|output)"/);
 
   const toggleTag = html.match(/<button\b[^>]*\bid="patchNotesToggle"[^>]*>/)?.[0] ?? "";
   assert.match(toggleTag, /\btype="button"/);
@@ -546,12 +544,39 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
     ["disconnect-confirmation", "parts-window-width", "split-confirmation", "turn-end-boundary"],
   );
   for (const requiredId of [
-    "sortie-count-spacing",
+    "sortie-count-position",
     "protagonist-names-inherited",
     "sortie-unit-pilot-names-inherited",
   ]) {
     assert.ok(v11Items.some((item) => item.id === requiredId), `v1.1 is missing ${requiredId}`);
   }
+  const sortieCountPosition = v11Items.find((item) => item.id === "sortie-count-position");
+  assert.match(sortieCountPosition.title, /NN기.*위치/);
+  assert.match(sortieCountPosition.description, /출격유닛 선택.*붙어 있던 NN기.*반각 한 칸 오른쪽/);
+  assert.deepEqual(
+    [sortieCountPosition.asIs.width, sortieCountPosition.asIs.height],
+    [188, 42],
+  );
+  assert.deepEqual(
+    [sortieCountPosition.toBe.width, sortieCountPosition.toBe.height],
+    [188, 42],
+  );
+  assert.match(sortieCountPosition.asIs.alt, /제목에 13기가 붙어/);
+  assert.match(sortieCountPosition.toBe.alt, /13기 사이.*반각 한 칸/);
+  const protagonistNames = getPatchNotesForRelease("srwf-f-20260810-v1-0").items
+    .find((item) => item.id === "protagonist-names");
+  assert.match(protagonistNames.description, /이미 한글화된.*설명과 항목명.*그대로.*8명분.*이름·애칭 표시 경로만.*한국어 데이터/);
+  assert.match(protagonistNames.asIs.alt, /설명과 항목명은 한국어.*헥토르.*이름과 애칭은 일본어/);
+  assert.match(protagonistNames.toBe.alt, /같은 주인공 설정.*헥토르.*한국어/);
+  const inheritedProtagonistNames = v11Items.find(
+    (item) => item.id === "protagonist-names-inherited",
+  );
+  assert.match(
+    inheritedProtagonistNames.description,
+    /이미 한글화된.*설명과 항목명.*그대로.*이름·애칭 표시 경로만.*v1\.1에도 그대로 포함/,
+  );
+  assert.equal(inheritedProtagonistNames.asIs.alt, protagonistNames.asIs.alt);
+  assert.equal(inheritedProtagonistNames.toBe.alt, protagonistNames.toBe.alt);
   assert.ok(v11Items.some((item) => item.evidenceType === "included"));
   assert.ok(v11Items.some((item) => item.evidenceType === "included-reference"));
   const v10Items = getPatchNotesForRelease("srwf-f-20260810-v1-0").items;
@@ -625,6 +650,13 @@ test("patch-note images are created lazily and release replacement closes stale 
   assert.ok(descendantText(list).includes(firstNotes.items[0].title));
   assert.ok(descendantText(list).includes("공개 릴리스 반영"));
   assert.ok(descendantText(list).includes("RAM 변조 참고 시안 · 릴리스 통과 증거 아님"));
+  const wideStripComparison = findDescendants(
+    list,
+    (node) => node.className === "patch-note-comparison"
+      && node.classList?.contains("is-wide-strip"),
+  );
+  assert.equal(wideStripComparison.length, 1);
+  assert.equal(wideStripComparison[0].parentNode.classList.contains("is-wide-strip-card"), true);
 
   __testHooks.renderPatchNotesForRelease(secondReleaseId);
   assert.equal(dialog.open, false);
@@ -863,41 +895,42 @@ test("worker errors distinguish output, storage, and malformed patch failures", 
   assert.doesNotMatch(__testHooks.friendlyWorkerError("TARGET_HASH_MISMATCH").message, /완성 파일/);
 });
 
-test("workflow position updates real step indicators and ARIA state", () => {
-  __testHooks.setWorkflowPosition("patch");
+test("workflow zones expose one clear action and retain truthful completion states", () => {
+  __testHooks.setWorkflowPhase("patch");
 
-  for (const name of ["release", "source"]) {
-    const indicator = stepElements[stepNames.indexOf(name)];
-    assert.equal(indicator.classList.contains("is-complete"), true);
-    assert.equal(indicator.classList.contains("is-current"), false);
-    assert.equal(indicator.attributes.has("aria-current"), false);
-    assert.equal(indicator.status.textContent, "완료");
+  const releaseZone = workflowZoneElements[workflowZoneNames.indexOf("release")];
+  const sourceZone = workflowZoneElements[workflowZoneNames.indexOf("source")];
+  const patchZone = workflowZoneElements[workflowZoneNames.indexOf("patch")];
+  assert.equal(releaseZone.dataset.state, "complete");
+  assert.equal(releaseZone.classList.contains("is-complete"), true);
+  assert.equal(sourceZone.dataset.state, "prepared");
+  assert.equal(sourceZone.classList.contains("is-prepared"), true);
+  assert.equal(sourceZone.classList.contains("is-complete"), false);
+  assert.equal(patchZone.dataset.state, "active");
+  assert.equal(patchZone.classList.contains("is-active"), true);
+
+  for (const zone of workflowZoneElements) {
+    assert.equal(zone.hidden, false);
+    assert.equal(zone.getAttribute("aria-busy"), "false");
   }
 
-  const patchIndicator = stepElements[stepNames.indexOf("patch")];
-  assert.equal(patchIndicator.classList.contains("is-current"), true);
-  assert.equal(patchIndicator.classList.contains("is-complete"), false);
-  assert.equal(patchIndicator.attributes.get("aria-current"), "step");
-  assert.equal(patchIndicator.status.textContent, "현재 단계");
+  __testHooks.setZoneState("source", "busy", { busy: true });
+  assert.equal(sourceZone.dataset.state, "busy");
+  assert.equal(sourceZone.getAttribute("aria-busy"), "true");
+  assert.equal(sourceZone.classList.contains("is-prepared"), false);
+  assert.equal(sourceZone.classList.contains("is-busy"), true);
 
-  for (const section of workflowElements) {
-    assert.equal(
-      section.classList.contains("is-active"),
-      section.dataset.workflowStep === "patch",
-    );
-    assert.equal(section.hidden, false);
-  }
+  __testHooks.setZoneState("source", "error");
+  assert.equal(sourceZone.dataset.state, "error");
+  assert.equal(sourceZone.classList.contains("is-busy"), false);
+  assert.equal(sourceZone.classList.contains("is-error"), true);
 
-  __testHooks.setWorkflowPosition("complete");
-  for (const indicator of stepElements) {
-    assert.equal(indicator.classList.contains("is-complete"), true);
-    assert.equal(indicator.classList.contains("is-current"), false);
-    assert.equal(indicator.attributes.has("aria-current"), false);
-    assert.equal(indicator.status.textContent, "완료");
-  }
-  for (const section of workflowElements) {
-    assert.equal(section.classList.contains("is-active"), false);
-    assert.equal(section.hidden, false);
+  __testHooks.setWorkflowPhase("complete");
+  for (const zone of workflowZoneElements) {
+    assert.equal(zone.dataset.state, "complete");
+    assert.equal(zone.classList.contains("is-complete"), true);
+    assert.equal(zone.getAttribute("aria-busy"), "false");
+    assert.equal(zone.hidden, false);
   }
 });
 
