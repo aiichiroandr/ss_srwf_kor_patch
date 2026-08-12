@@ -63,13 +63,13 @@ const element = (id) => {
   return elements.get(id);
 };
 
-const workflowNames = ["source", "output", "patch"];
+const workflowNames = ["source", "patch"];
 const workflowElements = workflowNames.map((name) => {
   const node = new FakeElement();
   node.dataset.workflowStep = name;
   return node;
 });
-const stepNames = ["release", "source", "output", "patch"];
+const stepNames = ["release", "source", "patch"];
 const stepElements = stepNames.map((name) => {
   const status = new FakeElement();
   status.textContent = name === "release" ? "현재 단계" : "대기";
@@ -208,7 +208,7 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /aria-describedby="progressDetail"/);
   assert.doesNotMatch(html, /출력 파일의 SHA-256까지 확인했습니다/);
   assert.match(html, /전체 SHA-256은\s*\n?\s*패치 시작 후 새 IMG를 만들면서 한 번의 읽기로 검사/);
-  assert.match(html, /검증하고 패치 시작/);
+  assert.match(html, /저장 확인 · 패치 시작/);
   assert.doesNotMatch(html, /선택 직후 전체 파일의 SHA-256/);
 });
 
@@ -227,26 +227,27 @@ test("every required runtime element exists in the public HTML", async () => {
 test("mobile browsers with the complete native file API are not blocked by user-agent", async () => {
   const originalNavigator = globalThis.navigator;
   const originalWindow = globalThis.window;
-  const originalFileSystemHandle = globalThis.FileSystemHandle;
+  const originalFileSystemDirectoryHandle = globalThis.FileSystemDirectoryHandle;
   const originalWorker = globalThis.Worker;
   const originalFetch = globalThis.fetch;
   const originalConsoleError = console.error;
 
-  class CapableFileSystemHandle {}
-  CapableFileSystemHandle.prototype.isSameEntry = async () => false;
+  class CapableFileSystemDirectoryHandle {}
+  CapableFileSystemDirectoryHandle.prototype.resolve = async () => [];
+  CapableFileSystemDirectoryHandle.prototype.getFileHandle = async () => null;
 
   Object.defineProperty(globalThis, "navigator", {
     configurable: true,
     value: { userAgentData: { mobile: true } },
   });
-  globalThis.FileSystemHandle = CapableFileSystemHandle;
+  globalThis.FileSystemDirectoryHandle = CapableFileSystemDirectoryHandle;
   globalThis.Worker = class CapableWorker {};
   globalThis.window = {
     addEventListener() {},
     isSecureContext: true,
     location: { origin: "null" },
     showOpenFilePicker: async () => [],
-    showSaveFilePicker: async () => null,
+    showDirectoryPicker: async () => null,
   };
   globalThis.fetch = async () => {
     throw new Error("synthetic manifest fetch disabled");
@@ -266,8 +267,8 @@ test("mobile browsers with the complete native file API are not blocked by user-
     globalThis.window = originalWindow;
     globalThis.fetch = originalFetch;
     console.error = originalConsoleError;
-    if (originalFileSystemHandle === undefined) delete globalThis.FileSystemHandle;
-    else globalThis.FileSystemHandle = originalFileSystemHandle;
+    if (originalFileSystemDirectoryHandle === undefined) delete globalThis.FileSystemDirectoryHandle;
+    else globalThis.FileSystemDirectoryHandle = originalFileSystemDirectoryHandle;
     if (originalWorker === undefined) delete globalThis.Worker;
     else globalThis.Worker = originalWorker;
   }
@@ -279,12 +280,10 @@ test("unsupported mobile browsers expose guidance instead of a dead source CTA",
     fileSystemSupported: false,
     sourcePrepared: false,
     hasSourceHandle: false,
-    hasOutputHandle: false,
     hasPreparationToken: false,
     busy: false,
   });
   assert.equal(controls.sourceDisabled, false);
-  assert.equal(controls.outputDisabled, true);
   assert.equal(controls.patchDisabled, true);
 
   __testHooks.showUnsupportedBrowser();
@@ -292,6 +291,70 @@ test("unsupported mobile browsers expose guidance instead of a dead source CTA",
   assert.match(element("errorTitle").textContent, /안전하게 저장/);
   assert.match(element("errorMessage").textContent, /Android Chrome 132|데스크톱 Chrome/);
   assert.equal(element("sourceState").textContent, "환경 확인");
+});
+
+test("prepared source enables STEP 3 without a separate output step", async () => {
+  const controls = __testHooks.deriveFileControlState({
+    releaseReady: true,
+    fileSystemSupported: true,
+    sourcePrepared: true,
+    hasSourceHandle: true,
+    hasPreparationToken: true,
+    busy: false,
+  });
+  assert.equal(controls.sourceDisabled, false);
+  assert.equal(controls.patchDisabled, false);
+  assert.equal("outputDisabled" in controls, false);
+
+  const sourceHandle = { name: "stock.img" };
+  const options = __testHooks.outputDirectoryPickerOptions(sourceHandle);
+  assert.equal(options.startIn, sourceHandle);
+  assert.equal(options.mode, "readwrite");
+  assert.equal(options.id, "srwf-patch-output-directory");
+
+  await assert.doesNotReject(() => __testHooks.requireDirectParentDirectory(
+    { resolve: async () => ["stock.img"] },
+    sourceHandle,
+  ));
+  await assert.rejects(
+    () => __testHooks.requireDirectParentDirectory(
+      { resolve: async () => ["nested", "stock.img"] },
+      sourceHandle,
+    ),
+    (error) => error?.code === "OUTPUT_DIRECTORY_MISMATCH",
+  );
+});
+
+test("same-folder output creation uses a high-entropy fresh filename", async () => {
+  const calls = [];
+  const suffixes = [
+    "111111111111111111111111",
+    "222222222222222222222222",
+  ];
+  const directoryHandle = {
+    async getFileHandle(name, options) {
+      calls.push({ name, options });
+      return {
+        name,
+        async getFile() {
+          return { size: name.includes("111111") ? 4 : 0 };
+        },
+      };
+    },
+  };
+  const handle = await __testHooks.createUnusedFileHandle(
+    directoryHandle,
+    "patched.img",
+    () => suffixes.shift(),
+  );
+  assert.equal(handle.name, "patched-222222222222222222222222.img");
+  assert.deepEqual(calls, [
+    { name: "patched-111111111111111111111111.img", options: { create: true } },
+    { name: "patched-222222222222222222222222.img", options: { create: true } },
+  ]);
+
+  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(appSource, /\.removeEntry\s*\(/);
 });
 
 test("the patcher is a single-screen workspace instead of a scrolling landing page", async () => {
@@ -304,16 +367,16 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.doesNotMatch(html, /class="site-footer(?:\s|\")/);
   assert.match(html, /class="task-stage"/);
   assert.match(html, /data-workflow-step="source"/);
-  assert.match(html, /data-workflow-step="output"/);
   assert.match(html, /data-workflow-step="patch"/);
-  assert.doesNotMatch(html, /data-workflow-step="(?:source|output|patch)"[^>]*hidden/);
+  assert.doesNotMatch(html, /data-workflow-step="output"/);
+  assert.doesNotMatch(html, /id="output(?:Button|ButtonText|State|Selection|Name)"/);
+  assert.doesNotMatch(html, /data-workflow-step="(?:source|patch)"[^>]*hidden/);
   assert.match(css, /html,\s*\nbody\s*\{[^}]*height:\s*100%[^}]*overflow:\s*hidden/s);
   assert.match(css, /\.patch-section\s*\{[^}]*height:\s*100%[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)/s);
   assert.match(css, /\.task-stage \[data-workflow-step\]\s*\{[^}]*height:\s*auto/s);
-  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.task-stage\s*\{[^}]*grid-template-rows:\s*repeat\(3, auto\)[^}]*align-content:\s*start/s);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.task-stage\s*\{[^}]*grid-template-rows:\s*repeat\(2, auto\)[^}]*align-content:\s*start/s);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.file-selection\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(html, /id="sourceButtonText"/);
-  assert.match(html, /id="outputButtonText"/);
 });
 
 test("release and patch references are pinned to their release id", () => {
@@ -524,7 +587,7 @@ test("worker errors distinguish output, storage, and malformed patch failures", 
 });
 
 test("workflow position updates real step indicators and ARIA state", () => {
-  __testHooks.setWorkflowPosition("output");
+  __testHooks.setWorkflowPosition("patch");
 
   for (const name of ["release", "source"]) {
     const indicator = stepElements[stepNames.indexOf(name)];
@@ -534,22 +597,16 @@ test("workflow position updates real step indicators and ARIA state", () => {
     assert.equal(indicator.status.textContent, "완료");
   }
 
-  const outputIndicator = stepElements[stepNames.indexOf("output")];
-  assert.equal(outputIndicator.classList.contains("is-current"), true);
-  assert.equal(outputIndicator.classList.contains("is-complete"), false);
-  assert.equal(outputIndicator.attributes.get("aria-current"), "step");
-  assert.equal(outputIndicator.status.textContent, "현재 단계");
-
   const patchIndicator = stepElements[stepNames.indexOf("patch")];
-  assert.equal(patchIndicator.classList.contains("is-current"), false);
+  assert.equal(patchIndicator.classList.contains("is-current"), true);
   assert.equal(patchIndicator.classList.contains("is-complete"), false);
-  assert.equal(patchIndicator.attributes.has("aria-current"), false);
-  assert.equal(patchIndicator.status.textContent, "대기");
+  assert.equal(patchIndicator.attributes.get("aria-current"), "step");
+  assert.equal(patchIndicator.status.textContent, "현재 단계");
 
   for (const section of workflowElements) {
     assert.equal(
       section.classList.contains("is-active"),
-      section.dataset.workflowStep === "output",
+      section.dataset.workflowStep === "patch",
     );
     assert.equal(section.hidden, false);
   }

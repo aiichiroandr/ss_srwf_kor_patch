@@ -52,11 +52,6 @@ const elements = {
   sourceName: byId("sourceName"),
   sourceMeta: byId("sourceMeta"),
   sourceCheck: byId("sourceCheck"),
-  outputButton: byId("outputButton"),
-  outputButtonText: byId("outputButtonText"),
-  outputState: byId("outputState"),
-  outputSelection: byId("outputSelection"),
-  outputName: byId("outputName"),
   patchButton: byId("patchButton"),
   cancelButton: byId("cancelButton"),
   applyHint: byId("applyHint"),
@@ -99,6 +94,7 @@ const state = {
   sourcePrepared: false,
   preparationToken: null,
   outputHandle: null,
+  outputDirectoryHandle: null,
   patchCompleted: false,
   worker: null,
   busy: false,
@@ -109,7 +105,6 @@ const state = {
 elements.gameSelect.addEventListener("change", handleGameChange);
 elements.releaseSelect.addEventListener("change", handleReleaseChange);
 elements.sourceButton.addEventListener("click", chooseSource);
-elements.outputButton.addEventListener("click", chooseOutput);
 elements.patchButton.addEventListener("click", applyPatch);
 elements.cancelButton.addEventListener("click", cancelCurrentOperation);
 elements.cueButton.addEventListener("click", saveCueFile);
@@ -132,9 +127,11 @@ function detectFileSystemSupport() {
   return Boolean(
     window.isSecureContext
       && typeof window.showOpenFilePicker === "function"
-      && typeof window.showSaveFilePicker === "function"
-      && typeof FileSystemHandle !== "undefined"
-      && typeof FileSystemHandle.prototype.isSameEntry === "function"
+      && typeof window.showDirectoryPicker === "function"
+      && typeof FileSystemDirectoryHandle !== "undefined"
+      && typeof FileSystemDirectoryHandle.prototype.resolve === "function"
+      && typeof FileSystemDirectoryHandle.prototype.getFileHandle === "function"
+      && typeof globalThis.crypto?.getRandomValues === "function"
       && typeof DecompressionStream === "function"
       && typeof Worker === "function",
   );
@@ -145,13 +142,13 @@ function showBrowserCompatibility() {
   if (state.fileSystemSupported) {
     elements.compatibilityBadge.classList.add("is-supported");
     elements.compatibilityBadge.lastChild.textContent = " 패치 지원";
-    elements.sourceHelp.textContent = "원본은 읽기 전용으로 엽니다. 전체 SHA-256은 새 IMG를 만들면서 한 번의 읽기로 검사합니다.";
+    elements.sourceHelp.textContent = "원본은 읽기 전용으로 엽니다. 전체 SHA-256은 한 번의 읽기로 검사하고, STEP 3에서 확인한 원본 폴더에 새 IMG를 만듭니다.";
     return;
   }
 
   elements.compatibilityBadge.classList.add("is-unsupported");
   elements.compatibilityBadge.lastChild.textContent = " 안전 저장 불가";
-  elements.sourceHelp.textContent = "이 브라우저에서는 약 579 MB의 새 IMG를 안전하게 저장할 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.";
+  elements.sourceHelp.textContent = "이 브라우저에서는 원본 폴더에 약 579 MB의 새 IMG를 안전하게 만들 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.";
 }
 
 async function loadReleaseIndex() {
@@ -439,7 +436,7 @@ async function loadSelectedRelease(row) {
   elements.sourceProfile.textContent = state.stockProfiles.get(release.source.profileId)?.label ?? "검증된 정품 원본";
   elements.targetName.textContent = release.target.filename;
   elements.publishedAt.textContent = formatPublishedAt(release.publishedAt);
-  elements.applyHint.textContent = "원본과 출력 위치 선택을 마치면 전체 검증과 패치를 시작할 수 있습니다.";
+  elements.applyHint.textContent = "정품 원본을 고르면 STEP 3에서 원본 폴더를 확인하고 새 IMG를 만들 수 있습니다.";
 
   setWorkflowPosition("source");
   updateControls();
@@ -768,99 +765,47 @@ async function chooseSource() {
   });
 }
 
-async function chooseOutput() {
-  if (!canChooseOutput()) {
-    return;
-  }
-  clearMessages();
-
-  let outputHandle;
-  try {
-    outputHandle = await window.showSaveFilePicker({
-      id: "srwf-patched-image",
-      suggestedName: state.release.target.filename,
-      excludeAcceptAllOption: false,
-      types: [
-        {
-          description: "패치된 Saturn 디스크 이미지",
-          accept: { "application/octet-stream": [".img"] },
-        },
-      ],
-    });
-  } catch (error) {
-    if (!isPickerCancellation(error)) {
-      showError("저장 위치를 열 수 없습니다", "브라우저의 파일 쓰기 권한을 확인한 뒤 다시 선택해 주세요.");
-    }
-    return;
-  }
-
-  if (!outputHandle) {
-    return;
-  }
-  if (!IMG_FILENAME_PATTERN.test(outputHandle.name)) {
-    state.outputHandle = null;
-    elements.outputSelection.hidden = true;
-    resetOutputButtonLabel();
-    elements.outputState.textContent = "이름 확인";
-    elements.outputState.className = "step-state is-error";
-    showError(
-      "출력 파일 이름을 확인해 주세요",
-      "영문자·숫자·점·밑줄·하이픈만 사용한 .img 이름으로 저장해 주세요.",
-    );
-    setWorkflowPosition("output");
-    updateControls();
-    return;
-  }
-  if (await isSameFileEntry(state.sourceHandle, outputHandle)) {
-    state.outputHandle = null;
-    elements.outputSelection.hidden = true;
-    resetOutputButtonLabel();
-    elements.outputState.textContent = "원본 차단";
-    elements.outputState.className = "step-state is-error";
-    showError(
-      "원본 파일에는 저장할 수 없습니다",
-      "원본 보호를 위해 같은 파일을 출력으로 사용할 수 없습니다. 새로운 이름이나 다른 위치를 선택해 주세요.",
-    );
-    setWorkflowPosition("output");
-    updateControls();
-    return;
-  }
-
-  state.outputHandle = outputHandle;
-  state.patchCompleted = false;
-  showSelectedOutputName(outputHandle.name);
-  elements.outputSelection.hidden = false;
-  elements.outputName.textContent = outputHandle.name;
-  elements.outputState.textContent = "선택됨";
-  elements.outputState.className = "step-state is-complete";
-  workflowSections.get("output")?.classList.add("is-complete");
-  setWorkflowPosition("patch");
-  updateControls();
-  announce(`출력 파일 ${outputHandle.name}을 선택했습니다.`);
-}
-
 async function applyPatch() {
   if (!canApplyPatch()) {
     return;
   }
   clearMessages();
 
-  if (await isSameFileEntry(state.sourceHandle, state.outputHandle)) {
-    state.outputHandle = null;
-    elements.outputSelection.hidden = true;
-    resetOutputButtonLabel();
-    elements.outputState.textContent = "원본 차단";
-    elements.outputState.className = "step-state is-error";
+  let outputDirectoryHandle;
+  try {
+    outputDirectoryHandle = await window.showDirectoryPicker(outputDirectoryPickerOptions(state.sourceHandle));
+  } catch (error) {
+    if (!isPickerCancellation(error)) {
+      showError("원본 폴더를 확인할 수 없습니다", "브라우저의 폴더 쓰기 권한을 확인한 뒤 다시 시도해 주세요.");
+    }
+    return;
+  }
+
+  if (!outputDirectoryHandle) {
+    return;
+  }
+
+  let outputHandle;
+  try {
+    await requireDirectParentDirectory(outputDirectoryHandle, state.sourceHandle);
+    outputHandle = await createUnusedFileHandle(outputDirectoryHandle, state.release.target.filename);
+  } catch (error) {
+    const parentMismatch = error?.code === "OUTPUT_DIRECTORY_MISMATCH";
     showError(
-      "원본 파일에는 저장할 수 없습니다",
-      "패치를 시작하기 전에 원본과 다른 출력 파일을 다시 선택해 주세요.",
+      parentMismatch ? "정품 원본이 있는 폴더를 선택해 주세요" : "새 패치 IMG를 만들 수 없습니다",
+      parentMismatch
+        ? "STEP 2에서 고른 원본 IMG가 바로 들어 있는 폴더를 선택해야 합니다."
+        : "같은 이름의 기존 파일을 덮어쓰지 못하도록 차단했습니다. 폴더 권한과 여유 공간을 확인해 주세요.",
     );
-    setWorkflowPosition("output");
+    setWorkflowPosition("patch");
     updateControls();
     return;
   }
 
+  state.outputDirectoryHandle = outputDirectoryHandle;
+  state.outputHandle = outputHandle;
   state.patchCompleted = false;
+  announce(`${outputHandle.name} 저장을 확인했습니다. 원본 검증과 패치를 시작합니다.`);
   elements.applyHint.textContent = "원본을 검증하며 새 IMG를 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요.";
   beginWorkerOperation("APPLY_PATCH", {
     preparationToken: state.preparationToken,
@@ -869,48 +814,72 @@ async function applyPatch() {
   });
 }
 
+function outputDirectoryPickerOptions(sourceHandle) {
+  return Object.freeze({
+    id: "srwf-patch-output-directory",
+    startIn: sourceHandle,
+    mode: "readwrite",
+  });
+}
+
+async function requireDirectParentDirectory(directoryHandle, sourceHandle) {
+  const relativePath = await directoryHandle.resolve(sourceHandle);
+  if (
+    !Array.isArray(relativePath)
+    || relativePath.length !== 1
+    || relativePath[0] !== sourceHandle.name
+  ) {
+    throw new PatcherError("OUTPUT_DIRECTORY_MISMATCH", "Selected directory is not the source parent");
+  }
+}
+
+async function createUnusedFileHandle(directoryHandle, desiredName, suffixFactory = createOutputSuffix) {
+  requireSafeFilename(desiredName, "output filename");
+  const extensionIndex = desiredName.lastIndexOf(".");
+  const stem = desiredName.slice(0, extensionIndex);
+  const extension = desiredName.slice(extensionIndex);
+  for (let index = 0; index < 8; index += 1) {
+    const suffix = suffixFactory();
+    if (!/^[a-f0-9]{24}$/.test(suffix)) {
+      throw new PatcherError("OUTPUT_NAME_INVALID", "Output suffix is invalid");
+    }
+    const candidateName = `${stem}-${suffix}${extension}`;
+    const handle = await directoryHandle.getFileHandle(candidateName, { create: true });
+    const initialFile = await handle.getFile();
+    if (initialFile.size === 0) {
+      return handle;
+    }
+  }
+  throw new PatcherError("OUTPUT_NAME_EXHAUSTED", "No fresh output filename is available");
+}
+
+function createOutputSuffix() {
+  const bytes = new Uint8Array(12);
+  globalThis.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
 async function saveCueFile() {
-  if (!state.release?.target.cueFilename || !state.patchCompleted || !state.outputHandle) {
+  if (
+    !state.release?.target.cueFilename
+    || !state.patchCompleted
+    || !state.outputHandle
+    || !state.outputDirectoryHandle
+  ) {
     return;
   }
 
   elements.cueButton.disabled = true;
-  elements.cueStatus.textContent = "CUE 저장 위치를 선택해 주세요.";
+  elements.cueStatus.textContent = "패치 IMG와 같은 폴더에 CUE를 만들고 있습니다.";
   let cueHandle;
   try {
-    cueHandle = await window.showSaveFilePicker({
-      id: "srwf-cue-file",
-      suggestedName: state.release.target.cueFilename,
-      excludeAcceptAllOption: true,
-      types: [
-        {
-          description: "CUE 시트",
-          accept: { "text/plain": [".cue"] },
-        },
-      ],
-    });
+    cueHandle = await createUnusedFileHandle(
+      state.outputDirectoryHandle,
+      state.release.target.cueFilename,
+    );
   } catch (error) {
     elements.cueButton.disabled = false;
-    if (isPickerCancellation(error)) {
-      elements.cueStatus.textContent = "원할 때 CUE 파일을 별도로 저장할 수 있습니다.";
-      return;
-    }
-    showCueFailure("CUE 저장 위치를 열 수 없습니다. IMG 패치 결과에는 영향이 없습니다.");
-    return;
-  }
-
-  if (!CUE_FILENAME_PATTERN.test(cueHandle.name)) {
-    elements.cueButton.disabled = false;
-    showCueFailure("영문자·숫자·점·밑줄·하이픈만 사용한 .cue 이름으로 저장해 주세요.");
-    return;
-  }
-
-  if (
-    await isSameFileEntry(state.sourceHandle, cueHandle)
-    || await isSameFileEntry(state.outputHandle, cueHandle)
-  ) {
-    elements.cueButton.disabled = false;
-    showCueFailure("IMG와 다른 이름의 CUE 파일을 선택해 주세요. 완성된 IMG는 그대로 유지됩니다.");
+    showCueFailure("패치 IMG 폴더에 CUE 파일을 만들 수 없습니다. IMG 패치 결과에는 영향이 없습니다.");
     return;
   }
 
@@ -1026,6 +995,7 @@ function handleWorkerMessage(event) {
       elements.sourceState.className = "step-state";
       setWorkflowPosition("source");
     } else {
+      void discardUncommittedOutput();
       setWorkflowPosition("patch");
     }
     updateControls();
@@ -1056,11 +1026,10 @@ function handleOperationComplete(message) {
     elements.sourceState.className = "step-state is-complete";
     workflowSections.get("source")?.classList.remove("is-active");
     workflowSections.get("source")?.classList.add("is-complete");
-    elements.outputState.textContent = "선택 필요";
-    setWorkflowPosition("output");
-    elements.applyHint.textContent = "원본 크기와 패치 데이터를 확인했습니다. 새 IMG 저장 위치를 선택해 주세요.";
+    setWorkflowPosition("patch");
+    elements.applyHint.textContent = "패치 시작을 누르면 원본 IMG가 있는 폴더의 확인창이 열립니다.";
     updateControls();
-    announce("원본 크기가 일치합니다. 전체 SHA-256은 패치 시작 시 확인합니다. 출력 위치를 선택할 수 있습니다.");
+    announce("원본 크기가 일치합니다. 패치 시작을 누르면 원본 IMG 폴더 확인창이 열립니다.");
     return;
   }
 
@@ -1070,9 +1039,9 @@ function handleOperationComplete(message) {
     elements.cueAction.hidden = !state.release.target.cueFilename;
     elements.cueButton.disabled = false;
     elements.cueButton.textContent = "CUE 파일 저장";
-    elements.cueStatus.textContent = "에뮬레이터에서 사용할 작은 CUE 파일을 별도로 저장할 수 있습니다.";
+    elements.cueStatus.textContent = "에뮬레이터용 CUE도 패치 IMG와 같은 폴더에 만들 수 있습니다.";
     elements.successPanel.hidden = false;
-    elements.applyHint.textContent = "패치를 완료했습니다. 필요하면 다른 출력 위치를 선택해 다시 만들 수 있습니다.";
+    elements.applyHint.textContent = "패치를 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
     workflowSections.get("patch")?.classList.add("is-complete");
     setWorkflowPosition("complete");
     updateControls();
@@ -1097,14 +1066,13 @@ function handleOperationFailure(error, operation = state.operation) {
     "PREPARED_SOURCE_MISSING",
     "WORKER_STOPPED",
   ]).has(error?.code);
+  if (operation === "APPLY_PATCH") {
+    void discardUncommittedOutput();
+  }
   if (operation === "PREPARE_SOURCE" || sourceMismatch || preparationLost) {
     state.sourcePrepared = false;
     state.preparationToken = null;
     state.outputHandle = null;
-    elements.outputSelection.hidden = true;
-    resetOutputButtonLabel();
-    elements.outputState.textContent = "잠김";
-    elements.outputState.className = "step-state";
     elements.sourceSelection.classList.remove("is-verifying");
     elements.sourceCheck.textContent = "×";
     elements.sourceState.textContent = sourceMismatch ? "불일치" : "준비 실패";
@@ -1201,6 +1169,14 @@ function finishBusyState() {
   elements.cancelButton.textContent = "중단";
 }
 
+async function discardUncommittedOutput() {
+  if (state.patchCompleted) {
+    return;
+  }
+  state.outputDirectoryHandle = null;
+  state.outputHandle = null;
+}
+
 function resetFileWorkflow() {
   if (state.busy && state.worker && state.jobId) {
     state.worker.postMessage({ type: "CANCEL", jobId: state.jobId });
@@ -1212,12 +1188,11 @@ function resetFileWorkflow() {
   state.sourcePrepared = false;
   state.preparationToken = null;
   state.outputHandle = null;
+  state.outputDirectoryHandle = null;
   state.patchCompleted = false;
   elements.sourceSelection.hidden = true;
   elements.sourceSelection.classList.remove("is-verifying");
-  elements.outputSelection.hidden = true;
   resetSourceButtonLabel();
-  resetOutputButtonLabel();
   elements.progressPanel.hidden = true;
   elements.errorPanel.hidden = true;
   elements.successPanel.hidden = true;
@@ -1226,8 +1201,6 @@ function resetFileWorkflow() {
   elements.cueButton.textContent = "CUE 파일 저장";
   elements.sourceState.textContent = "대기";
   elements.sourceState.className = "step-state";
-  elements.outputState.textContent = "잠김";
-  elements.outputState.className = "step-state";
   for (const section of workflowSections.values()) {
     section.classList.remove("is-active", "is-complete");
   }
@@ -1242,16 +1215,12 @@ function resetPreparedSource() {
   state.sourcePrepared = false;
   state.preparationToken = null;
   state.outputHandle = null;
+  state.outputDirectoryHandle = null;
   state.patchCompleted = false;
-  elements.outputSelection.hidden = true;
-  resetOutputButtonLabel();
-  elements.outputState.textContent = "잠김";
-  elements.outputState.className = "step-state";
   elements.errorPanel.hidden = true;
   elements.successPanel.hidden = true;
   elements.cueAction.hidden = true;
   workflowSections.get("source")?.classList.remove("is-complete");
-  workflowSections.get("output")?.classList.remove("is-active", "is-complete");
   workflowSections.get("patch")?.classList.remove("is-active", "is-complete");
 }
 
@@ -1260,19 +1229,9 @@ function showSelectedSourceName(name) {
   elements.sourceButton.title = `선택됨: ${name}. 다른 정품 원본 IMG를 선택하려면 누르세요.`;
 }
 
-function showSelectedOutputName(name) {
-  elements.outputButtonText.textContent = `저장 위치 · ${name}`;
-  elements.outputButton.title = `선택됨: ${name}. 다른 새 IMG 저장 위치를 선택하려면 누르세요.`;
-}
-
 function resetSourceButtonLabel() {
   elements.sourceButtonText.textContent = "정품 원본 선택";
   elements.sourceButton.removeAttribute("title");
-}
-
-function resetOutputButtonLabel() {
-  elements.outputButtonText.textContent = "새 IMG 저장 위치 선택";
-  elements.outputButton.removeAttribute("title");
 }
 
 function updateControls() {
@@ -1282,7 +1241,6 @@ function updateControls() {
     fileSystemSupported: state.fileSystemSupported,
     sourcePrepared: state.sourcePrepared,
     hasSourceHandle: Boolean(state.sourceHandle),
-    hasOutputHandle: Boolean(state.outputHandle),
     hasPreparationToken: Boolean(state.preparationToken),
     busy: state.busy,
   });
@@ -1292,7 +1250,6 @@ function updateControls() {
     || state.availability === "loading"
     || state.availability === "preparing";
   elements.sourceButton.disabled = fileControls.sourceDisabled;
-  elements.outputButton.disabled = fileControls.outputDisabled;
   elements.patchButton.disabled = fileControls.patchDisabled;
 
   if (releaseReady && !state.fileSystemSupported) {
@@ -1305,22 +1262,15 @@ function deriveFileControlState({
   fileSystemSupported,
   sourcePrepared,
   hasSourceHandle,
-  hasOutputHandle,
   hasPreparationToken,
   busy,
 }) {
   return Object.freeze({
     sourceDisabled: !releaseReady || busy,
-    outputDisabled: !releaseReady
-      || !fileSystemSupported
-      || !sourcePrepared
-      || !hasSourceHandle
-      || busy,
     patchDisabled: !releaseReady
       || !fileSystemSupported
       || !sourcePrepared
       || !hasSourceHandle
-      || !hasOutputHandle
       || !hasPreparationToken
       || busy,
   });
@@ -1330,16 +1280,16 @@ function canChooseSource() {
   return state.availability === "ready" && state.release && !state.busy;
 }
 
-function canChooseOutput() {
-  return canChooseSource() && state.fileSystemSupported && state.sourcePrepared && state.sourceHandle;
-}
-
 function canApplyPatch() {
-  return canChooseOutput() && state.outputHandle && state.preparationToken;
+  return canChooseSource()
+    && state.fileSystemSupported
+    && state.sourcePrepared
+    && state.sourceHandle
+    && state.preparationToken;
 }
 
 function showUnsupportedBrowser() {
-  const message = "이 브라우저에는 약 579 MB의 새 IMG를 사용자가 고른 위치에 안전하게 저장할 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.";
+  const message = "이 브라우저에는 원본 폴더에 약 579 MB의 새 IMG를 안전하게 만들 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.";
   elements.sourceHelp.textContent = message;
   elements.sourceState.textContent = "환경 확인";
   elements.sourceState.className = "step-state is-error";
@@ -1351,7 +1301,7 @@ function showUnsupportedBrowser() {
 }
 
 function setWorkflowPosition(current) {
-  const order = ["release", "source", "output", "patch"];
+  const order = ["release", "source", "patch"];
   const currentIndex = current === "complete" ? order.length : order.indexOf(current);
   for (const [name, indicator] of stepIndicators) {
     const index = order.indexOf(name);
@@ -1456,21 +1406,6 @@ function friendlyWorkerError(code) {
       ? ["패치 데이터 형식이 올바르지 않습니다", "공개 패치의 구조를 안전하게 확인하지 못해 작업을 차단했습니다."]
       : fallback);
   return { title, message };
-}
-
-async function isSameFileEntry(sourceHandle, outputHandle) {
-  if (!sourceHandle || !outputHandle || typeof sourceHandle.isSameEntry !== "function") {
-    throw new PatcherError("FILE_IDENTITY_UNAVAILABLE", "File identity comparison is unavailable");
-  }
-  try {
-    return await sourceHandle.isSameEntry(outputHandle);
-  } catch {
-    showError(
-      "원본과 출력 파일을 비교할 수 없습니다",
-      "안전을 위해 작업을 차단했습니다. 파일을 다시 선택해 주세요.",
-    );
-    return true;
-  }
 }
 
 function resolveLocalReference(reference, baseUrl) {
@@ -1663,6 +1598,7 @@ class PatcherError extends Error {
 export const __testHooks = Object.freeze({
   activateGame,
   beginWorkerOperation,
+  createUnusedFileHandle,
   detectFileSystemSupport,
   deriveFileControlState,
   expectedManifestReference,
@@ -1672,6 +1608,8 @@ export const __testHooks = Object.freeze({
   handleIndexFailure,
   isRfc3339DateTime,
   normalizeReleaseManifest,
+  outputDirectoryPickerOptions,
+  requireDirectParentDirectory,
   showUnsupportedBrowser,
   setWorkflowPosition,
   validateReleaseIndex,

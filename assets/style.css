@@ -933,11 +933,6 @@ a:focus-visible {
   font-weight: 850;
 }
 
-.file-type.is-output {
-  color: var(--ink);
-  background: var(--mint);
-}
-
 .file-selection > div {
   min-width: 0;
   display: flex;
@@ -1549,15 +1544,15 @@ a:focus-visible {
 
   .step-rail ol {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
   }
 
   .step-rail ol::before {
     top: 16px;
-    right: 12.5%;
+    right: 16.666%;
     bottom: auto;
-    left: 12.5%;
+    left: 16.666%;
     width: auto;
     height: 1px;
   }
@@ -1869,7 +1864,7 @@ main {
   position: relative;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto auto;
   gap: 10px;
   overflow: hidden;
@@ -2108,15 +2103,15 @@ main {
 
   .step-rail ol {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
 
   .step-rail ol::before {
     top: 14px;
-    right: 12.5%;
+    right: 16.666%;
     bottom: auto;
-    left: 12.5%;
+    left: 16.666%;
     width: auto;
     height: 1px;
   }
@@ -2188,7 +2183,7 @@ main {
     flex: 1 1 auto;
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(3, auto);
+    grid-template-rows: repeat(2, auto);
     align-content: start;
     gap: 5px;
     overflow: hidden;
