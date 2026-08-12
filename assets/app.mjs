@@ -1274,7 +1274,9 @@ function createPatchNoteCard(note, index) {
   evidence.className = `patch-note-evidence is-${note.evidenceType}`;
   evidence.textContent = note.evidenceType === "included"
     ? "공개 릴리스 반영"
-    : "RAM 변조 참고 시안 · 릴리스 통과 증거 아님";
+    : note.evidenceType === "included-reference"
+      ? "공개 릴리스 반영 · 기능 화면 참고"
+      : "RAM 변조 참고 시안 · 릴리스 통과 증거 아님";
   headingRow.append(heading, evidence);
 
   const comparison = document.createElement("div");

@@ -21,6 +21,24 @@ export const PATCH_NOTES = Object.freeze({
     "v1.0의 범위를 유지하면서 출격 수 간격, 턴 종료 확인창, 예고 본문 크기와 타이틀 메뉴 간격을 보완했습니다. RAM 시안은 후속 UI 작업 참고용입니다.",
     [
       item({
+        id: "sortie-count-spacing",
+        title: "출격 유닛 수 표기 간격",
+        description: "‘출격유닛 선택’과 동적 기체 수 사이에 공백을 넣어 ‘선택 13기’처럼 또렷하게 구분했습니다.",
+        evidenceType: "included-reference",
+        asIs: image(
+          "assets/patch-notes/v1-1-sortie-count-before.png",
+          "AS-IS 기능 화면: 출격유닛 선택 문구와 13기 표기가 붙어 있는 화면",
+          330,
+          240,
+        ),
+        toBe: image(
+          "assets/patch-notes/v1-1-sortie-count-after.png",
+          "TO-BE 기능 화면: 출격유닛 선택 문구와 13기 표기 사이에 간격을 둔 화면",
+          330,
+          240,
+        ),
+      }),
+      item({
         id: "preview-body-size",
         title: "F완결편 예고 본문 확대",
         description: "예고 카드 다섯 장의 본문을 13pt에서 15pt로 키우고 안전 여백 안에 다시 배치했습니다.",
@@ -36,6 +54,42 @@ export const PATCH_NOTES = Object.freeze({
           "TO-BE: 15포인트로 확대하고 줄을 다시 배치한 F완결편 예고 한국어 본문",
           320,
           224,
+        ),
+      }),
+      item({
+        id: "protagonist-names-inherited",
+        title: "주인공 8명 이름 한글 표기",
+        description: "v1.0부터 주인공 선택 화면의 기본 이름·애칭과 관련 표시 경로를 8명 모두 한국어 데이터로 연결했습니다.",
+        evidenceType: "included-reference",
+        asIs: image(
+          "assets/patch-notes/v1-0-protagonist-names-before.png",
+          "AS-IS 기능 화면: 일본어 기본 이름과 애칭이 표시된 주인공 설정 화면",
+          330,
+          240,
+        ),
+        toBe: image(
+          "assets/patch-notes/v1-0-protagonist-names-after.png",
+          "TO-BE 기능 화면: 한국어 기본 이름과 애칭이 표시된 주인공 설정 화면",
+          330,
+          240,
+        ),
+      }),
+      item({
+        id: "sortie-unit-pilot-names-inherited",
+        title: "출격 목록 기체·파일럿명",
+        description: "v1.0부터 출격 목록의 대표 기체명과 파일럿명을 한국어로 표시하며, 남은 고유명사·일본어 표기는 계속 검수합니다.",
+        evidenceType: "included-reference",
+        asIs: image(
+          "assets/patch-notes/v1-0-sortie-names-before.png",
+          "AS-IS 기능 화면: 기체명과 파일럿명이 일본어로 표시된 출격 목록",
+          330,
+          240,
+        ),
+        toBe: image(
+          "assets/patch-notes/v1-0-sortie-names-after.png",
+          "TO-BE 기능 화면: 대표 기체명과 파일럿명이 한국어로 표시된 출격 목록",
+          330,
+          240,
         ),
       }),
       item({
@@ -116,6 +170,42 @@ export const PATCH_NOTES = Object.freeze({
     "v1.0",
     "시나리오·전투 문구와 주요 시스템 UI를 한글화하고 F완결편 예고 카드 일곱 장을 한국어로 다시 구성한 첫 공개판입니다.",
     [
+      item({
+        id: "protagonist-names",
+        title: "주인공 8명 이름 한글 표기",
+        description: "주인공 선택 화면의 기본 이름·애칭과 관련 표시 경로를 8명 모두 한국어 데이터로 연결했습니다.",
+        evidenceType: "included-reference",
+        asIs: image(
+          "assets/patch-notes/v1-0-protagonist-names-before.png",
+          "AS-IS 기능 화면: 일본어 기본 이름과 애칭이 표시된 주인공 설정 화면",
+          330,
+          240,
+        ),
+        toBe: image(
+          "assets/patch-notes/v1-0-protagonist-names-after.png",
+          "TO-BE 기능 화면: 한국어 기본 이름과 애칭이 표시된 주인공 설정 화면",
+          330,
+          240,
+        ),
+      }),
+      item({
+        id: "sortie-unit-pilot-names",
+        title: "출격 목록 기체·파일럿명",
+        description: "출격 목록의 대표 기체명과 파일럿명을 한국어로 표시하며, 남은 고유명사·일본어 표기는 계속 검수합니다.",
+        evidenceType: "included-reference",
+        asIs: image(
+          "assets/patch-notes/v1-0-sortie-names-before.png",
+          "AS-IS 기능 화면: 기체명과 파일럿명이 일본어로 표시된 출격 목록",
+          330,
+          240,
+        ),
+        toBe: image(
+          "assets/patch-notes/v1-0-sortie-names-after.png",
+          "TO-BE 기능 화면: 대표 기체명과 파일럿명이 한국어로 표시된 출격 목록",
+          330,
+          240,
+        ),
+      }),
       item({
         id: "preview-heading-translation",
         title: "F완결편 예고 제목 한글화",

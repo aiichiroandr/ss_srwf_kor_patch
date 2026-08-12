@@ -1886,7 +1886,8 @@ a:focus-visible {
   line-height: 1.35;
 }
 
-.patch-note-evidence.is-included {
+.patch-note-evidence.is-included,
+.patch-note-evidence.is-included-reference {
   color: var(--green);
   background: rgba(8, 125, 104, 0.1);
 }

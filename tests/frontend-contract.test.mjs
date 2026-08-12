@@ -518,7 +518,7 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
       assert.ok(item.title.trim().length > 0);
       assert.ok(item.description.trim().length > 0);
       assert.doesNotMatch(item.description, /[\r\n]/, `${releaseId}/${item.id} description must be one line`);
-      assert.ok(["included", "ram-reference"].includes(item.evidenceType));
+      assert.ok(["included", "included-reference", "ram-reference"].includes(item.evidenceType));
 
       for (const sideName of ["asIs", "toBe"]) {
         const side = item[sideName];
@@ -545,10 +545,21 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
     v11RamReferences.map((item) => item.id).sort(),
     ["disconnect-confirmation", "parts-window-width", "split-confirmation", "turn-end-boundary"],
   );
+  for (const requiredId of [
+    "sortie-count-spacing",
+    "protagonist-names-inherited",
+    "sortie-unit-pilot-names-inherited",
+  ]) {
+    assert.ok(v11Items.some((item) => item.id === requiredId), `v1.1 is missing ${requiredId}`);
+  }
   assert.ok(v11Items.some((item) => item.evidenceType === "included"));
+  assert.ok(v11Items.some((item) => item.evidenceType === "included-reference"));
+  const v10Items = getPatchNotesForRelease("srwf-f-20260810-v1-0").items;
+  for (const requiredId of ["protagonist-names", "sortie-unit-pilot-names"]) {
+    assert.ok(v10Items.some((item) => item.id === requiredId), `v1.0 is missing ${requiredId}`);
+  }
   assert.equal(
-    getPatchNotesForRelease("srwf-f-20260810-v1-0").items
-      .every((item) => item.evidenceType === "included"),
+    v10Items.every((item) => ["included", "included-reference"].includes(item.evidenceType)),
     true,
   );
 
@@ -640,6 +651,7 @@ test("patch-note UI explicitly distinguishes included changes from RAM reference
 
   assert.match(appSource, /evidenceType/);
   assert.match(appSource, /공개 릴리스 반영/);
+  assert.match(appSource, /공개 릴리스 반영 · 기능 화면 참고/);
   assert.match(appSource, /RAM 변조 참고 시안/);
   assert.match(appSource, /릴리스 통과 증거 아님/);
 });
