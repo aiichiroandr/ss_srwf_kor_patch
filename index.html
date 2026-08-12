@@ -106,6 +106,22 @@
                   </div>
                 </div>
               </div>
+              <button
+                class="patch-note-toggle"
+                type="button"
+                id="patchNotesToggle"
+                aria-haspopup="dialog"
+                aria-controls="patchNotesDialog"
+                aria-expanded="false"
+                disabled
+              >
+                <span>
+                  <small>PATCH NOTES</small>
+                  <strong><span id="patchNotesVersion">—</span> 변경 내역</strong>
+                </span>
+                <span id="patchNotesCount">준비 중</span>
+                <span aria-hidden="true">↗</span>
+              </button>
               <dl class="release-facts">
                 <div>
                   <dt>원본 프로필</dt>
@@ -224,6 +240,34 @@
         </div>
       </section>
     </main>
+
+    <dialog
+      class="patch-note-dialog"
+      id="patchNotesDialog"
+      aria-labelledby="patchNotesHeading"
+      aria-describedby="patchNotesSummary"
+      aria-modal="true"
+    >
+      <div class="patch-note-dialog-shell">
+        <header class="patch-note-dialog-header">
+          <div>
+            <span>PATCH NOTES · AS-IS → TO-BE</span>
+            <h2 id="patchNotesHeading">버전별 패치노트</h2>
+          </div>
+          <button class="patch-note-close" type="button" id="patchNotesClose">
+            닫기 <span aria-hidden="true">×</span>
+          </button>
+        </header>
+        <p class="patch-note-summary" id="patchNotesSummary">
+          선택한 공개 버전의 변경 내역을 불러오는 중입니다.
+        </p>
+        <div class="patch-note-list" id="patchNotesList" role="list"></div>
+        <footer class="patch-note-dialog-footer">
+          <span>좌우로 넘겨 비교하세요.</span>
+          <span>RAM 시안은 후속 배치 참고이며 현재 공개 릴리스의 통과 증거가 아닙니다.</span>
+        </footer>
+      </div>
+    </dialog>
 
     <div class="sr-only" id="liveRegion" role="status" aria-live="polite" aria-atomic="true"></div>
   </body>

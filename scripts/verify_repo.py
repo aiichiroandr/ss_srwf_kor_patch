@@ -72,6 +72,7 @@ REQUIRED_FILES = {
     "assets/app.mjs",
     "assets/patch-core.mjs",
     "assets/patch-worker.mjs",
+    "assets/release-notes.mjs",
     "assets/sha256.mjs",
     "assets/style.css",
     "docs/PATCH_FORMAT.md",
@@ -109,7 +110,22 @@ PUBLIC_ASSET_TOTAL_MAX = 24 * 1024 * 1024
 PNG_DIMENSION_MAX = 32_768
 # Binary UI assets are publication decisions, not extension-based exceptions.
 # Add only a reviewed canonical repository path and its exact lowercase SHA-256.
-PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {}
+PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
+    "assets/patch-notes/v1-0-preview-body-after.png": "ff5bbb34f33376d1444f93248e7aedee378259f75a13c9b2faa7f9ebff41dae9",
+    "assets/patch-notes/v1-0-preview-body-before.png": "bc531af867d8ead30a25101b344828295621f31c20d8d6768d8405c5d069195d",
+    "assets/patch-notes/v1-0-preview-heading-after.png": "f1fecef1beb5a573672b6aa9a1980c401ebc5a73aa308c27d6eb84d03294c2ec",
+    "assets/patch-notes/v1-0-preview-heading-before.png": "5ce50d87b82b2f9d53d3ba10b425dab11597f3213f56b80d79e8516e1d7469fd",
+    "assets/patch-notes/v1-1-preview-body-13pt.png": "ff5bbb34f33376d1444f93248e7aedee378259f75a13c9b2faa7f9ebff41dae9",
+    "assets/patch-notes/v1-1-preview-body-15pt.png": "0366cb380c5f1f75831775f48901844a769d8de954da726ca7e80f3e982b2dcc",
+    "assets/patch-notes/v1-1-ram-disconnect-after.png": "c1ed3d24b63532af079a437e056c486c7fd0a3ff1cc22b8c3104f6b3af14f6d9",
+    "assets/patch-notes/v1-1-ram-disconnect-before.png": "a77e308c7401114628cd643f5edd9f116ead6a9ef947125915d49baac32fbd2e",
+    "assets/patch-notes/v1-1-ram-parts-after.png": "fc783e6ab9f790f0ac0a9a02a6f5465fe9a8d21db26fbb0ca2d013769a19d260",
+    "assets/patch-notes/v1-1-ram-parts-before.png": "454515ba6451ce76ff59de4005d0605388b09c9b1708497668bd1285e251cef2",
+    "assets/patch-notes/v1-1-ram-split-after.png": "77f7ab2a704fbb4fce67fcb186a9ac741211f6ccc9d9a96d50782869367a4c81",
+    "assets/patch-notes/v1-1-ram-split-before.png": "6708283242c2ce95b6b24776593698c4a702d9f15a7c6a305421d67d49b55045",
+    "assets/patch-notes/v1-1-ram-turn-end-after.png": "9fdd3dc824328746e42fbf164652569c44da752ce5376b8aa23f3e4f7fd988a8",
+    "assets/patch-notes/v1-1-ram-turn-end-before.png": "60722fb4a8a46377a992e129daa4df1adfffdfd3523a16b6fb038a8abc42c540",
+}
 ACTIVE_WEB_SUFFIXES = {
     ".html", ".htm", ".shtml", ".xhtml", ".xht", ".svg",
     ".xml", ".xsl", ".xslt",

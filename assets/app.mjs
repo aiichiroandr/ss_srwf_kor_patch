@@ -1,4 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
+import { getPatchNotesForRelease, isSafePatchNoteAssetPath } from "./release-notes.mjs";
 
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -41,6 +42,14 @@ const elements = {
   gameSelect: byId("gameSelect"),
   releaseSelect: byId("releaseSelect"),
   releaseState: byId("releaseState"),
+  patchNotesToggle: byId("patchNotesToggle"),
+  patchNotesVersion: byId("patchNotesVersion"),
+  patchNotesCount: byId("patchNotesCount"),
+  patchNotesDialog: byId("patchNotesDialog"),
+  patchNotesHeading: byId("patchNotesHeading"),
+  patchNotesSummary: byId("patchNotesSummary"),
+  patchNotesList: byId("patchNotesList"),
+  patchNotesClose: byId("patchNotesClose"),
   sourceProfile: byId("sourceProfile"),
   targetName: byId("targetName"),
   publishedAt: byId("publishedAt"),
@@ -89,6 +98,8 @@ const state = {
   visibleReleaseRows: [],
   release: null,
   releaseLoadSequence: 0,
+  patchNotesReleaseId: null,
+  renderedPatchNotesReleaseId: null,
   sourceHandle: null,
   sourceFile: null,
   sourcePrepared: false,
@@ -104,6 +115,9 @@ const state = {
 
 elements.gameSelect.addEventListener("change", handleGameChange);
 elements.releaseSelect.addEventListener("change", handleReleaseChange);
+elements.patchNotesToggle.addEventListener("click", openPatchNotes);
+elements.patchNotesClose.addEventListener("click", () => closePatchNotes({ restoreFocus: true }));
+elements.patchNotesDialog.addEventListener("close", handlePatchNotesDialogClosed);
 elements.sourceButton.addEventListener("click", chooseSource);
 elements.patchButton.addEventListener("click", applyPatch);
 elements.cancelButton.addEventListener("click", cancelCurrentOperation);
@@ -394,6 +408,7 @@ async function activateGame(gameId) {
   if (!game) {
     throw new PatcherError("GAME_CATALOG_INVALID", "Selected game is not in the public catalog");
   }
+  invalidateReleaseLoad();
   state.selectedGameId = game.id;
   elements.gameSelect.value = game.id;
   state.visibleReleaseRows = state.releaseRows.filter((row) => row.gameId === game.id);
@@ -408,8 +423,10 @@ async function activateGame(gameId) {
     throw new PatcherError("INDEX_STATE_CONFLICT", "Selected game default release is missing");
   }
   replaceReleaseOptions(state.visibleReleaseRows);
-  await loadSelectedRelease(defaultRow);
-  announce(`${game.label}, 공개 버전 ${state.visibleReleaseRows.length}개를 불러왔습니다.`);
+  const loaded = await loadSelectedRelease(defaultRow);
+  if (loaded && state.selectedGameId === game.id) {
+    announce(`${game.label}, 공개 버전 ${state.visibleReleaseRows.length}개를 불러왔습니다.`);
+  }
 }
 
 async function loadSelectedRelease(row) {
@@ -420,12 +437,20 @@ async function loadSelectedRelease(row) {
   elements.releaseState.textContent = "검증 중";
   elements.releaseState.classList.remove("is-ready");
 
-  const manifestUrl = resolveLocalReference(row.manifest, SITE_ROOT_URL);
-  const manifest = await fetchJsonDocument(manifestUrl, row.manifestSha256);
-  const release = normalizeReleaseManifest(manifest, row, manifestUrl);
+  let release;
+  try {
+    const manifestUrl = resolveLocalReference(row.manifest, SITE_ROOT_URL);
+    const manifest = await fetchJsonDocument(manifestUrl, row.manifestSha256);
+    release = normalizeReleaseManifest(manifest, row, manifestUrl);
+  } catch (error) {
+    if (sequence !== state.releaseLoadSequence) {
+      return false;
+    }
+    throw error;
+  }
 
   if (sequence !== state.releaseLoadSequence) {
-    return;
+    return false;
   }
 
   state.release = release;
@@ -436,10 +461,16 @@ async function loadSelectedRelease(row) {
   elements.sourceProfile.textContent = state.stockProfiles.get(release.source.profileId)?.label ?? "검증된 정품 원본";
   elements.targetName.textContent = release.target.filename;
   elements.publishedAt.textContent = formatPublishedAt(release.publishedAt);
+  renderPatchNotesForRelease(release.id);
   elements.applyHint.textContent = "정품 원본을 고르면 STEP 3에서 원본 폴더를 확인하고 새 IMG를 만들 수 있습니다.";
 
   setWorkflowPosition("source");
   updateControls();
+  return true;
+}
+
+function invalidateReleaseLoad() {
+  state.releaseLoadSequence += 1;
 }
 
 function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = state.stockProfiles) {
@@ -651,6 +682,7 @@ function showPreparingState() {
 
 function handleIndexFailure(error) {
   console.error("Release metadata could not be loaded", error);
+  invalidateReleaseLoad();
   state.availability = "error";
   state.games = new Map();
   state.selectedGameId = null;
@@ -1169,6 +1201,128 @@ function finishBusyState() {
   elements.cancelButton.textContent = "중단";
 }
 
+function renderPatchNotesForRelease(releaseId) {
+  const notes = getPatchNotesForRelease(releaseId);
+  closePatchNotes();
+  elements.patchNotesList.replaceChildren();
+  state.renderedPatchNotesReleaseId = null;
+
+  if (!notes || !notes.items.every(hasSafePatchNoteImages)) {
+    clearPatchNotes();
+    return;
+  }
+
+  state.patchNotesReleaseId = releaseId;
+  elements.patchNotesVersion.textContent = notes.version;
+  elements.patchNotesCount.textContent = `${notes.items.length}건 · 열기`;
+  elements.patchNotesHeading.textContent = `${notes.version} 패치노트`;
+  elements.patchNotesSummary.textContent = notes.summary;
+  elements.patchNotesToggle.disabled = false;
+}
+
+function hasSafePatchNoteImages(note) {
+  return [note?.asIs?.src, note?.toBe?.src].every(isSafePatchNoteAssetPath);
+}
+
+function clearPatchNotes() {
+  closePatchNotes();
+  state.patchNotesReleaseId = null;
+  state.renderedPatchNotesReleaseId = null;
+  elements.patchNotesToggle.disabled = true;
+  elements.patchNotesToggle.setAttribute("aria-expanded", "false");
+  elements.patchNotesVersion.textContent = "—";
+  elements.patchNotesCount.textContent = "준비 중";
+  elements.patchNotesHeading.textContent = "버전별 패치노트";
+  elements.patchNotesSummary.textContent = "선택한 공개 버전의 변경 내역을 불러오는 중입니다.";
+  elements.patchNotesList.replaceChildren();
+}
+
+function openPatchNotes() {
+  const releaseId = state.patchNotesReleaseId;
+  const notes = getPatchNotesForRelease(releaseId);
+  if (!notes || elements.patchNotesToggle.disabled || !notes.items.every(hasSafePatchNoteImages)) {
+    return;
+  }
+
+  if (state.renderedPatchNotesReleaseId !== releaseId) {
+    const fragment = document.createDocumentFragment();
+    notes.items.forEach((note, index) => fragment.append(createPatchNoteCard(note, index)));
+    elements.patchNotesList.replaceChildren(fragment);
+    state.renderedPatchNotesReleaseId = releaseId;
+  }
+
+  elements.patchNotesToggle.setAttribute("aria-expanded", "true");
+  if (typeof elements.patchNotesDialog.showModal === "function") {
+    elements.patchNotesDialog.showModal();
+  } else {
+    elements.patchNotesDialog.setAttribute("open", "");
+  }
+  announce(`${notes.version} 패치노트 ${notes.items.length}건을 열었습니다.`);
+}
+
+function createPatchNoteCard(note, index) {
+  const card = document.createElement("article");
+  card.className = "patch-note-card";
+  card.setAttribute("role", "listitem");
+  card.setAttribute("aria-label", `${index + 1}. ${note.title}`);
+
+  const headingRow = document.createElement("div");
+  headingRow.className = "patch-note-card-heading";
+  const heading = document.createElement("h3");
+  heading.textContent = note.title;
+  const evidence = document.createElement("span");
+  evidence.className = `patch-note-evidence is-${note.evidenceType}`;
+  evidence.textContent = note.evidenceType === "included"
+    ? "공개 릴리스 반영"
+    : "RAM 변조 참고 시안 · 릴리스 통과 증거 아님";
+  headingRow.append(heading, evidence);
+
+  const comparison = document.createElement("div");
+  comparison.className = "patch-note-comparison";
+  comparison.append(
+    createPatchNoteFigure("AS-IS", note.asIs),
+    createPatchNoteFigure("TO-BE", note.toBe),
+  );
+
+  const description = document.createElement("p");
+  description.className = "patch-note-description";
+  description.textContent = note.description;
+  card.append(headingRow, comparison, description);
+  return card;
+}
+
+function createPatchNoteFigure(label, asset) {
+  const figure = document.createElement("figure");
+  figure.className = "patch-note-figure";
+  const caption = document.createElement("figcaption");
+  caption.textContent = label;
+  const image = document.createElement("img");
+  image.src = new URL(asset.src, SITE_ROOT_URL).href;
+  image.alt = asset.alt;
+  image.width = asset.width;
+  image.height = asset.height;
+  image.loading = "lazy";
+  image.decoding = "async";
+  figure.append(caption, image);
+  return figure;
+}
+
+function closePatchNotes({ restoreFocus = false } = {}) {
+  if (elements.patchNotesDialog.open && typeof elements.patchNotesDialog.close === "function") {
+    elements.patchNotesDialog.close();
+  } else {
+    elements.patchNotesDialog.removeAttribute("open");
+  }
+  elements.patchNotesToggle.setAttribute("aria-expanded", "false");
+  if (restoreFocus && !elements.patchNotesToggle.disabled) {
+    elements.patchNotesToggle.focus();
+  }
+}
+
+function handlePatchNotesDialogClosed() {
+  elements.patchNotesToggle.setAttribute("aria-expanded", "false");
+}
+
 async function discardUncommittedOutput() {
   if (state.patchCompleted) {
     return;
@@ -1190,6 +1344,7 @@ function resetFileWorkflow() {
   state.outputHandle = null;
   state.outputDirectoryHandle = null;
   state.patchCompleted = false;
+  clearPatchNotes();
   elements.sourceSelection.hidden = true;
   elements.sourceSelection.classList.remove("is-verifying");
   resetSourceButtonLabel();
@@ -1249,6 +1404,7 @@ function updateControls() {
     || state.visibleReleaseRows.length <= 1
     || state.availability === "loading"
     || state.availability === "preparing";
+  elements.patchNotesToggle.disabled = state.busy || !state.patchNotesReleaseId;
   elements.sourceButton.disabled = fileControls.sourceDisabled;
   elements.patchButton.disabled = fileControls.patchDisabled;
 
@@ -1609,6 +1765,10 @@ export const __testHooks = Object.freeze({
   isRfc3339DateTime,
   normalizeReleaseManifest,
   outputDirectoryPickerOptions,
+  clearPatchNotes,
+  closePatchNotes,
+  openPatchNotes,
+  renderPatchNotesForRelease,
   requireDirectParentDirectory,
   showUnsupportedBrowser,
   setWorkflowPosition,

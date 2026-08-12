@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -26,13 +27,17 @@ class FakeClassList {
 }
 
 class FakeElement {
-  constructor({ status = null } = {}) {
+  constructor({ status = null, tagName = "div" } = {}) {
     this.attributes = new Map();
+    this.children = [];
     this.classList = new FakeClassList();
     this.dataset = {};
     this.disabled = false;
     this.hidden = false;
     this.lastChild = { textContent: "" };
+    this.open = false;
+    this.parentNode = null;
+    this.tagName = tagName.toUpperCase();
     this.textContent = "";
     this.value = 0;
     this.status = status;
@@ -40,8 +45,43 @@ class FakeElement {
 
   addEventListener() {}
 
+  append(...children) {
+    for (const child of children) {
+      if (child && typeof child === "object") child.parentNode = this;
+      this.children.push(child);
+    }
+    this.lastChild = this.children.at(-1) ?? { textContent: "" };
+  }
+
+  appendChild(child) {
+    this.append(child);
+    return child;
+  }
+
+  close() {
+    this.open = false;
+    this.removeAttribute("open");
+  }
+
+  focus() {}
+
+  getAttribute(name) {
+    return this.attributes.get(name) ?? null;
+  }
+
+  hasAttribute(name) {
+    return this.attributes.has(name);
+  }
+
   querySelector(selector) {
-    return selector === "[data-step-status]" ? this.status : null;
+    if (selector === "[data-step-status]") return this.status;
+    const tagName = selector.toUpperCase();
+    return findDescendants(this, (node) => node.tagName === tagName)[0] ?? null;
+  }
+
+  querySelectorAll(selector) {
+    const tagName = selector.toUpperCase();
+    return findDescendants(this, (node) => node.tagName === tagName);
   }
 
   removeAttribute(name) {
@@ -49,12 +89,35 @@ class FakeElement {
   }
 
   replaceChildren(...children) {
-    this.children = children;
+    this.children = [];
+    this.append(...children);
   }
 
   setAttribute(name, value) {
     this.attributes.set(name, String(value));
   }
+
+  showModal() {
+    this.open = true;
+    this.setAttribute("open", "");
+  }
+}
+
+function findDescendants(node, predicate) {
+  const result = [];
+  for (const child of node.children ?? []) {
+    if (!child || typeof child !== "object") continue;
+    if (predicate(child)) result.push(child);
+    result.push(...findDescendants(child, predicate));
+  }
+  return result;
+}
+
+function descendantText(node) {
+  return [
+    typeof node?.textContent === "string" ? node.textContent : "",
+    ...(node?.children ?? []).map(descendantText),
+  ].join(" ");
 }
 
 const elements = new Map();
@@ -87,7 +150,9 @@ Object.defineProperty(globalThis, "navigator", {
   value: {},
 });
 globalThis.document = {
-  createElement: () => new FakeElement(),
+  createElement: (tagName) => new FakeElement({ tagName }),
+  createDocumentFragment: () => new FakeElement({ tagName: "fragment" }),
+  createTextNode: (value) => ({ children: [], textContent: String(value) }),
   getElementById: element,
   querySelectorAll(selector) {
     if (selector === "[data-workflow-step]") return workflowElements;
@@ -377,6 +442,206 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.task-stage\s*\{[^}]*grid-template-rows:\s*repeat\(2, auto\)[^}]*align-content:\s*start/s);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.file-selection\s*\{[^}]*display:\s*none\s*!important/s);
   assert.match(html, /id="sourceButtonText"/);
+});
+
+test("patch notes sit between release selection and source selection without adding a fourth step", async () => {
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const releaseSelectPosition = html.indexOf('id="releaseSelect"');
+  const patchNotesPosition = html.indexOf('id="patchNotesToggle"');
+  const sourceButtonPosition = html.indexOf('id="sourceButton"');
+
+  assert.ok(releaseSelectPosition >= 0, "release selector is missing");
+  assert.ok(patchNotesPosition > releaseSelectPosition, "patch notes must follow the release selector");
+  assert.ok(sourceButtonPosition > patchNotesPosition, "patch notes must precede the source picker");
+  assert.equal([...html.matchAll(/data-step-indicator="[^"]+"/g)].length, 3);
+  for (const step of ["release", "source", "patch"]) {
+    assert.match(html, new RegExp(`data-step-indicator="${step}"`));
+  }
+  assert.doesNotMatch(html, /data-step-indicator="(?:notes|output)"/);
+
+  const toggleTag = html.match(/<button\b[^>]*\bid="patchNotesToggle"[^>]*>/)?.[0] ?? "";
+  assert.match(toggleTag, /\btype="button"/);
+  assert.match(toggleTag, /\baria-controls="patchNotesDialog"/);
+  assert.match(toggleTag, /\baria-expanded="false"/);
+  assert.match(toggleTag, /\bdisabled\b/);
+
+  const dialogTag = html.match(/<dialog\b[^>]*\bid="patchNotesDialog"[^>]*>/)?.[0] ?? "";
+  assert.match(dialogTag, /\baria-labelledby="patchNotesHeading"/);
+  assert.match(dialogTag, /\baria-modal="true"/);
+  assert.match(html, /id="patchNotesVersion"/);
+  assert.match(html, /id="patchNotesCount"/);
+  assert.match(html, /id="patchNotesList"/);
+  const closeButton = html.match(
+    /<button\b[^>]*\bid="patchNotesClose"[^>]*>[\s\S]*?<\/button>/,
+  )?.[0] ?? "";
+  const closeTag = closeButton.match(/^<button\b[^>]*>/)?.[0] ?? "";
+  assert.match(closeTag, /\btype="button"/);
+  assert.match(closeButton, /닫기/);
+});
+
+test("every accepted release has exact, safe, one-line patch-note comparison data", async () => {
+  const [
+    { PATCH_NOTES, getPatchNotesForRelease, isSafePatchNoteAssetPath },
+    releaseIndex,
+    verifierSource,
+  ] = await Promise.all([
+    import("../assets/release-notes.mjs"),
+    readFile(new URL("../manifest/releases.json", import.meta.url), "utf8").then(JSON.parse),
+    readFile(new URL("../scripts/verify_repo.py", import.meta.url), "utf8"),
+  ]);
+  const publicAssetAllowlist = Object.fromEntries(
+    [...verifierSource.matchAll(/^\s*"(assets\/patch-notes\/[^"]+)":\s*"([0-9a-f]{64})",?\s*$/gm)]
+      .map((match) => [match[1], match[2]]),
+  );
+  const acceptedReleaseIds = releaseIndex.releases
+    .filter((release) => release.state === "ACCEPTED")
+    .map((release) => release.id);
+  const referencedAssets = new Map();
+
+  assert.deepEqual(Object.keys(PATCH_NOTES).sort(), [...acceptedReleaseIds].sort());
+  for (const releaseId of acceptedReleaseIds) {
+    const notes = getPatchNotesForRelease(releaseId);
+    assert.ok(notes, `missing patch notes for ${releaseId}`);
+    assert.deepEqual(Object.keys(notes).sort(), ["items", "summary", "version"]);
+    assert.match(notes.version, /^v\d+\.\d+$/);
+    assert.equal(typeof notes.summary, "string");
+    assert.ok(notes.summary.trim().length > 0);
+    assert.ok(Array.isArray(notes.items) && notes.items.length > 0);
+    assert.equal(new Set(notes.items.map((item) => item.id)).size, notes.items.length);
+
+    for (const item of notes.items) {
+      assert.deepEqual(
+        Object.keys(item).sort(),
+        ["asIs", "description", "evidenceType", "id", "title", "toBe"],
+      );
+      assert.match(item.id, /^[a-z0-9][a-z0-9-]*$/);
+      assert.ok(item.title.trim().length > 0);
+      assert.ok(item.description.trim().length > 0);
+      assert.doesNotMatch(item.description, /[\r\n]/, `${releaseId}/${item.id} description must be one line`);
+      assert.ok(["included", "ram-reference"].includes(item.evidenceType));
+
+      for (const sideName of ["asIs", "toBe"]) {
+        const side = item[sideName];
+        assert.deepEqual(Object.keys(side).sort(), ["alt", "height", "src", "width"]);
+        assert.equal(isSafePatchNoteAssetPath(side.src), true, `${side.src} must be a safe local asset`);
+        assert.match(side.src, /^assets\/patch-notes\/[a-z0-9][a-z0-9._/-]*\.(?:png|webp)$/);
+        assert.ok(side.alt.trim().length > 0);
+        assert.equal(Number.isSafeInteger(side.width) && side.width > 0, true);
+        assert.equal(Number.isSafeInteger(side.height) && side.height > 0, true);
+        const resolved = new URL(side.src, "https://example.test/ss_srwf_kor_patch/");
+        assert.equal(resolved.origin, "https://example.test");
+        const previousDimensions = referencedAssets.get(side.src);
+        if (previousDimensions) {
+          assert.deepEqual(previousDimensions, { width: side.width, height: side.height });
+        }
+        referencedAssets.set(side.src, { width: side.width, height: side.height });
+      }
+    }
+  }
+
+  const v11Items = getPatchNotesForRelease("srwf-f-20260812-v1-1").items;
+  const v11RamReferences = v11Items.filter((item) => item.evidenceType === "ram-reference");
+  assert.deepEqual(
+    v11RamReferences.map((item) => item.id).sort(),
+    ["disconnect-confirmation", "parts-window-width", "split-confirmation", "turn-end-boundary"],
+  );
+  assert.ok(v11Items.some((item) => item.evidenceType === "included"));
+  assert.equal(
+    getPatchNotesForRelease("srwf-f-20260810-v1-0").items
+      .every((item) => item.evidenceType === "included"),
+    true,
+  );
+
+  assert.deepEqual(Object.keys(publicAssetAllowlist).sort(), [...referencedAssets.keys()].sort());
+  for (const [assetPath, dimensions] of referencedAssets) {
+    const bytes = await readFile(new URL(`../${assetPath}`, import.meta.url));
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    assert.equal(publicAssetAllowlist[assetPath], digest, `${assetPath} must be hash-allowlisted`);
+    if (assetPath.endsWith(".png")) {
+      assert.equal(bytes.readUInt32BE(16), dimensions.width, `${assetPath} width must match its metadata`);
+      assert.equal(bytes.readUInt32BE(20), dimensions.height, `${assetPath} height must match its metadata`);
+    }
+  }
+
+  assert.equal(getPatchNotesForRelease("not-a-public-release"), null);
+  assert.equal(isSafePatchNoteAssetPath("assets/patch-notes/example.png"), true);
+  for (const unsafe of [
+    "https://example.test/example.png",
+    "//example.test/example.png",
+    "/assets/patch-notes/example.png",
+    "../assets/patch-notes/example.png",
+    "assets/patch-notes/../example.png",
+    "assets\\patch-notes\\example.png",
+    "assets/patch-notes/example.png?download=1",
+    "assets/patch-notes/example.png#preview",
+    "assets/patch-notes/%2e%2e/example.png",
+    "assets/patch-notes/example.svg",
+  ]) {
+    assert.equal(isSafePatchNoteAssetPath(unsafe), false, `${unsafe} must be rejected`);
+  }
+});
+
+test("patch-note images are created lazily and release replacement closes stale content", async () => {
+  const { getPatchNotesForRelease } = await import("../assets/release-notes.mjs");
+  const firstReleaseId = "srwf-f-20260812-v1-1";
+  const secondReleaseId = "srwf-f-20260810-v1-0";
+  const firstNotes = getPatchNotesForRelease(firstReleaseId);
+  const secondNotes = getPatchNotesForRelease(secondReleaseId);
+  const toggle = element("patchNotesToggle");
+  const dialog = element("patchNotesDialog");
+  const list = element("patchNotesList");
+
+  __testHooks.clearPatchNotes();
+  __testHooks.renderPatchNotesForRelease(firstReleaseId);
+  assert.equal(toggle.disabled, false);
+  assert.equal(dialog.open, false);
+  assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
+  assert.equal(element("patchNotesVersion").textContent, firstNotes.version);
+  assert.match(element("patchNotesCount").textContent, new RegExp(String(firstNotes.items.length)));
+
+  __testHooks.openPatchNotes();
+  assert.equal(dialog.open, true);
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  const firstImages = findDescendants(list, (node) => node.tagName === "IMG");
+  assert.equal(firstImages.length, firstNotes.items.length * 2);
+  for (const image of firstImages) {
+    assert.equal(image.loading ?? image.getAttribute("loading"), "lazy");
+    assert.equal(image.decoding ?? image.getAttribute("decoding"), "async");
+    assert.ok((image.alt ?? image.getAttribute("alt") ?? "").trim().length > 0);
+    assert.ok(Number(image.width ?? image.getAttribute("width")) > 0);
+    assert.ok(Number(image.height ?? image.getAttribute("height")) > 0);
+  }
+  assert.ok(descendantText(list).includes(firstNotes.items[0].title));
+  assert.ok(descendantText(list).includes("공개 릴리스 반영"));
+  assert.ok(descendantText(list).includes("RAM 변조 참고 시안 · 릴리스 통과 증거 아님"));
+
+  __testHooks.renderPatchNotesForRelease(secondReleaseId);
+  assert.equal(dialog.open, false);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
+  assert.equal(element("patchNotesVersion").textContent, secondNotes.version);
+  assert.match(element("patchNotesCount").textContent, new RegExp(String(secondNotes.items.length)));
+
+  __testHooks.openPatchNotes();
+  assert.ok(descendantText(list).includes(secondNotes.items[0].title));
+  if (secondNotes.items[0].title !== firstNotes.items[0].title) {
+    assert.equal(descendantText(list).includes(firstNotes.items[0].title), false);
+  }
+
+  __testHooks.renderPatchNotesForRelease("not-a-public-release");
+  assert.equal(dialog.open, false);
+  assert.equal(toggle.disabled, true);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
+});
+
+test("patch-note UI explicitly distinguishes included changes from RAM reference mockups", async () => {
+  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
+
+  assert.match(appSource, /evidenceType/);
+  assert.match(appSource, /공개 릴리스 반영/);
+  assert.match(appSource, /RAM 변조 참고 시안/);
+  assert.match(appSource, /릴리스 통과 증거 아님/);
 });
 
 test("release and patch references are pinned to their release id", () => {
@@ -696,4 +961,72 @@ test("an index failure clears facts from the previously selected release", () =>
   assert.equal(element("targetName").textContent, "—");
   assert.equal(element("publishedAt").textContent, "—");
   assert.equal(element("releaseState").textContent, "차단됨");
+});
+
+test("a delayed F manifest cannot revive controls after switching to the unavailable game", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalConsoleError = console.error;
+  const encoder = new TextEncoder();
+  const releaseId = "v5-race";
+  const manifest = makeReleaseManifest({ id: releaseId });
+  const manifestBytes = encoder.encode(JSON.stringify(manifest));
+  const manifestSha256 = createHash("sha256").update(manifestBytes).digest("hex");
+  const index = {
+    $schema: "../schemas/releases.schema.json",
+    schema: "srwf-kor.public-release-index.v2",
+    project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" },
+    games: [
+      { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: releaseId },
+      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
+    ],
+    stock_profiles: [{ ...STOCK_PROFILE }],
+    releases: [makeReleaseRow({
+      id: releaseId,
+      manifest: `releases/${releaseId}.json`,
+      manifestSha256,
+    })],
+  };
+  const indexBytes = encoder.encode(JSON.stringify(index));
+  let resolveManifestResponse;
+  let markManifestRequested;
+  const manifestRequested = new Promise((resolve) => {
+    markManifestRequested = resolve;
+  });
+  const delayedManifestResponse = new Promise((resolve) => {
+    resolveManifestResponse = resolve;
+  });
+  const responseFor = (bytes) => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => String(bytes.byteLength) },
+    arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+  });
+
+  globalThis.fetch = async (url) => {
+    const path = String(url);
+    if (path.endsWith("manifest/releases.json")) return responseFor(indexBytes);
+    if (path.endsWith(`releases/${releaseId}.json`)) {
+      markManifestRequested();
+      return delayedManifestResponse;
+    }
+    throw new Error(`unexpected synthetic URL: ${path}`);
+  };
+  console.error = () => {};
+
+  try {
+    const fresh = await import(`../assets/app.mjs?stale-release-race=${Date.now()}`);
+    await manifestRequested;
+    await fresh.__testHooks.activateGame("srwf-final");
+    resolveManifestResponse(responseFor(manifestBytes));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(element("gameSelect").value, "srwf-final");
+    assert.equal(element("releaseState").textContent, "준비 중");
+    assert.equal(element("patchNotesToggle").disabled, true);
+    assert.equal(element("sourceButton").disabled, true);
+    assert.equal(element("sourceProfile").textContent, "—");
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalConsoleError;
+  }
 });

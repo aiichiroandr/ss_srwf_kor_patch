@@ -161,7 +161,10 @@ allowlist에 함께 고정해야 합니다. allowlist에 들어간 PNG, WebP, IC
 파일 8 MiB, 전체 24 MiB 상한과 기존 container 구조 검사를 모두 통과해야 합니다.
 단순히 확장자를 바꾸거나 유효한 container 안에 다른 payload를 넣는 것만으로는
 승인되지 않습니다. `.srwfp`는 이 UI asset 절차에 포함하지 않고 기존의 ACCEPTED
-index와 전용 parser gate를 그대로 거칩니다. 현재 allowlist는 비어 있습니다.
+index와 전용 parser gate를 그대로 거칩니다. 현재 allowlist에는 버전별 패치노트의
+저해상도 AS-IS/TO-BE PNG만 들어 있으며, 실제 공개 빌드 반영 자료와 후속 RAM 배치
+참고 자료를 화면에서 명확히 구분합니다. 전체 디스크 이미지, 세이브·상태 파일과
+에뮬레이터 캐시는 이 절차로도 승인할 수 없습니다.
 
 외부 URL·network write 검사는 `.html`, `.htm`, `.shtml`, `.xhtml`, SVG/XML/XSL, CSS,
 JavaScript와 MJS 등 저장소의 active web source에 적용합니다. `tests/` 아래

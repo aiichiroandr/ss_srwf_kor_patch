@@ -1686,6 +1686,393 @@ a:focus-visible {
   }
 }
 
+.patch-note-toggle {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  color: var(--ink);
+  text-align: left;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--white);
+  cursor: pointer;
+}
+
+.patch-note-toggle > span:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.patch-note-toggle small {
+  color: var(--blue);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+}
+
+.patch-note-toggle strong {
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patch-note-toggle > span:nth-child(2) {
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.patch-note-toggle > span:last-child {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--white);
+  background: var(--blue);
+}
+
+.patch-note-toggle:hover:not(:disabled) {
+  border-color: var(--blue);
+  box-shadow: 0 8px 22px rgba(39, 93, 225, 0.12);
+}
+
+.patch-note-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.patch-note-dialog {
+  width: min(1120px, calc(100vw - 28px));
+  height: min(690px, calc(100dvh - 28px));
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  overflow: hidden;
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  background: #f2f1ec;
+  box-shadow: 0 28px 90px rgba(9, 19, 31, 0.42);
+}
+
+.patch-note-dialog::backdrop {
+  background: rgba(7, 17, 29, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.patch-note-dialog-shell {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 0;
+}
+
+.patch-note-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 17px 19px 14px;
+  color: var(--white);
+  background:
+    radial-gradient(circle at 90% 0, rgba(39, 93, 225, 0.55), transparent 42%),
+    var(--ink);
+}
+
+.patch-note-dialog-header span:first-child {
+  color: #9db8ff;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.patch-note-dialog-header h2 {
+  margin: 2px 0 0;
+  font-size: clamp(18px, 2.4vw, 27px);
+  line-height: 1.15;
+}
+
+.patch-note-close {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  color: var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.patch-note-close span {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.patch-note-summary {
+  margin: 0;
+  padding: 11px 19px;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.patch-note-list {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min(720px, calc(100vw - 72px));
+  gap: 12px;
+  padding: 13px 19px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-color: var(--blue) var(--paper-deep);
+}
+
+.patch-note-card {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 9px;
+  padding: 13px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+}
+
+.patch-note-card-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.patch-note-card-heading h3 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patch-note-evidence {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.patch-note-evidence.is-included {
+  color: var(--green);
+  background: rgba(8, 125, 104, 0.1);
+}
+
+.patch-note-evidence.is-ram-reference {
+  color: #8a4a00;
+  background: rgba(245, 200, 76, 0.26);
+}
+
+.patch-note-comparison {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.patch-note-figure {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid #273549;
+  border-radius: 10px;
+  background: #050910;
+}
+
+.patch-note-figure figcaption {
+  padding: 4px 7px;
+  color: #bed0ff;
+  border-bottom: 1px solid #273549;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.patch-note-figure img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: block;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.patch-note-description {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patch-note-dialog-footer {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 19px;
+  color: var(--ink-soft);
+  border-top: 1px solid var(--line);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .patch-note-toggle {
+    min-height: 34px;
+    margin-top: 5px;
+    gap: 6px;
+    padding: 4px 7px;
+    border-radius: 9px;
+  }
+
+  .patch-note-toggle small {
+    display: none;
+  }
+
+  .patch-note-toggle strong {
+    margin-top: 0;
+    font-size: 10px;
+  }
+
+  .patch-note-toggle > span:nth-child(2) {
+    font-size: 9px;
+  }
+
+  .patch-note-toggle > span:last-child {
+    width: 24px;
+    height: 24px;
+  }
+
+  .patch-note-dialog {
+    width: calc(100vw - 10px);
+    height: calc(100dvh - 10px);
+    border-radius: 16px;
+  }
+
+  .patch-note-dialog-header {
+    padding: 11px 12px 9px;
+  }
+
+  .patch-note-dialog-header h2 {
+    font-size: 17px;
+  }
+
+  .patch-note-close {
+    min-height: 38px;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+
+  .patch-note-summary {
+    padding: 8px 12px;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .patch-note-list {
+    grid-auto-columns: calc(100vw - 34px);
+    gap: 7px;
+    padding: 8px 12px;
+  }
+
+  .patch-note-card {
+    gap: 7px;
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .patch-note-card-heading {
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .patch-note-card-heading h3 {
+    font-size: 12px;
+  }
+
+  .patch-note-evidence {
+    max-width: 48%;
+    padding: 2px 5px;
+    overflow: hidden;
+    font-size: 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .patch-note-description {
+    font-size: 9px;
+  }
+
+  .patch-note-dialog-footer {
+    min-height: 30px;
+    padding: 5px 12px;
+    font-size: 8px;
+  }
+
+  .patch-note-dialog-footer span:last-child {
+    display: none;
+  }
+}
+
+@media (max-height: 620px) {
+  .patch-note-dialog-header {
+    padding-top: 8px;
+    padding-bottom: 7px;
+  }
+
+  .patch-note-summary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .patch-note-list {
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
