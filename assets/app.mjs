@@ -49,6 +49,7 @@ const elements = {
   targetName: byId("targetName"),
   publishedAt: byId("publishedAt"),
   sourceButton: byId("sourceButton"),
+  sourceHelp: byId("sourceHelp"),
   sourceState: byId("sourceState"),
   sourceSelection: byId("sourceSelection"),
   sourceName: byId("sourceName"),
@@ -130,10 +131,8 @@ function byId(id) {
 }
 
 function detectFileSystemSupport() {
-  const isMobileChromium = navigator.userAgentData?.mobile === true;
   return Boolean(
     window.isSecureContext
-      && !isMobileChromium
       && typeof window.showOpenFilePicker === "function"
       && typeof window.showSaveFilePicker === "function"
       && typeof FileSystemHandle !== "undefined"
@@ -147,12 +146,14 @@ function showBrowserCompatibility() {
   elements.compatibilityBadge.classList.remove("is-supported", "is-unsupported");
   if (state.fileSystemSupported) {
     elements.compatibilityBadge.classList.add("is-supported");
-    elements.compatibilityBadge.lastChild.textContent = " 데스크톱 패치 지원";
+    elements.compatibilityBadge.lastChild.textContent = " 이 기기에서 패치 지원";
+    elements.sourceHelp.textContent = "원본은 읽기 전용으로 엽니다. 전체 SHA-256은 새 IMG를 만들면서 한 번의 읽기로 검사합니다.";
     return;
   }
 
   elements.compatibilityBadge.classList.add("is-unsupported");
-  elements.compatibilityBadge.lastChild.textContent = " 데스크톱 Chrome·Edge 필요";
+  elements.compatibilityBadge.lastChild.textContent = " 안전 저장 API 없음";
+  elements.sourceHelp.textContent = "이 브라우저에서는 약 579 MB의 새 IMG를 안전하게 저장할 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.";
 }
 
 async function loadReleaseIndex() {
@@ -723,6 +724,10 @@ async function chooseSource() {
     return;
   }
   clearMessages();
+  if (!state.fileSystemSupported) {
+    showUnsupportedBrowser();
+    return;
+  }
 
   let handles;
   try {
@@ -880,7 +885,7 @@ async function applyPatch() {
   }
 
   state.patchCompleted = false;
-  elements.applyHint.textContent = "원본을 검증하며 새 IMG를 만들고 있습니다. 이 탭을 닫지 마세요.";
+  elements.applyHint.textContent = "원본을 검증하며 새 IMG를 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요.";
   beginWorkerOperation("APPLY_PATCH", {
     preparationToken: state.preparationToken,
     releaseKey: releaseKey(state.release),
@@ -1272,34 +1277,77 @@ function resetPreparedSource() {
 
 function updateControls() {
   const releaseReady = state.availability === "ready" && Boolean(state.release);
+  const fileControls = deriveFileControlState({
+    releaseReady,
+    fileSystemSupported: state.fileSystemSupported,
+    sourcePrepared: state.sourcePrepared,
+    hasSourceHandle: Boolean(state.sourceHandle),
+    hasOutputHandle: Boolean(state.outputHandle),
+    hasPreparationToken: Boolean(state.preparationToken),
+    busy: state.busy,
+  });
   elements.gameSelect.disabled = state.busy || state.games.size <= 1 || state.availability === "loading";
   elements.releaseSelect.disabled = state.busy
     || state.visibleReleaseRows.length <= 1
     || state.availability === "loading"
     || state.availability === "preparing";
-  elements.sourceButton.disabled = !releaseReady || !state.fileSystemSupported || state.busy;
-  elements.outputButton.disabled = !releaseReady || !state.fileSystemSupported || !state.sourcePrepared || state.busy;
-  elements.patchButton.disabled = !releaseReady
-    || !state.fileSystemSupported
-    || !state.sourcePrepared
-    || !state.outputHandle
-    || state.busy;
+  elements.sourceButton.disabled = fileControls.sourceDisabled;
+  elements.outputButton.disabled = fileControls.outputDisabled;
+  elements.patchButton.disabled = fileControls.patchDisabled;
 
   if (releaseReady && !state.fileSystemSupported) {
-    elements.applyHint.textContent = "파일을 안전하게 분리하려면 데스크톱 Chrome 또는 Edge가 필요합니다.";
+    elements.applyHint.textContent = "Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 안전한 파일 저장을 지원합니다.";
   }
 }
 
+function deriveFileControlState({
+  releaseReady,
+  fileSystemSupported,
+  sourcePrepared,
+  hasSourceHandle,
+  hasOutputHandle,
+  hasPreparationToken,
+  busy,
+}) {
+  return Object.freeze({
+    sourceDisabled: !releaseReady || busy,
+    outputDisabled: !releaseReady
+      || !fileSystemSupported
+      || !sourcePrepared
+      || !hasSourceHandle
+      || busy,
+    patchDisabled: !releaseReady
+      || !fileSystemSupported
+      || !sourcePrepared
+      || !hasSourceHandle
+      || !hasOutputHandle
+      || !hasPreparationToken
+      || busy,
+  });
+}
+
 function canChooseSource() {
-  return state.availability === "ready" && state.release && state.fileSystemSupported && !state.busy;
+  return state.availability === "ready" && state.release && !state.busy;
 }
 
 function canChooseOutput() {
-  return canChooseSource() && state.sourcePrepared && state.sourceHandle;
+  return canChooseSource() && state.fileSystemSupported && state.sourcePrepared && state.sourceHandle;
 }
 
 function canApplyPatch() {
   return canChooseOutput() && state.outputHandle && state.preparationToken;
+}
+
+function showUnsupportedBrowser() {
+  const message = "이 브라우저에는 약 579 MB의 새 IMG를 사용자가 고른 위치에 안전하게 저장할 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.";
+  elements.sourceHelp.textContent = message;
+  elements.sourceState.textContent = "환경 확인";
+  elements.sourceState.className = "step-state is-error";
+  elements.applyHint.textContent = message;
+  showError("이 기기에서는 패치 파일을 안전하게 저장할 수 없습니다", message);
+  setWorkflowPosition("source");
+  updateControls();
+  announce(message);
 }
 
 function setAvailability(kind, title, description, code) {
@@ -1622,6 +1670,8 @@ class PatcherError extends Error {
 export const __testHooks = Object.freeze({
   activateGame,
   beginWorkerOperation,
+  detectFileSystemSupport,
+  deriveFileControlState,
   expectedManifestReference,
   expectedPatchReference,
   fetchJsonDocument,
@@ -1629,6 +1679,7 @@ export const __testHooks = Object.freeze({
   handleIndexFailure,
   isRfc3339DateTime,
   normalizeReleaseManifest,
+  showUnsupportedBrowser,
   setWorkflowPosition,
   validateReleaseIndex,
   validateGames,

@@ -2383,7 +2383,7 @@ main {
   }
 
   .compatibility {
-    max-width: 96px;
+    max-width: 128px;
     overflow: hidden;
     font-size: 9px;
     text-overflow: ellipsis;
@@ -2551,14 +2551,21 @@ main {
   }
 
   .selector-grid {
+    grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
     gap: 7px;
   }
 
   .select-wrap select {
     min-height: 39px;
+    padding-right: 26px;
+    padding-left: 10px;
     padding-top: 7px;
     padding-bottom: 7px;
     font-size: 12px;
+  }
+
+  .select-wrap::after {
+    right: 9px;
   }
 
   .release-facts {
@@ -2616,6 +2623,44 @@ main {
 
   .task-stage .message-panel.is-success {
     margin: 12px;
+  }
+}
+
+@media (max-height: 500px) and (min-width: 761px) {
+  body {
+    grid-template-rows: 48px minmax(0, 1fr);
+  }
+
+  .site-header {
+    height: 48px;
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .patch-section {
+    gap: 6px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .station-title > p:last-child,
+  .file-step-body > p {
+    display: none;
+  }
+
+  .availability-banner {
+    min-height: 44px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .file-step-body {
+    padding: 12px 16px;
+  }
+
+  .file-step-heading h3 {
+    font-size: 16px;
   }
 }
 

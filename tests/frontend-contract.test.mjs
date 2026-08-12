@@ -188,8 +188,8 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.doesNotMatch(html, /href="NOTICE\.md"/);
   assert.match(html, /id="release-notes"/);
   assert.match(html, /CURRENT F RELEASE · 2026\.08\.12/);
-  assert.match(html, /2026\.08\.10 이전 프리뷰도 버전/);
-  assert.match(html, /Codex × Fable 협업/);
+  assert.match(html, /2026\.08\.10 v1\.0도 버전/);
+  assert.match(html, /Codex × Claude 협업/);
   assert.match(html, /id="gameSelect"/);
   assert.doesNotMatch(html, /FABLE G25K/);
   assert.match(html, /<details class="rights-disclosure">/);
@@ -205,6 +205,76 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /전체 SHA-256은\s*\n?\s*패치 시작 후 새 IMG를 만들면서 한 번의 읽기로 검사/);
   assert.match(html, /검증하고 패치 시작/);
   assert.doesNotMatch(html, /선택 직후 전체 파일의 SHA-256/);
+});
+
+test("mobile browsers with the complete native file API are not blocked by user-agent", async () => {
+  const originalNavigator = globalThis.navigator;
+  const originalWindow = globalThis.window;
+  const originalFileSystemHandle = globalThis.FileSystemHandle;
+  const originalWorker = globalThis.Worker;
+  const originalFetch = globalThis.fetch;
+  const originalConsoleError = console.error;
+
+  class CapableFileSystemHandle {}
+  CapableFileSystemHandle.prototype.isSameEntry = async () => false;
+
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { userAgentData: { mobile: true } },
+  });
+  globalThis.FileSystemHandle = CapableFileSystemHandle;
+  globalThis.Worker = class CapableWorker {};
+  globalThis.window = {
+    addEventListener() {},
+    isSecureContext: true,
+    location: { origin: "null" },
+    showOpenFilePicker: async () => [],
+    showSaveFilePicker: async () => null,
+  };
+  globalThis.fetch = async () => {
+    throw new Error("synthetic manifest fetch disabled");
+  };
+  console.error = () => {};
+
+  try {
+    await import(`../assets/app.mjs?mobile-native-capability=${Date.now()}`);
+    assert.equal(element("compatibilityBadge").classList.contains("is-supported"), true);
+    assert.match(element("compatibilityBadge").lastChild.textContent, /패치 지원/);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: originalNavigator,
+    });
+    globalThis.window = originalWindow;
+    globalThis.fetch = originalFetch;
+    console.error = originalConsoleError;
+    if (originalFileSystemHandle === undefined) delete globalThis.FileSystemHandle;
+    else globalThis.FileSystemHandle = originalFileSystemHandle;
+    if (originalWorker === undefined) delete globalThis.Worker;
+    else globalThis.Worker = originalWorker;
+  }
+});
+
+test("unsupported mobile browsers expose guidance instead of a dead source CTA", () => {
+  const controls = __testHooks.deriveFileControlState({
+    releaseReady: true,
+    fileSystemSupported: false,
+    sourcePrepared: false,
+    hasSourceHandle: false,
+    hasOutputHandle: false,
+    hasPreparationToken: false,
+    busy: false,
+  });
+  assert.equal(controls.sourceDisabled, false);
+  assert.equal(controls.outputDisabled, true);
+  assert.equal(controls.patchDisabled, true);
+
+  __testHooks.showUnsupportedBrowser();
+  assert.equal(element("errorPanel").hidden, false);
+  assert.match(element("errorTitle").textContent, /안전하게 저장/);
+  assert.match(element("errorMessage").textContent, /Android Chrome 132|데스크톱 Chrome/);
+  assert.equal(element("sourceState").textContent, "환경 확인");
 });
 
 test("the patcher is a single-screen workspace instead of a scrolling landing page", async () => {
@@ -418,6 +488,8 @@ test("runtime enforces stock-sized targets and all public patch hard limits", ()
 
 test("worker errors distinguish output, storage, and malformed patch failures", () => {
   assert.match(__testHooks.friendlyWorkerError("OUTPUT_SIZE_MISMATCH").message, /크기/);
+  assert.match(__testHooks.friendlyWorkerError("OUTPUT_HANDLE_INVALID").title, /출력 파일/);
+  assert.match(__testHooks.friendlyWorkerError("OUTPUT_PERMISSION_DENIED").message, /쓰기 권한|다른 위치/);
   assert.match(__testHooks.friendlyWorkerError("OUTPUT_QUOTA_EXCEEDED").title, /저장 공간/);
   assert.match(__testHooks.friendlyWorkerError("BAD_MAGIC").title, /패치 데이터 형식/);
   assert.match(__testHooks.friendlyWorkerError("BODY_TOO_LARGE").title, /패치 데이터 형식/);

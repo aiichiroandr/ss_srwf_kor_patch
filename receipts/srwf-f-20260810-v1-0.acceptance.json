@@ -1,6 +1,6 @@
 {
   "schema": "srwf-kor.acceptance-receipt.v1",
-  "releaseId": "srwf-f-20260810-preview",
+  "releaseId": "srwf-f-20260810-v1-0",
   "state": "ACCEPTED",
   "acceptedAt": "2026-08-09T15:55:36Z",
   "stockProfileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
@@ -14,5 +14,5 @@
     "visualLayout": "PASS",
     "longPlayProgression": "PASS"
   },
-  "decisionAuthority": "저장소 소유자 지시: 2026.08.10 이전 프리뷰 공개, 알려진 마이너 표시·문구 문제 수용"
+  "decisionAuthority": "저장소 소유자 지시: 2026.08.10 공개 패치를 v1.0 이전 릴리스 선택 항목으로 제공하도록 승인"
 }

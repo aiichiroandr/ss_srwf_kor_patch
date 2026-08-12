@@ -4,7 +4,7 @@
 
 이 저장소는 현재 `HAS_ACCEPTED_RELEASE`이며,
 [`manifest/releases.json`](../manifest/releases.json)에
-`srwf-f-20260812-v0-1`과 `srwf-f-20260810-preview` 두 항목이 등록되어 있습니다.
+`srwf-f-20260812-v1-1`과 `srwf-f-20260810-v1-0` 두 항목이 등록되어 있습니다.
 공개 payload는 각 영수증·릴리스 명세와 해시가 일치하는 희소 `.srwfp`
 두 개뿐입니다.
 
@@ -114,7 +114,7 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
   "schema": "srwf-kor.public-release.v1",
   "id": "srwf-f-YYYYMMDD-version",
   "state": "ACCEPTED",
-  "version": "v0.1",
+  "version": "v1.1",
   "title": "표시 이름",
   "publishedAt": "YYYY-MM-DDTHH:MM:SSZ",
   "source": {
