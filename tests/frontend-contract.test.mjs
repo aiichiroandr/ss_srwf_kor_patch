@@ -269,6 +269,20 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.doesNotMatch(html, /선택 직후 전체 파일의 SHA-256/);
 });
 
+test("static entry assets share an explicit cache revision", async () => {
+  const [html, appSource] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
+  ]);
+  const revision = "20260812-3";
+
+  assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
+  assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
+  assert.match(appSource, new RegExp(`release-notes\\.mjs\\?v=${revision}`));
+  assert.match(appSource, new RegExp(`STATIC_ASSET_REVISION = "${revision}"`));
+  assert.match(appSource, /imageUrl\.searchParams\.set\("v", STATIC_ASSET_REVISION\)/);
+});
+
 test("every required runtime element exists in the public HTML", async () => {
   const [html, app] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),

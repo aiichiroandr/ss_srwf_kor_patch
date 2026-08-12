@@ -1,6 +1,10 @@
 import { sha256Hex } from "./sha256.mjs";
-import { getPatchNotesForRelease, isSafePatchNoteAssetPath } from "./release-notes.mjs";
+import {
+  getPatchNotesForRelease,
+  isSafePatchNoteAssetPath,
+} from "./release-notes.mjs?v=20260812-3";
 
+const STATIC_ASSET_REVISION = "20260812-3";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -1396,7 +1400,9 @@ function createPatchNoteFigure(label, asset) {
   const caption = document.createElement("figcaption");
   caption.textContent = label;
   const image = document.createElement("img");
-  image.src = new URL(asset.src, SITE_ROOT_URL).href;
+  const imageUrl = new URL(asset.src, SITE_ROOT_URL);
+  imageUrl.searchParams.set("v", STATIC_ASSET_REVISION);
+  image.src = imageUrl.href;
   image.alt = asset.alt;
   image.width = asset.width;
   image.height = asset.height;
