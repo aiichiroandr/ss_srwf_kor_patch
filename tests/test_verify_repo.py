@@ -57,6 +57,11 @@ def copy_schema_files(root: Path) -> None:
     shutil.copy2(PROJECT_ROOT / "assets/patch-core.mjs", root / "assets/patch-core.mjs")
 
 
+def copy_public_release_tree(root: Path) -> None:
+    for directory in ("schemas", "manifest", "releases", "receipts", "patches"):
+        shutil.copytree(PROJECT_ROOT / directory, root / directory)
+
+
 def png_chunk(chunk_type: bytes, payload: bytes) -> bytes:
     return (
         struct.pack(">I", len(payload))
@@ -592,10 +597,29 @@ class RepositoryPolicyTests(unittest.TestCase):
             write_json(release_path, release)
             index = {
                 "$schema": "../schemas/releases.schema.json",
-                "schema": "srwf-kor.public-release-index.v1",
+                "schema": "srwf-kor.public-release-index.v2",
                 "project": {"id": "srwf-kor-v5", "status": "HAS_ACCEPTED_RELEASE"},
-                "stock_profiles": [{**verifier.STOCK_PROFILE, "label": "Synthetic stock"}],
+                "games": [
+                    {
+                        "id": "srwf-f",
+                        "label": "슈퍼로봇대전 F",
+                        "status": "HAS_ACCEPTED_RELEASE",
+                        "defaultReleaseId": release_id,
+                    },
+                    {
+                        "id": "srwf-final",
+                        "label": "슈퍼로봇대전 F 완결편",
+                        "status": "NO_ACCEPTED_RELEASE",
+                        "defaultReleaseId": None,
+                    },
+                ],
+                "stock_profiles": [{
+                    "gameId": "srwf-f",
+                    **verifier.STOCK_PROFILE,
+                    "label": "Synthetic stock",
+                }],
                 "releases": [{
+                    "gameId": "srwf-f",
                     "id": release_id,
                     "state": "ACCEPTED",
                     "label": "Synthetic accepted release",
@@ -609,6 +633,61 @@ class RepositoryPolicyTests(unittest.TestCase):
                 files = [path for path in root.rglob("*") if path.is_file()]
                 verifier.validate_index(files)
                 self.assertEqual(verifier.errors, [])
+
+    def test_per_game_default_and_availability_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            copy_public_release_tree(root)
+            index_path = root / "manifest/releases.json"
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            final_game = next(game for game in index["games"] if game["id"] == "srwf-final")
+            final_game["status"] = "HAS_ACCEPTED_RELEASE"
+            final_game["defaultReleaseId"] = index["releases"][0]["id"]
+            write_json(index_path, index)
+
+            with verifier_root(root):
+                files = [path for path in root.rglob("*") if path.is_file()]
+                verifier.validate_index(files)
+                joined = "\n".join(verifier.errors)
+                self.assertIn("game srwf-final: HAS_ACCEPTED_RELEASE requires at least one release row", joined)
+                self.assertIn("defaultReleaseId must reference its own accepted release", joined)
+
+    def test_cross_game_release_and_profile_bindings_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            copy_public_release_tree(root)
+            index_path = root / "manifest/releases.json"
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            index["games"][0]["status"] = "NO_ACCEPTED_RELEASE"
+            index["games"][0]["defaultReleaseId"] = None
+            index["games"][1]["status"] = "HAS_ACCEPTED_RELEASE"
+            index["games"][1]["defaultReleaseId"] = index["releases"][0]["id"]
+            for row in index["releases"]:
+                row["gameId"] = "srwf-final"
+            write_json(index_path, index)
+
+            with verifier_root(root):
+                files = [path for path in root.rglob("*") if path.is_file()]
+                verifier.validate_index(files)
+                joined = "\n".join(verifier.errors)
+                self.assertIn("source profile belongs to a different game", joined)
+
+    def test_duplicate_game_or_unpinned_stock_profile_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            copy_public_release_tree(root)
+            index_path = root / "manifest/releases.json"
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            index["games"][1]["id"] = "srwf-f"
+            index["stock_profiles"][0]["sha256"] = "00" * 32
+            write_json(index_path, index)
+
+            with verifier_root(root):
+                files = [path for path in root.rglob("*") if path.is_file()]
+                verifier.validate_index(files)
+                joined = "\n".join(verifier.errors)
+                self.assertIn("duplicate game id", joined)
+                self.assertIn("sha256 is not exact", joined)
 
 
 if __name__ == "__main__":

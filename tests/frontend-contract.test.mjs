@@ -112,6 +112,7 @@ await new Promise((resolve) => setTimeout(resolve, 0));
 console.error = initialConsoleError;
 
 const STOCK_PROFILE = Object.freeze({
+  gameId: "srwf-f",
   id: "saturn-jp-stock-track01-mode1-2352-c198a930",
   label: "검증된 세가 새턴 일본어판 원본 (Track 01)",
   size: 578512032,
@@ -125,6 +126,7 @@ const STOCK_PROFILE = Object.freeze({
 
 function makeReleaseRow(overrides = {}) {
   return {
+    gameId: "srwf-f",
     id: "v5-r001",
     state: "ACCEPTED",
     label: "공개 릴리스",
@@ -185,8 +187,11 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /<main id="main" tabindex="-1">/);
   assert.doesNotMatch(html, /href="NOTICE\.md"/);
   assert.match(html, /id="release-notes"/);
-  assert.match(html, /FABLE G25K/);
-  assert.match(html, /이전 G24도 목록에서 계속 선택/);
+  assert.match(html, /CURRENT F RELEASE · 2026\.08\.12/);
+  assert.match(html, /2026\.08\.10 이전 프리뷰도 버전/);
+  assert.match(html, /Codex × Fable 협업/);
+  assert.match(html, /id="gameSelect"/);
+  assert.doesNotMatch(html, /FABLE G25K/);
   assert.match(html, /<details class="rights-disclosure">/);
   assert.match(html, /비공식\s*\n?\s*팬 프로젝트/);
   assert.match(html, /aria-current="step"/);
@@ -222,6 +227,7 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
 test("release and patch references are pinned to their release id", () => {
   const releaseId = "v5-r001";
   const row = {
+    gameId: "srwf-f",
     id: releaseId,
     state: "ACCEPTED",
     label: "공개 릴리스",
@@ -241,13 +247,18 @@ test("release and patch references are pinned to their release id", () => {
 test("runtime accepts an exact public index and accepted release contract", () => {
   const index = {
     $schema: "../schemas/releases.schema.json",
-    schema: "srwf-kor.public-release-index.v1",
+    schema: "srwf-kor.public-release-index.v2",
     project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" },
+    games: [
+      { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: "v5-r001" },
+      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
+    ],
     stock_profiles: [{ ...STOCK_PROFILE }],
     releases: [makeReleaseRow()],
   };
 
   assert.doesNotThrow(() => __testHooks.validateReleaseIndex(index));
+  assert.doesNotThrow(() => __testHooks.validateGames(index.games));
   assert.doesNotThrow(() => __testHooks.validateStockProfiles(index.stock_profiles));
   assert.doesNotThrow(() => __testHooks.validateReleaseRow(index.releases[0]));
   const normalized = normalizeManifest(makeReleaseManifest());
@@ -266,8 +277,12 @@ test("runtime accepts an exact public index and accepted release contract", () =
 test("runtime rejects unknown or missing keys at every public object layer", () => {
   const exactIndex = {
     $schema: "../schemas/releases.schema.json",
-    schema: "srwf-kor.public-release-index.v1",
+    schema: "srwf-kor.public-release-index.v2",
     project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" },
+    games: [
+      { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: "v5-r001" },
+      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
+    ],
     stock_profiles: [{ ...STOCK_PROFILE }],
     releases: [makeReleaseRow()],
   };
@@ -312,8 +327,12 @@ test("runtime rejects unknown or missing keys at every public object layer", () 
 test("runtime enforces local schemas, bounded strings, RFC 3339, and lowercase identities", () => {
   const exactIndex = {
     $schema: "../schemas/releases.schema.json",
-    schema: "srwf-kor.public-release-index.v1",
+    schema: "srwf-kor.public-release-index.v2",
     project: { id: "srwf-kor-v5", status: "NO_ACCEPTED_RELEASE" },
+    games: [
+      { id: "srwf-f", label: "슈퍼로봇대전 F", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
+      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
+    ],
     stock_profiles: [{ ...STOCK_PROFILE }],
     releases: [],
   };

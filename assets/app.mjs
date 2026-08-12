@@ -2,7 +2,7 @@ import { sha256Hex } from "./sha256.mjs";
 
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
-const INDEX_SCHEMA = "srwf-kor.public-release-index.v1";
+const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
 const RELEASE_SCHEMA = "srwf-kor.public-release.v1";
 const PATCH_FORMAT = "srwf.sparse-byte-delta.v1";
 const PROJECT_ID = "srwf-kor-v5";
@@ -21,16 +21,20 @@ const MIN_RECORD_BODY_BYTES = 45;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const IMG_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.img$/;
 const CUE_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
-const STOCK_PROFILE = Object.freeze({
-  id: "saturn-jp-stock-track01-mode1-2352-c198a930",
-  size: 578512032,
-  sha256: "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
-  sectorCount: 245966,
-  sectorSize: 2352,
-  userDataOffset: 16,
-  userDataSize: 2048,
-  track: "TRACK 01 MODE1/2352",
-});
+const PINNED_STOCK_PROFILES = new Map([
+  ["saturn-jp-stock-track01-mode1-2352-c198a930", Object.freeze({
+    gameId: "srwf-f",
+    id: "saturn-jp-stock-track01-mode1-2352-c198a930",
+    size: 578512032,
+    sha256: "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+    sectorCount: 245966,
+    sectorSize: 2352,
+    userDataOffset: 16,
+    userDataSize: 2048,
+    track: "TRACK 01 MODE1/2352",
+  })],
+]);
+const PUBLIC_GAME_IDS = new Set(["srwf-f", "srwf-final"]);
 
 const elements = {
   compatibilityBadge: byId("compatibilityBadge"),
@@ -38,6 +42,7 @@ const elements = {
   availabilityTitle: byId("availabilityTitle"),
   availabilityDescription: byId("availabilityDescription"),
   availabilityCode: byId("availabilityCode"),
+  gameSelect: byId("gameSelect"),
   releaseSelect: byId("releaseSelect"),
   releaseState: byId("releaseState"),
   sourceProfile: byId("sourceProfile"),
@@ -83,8 +88,11 @@ const stepIndicators = new Map(
 const state = {
   fileSystemSupported: detectFileSystemSupport(),
   availability: "loading",
+  games: new Map(),
+  selectedGameId: null,
   stockProfiles: new Map(),
   releaseRows: [],
+  visibleReleaseRows: [],
   release: null,
   releaseLoadSequence: 0,
   sourceHandle: null,
@@ -99,6 +107,7 @@ const state = {
   jobId: null,
 };
 
+elements.gameSelect.addEventListener("change", handleGameChange);
 elements.releaseSelect.addEventListener("change", handleReleaseChange);
 elements.sourceButton.addEventListener("click", chooseSource);
 elements.outputButton.addEventListener("click", chooseOutput);
@@ -156,32 +165,26 @@ async function loadReleaseIndex() {
 
   const index = await fetchJsonDocument(RELEASE_INDEX_URL);
   validateReleaseIndex(index);
+  state.games = validateGames(index.games);
   state.stockProfiles = validateStockProfiles(index.stock_profiles);
-
-  if (index.project.status === NO_ACCEPTED_RELEASE) {
-    if (index.releases.length !== 0) {
-      throw new PatcherError("INDEX_STATE_CONFLICT", "Release index state conflicts with its rows");
-    }
-    showPreparingState();
-    return;
-  }
-
-  if (index.project.status !== HAS_ACCEPTED_RELEASE || index.releases.length === 0) {
-    throw new PatcherError("INDEX_STATE_CONFLICT", "Accepted release state requires at least one release row");
-  }
-
   state.releaseRows = index.releases.map(validateReleaseRow);
   if (new Set(state.releaseRows.map((row) => row.id)).size !== state.releaseRows.length) {
     throw new PatcherError("INDEX_DUPLICATE_RELEASE", "Release ids must be unique");
   }
-  replaceReleaseOptions(state.releaseRows);
-  await loadSelectedRelease(state.releaseRows[0]);
+  validateGameBindings(index.project.status);
+  replaceGameOptions([...state.games.values()]);
+  const initialGame = [...state.games.values()].find((game) => game.status === HAS_ACCEPTED_RELEASE)
+    ?? [...state.games.values()][0];
+  if (!initialGame) {
+    throw new PatcherError("INDEX_STATE_CONFLICT", "At least one public game entry is required");
+  }
+  await activateGame(initialGame.id);
 }
 
 function validateReleaseIndex(index) {
   requireExactOwnKeys(
     index,
-    ["$schema", "schema", "project", "stock_profiles", "releases"],
+    ["$schema", "schema", "project", "games", "stock_profiles", "releases"],
     "release index",
     "INDEX_INVALID",
   );
@@ -203,24 +206,77 @@ function validateReleaseIndex(index) {
   if (![NO_ACCEPTED_RELEASE, HAS_ACCEPTED_RELEASE].includes(index.project.status)) {
     throw new PatcherError("INDEX_INVALID", "Release project status is not recognized");
   }
-  if (!Array.isArray(index.stock_profiles) || !Array.isArray(index.releases)) {
+  if (!Array.isArray(index.games) || !Array.isArray(index.stock_profiles) || !Array.isArray(index.releases)) {
     throw new PatcherError("INDEX_INVALID", "Release index arrays are missing");
   }
+}
+
+function validateGames(games) {
+  if (!Array.isArray(games) || games.length !== PUBLIC_GAME_IDS.size) {
+    throw new PatcherError("GAME_CATALOG_INVALID", "The complete public game catalog is required");
+  }
+  const result = new Map();
+  for (const game of games) {
+    requireExactOwnKeys(
+      game,
+      ["id", "label", "status", "defaultReleaseId"],
+      "game entry",
+      "GAME_CATALOG_INVALID",
+    );
+    if (!PUBLIC_GAME_IDS.has(game.id) || result.has(game.id)) {
+      throw new PatcherError("GAME_CATALOG_INVALID", "Game ids must be known and unique");
+    }
+    requireBoundedString(game.label, "game label", 160, "GAME_CATALOG_INVALID");
+    if (![NO_ACCEPTED_RELEASE, HAS_ACCEPTED_RELEASE].includes(game.status)) {
+      throw new PatcherError("GAME_CATALOG_INVALID", "Game release status is invalid");
+    }
+    if (
+      (game.status === NO_ACCEPTED_RELEASE && game.defaultReleaseId !== null)
+      || (game.status === HAS_ACCEPTED_RELEASE
+        && (typeof game.defaultReleaseId !== "string"
+          || !/^[a-z0-9][a-z0-9._-]{0,63}$/.test(game.defaultReleaseId)))
+    ) {
+      throw new PatcherError("GAME_CATALOG_INVALID", "Game default release conflicts with its status");
+    }
+    result.set(game.id, Object.freeze({ ...game }));
+  }
+  return result;
 }
 
 function validateStockProfiles(profiles) {
   if (!Array.isArray(profiles)) {
     throw new PatcherError("STOCK_PROFILE_INVALID", "Stock profiles must be an array");
   }
-  if (profiles.length !== 1) {
-    throw new PatcherError("STOCK_PROFILE_INVALID", "Exactly one stock profile is required");
+  if (profiles.length !== PINNED_STOCK_PROFILES.size) {
+    throw new PatcherError("STOCK_PROFILE_INVALID", "Every currently supported stock profile is required");
   }
-  const profile = profiles[0];
-  requireExactOwnKeys(
-    profile,
-    [
+  const result = new Map();
+  for (const profile of profiles) {
+    requireExactOwnKeys(
+      profile,
+      [
+        "gameId",
+        "id",
+        "label",
+        "size",
+        "sha256",
+        "sectorCount",
+        "sectorSize",
+        "userDataOffset",
+        "userDataSize",
+        "track",
+      ],
+      "stock profile",
+      "STOCK_PROFILE_INVALID",
+    );
+    requireBoundedString(profile.label, "stock profile label", 160, "STOCK_PROFILE_INVALID");
+    const pinned = PINNED_STOCK_PROFILES.get(profile.id);
+    if (!pinned || result.has(profile.id)) {
+      throw new PatcherError("STOCK_PROFILE_INVALID", "Stock profile ids must be pinned and unique");
+    }
+    for (const key of [
+      "gameId",
       "id",
-      "label",
       "size",
       "sha256",
       "sectorCount",
@@ -228,36 +284,27 @@ function validateStockProfiles(profiles) {
       "userDataOffset",
       "userDataSize",
       "track",
-    ],
-    "stock profile",
-    "STOCK_PROFILE_INVALID",
-  );
-  requireBoundedString(profile.label, "stock profile label", 160, "STOCK_PROFILE_INVALID");
-  for (const key of [
-    "id",
-    "size",
-    "sha256",
-    "sectorCount",
-    "sectorSize",
-    "userDataOffset",
-    "userDataSize",
-    "track",
-  ]) {
-    if (profile[key] !== STOCK_PROFILE[key]) {
-      throw new PatcherError("STOCK_PROFILE_INVALID", `Stock profile ${key} is not the pinned value`);
+    ]) {
+      if (profile[key] !== pinned[key]) {
+        throw new PatcherError("STOCK_PROFILE_INVALID", `Stock profile ${key} is not the pinned value`);
+      }
     }
+    result.set(profile.id, Object.freeze({ ...profile }));
   }
-  return new Map([[profile.id, Object.freeze({ ...profile })]]);
+  return result;
 }
 
 function validateReleaseRow(row) {
   requireExactOwnKeys(
     row,
-    ["id", "state", "label", "manifest", "manifestSha256"],
+    ["gameId", "id", "state", "label", "manifest", "manifestSha256"],
     "release row",
     "RELEASE_ROW_INVALID",
   );
   requireNonEmptyString(row.id, "release id");
+  if (!PUBLIC_GAME_IDS.has(row.gameId)) {
+    throw new PatcherError("RELEASE_ROW_INVALID", "Release game id is not recognized");
+  }
   if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(row.id)) {
     throw new PatcherError("RELEASE_ROW_INVALID", "Release id contains unsupported characters");
   }
@@ -271,12 +318,56 @@ function validateReleaseRow(row) {
   }
   requireSha256(row.manifestSha256, "release manifest SHA-256");
   return Object.freeze({
+    gameId: row.gameId,
     id: row.id,
     state: row.state,
     label: row.label,
     manifest: row.manifest,
     manifestSha256: row.manifestSha256.toLowerCase(),
   });
+}
+
+function validateGameBindings(projectStatus) {
+  for (const profile of state.stockProfiles.values()) {
+    if (!state.games.has(profile.gameId)) {
+      throw new PatcherError("GAME_PROFILE_MISMATCH", "A stock profile references an unknown game");
+    }
+  }
+  for (const row of state.releaseRows) {
+    if (!state.games.has(row.gameId)) {
+      throw new PatcherError("GAME_RELEASE_MISMATCH", "A release references an unknown game");
+    }
+  }
+  let acceptedGameCount = 0;
+  for (const game of state.games.values()) {
+    const rows = state.releaseRows.filter((row) => row.gameId === game.id);
+    if (game.status === NO_ACCEPTED_RELEASE) {
+      if (rows.length !== 0 || game.defaultReleaseId !== null) {
+        throw new PatcherError("INDEX_STATE_CONFLICT", "An unavailable game cannot have public releases");
+      }
+      continue;
+    }
+    acceptedGameCount += 1;
+    if (!rows.length || !rows.some((row) => row.id === game.defaultReleaseId)) {
+      throw new PatcherError("INDEX_STATE_CONFLICT", "A published game requires its default accepted release");
+    }
+  }
+  const expectedProjectStatus = acceptedGameCount ? HAS_ACCEPTED_RELEASE : NO_ACCEPTED_RELEASE;
+  if (projectStatus !== expectedProjectStatus) {
+    throw new PatcherError("INDEX_STATE_CONFLICT", "Project status conflicts with per-game release states");
+  }
+}
+
+function replaceGameOptions(games) {
+  const options = games.map((game) => {
+    const option = document.createElement("option");
+    option.value = game.id;
+    option.textContent = game.status === HAS_ACCEPTED_RELEASE
+      ? game.label
+      : `${game.label} · 준비 중`;
+    return option;
+  });
+  elements.gameSelect.replaceChildren(...options);
 }
 
 function replaceReleaseOptions(rows) {
@@ -290,7 +381,7 @@ function replaceReleaseOptions(rows) {
 }
 
 async function handleReleaseChange() {
-  const row = state.releaseRows.find((candidate) => candidate.id === elements.releaseSelect.value);
+  const row = state.visibleReleaseRows.find((candidate) => candidate.id === elements.releaseSelect.value);
   if (!row) {
     return;
   }
@@ -299,6 +390,37 @@ async function handleReleaseChange() {
   } catch (error) {
     handleIndexFailure(error);
   }
+}
+
+async function handleGameChange() {
+  try {
+    await activateGame(elements.gameSelect.value);
+  } catch (error) {
+    handleIndexFailure(error);
+  }
+}
+
+async function activateGame(gameId) {
+  const game = state.games.get(gameId);
+  if (!game) {
+    throw new PatcherError("GAME_CATALOG_INVALID", "Selected game is not in the public catalog");
+  }
+  state.selectedGameId = game.id;
+  elements.gameSelect.value = game.id;
+  state.visibleReleaseRows = state.releaseRows.filter((row) => row.gameId === game.id);
+  resetFileWorkflow();
+  if (game.status === NO_ACCEPTED_RELEASE) {
+    showPreparingState(game);
+    announce(`${game.label}은 현재 공개 패치를 준비 중입니다.`);
+    return;
+  }
+  const defaultRow = state.visibleReleaseRows.find((row) => row.id === game.defaultReleaseId);
+  if (!defaultRow) {
+    throw new PatcherError("INDEX_STATE_CONFLICT", "Selected game default release is missing");
+  }
+  replaceReleaseOptions(state.visibleReleaseRows);
+  await loadSelectedRelease(defaultRow);
+  announce(`${game.label}, 공개 버전 ${state.visibleReleaseRows.length}개를 불러왔습니다.`);
 }
 
 async function loadSelectedRelease(row) {
@@ -328,7 +450,7 @@ async function loadSelectedRelease(row) {
   elements.releaseSelect.value = row.id;
   elements.releaseState.textContent = "ACCEPTED";
   elements.releaseState.classList.add("is-ready");
-  elements.sourceProfile.textContent = release.source.profileId;
+  elements.sourceProfile.textContent = state.stockProfiles.get(release.source.profileId)?.label ?? "검증된 정품 원본";
   elements.targetName.textContent = release.target.filename;
   elements.publishedAt.textContent = formatPublishedAt(release.publishedAt);
   elements.applyHint.textContent = "원본과 출력 위치 선택을 마치면 전체 검증과 패치를 시작할 수 있습니다.";
@@ -388,6 +510,7 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
   const stockProfile = stockProfiles.get(manifest.source.profileId);
   if (
     !stockProfile
+    || stockProfile.gameId !== row.gameId
     || manifest.source.size !== stockProfile.size
     || manifest.source.sha256 !== stockProfile.sha256
   ) {
@@ -433,6 +556,7 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
 
   const patchUrl = resolveLocalReference(manifest.patch.url, SITE_ROOT_URL);
   return Object.freeze({
+    gameId: row.gameId,
     id: manifest.id,
     version: manifest.version,
     title: manifest.title,
@@ -528,26 +652,26 @@ async function fetchJsonDocument(url, expectedSha256 = null, timeoutMs = MANIFES
   }
 }
 
-function showPreparingState() {
+function showPreparingState(game = state.games.get(state.selectedGameId)) {
   state.availability = "preparing";
-  state.releaseRows = [];
+  state.visibleReleaseRows = [];
   state.release = null;
   resetFileWorkflow();
 
   const option = document.createElement("option");
-  option.textContent = "첫 공개 릴리스 준비 중";
+  option.textContent = "공개 패치 준비 중";
   elements.releaseSelect.replaceChildren(option);
   elements.releaseState.textContent = "준비 중";
   elements.releaseState.classList.remove("is-ready");
   elements.sourceProfile.textContent = "—";
   elements.targetName.textContent = "—";
   elements.publishedAt.textContent = "—";
-  elements.applyHint.textContent = "검증을 통과한 첫 공개 릴리스가 등록되면 사용할 수 있습니다.";
+  elements.applyHint.textContent = "검증과 승인을 마친 공개 패치가 등록되면 사용할 수 있습니다.";
 
   setAvailability(
     "preparing",
-    "첫 공개 패치를 검증하고 있습니다",
-    "현재 ACCEPTED 릴리스가 없어 파일 선택과 패치 실행을 잠갔습니다.",
+    `${game?.label ?? "선택한 게임"} 패치 준비 중`,
+    "현재 공개 승인된 패치가 없어 파일 선택과 패치 실행을 잠갔습니다.",
     NO_ACCEPTED_RELEASE,
   );
   setWorkflowPosition("release");
@@ -557,13 +681,19 @@ function showPreparingState() {
 function handleIndexFailure(error) {
   console.error("Release metadata could not be loaded", error);
   state.availability = "error";
+  state.games = new Map();
+  state.selectedGameId = null;
   state.releaseRows = [];
+  state.visibleReleaseRows = [];
   state.release = null;
   resetFileWorkflow();
 
   const option = document.createElement("option");
   option.textContent = "릴리스 정보를 사용할 수 없음";
   elements.releaseSelect.replaceChildren(option);
+  const gameOption = document.createElement("option");
+  gameOption.textContent = "게임 정보를 사용할 수 없음";
+  elements.gameSelect.replaceChildren(gameOption);
   elements.releaseState.textContent = "차단됨";
   elements.releaseState.classList.remove("is-ready");
   elements.sourceProfile.textContent = "—";
@@ -1142,7 +1272,11 @@ function resetPreparedSource() {
 
 function updateControls() {
   const releaseReady = state.availability === "ready" && Boolean(state.release);
-  elements.releaseSelect.disabled = state.busy || state.releaseRows.length <= 1 || state.availability === "loading";
+  elements.gameSelect.disabled = state.busy || state.games.size <= 1 || state.availability === "loading";
+  elements.releaseSelect.disabled = state.busy
+    || state.visibleReleaseRows.length <= 1
+    || state.availability === "loading"
+    || state.availability === "preparing";
   elements.sourceButton.disabled = !releaseReady || !state.fileSystemSupported || state.busy;
   elements.outputButton.disabled = !releaseReady || !state.fileSystemSupported || !state.sourcePrepared || state.busy;
   elements.patchButton.disabled = !releaseReady
@@ -1435,7 +1569,7 @@ function formatPublishedAt(value) {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    timeZone: "UTC",
+    timeZone: "Asia/Seoul",
   }).format(date);
 }
 
@@ -1486,6 +1620,7 @@ class PatcherError extends Error {
 }
 
 export const __testHooks = Object.freeze({
+  activateGame,
   beginWorkerOperation,
   expectedManifestReference,
   expectedPatchReference,
@@ -1496,6 +1631,7 @@ export const __testHooks = Object.freeze({
   normalizeReleaseManifest,
   setWorkflowPosition,
   validateReleaseIndex,
+  validateGames,
   validateReleaseRow,
   validateStockProfiles,
 });

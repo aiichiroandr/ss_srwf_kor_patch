@@ -4,9 +4,13 @@
 
 이 저장소는 현재 `HAS_ACCEPTED_RELEASE`이며,
 [`manifest/releases.json`](../manifest/releases.json)에
-`v5-r001-fable-g25k`와 `v5-r001-fable-g24` 두 항목이 등록되어 있습니다.
+`srwf-f-20260812-v0-1`과 `srwf-f-20260810-preview` 두 항목이 등록되어 있습니다.
 공개 payload는 각 영수증·릴리스 명세와 해시가 일치하는 희소 `.srwfp`
 두 개뿐입니다.
+
+게임 카탈로그에는 `srwf-f`와 `srwf-final`이 함께 등록되어 있습니다. F는
+`HAS_ACCEPTED_RELEASE`, F 완결편은 `NO_ACCEPTED_RELEASE`이며, 완결편에는
+공개 릴리스 행·기본 릴리스·원본 프로필을 아직 연결하지 않습니다.
 
 후속 `latest`, 새 빌드, 실행 가능 후보, 정적 검증 통과, identity rebuild 또는
 일부 화면의 runtime 확인만으로 새 항목을 추가할 수 없습니다.
@@ -27,7 +31,7 @@
 
 ## source authority
 
-공개 v1 patch는 아래 stock profile 하나에만 적용됩니다.
+현재 공개된 F용 patch는 아래 stock profile 하나에만 적용됩니다.
 
 | field | exact value |
 |---|---|
@@ -86,10 +90,11 @@ release manifest와 receipt가 가리키는 source, target, patch, V5 commit도
 
 ```json
 {
-  "id": "v5-rNNN",
+  "gameId": "srwf-f",
+  "id": "srwf-f-YYYYMMDD-version",
   "state": "ACCEPTED",
   "label": "표시 이름",
-  "manifest": "releases/v5-rNNN.json",
+  "manifest": "releases/srwf-f-YYYYMMDD-version.json",
   "manifestSha256": "64 lowercase hex characters"
 }
 ```
@@ -107,9 +112,9 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
 ```jsonc
 {
   "schema": "srwf-kor.public-release.v1",
-  "id": "v5-rNNN",
+  "id": "srwf-f-YYYYMMDD-version",
   "state": "ACCEPTED",
-  "version": "rNNN",
+  "version": "v0.1",
   "title": "표시 이름",
   "publishedAt": "YYYY-MM-DDTHH:MM:SSZ",
   "source": {
@@ -118,14 +123,14 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
     "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
   },
   "target": {
-    "filename": "SRWF-KOR-rNNN.img",
-    "cueFilename": "SRWF-KOR-rNNN.cue",
+    "filename": "SRWF-KOR-YYYYMMDD-version.img",
+    "cueFilename": "SRWF-KOR-YYYYMMDD-version.cue",
     "size": 578512032,
     "sha256": "<accepted target SHA-256>"
   },
   "patch": {
     "format": "srwf.sparse-byte-delta.v1",
-    "url": "patches/v5-rNNN.srwfp",
+    "url": "patches/srwf-f-YYYYMMDD-version.srwfp",
     "size": 0,
     "sha256": "<accepted patch SHA-256>",
     "recordCount": 0,
@@ -183,5 +188,4 @@ preimage 및 모든 target byte의 실제 변경 여부는 브라우저 적용�
 설치된 pre-commit hook은 dependency 설치, `curl`, `wget`, `npx` 같은 네트워크
 동작 없이 저장소의 고정된 `npm test` 명령 전체를 실행합니다.
 
-현재 요청 범위는 로컬 저장소 작성까지입니다. 원격 생성, push, Pages 활성화,
-배포는 별도의 사용자 요청 없이는 수행하지 않습니다.
+원격 push와 Pages 배포는 저장소 소유자의 명시적 요청이 있을 때만 수행합니다.

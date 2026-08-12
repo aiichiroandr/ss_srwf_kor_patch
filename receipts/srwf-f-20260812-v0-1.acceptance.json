@@ -1,6 +1,6 @@
 {
   "schema": "srwf-kor.acceptance-receipt.v1",
-  "releaseId": "v5-r001-fable-g25k",
+  "releaseId": "srwf-f-20260812-v0-1",
   "state": "ACCEPTED",
   "acceptedAt": "2026-08-11T23:27:58Z",
   "stockProfileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
@@ -14,5 +14,5 @@
     "visualLayout": "PASS",
     "longPlayProgression": "PASS"
   },
-  "decisionAuthority": "저장소 소유자 지시: “g25k 패치받을수있도록 세팅해”; G25K를 공개 패치 선택 항목으로 제공하도록 승인"
+  "decisionAuthority": "저장소 소유자 지시: 2026.08.12 v0.1 프리뷰를 공개 패치 선택 항목으로 제공하도록 승인"
 }

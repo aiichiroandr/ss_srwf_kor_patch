@@ -813,6 +813,17 @@ a:focus-visible {
 
 .select-wrap {
   position: relative;
+  min-width: 0;
+}
+
+.selector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.selector-grid > div {
+  min-width: 0;
 }
 
 .select-wrap::after {
@@ -836,6 +847,7 @@ a:focus-visible {
   font-size: 14px;
   font-weight: 750;
   appearance: none;
+  text-overflow: ellipsis;
 }
 
 .select-wrap select:disabled {
@@ -2536,6 +2548,10 @@ main {
   .release-card .field-label {
     margin: 7px 0 4px;
     font-size: 9px;
+  }
+
+  .selector-grid {
+    gap: 7px;
   }
 
   .select-wrap select {

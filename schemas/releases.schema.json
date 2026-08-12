@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:srwf-kor:schema:public-release-index:v1",
+  "$id": "urn:srwf-kor:schema:public-release-index:v2",
   "title": "SRWF Korean public release index",
   "type": "object",
   "additionalProperties": false,
@@ -8,6 +8,7 @@
     "$schema",
     "schema",
     "project",
+    "games",
     "stock_profiles",
     "releases"
   ],
@@ -16,7 +17,7 @@
       "const": "../schemas/releases.schema.json"
     },
     "schema": {
-      "const": "srwf-kor.public-release-index.v1"
+      "const": "srwf-kor.public-release-index.v2"
     },
     "project": {
       "type": "object",
@@ -37,15 +38,100 @@
         }
       }
     },
+    "games": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "status",
+          "defaultReleaseId"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "srwf-f",
+              "srwf-final"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "\\S"
+          },
+          "status": {
+            "enum": [
+              "NO_ACCEPTED_RELEASE",
+              "HAS_ACCEPTED_RELEASE"
+            ]
+          },
+          "defaultReleaseId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "NO_ACCEPTED_RELEASE"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "defaultReleaseId": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "HAS_ACCEPTED_RELEASE"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "defaultReleaseId": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
     "stock_profiles": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 1,
-      "prefixItems": [
-        {
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "gameId",
             "id",
             "label",
             "size",
@@ -57,6 +143,9 @@
             "track"
           ],
           "properties": {
+            "gameId": {
+              "const": "srwf-f"
+            },
             "id": {
               "const": "saturn-jp-stock-track01-mode1-2352-c198a930"
             },
@@ -88,8 +177,7 @@
               "const": "TRACK 01 MODE1/2352"
             }
           }
-        }
-      ]
+      }
     },
     "releases": {
       "type": "array",
@@ -98,6 +186,7 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
+          "gameId",
           "id",
           "state",
           "label",
@@ -105,6 +194,12 @@
           "manifestSha256"
         ],
         "properties": {
+          "gameId": {
+            "enum": [
+              "srwf-f",
+              "srwf-final"
+            ]
+          },
           "id": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"

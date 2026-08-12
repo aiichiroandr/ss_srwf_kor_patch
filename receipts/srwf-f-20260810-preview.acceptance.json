@@ -1,6 +1,6 @@
 {
   "schema": "srwf-kor.acceptance-receipt.v1",
-  "releaseId": "v5-r001-fable-g24",
+  "releaseId": "srwf-f-20260810-preview",
   "state": "ACCEPTED",
   "acceptedAt": "2026-08-09T15:55:36Z",
   "stockProfileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
@@ -14,5 +14,5 @@
     "visualLayout": "PASS",
     "longPlayProgression": "PASS"
   },
-  "decisionAuthority": "저장소 소유자 지시: 콜드부트·무정지 검증 보고에 따라 G24 우선 공개, 알려진 마이너 표시·문구 문제 수용"
+  "decisionAuthority": "저장소 소유자 지시: 2026.08.10 이전 프리뷰 공개, 알려진 마이너 표시·문구 문제 수용"
 }

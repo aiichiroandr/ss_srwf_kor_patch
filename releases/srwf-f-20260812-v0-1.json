@@ -1,9 +1,9 @@
 {
   "schema": "srwf-kor.public-release.v1",
-  "id": "v5-r001-fable-g25k",
+  "id": "srwf-f-20260812-v0-1",
   "state": "ACCEPTED",
-  "version": "r001-fable-g25k",
-  "title": "슈퍼로봇대전 F 한국어 패치 — Fable G25K 공개판",
+  "version": "v0.1",
+  "title": "세가 새턴 슈퍼로봇대전 F 한글 패치 — 2026.08.12 v0.1 프리뷰",
   "publishedAt": "2026-08-11T23:27:58Z",
   "source": {
     "profileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
@@ -11,14 +11,14 @@
     "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
   },
   "target": {
-    "filename": "SRWF-KOR-fable-g25k.img",
-    "cueFilename": "SRWF-KOR-fable-g25k.cue",
+    "filename": "SRWF-KOR-20260812-v0.1.img",
+    "cueFilename": "SRWF-KOR-20260812-v0.1.cue",
     "size": 578512032,
     "sha256": "4319df1a1feb7c2608568884348bf9078cc7e954679bae9aafcad7784f4ecbb3"
   },
   "patch": {
     "format": "srwf.sparse-byte-delta.v1",
-    "url": "patches/v5-r001-fable-g25k.srwfp",
+    "url": "patches/srwf-f-20260812-v0-1.srwfp",
     "size": 3593835,
     "sha256": "a8cca9b2c1afb53cd762bb3670a9381e0c2ad2695f2c90c23103442e4f5460a8",
     "recordCount": 50825,
@@ -27,6 +27,6 @@
   "provenance": {
     "v5Commit": "9de93aa4a2b0ebb1ef0dcd589740ed801c1a2f34",
     "buildReceiptSha256": "563f3fda8d8f49b49625a609bb303a82f57fc5f668d3e97f13447506bd4bf155",
-    "acceptanceReceiptSha256": "55101cd41d9dd0669926ae5c8d1417006c968108b608b03e31c4d2292331ca01"
+    "acceptanceReceiptSha256": "8f31d530be1847624996c512a2b9aa4827a945d8faefaf411e0881db54d985a6"
   }
 }

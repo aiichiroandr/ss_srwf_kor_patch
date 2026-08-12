@@ -38,6 +38,13 @@ STOCK_PROFILE = {
     "userDataSize": 2_048,
     "track": "TRACK 01 MODE1/2352",
 }
+GAME_DEFINITIONS = {
+    "srwf-f": {"label": "슈퍼로봇대전 F"},
+    "srwf-final": {"label": "슈퍼로봇대전 F 완결편"},
+}
+PINNED_STOCK_PROFILES = {
+    STOCK_PROFILE["id"]: {"gameId": "srwf-f", **STOCK_PROFILE},
+}
 PATCH_MAX = 32 * 1024 * 1024
 BODY_MAX = 64 * 1024 * 1024
 RECORD_MAX = 1_000_000
@@ -935,10 +942,10 @@ def validate_schema_documents() -> None:
     index_schema = documents.get("releases.schema.json", {})
     expect_schema_fragment(
         index_schema.get("$id"),
-        "urn:srwf-kor:schema:public-release-index:v1",
+        "urn:srwf-kor:schema:public-release-index:v2",
         "schemas/releases.schema.json $id",
     )
-    index_keys = {"$schema", "schema", "project", "stock_profiles", "releases"}
+    index_keys = {"$schema", "schema", "project", "games", "stock_profiles", "releases"}
     index_props = schema_object_properties(
         index_schema,
         index_keys,
@@ -952,7 +959,7 @@ def validate_schema_documents() -> None:
     )
     expect_schema_fragment(
         index_props.get("schema"),
-        {"const": "srwf-kor.public-release-index.v1"},
+        {"const": "srwf-kor.public-release-index.v2"},
         "schemas/releases.schema.json schema property",
     )
     project = index_props.get("project")
@@ -964,22 +971,76 @@ def validate_schema_documents() -> None:
         "release-index project status",
     )
 
+    games = index_props.get("games")
+    if not isinstance(games, dict):
+        complain("release-index games: array schema is missing")
+        game_schema: Any = None
+    else:
+        if set(games) != {"type", "minItems", "maxItems", "uniqueItems", "items"}:
+            complain("release-index games: array schema keys are out of sync")
+        expect_schema_fragment(games.get("type"), "array", "release-index games type")
+        expect_schema_fragment(games.get("minItems"), 2, "release-index games minimum")
+        expect_schema_fragment(games.get("maxItems"), 2, "release-index games maximum")
+        expect_schema_fragment(games.get("uniqueItems"), True, "release-index games uniqueness")
+        game_schema = games.get("items")
+    game_props = schema_object_properties(
+        game_schema,
+        {"id", "label", "status", "defaultReleaseId"},
+        "release-index game",
+        allowed_metadata={"allOf"},
+    )
+    for key, expected in {
+        "id": {"enum": list(GAME_DEFINITIONS)},
+        "label": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": r"\S"},
+        "status": {"enum": ["NO_ACCEPTED_RELEASE", "HAS_ACCEPTED_RELEASE"]},
+        "defaultReleaseId": {"type": ["string", "null"], "pattern": ID_PATTERN},
+    }.items():
+        expect_schema_fragment(game_props.get(key), expected, f"release-index game {key}")
+    expected_game_status_rules = [
+        {
+            "if": {
+                "properties": {"status": {"const": "NO_ACCEPTED_RELEASE"}},
+                "required": ["status"],
+            },
+            "then": {"properties": {"defaultReleaseId": {"type": "null"}}},
+        },
+        {
+            "if": {
+                "properties": {"status": {"const": "HAS_ACCEPTED_RELEASE"}},
+                "required": ["status"],
+            },
+            "then": {
+                "properties": {
+                    "defaultReleaseId": {"type": "string", "pattern": ID_PATTERN}
+                }
+            },
+        },
+    ]
+    expect_schema_fragment(
+        game_schema.get("allOf") if isinstance(game_schema, dict) else None,
+        expected_game_status_rules,
+        "release-index game status rules",
+    )
+
     stock_profiles = index_props.get("stock_profiles")
     if not isinstance(stock_profiles, dict):
         complain("release-index stock_profiles: array schema is missing")
         profile_schema: Any = None
     else:
-        if set(stock_profiles) != {"type", "minItems", "maxItems", "prefixItems"}:
+        if set(stock_profiles) != {"type", "minItems", "maxItems", "uniqueItems", "items"}:
             complain("release-index stock_profiles: array schema keys are out of sync")
         expect_schema_fragment(stock_profiles.get("type"), "array", "release-index stock_profiles type")
         expect_schema_fragment(stock_profiles.get("minItems"), 1, "release-index stock_profiles minimum")
-        expect_schema_fragment(stock_profiles.get("maxItems"), 1, "release-index stock_profiles maximum")
-        prefix_items = stock_profiles.get("prefixItems")
-        profile_schema = prefix_items[0] if isinstance(prefix_items, list) and len(prefix_items) == 1 else None
-        if profile_schema is None:
-            complain("release-index stock_profiles: exactly one prefix item schema is required")
-    profile_keys = set(STOCK_PROFILE) | {"label"}
+        expect_schema_fragment(stock_profiles.get("maxItems"), 16, "release-index stock_profiles maximum")
+        expect_schema_fragment(stock_profiles.get("uniqueItems"), True, "release-index stock_profiles uniqueness")
+        profile_schema = stock_profiles.get("items")
+    profile_keys = set(STOCK_PROFILE) | {"gameId", "label"}
     profile_props = schema_object_properties(profile_schema, profile_keys, "release-index stock profile")
+    expect_schema_fragment(
+        profile_props.get("gameId"),
+        {"const": "srwf-f"},
+        "release-index stock profile gameId",
+    )
     for key, expected in STOCK_PROFILE.items():
         expect_schema_fragment(
             profile_props.get(key),
@@ -1002,9 +1063,10 @@ def validate_schema_documents() -> None:
         expect_schema_fragment(releases_array.get("type"), "array", "release-index releases type")
         expect_schema_fragment(releases_array.get("uniqueItems"), True, "release-index releases uniqueness")
         row_schema = releases_array.get("items")
-    row_keys = {"id", "state", "label", "manifest", "manifestSha256"}
+    row_keys = {"gameId", "id", "state", "label", "manifest", "manifestSha256"}
     row_props = schema_object_properties(row_schema, row_keys, "release-index row")
     for key, expected in {
+        "gameId": {"enum": list(GAME_DEFINITIONS)},
         "id": {"type": "string", "pattern": ID_PATTERN},
         "state": {"const": "ACCEPTED"},
         "label": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": r"\S"},
@@ -1208,10 +1270,12 @@ def validate_acceptance_receipt(
         complain(f"{context}: release identity/state is not explicit ACCEPTED")
     if not is_rfc3339_datetime(receipt.get("acceptedAt")):
         complain(f"{context}: acceptedAt must be an RFC 3339 date-time")
-    if receipt.get("stockProfileId") != STOCK_PROFILE["id"]:
-        complain(f"{context}: stockProfileId is not the pinned profile")
-    if receipt.get("sourceSha256") != STOCK_PROFILE["sha256"]:
-        complain(f"{context}: sourceSha256 is not the pinned stock hash")
+    source_profile_id = source.get("profileId") if isinstance(source, dict) else None
+    source_sha256 = source.get("sha256") if isinstance(source, dict) else None
+    if receipt.get("stockProfileId") != source_profile_id:
+        complain(f"{context}: stockProfileId does not match the release source")
+    if receipt.get("sourceSha256") != source_sha256:
+        complain(f"{context}: sourceSha256 does not match the release source")
     if not is_hex64(receipt.get("targetSha256")):
         complain(f"{context}: targetSha256 is invalid")
     if not is_hex64(receipt.get("patchSha256")):
@@ -1244,8 +1308,17 @@ def validate_acceptance_receipt(
         complain(f"{context}: V5 commit does not match release manifest")
 
 
-def validate_release_manifest(row: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
+def validate_release_manifest(
+    row: dict[str, Any],
+    stock_profiles_by_id: dict[str, dict[str, Any]] | None = None,
+) -> tuple[str | None, str | None, str | None]:
     release_id = row.get("id")
+    game_id = row.get("gameId")
+    if stock_profiles_by_id is None:
+        stock_profiles_by_id = {
+            profile_id: {**profile, "label": "pinned stock"}
+            for profile_id, profile in PINNED_STOCK_PROFILES.items()
+        }
     manifest_ref = row.get("manifest")
     if not isinstance(release_id, str) or ID_RE.fullmatch(release_id) is None:
         complain("release index row: invalid id")
@@ -1278,13 +1351,20 @@ def validate_release_manifest(row: dict[str, Any]) -> tuple[str | None, str | No
 
     source = manifest.get("source")
     if exact_keys(source, {"profileId", "size", "sha256"}, f"release {release_id} source"):
-        expected_source = {
-            "profileId": STOCK_PROFILE["id"],
-            "size": STOCK_PROFILE["size"],
-            "sha256": STOCK_PROFILE["sha256"],
-        }
-        if source != expected_source:
-            complain(f"release {release_id}: source is not the exact stock profile")
+        assert isinstance(source, dict)
+        profile = stock_profiles_by_id.get(source.get("profileId"))
+        if profile is None:
+            complain(f"release {release_id}: source profile is not pinned in the public index")
+        else:
+            if profile.get("gameId") != game_id:
+                complain(f"release {release_id}: source profile belongs to a different game")
+            expected_source = {
+                "profileId": profile.get("id"),
+                "size": profile.get("size"),
+                "sha256": profile.get("sha256"),
+            }
+            if source != expected_source:
+                complain(f"release {release_id}: source is not the exact indexed stock profile")
 
     target = manifest.get("target")
     if exact_keys(target, {"filename", "cueFilename", "size", "sha256"}, f"release {release_id} target"):
@@ -1293,7 +1373,16 @@ def validate_release_manifest(row: dict[str, Any]) -> tuple[str | None, str | No
             complain(f"release {release_id}: target filename must be a safe .img basename")
         if not isinstance(target.get("cueFilename"), str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.cue", target["cueFilename"]) is None:
             complain(f"release {release_id}: CUE filename must be a safe basename")
-        if target.get("size") != STOCK_PROFILE["size"] or not is_hex64(target.get("sha256")):
+        source_profile = (
+            stock_profiles_by_id.get(source.get("profileId"))
+            if isinstance(source, dict)
+            else None
+        )
+        if (
+            source_profile is None
+            or target.get("size") != source_profile.get("size")
+            or not is_hex64(target.get("sha256"))
+        ):
             complain(f"release {release_id}: target size/hash is invalid")
 
     patch = manifest.get("patch")
@@ -1358,7 +1447,7 @@ def validate_release_manifest(row: dict[str, Any]) -> tuple[str | None, str | No
 
 def validate_index(files: list[Path]) -> None:
     index = load_json(INDEX_PATH)
-    required = {"$schema", "schema", "project", "stock_profiles", "releases"}
+    required = {"$schema", "schema", "project", "games", "stock_profiles", "releases"}
     if not exact_keys(index, required, "manifest/releases.json"):
         return
     assert isinstance(index, dict)
@@ -1368,7 +1457,7 @@ def validate_index(files: list[Path]) -> None:
         schema_path = (INDEX_PATH.parent / index["$schema"]).resolve()
         if schema_path != (ROOT / "schemas/releases.schema.json").resolve() or not schema_path.is_file():
             complain("manifest/releases.json: $schema path does not resolve to the checked-in schema")
-    if index.get("schema") != "srwf-kor.public-release-index.v1":
+    if index.get("schema") != "srwf-kor.public-release-index.v2":
         complain("manifest/releases.json: schema id mismatch")
     if index.get("project") not in (
         {"id": "srwf-kor-v5", "status": "NO_ACCEPTED_RELEASE"},
@@ -1376,18 +1465,78 @@ def validate_index(files: list[Path]) -> None:
     ):
         complain("manifest/releases.json: project id/status is invalid")
 
-    profiles = index.get("stock_profiles")
-    if not isinstance(profiles, list) or len(profiles) != 1 or not isinstance(profiles[0], dict):
-        complain("manifest/releases.json: exactly one stock profile is required")
+    games = index.get("games")
+    games_by_id: dict[str, dict[str, Any]] = {}
+    if not isinstance(games, list) or len(games) != len(GAME_DEFINITIONS):
+        complain("manifest/releases.json: exactly the two supported games are required")
     else:
-        profile = profiles[0]
-        if set(profile) != {"id", "label", "size", "sha256", "sectorCount", "sectorSize", "userDataOffset", "userDataSize", "track"}:
-            complain("manifest/releases.json: stock profile keys differ from the fixed contract")
-        for key, expected in STOCK_PROFILE.items():
-            if profile.get(key) != expected:
-                complain(f"manifest/releases.json: stock profile {key} is not exact")
-        if not is_bounded_string(profile.get("label"), maximum=160):
-            complain("manifest/releases.json: stock profile label must be 1-160 non-blank characters")
+        expected_game_order = list(GAME_DEFINITIONS)
+        actual_game_order: list[Any] = []
+        for position, game in enumerate(games):
+            if not exact_keys(
+                game,
+                {"id", "label", "status", "defaultReleaseId"},
+                f"game index row {position}",
+            ):
+                continue
+            assert isinstance(game, dict)
+            game_id = game.get("id")
+            actual_game_order.append(game_id)
+            if game_id not in GAME_DEFINITIONS:
+                complain(f"game index row {position}: unsupported game id")
+                continue
+            if game_id in games_by_id:
+                complain(f"game index row {position}: duplicate game id")
+                continue
+            games_by_id[game_id] = game
+            if game.get("label") != GAME_DEFINITIONS[game_id]["label"]:
+                complain(f"game index row {position}: label is not the pinned public label")
+            status = game.get("status")
+            default_release_id = game.get("defaultReleaseId")
+            if status not in {"NO_ACCEPTED_RELEASE", "HAS_ACCEPTED_RELEASE"}:
+                complain(f"game index row {position}: status is invalid")
+            if status == "NO_ACCEPTED_RELEASE" and default_release_id is not None:
+                complain(f"game index row {position}: unavailable game must have a null default")
+            if (
+                status == "HAS_ACCEPTED_RELEASE"
+                and (
+                    not isinstance(default_release_id, str)
+                    or ID_RE.fullmatch(default_release_id) is None
+                )
+            ):
+                complain(f"game index row {position}: available game requires a valid default release id")
+        if actual_game_order != expected_game_order:
+            complain("manifest/releases.json: game order must be srwf-f then srwf-final")
+
+    profiles = index.get("stock_profiles")
+    stock_profiles_by_id: dict[str, dict[str, Any]] = {}
+    if not isinstance(profiles, list) or not 1 <= len(profiles) <= 16:
+        complain("manifest/releases.json: stock_profiles must contain 1-16 pinned profiles")
+    else:
+        profile_keys = {
+            "gameId", "id", "label", "size", "sha256", "sectorCount", "sectorSize",
+            "userDataOffset", "userDataSize", "track",
+        }
+        for position, profile in enumerate(profiles):
+            if not exact_keys(profile, profile_keys, f"stock profile row {position}"):
+                continue
+            assert isinstance(profile, dict)
+            profile_id = profile.get("id")
+            if profile_id in stock_profiles_by_id:
+                complain(f"stock profile row {position}: duplicate profile id")
+                continue
+            pinned = PINNED_STOCK_PROFILES.get(profile_id)
+            if pinned is None:
+                complain(f"stock profile row {position}: profile is not explicitly pinned")
+                continue
+            stock_profiles_by_id[profile_id] = profile
+            if profile.get("gameId") not in games_by_id:
+                complain(f"stock profile row {position}: gameId is unknown")
+            for key, expected in pinned.items():
+                if profile.get(key) != expected:
+                    complain(f"stock profile row {position}: {key} is not exact")
+            if not is_bounded_string(profile.get("label"), maximum=160):
+                complain(f"stock profile row {position}: label must be 1-160 non-blank characters")
 
     releases = index.get("releases")
     if not isinstance(releases, list):
@@ -1398,15 +1547,28 @@ def validate_index(files: list[Path]) -> None:
         complain("NO_ACCEPTED_RELEASE requires an empty releases array")
     if status == "HAS_ACCEPTED_RELEASE" and not releases:
         complain("HAS_ACCEPTED_RELEASE requires at least one ACCEPTED release")
+    expected_project_status = (
+        "HAS_ACCEPTED_RELEASE"
+        if any(game.get("status") == "HAS_ACCEPTED_RELEASE" for game in games_by_id.values())
+        else "NO_ACCEPTED_RELEASE"
+    )
+    if status != expected_project_status:
+        complain("manifest/releases.json: project status does not match per-game availability")
 
     referenced_manifests: set[str] = set()
     referenced_patches: set[str] = set()
     referenced_receipts: set[str] = set()
     ids: set[str] = set()
+    release_ids_by_game: dict[str, set[str]] = {game_id: set() for game_id in games_by_id}
     for position, row in enumerate(releases):
-        if not exact_keys(row, {"id", "state", "label", "manifest", "manifestSha256"}, f"release index row {position}"):
+        if not exact_keys(row, {"gameId", "id", "state", "label", "manifest", "manifestSha256"}, f"release index row {position}"):
             continue
         assert isinstance(row, dict)
+        game_id = row.get("gameId")
+        if game_id not in games_by_id:
+            complain(f"release index row {position}: gameId is unknown")
+        elif games_by_id[game_id].get("status") != "HAS_ACCEPTED_RELEASE":
+            complain(f"release index row {position}: unavailable game cannot publish a release")
         if row.get("state") != "ACCEPTED":
             complain(f"release index row {position}: state must be ACCEPTED")
         if not is_bounded_string(row.get("label"), maximum=160):
@@ -1415,13 +1577,28 @@ def validate_index(files: list[Path]) -> None:
             complain(f"release index row {position}: duplicate id")
         if isinstance(row.get("id"), str):
             ids.add(row["id"])
-        manifest_ref, patch_ref, receipt_ref = validate_release_manifest(row)
+            if game_id in release_ids_by_game:
+                release_ids_by_game[game_id].add(row["id"])
+        manifest_ref, patch_ref, receipt_ref = validate_release_manifest(row, stock_profiles_by_id)
         if manifest_ref:
             referenced_manifests.add(manifest_ref)
         if patch_ref:
             referenced_patches.add(patch_ref)
         if receipt_ref:
             referenced_receipts.add(receipt_ref)
+
+    for game_id, game in games_by_id.items():
+        game_release_ids = release_ids_by_game.get(game_id, set())
+        if game.get("status") == "NO_ACCEPTED_RELEASE":
+            if game_release_ids:
+                complain(f"game {game_id}: NO_ACCEPTED_RELEASE requires no release rows")
+            if game.get("defaultReleaseId") is not None:
+                complain(f"game {game_id}: NO_ACCEPTED_RELEASE requires a null default")
+        else:
+            if not game_release_ids:
+                complain(f"game {game_id}: HAS_ACCEPTED_RELEASE requires at least one release row")
+            if game.get("defaultReleaseId") not in game_release_ids:
+                complain(f"game {game_id}: defaultReleaseId must reference its own accepted release")
 
     present = {relative(path) for path in files}
     actual_manifests = {
