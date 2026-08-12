@@ -1,0 +1,37 @@
+{
+  "$schema": "../schemas/releases.schema.json",
+  "schema": "srwf-kor.public-release-index.v1",
+  "project": {
+    "id": "srwf-kor-v5",
+    "status": "HAS_ACCEPTED_RELEASE"
+  },
+  "stock_profiles": [
+    {
+      "id": "saturn-jp-stock-track01-mode1-2352-c198a930",
+      "label": "검증된 세가 새턴 일본어판 원본 (Track 01)",
+      "size": 578512032,
+      "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+      "sectorCount": 245966,
+      "sectorSize": 2352,
+      "userDataOffset": 16,
+      "userDataSize": 2048,
+      "track": "TRACK 01 MODE1/2352"
+    }
+  ],
+  "releases": [
+    {
+      "id": "v5-r001-fable-g25k",
+      "state": "ACCEPTED",
+      "label": "Fable G25K 공개판",
+      "manifest": "releases/v5-r001-fable-g25k.json",
+      "manifestSha256": "d10ccc9413fce7ebdc376fc67434991739e49fdb89b0736103d4425bf5fe044c"
+    },
+    {
+      "id": "v5-r001-fable-g24",
+      "state": "ACCEPTED",
+      "label": "Fable G24 마이너 공개판",
+      "manifest": "releases/v5-r001-fable-g24.json",
+      "manifestSha256": "b5886164bd5efd97846649f4fe13d73b894af003189f63297c6ecedab050bb64"
+    }
+  ]
+}

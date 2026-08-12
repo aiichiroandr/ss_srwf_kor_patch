@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:srwf-kor:schema:acceptance-receipt:v1",
+  "title": "Explicit SRWF Korean release acceptance receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "releaseId",
+    "state",
+    "acceptedAt",
+    "stockProfileId",
+    "sourceSha256",
+    "targetSha256",
+    "patchSha256",
+    "v5Commit",
+    "gates",
+    "decisionAuthority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "srwf-kor.acceptance-receipt.v1"
+    },
+    "releaseId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "state": {
+      "const": "ACCEPTED"
+    },
+    "acceptedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "stockProfileId": {
+      "const": "saturn-jp-stock-track01-mode1-2352-c198a930"
+    },
+    "sourceSha256": {
+      "const": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+    },
+    "targetSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "patchSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "v5Commit": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "staticStructure",
+        "runtimeConsumption",
+        "visualLayout",
+        "longPlayProgression"
+      ],
+      "properties": {
+        "staticStructure": {
+          "const": "PASS"
+        },
+        "runtimeConsumption": {
+          "const": "PASS"
+        },
+        "visualLayout": {
+          "const": "PASS"
+        },
+        "longPlayProgression": {
+          "const": "PASS"
+        }
+      }
+    },
+    "decisionAuthority": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "\\S"
+    }
+  }
+}

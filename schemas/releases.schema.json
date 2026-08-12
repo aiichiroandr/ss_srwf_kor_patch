@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:srwf-kor:schema:public-release-index:v1",
+  "title": "SRWF Korean public release index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "project",
+    "stock_profiles",
+    "releases"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../schemas/releases.schema.json"
+    },
+    "schema": {
+      "const": "srwf-kor.public-release-index.v1"
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "const": "srwf-kor-v5"
+        },
+        "status": {
+          "enum": [
+            "NO_ACCEPTED_RELEASE",
+            "HAS_ACCEPTED_RELEASE"
+          ]
+        }
+      }
+    },
+    "stock_profiles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "prefixItems": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label",
+            "size",
+            "sha256",
+            "sectorCount",
+            "sectorSize",
+            "userDataOffset",
+            "userDataSize",
+            "track"
+          ],
+          "properties": {
+            "id": {
+              "const": "saturn-jp-stock-track01-mode1-2352-c198a930"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "\\S"
+            },
+            "size": {
+              "const": 578512032
+            },
+            "sha256": {
+              "const": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+            },
+            "sectorCount": {
+              "const": 245966
+            },
+            "sectorSize": {
+              "const": 2352
+            },
+            "userDataOffset": {
+              "const": 16
+            },
+            "userDataSize": {
+              "const": 2048
+            },
+            "track": {
+              "const": "TRACK 01 MODE1/2352"
+            }
+          }
+        }
+      ]
+    },
+    "releases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "state",
+          "label",
+          "manifest",
+          "manifestSha256"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+          },
+          "state": {
+            "const": "ACCEPTED"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "\\S"
+          },
+          "manifest": {
+            "type": "string",
+            "pattern": "^releases/[a-z0-9][a-z0-9._-]{0,63}\\.json$"
+          },
+          "manifestSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "project": {
+            "properties": {
+              "status": {
+                "const": "NO_ACCEPTED_RELEASE"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "releases": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "project": {
+            "properties": {
+              "status": {
+                "const": "HAS_ACCEPTED_RELEASE"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "releases": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

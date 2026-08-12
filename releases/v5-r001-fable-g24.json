@@ -1,0 +1,32 @@
+{
+  "schema": "srwf-kor.public-release.v1",
+  "id": "v5-r001-fable-g24",
+  "state": "ACCEPTED",
+  "version": "r001-fable-g24",
+  "title": "슈퍼로봇대전 F 한국어 패치 — Fable G24 마이너 공개판",
+  "publishedAt": "2026-08-09T15:55:36Z",
+  "source": {
+    "profileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
+    "size": 578512032,
+    "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+  },
+  "target": {
+    "filename": "SRWF-KOR-fable-g24.img",
+    "cueFilename": "SRWF-KOR-fable-g24.cue",
+    "size": 578512032,
+    "sha256": "2dc6168afca91daccb6ac48a3473dd6969831c152e91535c47448579da29a26a"
+  },
+  "patch": {
+    "format": "srwf.sparse-byte-delta.v1",
+    "url": "patches/v5-r001-fable-g24.srwfp",
+    "size": 3596477,
+    "sha256": "718ac1042dbb4c5a104b1088ddcd937d9608a44367fd7b8e7eeaf3bb0beb4d61",
+    "recordCount": 50881,
+    "bodyUncompressedSize": 4517451
+  },
+  "provenance": {
+    "v5Commit": "db6b57af028882ae0e7a3afd0305906f836e33d0",
+    "buildReceiptSha256": "016a3e62a1940e0d55d815bbeb1b421a9c225737c87ec979ae1a018dc2caef0a",
+    "acceptanceReceiptSha256": "b00e2cab8f80268d5e4d79489bf1cbc951ea4e667e7fb2d4497f471665cba74e"
+  }
+}

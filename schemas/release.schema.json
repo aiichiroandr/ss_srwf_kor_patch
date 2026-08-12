@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:srwf-kor:schema:public-release:v1",
+  "title": "SRWF Korean accepted public release",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "state",
+    "version",
+    "title",
+    "publishedAt",
+    "source",
+    "target",
+    "patch",
+    "provenance"
+  ],
+  "properties": {
+    "schema": {
+      "const": "srwf-kor.public-release.v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "state": {
+      "const": "ACCEPTED"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "\\S"
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profileId",
+        "size",
+        "sha256"
+      ],
+      "properties": {
+        "profileId": {
+          "const": "saturn-jp-stock-track01-mode1-2352-c198a930"
+        },
+        "size": {
+          "const": 578512032
+        },
+        "sha256": {
+          "const": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filename",
+        "cueFilename",
+        "size",
+        "sha256"
+      ],
+      "properties": {
+        "filename": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.img$"
+        },
+        "cueFilename": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.cue$"
+        },
+        "size": {
+          "const": 578512032
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "patch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "url",
+        "size",
+        "sha256",
+        "recordCount",
+        "bodyUncompressedSize"
+      ],
+      "properties": {
+        "format": {
+          "const": "srwf.sparse-byte-delta.v1"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^patches/[a-z0-9][a-z0-9._-]{0,63}\\.srwfp$"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 101,
+          "maximum": 33554432
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "recordCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "bodyUncompressedSize": {
+          "type": "integer",
+          "minimum": 45,
+          "maximum": 67108864
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v5Commit",
+        "buildReceiptSha256",
+        "acceptanceReceiptSha256"
+      ],
+      "properties": {
+        "v5Commit": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "buildReceiptSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "acceptanceReceiptSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}
