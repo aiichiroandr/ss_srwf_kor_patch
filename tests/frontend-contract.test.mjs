@@ -186,14 +186,19 @@ test("public page exposes the legal and accessibility contracts", async () => {
 
   assert.match(html, /<main id="main" tabindex="-1">/);
   assert.doesNotMatch(html, /href="NOTICE\.md"/);
-  assert.match(html, /id="release-notes"/);
-  assert.match(html, /CURRENT F RELEASE · 2026\.08\.12/);
-  assert.match(html, /2026\.08\.10 v1\.0도 버전/);
-  assert.match(html, /Codex × Claude 협업/);
+  assert.doesNotMatch(html, /class="info-drawer"/);
+  assert.doesNotMatch(html, />릴리스 · 안전 안내</);
+  assert.match(html, /비공식 팬 프로젝트, 게임 원본 미포함, 권리자 및 플랫폼과 무관/);
+  assert.match(html, /비공식 · 원본 미포함/);
+  assert.match(html, /권리자·플랫폼과 무관/);
+  assert.match(html, /<title>세가새턴 슈퍼로봇대전 F 한글패치<\/title>/);
+  assert.match(html, /지원 원본: 일본판 Rev\. B/);
+  assert.match(html, /디스크 이미지를 한글로 패치합니다/);
+  assert.doesNotMatch(html, /한국어 패치 만들기/);
+  assert.doesNotMatch(html, /id="availability(?:Banner|Title|Description|Code)"/);
+  assert.doesNotMatch(html, /검증된 공개 릴리스/);
   assert.match(html, /id="gameSelect"/);
   assert.doesNotMatch(html, /FABLE G25K/);
-  assert.match(html, /<details class="rights-disclosure">/);
-  assert.match(html, /비공식\s*\n?\s*팬 프로젝트/);
   assert.match(html, /aria-current="step"/);
   assert.match(html, /data-step-status/);
   assert.match(html, /role="listitem"/);
@@ -205,6 +210,18 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /전체 SHA-256은\s*\n?\s*패치 시작 후 새 IMG를 만들면서 한 번의 읽기로 검사/);
   assert.match(html, /검증하고 패치 시작/);
   assert.doesNotMatch(html, /선택 직후 전체 파일의 SHA-256/);
+});
+
+test("every required runtime element exists in the public HTML", async () => {
+  const [html, app] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
+  ]);
+  const requiredIds = [...app.matchAll(/byId\("([^"]+)"\)/g)].map((match) => match[1]);
+  assert.ok(requiredIds.length > 0);
+  for (const id of new Set(requiredIds)) {
+    assert.ok(html.includes(`id="${id}"`), `missing required element #${id}`);
+  }
 });
 
 test("mobile browsers with the complete native file API are not blocked by user-agent", async () => {
@@ -286,12 +303,17 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.doesNotMatch(html, /class="hero(?:\s|\")/);
   assert.doesNotMatch(html, /class="site-footer(?:\s|\")/);
   assert.match(html, /class="task-stage"/);
-  assert.match(html, /data-workflow-step="source"[^>]*hidden/);
-  assert.match(html, /data-workflow-step="output"[^>]*hidden/);
-  assert.match(html, /data-workflow-step="patch"[^>]*hidden/);
+  assert.match(html, /data-workflow-step="source"/);
+  assert.match(html, /data-workflow-step="output"/);
+  assert.match(html, /data-workflow-step="patch"/);
+  assert.doesNotMatch(html, /data-workflow-step="(?:source|output|patch)"[^>]*hidden/);
   assert.match(css, /html,\s*\nbody\s*\{[^}]*height:\s*100%[^}]*overflow:\s*hidden/s);
   assert.match(css, /\.patch-section\s*\{[^}]*height:\s*100%[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)/s);
-  assert.match(css, /\[data-workflow-step\]\s*\{\s*display:\s*none;/s);
+  assert.match(css, /\.task-stage \[data-workflow-step\]\s*\{[^}]*height:\s*auto/s);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.task-stage\s*\{[^}]*grid-template-rows:\s*repeat\(3, auto\)[^}]*align-content:\s*start/s);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.file-selection\s*\{[^}]*display:\s*none\s*!important/s);
+  assert.match(html, /id="sourceButtonText"/);
+  assert.match(html, /id="outputButtonText"/);
 });
 
 test("release and patch references are pinned to their release id", () => {
@@ -529,7 +551,7 @@ test("workflow position updates real step indicators and ARIA state", () => {
       section.classList.contains("is-active"),
       section.dataset.workflowStep === "output",
     );
-    assert.equal(section.hidden, section.dataset.workflowStep !== "output");
+    assert.equal(section.hidden, false);
   }
 
   __testHooks.setWorkflowPosition("complete");
@@ -541,7 +563,7 @@ test("workflow position updates real step indicators and ARIA state", () => {
   }
   for (const section of workflowElements) {
     assert.equal(section.classList.contains("is-active"), false);
-    assert.equal(section.hidden, true);
+    assert.equal(section.hidden, false);
   }
 });
 
@@ -594,8 +616,9 @@ test("a stalled release request times out and replaces the spinner with server g
   } finally {
     console.error = originalConsoleError;
   }
-  assert.equal(element("availabilityCode").textContent, "SERVER OFFLINE");
-  assert.match(element("availabilityTitle").textContent, /릴리스 목록/);
+  assert.equal(element("errorPanel").hidden, false);
+  assert.match(element("errorTitle").textContent, /릴리스 목록/);
+  assert.match(element("errorMessage").textContent, /서버.*새로고침/);
   assert.match(element("applyHint").textContent, /서버를 다시 실행/);
 });
 

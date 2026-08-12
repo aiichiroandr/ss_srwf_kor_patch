@@ -45,6 +45,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The compact patch station below supersedes the original landing-page styles. */
+
+.station-intro {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
 button,
 select {
   font: inherit;
@@ -140,9 +151,9 @@ a:focus-visible {
 }
 
 .brand-copy strong {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: inherit;
   font-size: 15px;
-  letter-spacing: 0.06em;
+  letter-spacing: -0.025em;
 }
 
 .brand-copy span {
@@ -526,104 +537,6 @@ a:focus-visible {
   word-break: keep-all;
 }
 
-.availability-banner {
-  min-height: 80px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 16px;
-  padding: 17px 22px;
-  border: 1px solid #c6c9c5;
-  border-radius: var(--radius-md);
-  background: rgba(255, 254, 251, 0.72);
-}
-
-.availability-icon {
-  width: 12px;
-  height: 12px;
-  border: 3px solid rgba(39, 93, 225, 0.2);
-  border-top-color: var(--blue);
-  border-radius: 50%;
-  animation: spin 900ms linear infinite;
-}
-
-.availability-banner > div {
-  display: flex;
-  flex-direction: column;
-}
-
-.availability-banner strong {
-  font-size: 15px;
-}
-
-.availability-banner div span {
-  color: var(--ink-soft);
-  font-size: 13px;
-}
-
-.availability-banner code {
-  padding: 5px 8px;
-  border-radius: 6px;
-  color: var(--blue-deep);
-  background: rgba(39, 93, 225, 0.08);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-
-.availability-banner.is-preparing {
-  border-color: rgba(177, 122, 0, 0.32);
-  background: #fff9e8;
-}
-
-.availability-banner.is-preparing .availability-icon {
-  border: 0;
-  border-radius: 2px;
-  background: var(--yellow);
-  animation: none;
-  transform: rotate(45deg);
-}
-
-.availability-banner.is-preparing code {
-  color: #7c5a00;
-  background: rgba(245, 200, 76, 0.22);
-}
-
-.availability-banner.is-ready {
-  border-color: rgba(8, 125, 104, 0.28);
-  background: #effbf7;
-}
-
-.availability-banner.is-ready .availability-icon {
-  border: 0;
-  background: var(--mint);
-  animation: none;
-  box-shadow: 0 0 0 5px rgba(32, 196, 178, 0.13);
-}
-
-.availability-banner.is-ready code {
-  color: var(--green);
-  background: rgba(32, 196, 178, 0.12);
-}
-
-.availability-banner.is-error {
-  border-color: rgba(200, 62, 67, 0.25);
-  background: #fff1f0;
-}
-
-.availability-banner.is-error .availability-icon {
-  border: 0;
-  border-radius: 50%;
-  background: var(--red);
-  animation: none;
-}
-
-.availability-banner.is-error code {
-  color: #963036;
-  background: rgba(200, 62, 67, 0.1);
-}
-
 .patch-console {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);
@@ -960,6 +873,13 @@ a:focus-visible {
   font-weight: 800;
   cursor: pointer;
   transition: border-color 150ms ease, background 150ms ease;
+}
+
+.file-button > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .file-button:not(:disabled):hover {
@@ -1612,16 +1532,6 @@ a:focus-visible {
     padding: 64px 16px 72px;
   }
 
-  .availability-banner {
-    grid-template-columns: auto minmax(0, 1fr);
-    padding: 16px;
-  }
-
-  .availability-banner code {
-    grid-column: 2;
-    justify-self: start;
-  }
-
   .patch-console {
     grid-template-columns: 1fr;
     border-radius: 20px;
@@ -1702,6 +1612,10 @@ a:focus-visible {
   .cancel-button,
   .file-button {
     width: 100%;
+  }
+
+  .file-selection {
+    display: none !important;
   }
 
   .safety-section,
@@ -1789,7 +1703,6 @@ a:focus-visible {
 }
 
 @media (forced-colors: active) {
-  .availability-icon,
   .local-pill-dot,
   .machine-card i::after {
     forced-color-adjust: none;
@@ -1857,159 +1770,6 @@ body {
   background: var(--white);
 }
 
-.info-drawer {
-  flex: 0 0 auto;
-}
-
-.info-drawer > summary {
-  position: relative;
-  z-index: 51;
-  min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border: 1px solid var(--ink);
-  border-radius: 9px;
-  color: var(--white);
-  background: var(--ink);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-  list-style: none;
-}
-
-.info-drawer > summary::-webkit-details-marker {
-  display: none;
-}
-
-.info-drawer > summary::after {
-  content: "+";
-  margin-left: 9px;
-  color: var(--mint);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 15px;
-}
-
-.info-drawer[open] > summary::after {
-  content: "×";
-}
-
-.info-drawer[open]::before {
-  content: "";
-  position: fixed;
-  z-index: 48;
-  inset: 64px 0 0;
-  background: rgba(16, 31, 47, 0.38);
-  backdrop-filter: blur(3px);
-}
-
-.info-panel {
-  position: fixed;
-  z-index: 50;
-  top: 76px;
-  right: max(18px, calc((100% - 1440px) / 2));
-  bottom: 14px;
-  left: max(18px, calc((100% - 1440px) / 2));
-  overflow: auto;
-  padding: 26px;
-  border: 1px solid rgba(16, 31, 47, 0.15);
-  border-radius: 22px;
-  background: var(--white);
-  box-shadow: 0 24px 90px rgba(16, 31, 47, 0.24);
-}
-
-.info-panel-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 20px;
-}
-
-.info-panel-heading h2 {
-  margin: 4px 0 0;
-  font-size: 26px;
-  letter-spacing: -0.035em;
-}
-
-.info-panel-heading > span {
-  color: var(--ink-soft);
-  font-size: 10px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: 1.15fr 0.9fr 1fr;
-  gap: 14px;
-  min-height: calc(100% - 58px);
-}
-
-.info-grid > section {
-  width: auto;
-  min-width: 0;
-  display: block;
-  margin: 0;
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: #f8f7f2;
-}
-
-.info-grid h2 {
-  margin: 8px 0 14px;
-  font-size: 21px;
-  letter-spacing: -0.035em;
-  line-height: 1.25;
-}
-
-.info-grid p,
-.info-grid li {
-  color: var(--ink-soft);
-  font-size: 12px;
-  line-height: 1.65;
-  word-break: keep-all;
-}
-
-.info-grid .release-notes > p:not(.eyebrow),
-.info-grid .requirements > p:not(.eyebrow) {
-  margin: 0;
-}
-
-.info-grid .release-notes ul {
-  display: grid;
-  gap: 7px;
-  margin: 18px 0 0;
-  padding: 14px 0 0 18px;
-  border-top: 1px solid var(--line);
-}
-
-.info-grid .safety-list {
-  border-top: 0;
-}
-
-.info-grid .safety-list li {
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 8px;
-  padding: 14px 0;
-}
-
-.info-grid .safety-list li > span {
-  color: var(--blue);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-  font-weight: 850;
-}
-
-.info-grid .safety-list p {
-  margin: 0;
-}
-
-.info-grid .rights-disclosure {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
-
 main {
   min-height: 0;
   overflow: hidden;
@@ -2020,49 +1780,10 @@ main {
   height: 100%;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 9px;
   padding: 14px max(18px, calc((100% - 1440px) / 2)) 16px;
   border: 0;
   background: transparent;
-}
-
-.station-topbar {
-  display: grid;
-  grid-template-columns: minmax(310px, 0.82fr) minmax(430px, 1.18fr);
-  align-items: center;
-  gap: 18px;
-}
-
-.station-title h1 {
-  margin: 2px 0 0;
-  font-size: clamp(25px, 2.4vw, 34px);
-  letter-spacing: -0.045em;
-  line-height: 1.05;
-}
-
-.station-title > p:last-child {
-  margin: 6px 0 0;
-  color: var(--ink-soft);
-  font-size: 11px;
-}
-
-.availability-banner {
-  min-height: 56px;
-  margin: 0;
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: rgba(255, 254, 251, 0.86);
-}
-
-.availability-banner strong {
-  font-size: 13px;
-}
-
-.availability-banner div span {
-  overflow: hidden;
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .patch-console,
@@ -2146,103 +1867,68 @@ main {
 
 .task-stage {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--white);
-}
-
-.stage-placeholder {
-  grid-column: 1;
-  grid-row: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 28px;
-  color: #6f7a80;
-  text-align: center;
-}
-
-.stage-placeholder > span {
-  color: var(--blue);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
-  font-weight: 850;
-  letter-spacing: 0.12em;
-}
-
-.stage-placeholder strong {
-  margin-top: 8px;
-  color: var(--ink);
-  font-size: 18px;
-}
-
-.stage-placeholder p {
-  margin: 6px 0 0;
-  font-size: 11px;
-}
-
-[data-workflow-step] {
-  display: none;
-}
-
-.task-stage [data-workflow-step].is-active {
-  position: relative;
-  z-index: 2;
-  grid-column: 1;
-  grid-row: 1;
   min-height: 0;
-  height: 100%;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  background: var(--white);
-}
-
-.task-stage .file-step.is-active {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
 }
 
-.task-stage .apply-card.is-active {
+.task-stage [data-workflow-step] {
+  position: relative;
+  min-height: 0;
+  height: auto;
+  margin: 0;
+}
+
+.task-stage .file-step {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+
+.task-stage .apply-card {
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  padding: clamp(24px, 4vw, 46px);
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px;
+  color: var(--white);
   background:
     radial-gradient(circle at 100% 0, rgba(39, 93, 225, 0.38), transparent 42%),
     var(--ink);
 }
 
 .task-stage .apply-card .apply-actions {
-  margin-top: 24px;
+  flex: 0 0 min(330px, 48%);
+  margin: 0;
 }
 
 .task-stage .apply-card .primary-button {
   width: 100%;
-  max-width: 340px;
 }
 
-.file-step-body {
+.task-stage .file-step-body {
   align-self: center;
-  padding: clamp(22px, 4vw, 42px);
+  padding: 15px 17px;
 }
 
-.file-step-body > p {
+.task-stage .file-step-body > p {
   max-width: 620px;
+  margin: 7px 0 10px;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .progress-panel,
 .task-stage .message-panel.is-error {
   position: relative;
   z-index: 4;
-  grid-column: 1;
-  grid-row: 2;
+  grid-column: 1 / -1;
+  grid-row: 3;
   margin: 0;
   border-right: 0;
   border-bottom: 0;
@@ -2253,7 +1939,7 @@ main {
 .task-stage .message-panel.is-success {
   position: relative;
   z-index: 5;
-  grid-column: 1;
+  grid-column: 1 / -1;
   grid-row: 1 / -1;
   align-self: center;
   margin: 22px;
@@ -2297,14 +1983,8 @@ main {
     padding-bottom: 10px;
   }
 
-  .station-title > p:last-child,
-  .availability-banner div span,
   .rail-note {
     display: none;
-  }
-
-  .availability-banner {
-    min-height: 48px;
   }
 
   .step-rail {
@@ -2369,12 +2049,20 @@ main {
   }
 
   .brand-copy strong {
-    font-size: 12px;
+    max-width: 215px;
+    font-size: 11px;
+    line-height: 1.15;
   }
 
-  .brand-copy span,
   .header-status .local-pill {
     display: none;
+  }
+
+  .brand-copy span {
+    margin-top: 3px;
+    font-size: 8px;
+    letter-spacing: -0.01em;
+    text-transform: none;
   }
 
   .header-status {
@@ -2390,107 +2078,26 @@ main {
     white-space: nowrap;
   }
 
-  .info-drawer > summary {
-    width: 40px;
-    padding: 5px 8px;
-    overflow: hidden;
-    font-size: 0;
-  }
-
-  .info-drawer > summary::before {
-    content: "안내";
-    font-size: 10px;
-  }
-
-  .info-drawer > summary::after {
-    display: none;
-  }
-
-  .info-drawer[open]::before {
-    inset: 58px 0 0;
-  }
-
-  .info-panel {
-    top: 66px;
-    right: 8px;
-    bottom: 8px;
-    left: 8px;
-    padding: 16px;
-    border-radius: 16px;
-  }
-
-  .info-panel-heading {
-    align-items: start;
-    margin-bottom: 14px;
-  }
-
-  .info-panel-heading h2 {
-    font-size: 21px;
-  }
-
-  .info-panel-heading > span {
-    display: none;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-
-  .info-grid > section {
-    padding: 18px;
-  }
-
   .patch-section {
-    gap: 8px;
-    padding: 8px;
+    gap: 5px;
+    padding: 5px 7px 7px;
   }
 
-  .station-topbar {
-    grid-template-columns: 1fr;
-    gap: 7px;
-  }
-
-  .station-title {
-    display: flex;
-    align-items: baseline;
-    gap: 9px;
-  }
-
-  .station-title .eyebrow,
-  .station-title > p:last-child {
-    display: none;
-  }
-
-  .station-title h1 {
-    margin: 0;
-    font-size: 21px;
-  }
-
-  .availability-banner {
-    min-height: 45px;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    padding: 7px 10px;
-  }
-
-  .availability-banner div span {
-    display: none;
-  }
-
-  .availability-banner code {
-    grid-column: auto;
-    justify-self: auto;
+  .station-intro {
+    margin: 0 2px;
+    font-size: 10px;
+    line-height: 1.3;
   }
 
   .patch-console {
     grid-template-columns: 1fr;
-    grid-template-rows: 54px minmax(0, 1fr);
+    grid-template-rows: 38px minmax(0, 1fr);
     border-radius: 17px;
   }
 
   .step-rail {
     display: block;
-    padding: 10px 14px;
+    padding: 3px 12px;
   }
 
   .step-rail > p,
@@ -2506,7 +2113,7 @@ main {
   }
 
   .step-rail ol::before {
-    top: 16px;
+    top: 14px;
     right: 12.5%;
     bottom: auto;
     left: 12.5%;
@@ -2520,16 +2127,22 @@ main {
     margin: 0;
   }
 
+  .step-rail li > span {
+    width: 28px;
+    height: 28px;
+  }
+
   .patch-workspace {
-    grid-template-columns: 1fr;
-    grid-template-rows: 126px minmax(0, 1fr);
-    gap: 8px;
-    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 5px;
   }
 
   .release-card {
+    flex: 0 0 auto;
     height: auto;
-    padding: 11px 13px;
+    padding: 7px 9px;
   }
 
   .card-heading {
@@ -2541,13 +2154,12 @@ main {
   }
 
   .card-heading h3 {
-    margin: 0;
-    font-size: 14px;
+    display: none;
   }
 
   .release-card .field-label {
-    margin: 7px 0 4px;
-    font-size: 9px;
+    margin: 0 0 3px;
+    font-size: 8px;
   }
 
   .selector-grid {
@@ -2556,7 +2168,7 @@ main {
   }
 
   .select-wrap select {
-    min-height: 39px;
+    min-height: 40px;
     padding-right: 26px;
     padding-left: 10px;
     padding-top: 7px;
@@ -2573,11 +2185,42 @@ main {
   }
 
   .task-stage {
-    border-radius: 13px;
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(3, auto);
+    align-content: start;
+    gap: 5px;
+    overflow: hidden;
+    border-radius: 0;
   }
 
+  .task-stage [data-workflow-step],
+  .task-stage [data-workflow-step].is-active {
+    position: relative;
+    z-index: auto;
+    grid-column: auto;
+    grid-row: auto;
+    min-height: 0;
+    height: auto;
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+
+  .task-stage .file-step,
   .task-stage .file-step.is-active {
+    display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .task-stage .apply-card,
+  .task-stage .apply-card.is-active {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 9px;
   }
 
   .file-step-number {
@@ -2585,32 +2228,44 @@ main {
   }
 
   .file-step-body {
-    align-self: center;
-    padding: 17px;
+    align-self: stretch;
+    padding: 8px 9px;
   }
 
   .file-step-heading h3,
   .apply-card h3 {
-    font-size: 17px;
+    margin: 0;
+    font-size: 13px;
   }
 
   .file-step-body > p {
-    margin: 8px 0 12px;
-    font-size: 11px;
-    line-height: 1.5;
+    display: none;
   }
 
-  .file-button,
-  .primary-button {
+  .file-button {
     width: 100%;
+    min-height: 44px;
+    margin-top: 7px;
   }
 
-  .task-stage .apply-card.is-active {
-    padding: 20px;
+  .task-stage .apply-card > div:first-child {
+    min-width: 0;
+  }
+
+  .task-stage .apply-card .step-label,
+  .task-stage .apply-card #applyHint {
+    display: none;
   }
 
   .task-stage .apply-card .apply-actions {
-    margin-top: 16px;
+    flex: 0 0 48%;
+    margin: 0;
+  }
+
+  .task-stage .apply-card .primary-button {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 11px;
   }
 
   .progress-panel {
@@ -2644,15 +2299,8 @@ main {
     padding-bottom: 6px;
   }
 
-  .station-title > p:last-child,
   .file-step-body > p {
     display: none;
-  }
-
-  .availability-banner {
-    min-height: 44px;
-    padding-top: 6px;
-    padding-bottom: 6px;
   }
 
   .file-step-body {

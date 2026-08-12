@@ -12,9 +12,9 @@
     <meta name="theme-color" content="#101f2f">
     <meta
       name="description"
-      content="원본 이미지를 업로드하지 않고 브라우저 안에서 검증하고 적용하는 SRWF 한국어 패처"
+      content="보유한 세가새턴판 슈퍼로봇대전 F Rev. B 디스크 이미지로 새 한글 패치 IMG를 만드는 웹 패처"
     >
-    <title>SRWF 한국어 패처</title>
+    <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
     <link rel="stylesheet" href="assets/style.css">
     <script type="module" src="assets/app.mjs"></script>
   </head>
@@ -22,11 +22,15 @@
     <a class="skip-link" href="#main">패처로 바로가기</a>
 
     <header class="site-header">
-      <a class="brand" href="#patcher" aria-label="SRWF 한국어 패처">
+      <a
+        class="brand"
+        href="#patcher"
+        aria-label="세가새턴 슈퍼로봇대전 F 한글패치, 비공식 팬 프로젝트, 게임 원본 미포함, 권리자 및 플랫폼과 무관"
+      >
         <span class="brand-mark" aria-hidden="true">F+</span>
         <span class="brand-copy">
-          <strong>SRWF KOR</strong>
-          <span>Local patch station</span>
+          <strong>세가새턴 슈퍼로봇대전 F 한글패치</strong>
+          <span>비공식 · 원본 미포함</span>
         </span>
       </a>
 
@@ -37,93 +41,17 @@
         </span>
         <span class="local-pill">
           <span class="local-pill-dot" aria-hidden="true"></span>
-          비공식 · 원본 미포함
+          권리자·플랫폼과 무관
         </span>
       </div>
-
-      <details class="info-drawer">
-        <summary>릴리스 · 안전 안내</summary>
-        <div class="info-panel">
-          <div class="info-panel-heading">
-            <div>
-              <p class="eyebrow">PATCH INFORMATION</p>
-              <h2>패치 정보와 배포 원칙</h2>
-            </div>
-            <span>닫으려면 위 버튼을 다시 누르세요</span>
-          </div>
-
-          <div class="info-grid">
-            <section class="release-notes" id="release-notes" aria-labelledby="release-notes-title">
-              <p class="eyebrow">CURRENT F RELEASE · 2026.08.12</p>
-              <h2 id="release-notes-title">v1.1을 공개했습니다</h2>
-              <p>
-                2026.08.12 v1.1은 v1.0을 바탕으로 출격 유닛 수 간격, 턴 종료 질문창,
-                타이틀 메뉴 간격과 F완결편 예고 본문 크기를 보완했습니다. 화자명과 사랑·봐주기
-                표기도 함께 재검증했습니다. 최종 공개 이미지는 상태 파일 없이 4,800프레임을
-                실행해 타이틀 도달과 정상 종료를 확인했습니다. 2026.08.10 v1.0도 버전
-                목록에서 계속 선택할 수 있습니다.
-              </p>
-              <ul role="list">
-                <li role="listitem">일부 기체명·고유명사와 목록 표기는 후속 보완 대상</li>
-                <li role="listitem">전 경로·전 화면 무결성이나 완전 번역을 뜻하지 않음</li>
-                <li role="listitem">번역·도구 제작: Codex × Claude 협업</li>
-              </ul>
-            </section>
-
-            <section class="safety-section" id="safety" aria-labelledby="safety-title">
-              <p class="eyebrow">BUILT-IN GUARDRAILS</p>
-              <h2 id="safety-title">원본을 건드리지 않는 세 가지 원칙</h2>
-              <ol class="safety-list" role="list">
-                <li role="listitem"><span>01</span><p>원본 전체 크기와 SHA-256을 패치 중 한 번의 읽기로 확인합니다.</p></li>
-                <li role="listitem"><span>02</span><p>원본과 같은 파일을 출력 위치로 선택하면 즉시 차단합니다.</p></li>
-                <li role="listitem"><span>03</span><p>결과 해시가 목표값과 다르면 저장을 확정하지 않습니다.</p></li>
-              </ol>
-            </section>
-
-            <section class="requirements" id="rights-notice" aria-labelledby="requirements-title">
-              <p class="eyebrow">RIGHTS &amp; REQUIREMENTS</p>
-              <h2 id="requirements-title">사용 전에 확인하세요</h2>
-              <p>
-                데스크톱 Chrome 또는 Edge 최신 버전이 필요합니다. 이 저장소는 패치 데이터와
-                도구만 제공하며 게임 원본은 포함하거나 배포하지 않습니다. 이 프로젝트는 비공식
-                팬 프로젝트이며 원 저작권자·플랫폼 사업자와 제휴하거나 승인을 받은 프로젝트가
-                아닙니다.
-              </p>
-              <details class="rights-disclosure">
-                <summary>권리 및 배포 고지 전문 보기</summary>
-                <p>
-                  원작 게임, 캐릭터, 명칭, 그래픽, 음악과 그 밖의 원 저작물에 관한 권리는 각
-                  권리자에게 있습니다. 이 프로젝트는 Sega, Bandai Namco Entertainment 또는
-                  플랫폼 사업자와 제휴하거나 그들로부터 보증·승인을 받지 않았습니다. 게임
-                  이미지, 추출 파일, 완성 이미지, CUE, 세이브 및 에뮬레이터 상태는 배포하지
-                  않습니다. 사용자는 적법하게 보유한 정확한 원본을 직접 준비하고 지역 법규와
-                  이용 조건을 확인해야 합니다.
-                </p>
-              </details>
-            </section>
-          </div>
-        </div>
-      </details>
     </header>
 
     <main id="main" tabindex="-1">
       <section class="patch-section" id="patcher" aria-labelledby="patcher-title">
-        <div class="station-topbar">
-          <div class="station-title">
-            <p class="eyebrow">SATURN SRW F / F FINAL · LOCAL WEB PATCHER</p>
-            <h1 id="patcher-title">한국어 패치 만들기</h1>
-            <p>게임과 공개 버전을 고른 뒤 정품 이미지를 선택하면 원본은 그대로 두고 새 패치 이미지를 만듭니다.</p>
-          </div>
-
-          <div class="availability-banner is-loading" id="availabilityBanner" role="status" aria-live="polite">
-            <span class="availability-icon" aria-hidden="true"></span>
-            <div>
-              <strong id="availabilityTitle">공개 릴리스 확인 중</strong>
-              <span id="availabilityDescription">검증된 패치 목록을 불러오고 있습니다.</span>
-            </div>
-            <code id="availabilityCode">CHECKING</code>
-          </div>
-        </div>
+        <p class="station-intro" id="patcher-title">
+          보유하신 세가새턴판 슈퍼로봇대전 F 디스크 이미지를 한글로 패치합니다.
+          지원 원본: 일본판 Rev. B · 원본 IMG 보존 · 새 한글 패치 IMG 생성
+        </p>
 
         <div class="patch-console">
           <aside class="step-rail" aria-label="패치 순서">
@@ -152,7 +80,7 @@
             </ol>
             <div class="rail-note">
               <span aria-hidden="true">↗</span>
-              원본은 업로드되지 않고 이 브라우저 안에서만 읽습니다.
+              정품 원본은 수정하지 않고 새 한글 패치 IMG로 저장합니다.
             </div>
           </aside>
 
@@ -163,7 +91,7 @@
                   <span class="step-label">STEP 1</span>
                   <h3 id="release-heading">게임 · 공개 버전</h3>
                 </div>
-                <span class="state-chip" id="releaseState">확인 중</span>
+                <span class="state-chip" id="releaseState" role="status" aria-live="polite" aria-atomic="true">확인 중</span>
               </div>
               <div class="selector-grid">
                 <div>
@@ -200,19 +128,13 @@
             </section>
 
             <div class="task-stage">
-              <div class="stage-placeholder" aria-hidden="true">
-                <span>LOCAL PATCH WORKSPACE</span>
-                <strong>릴리스 검증을 기다리고 있습니다</strong>
-                <p>준비가 끝나면 여기에서 한 단계씩 진행합니다.</p>
-              </div>
-
-              <section class="file-step" data-workflow-step="source" aria-labelledby="source-heading" hidden>
+              <section class="file-step" data-workflow-step="source" aria-labelledby="source-heading">
               <div class="file-step-number" aria-hidden="true">02</div>
               <div class="file-step-body">
                 <div class="file-step-heading">
                   <div>
                     <span class="step-label">STEP 2</span>
-                    <h3 id="source-heading">해당 게임의 정품 원본 선택</h3>
+                    <h3 id="source-heading">정품 원본 IMG 선택</h3>
                   </div>
                   <span class="step-state" id="sourceState">대기</span>
                 </div>
@@ -222,7 +144,7 @@
                 </p>
                 <button class="file-button" type="button" id="sourceButton" disabled>
                   <span class="button-symbol" aria-hidden="true">＋</span>
-                  <span>정품 원본 선택</span>
+                  <span id="sourceButtonText">정품 원본 선택</span>
                 </button>
                 <div class="file-selection" id="sourceSelection" hidden>
                   <span class="file-type" aria-hidden="true">IMG</span>
@@ -235,7 +157,7 @@
               </div>
               </section>
 
-              <section class="file-step" data-workflow-step="output" aria-labelledby="output-heading" hidden>
+              <section class="file-step" data-workflow-step="output" aria-labelledby="output-heading">
               <div class="file-step-number" aria-hidden="true">03</div>
               <div class="file-step-body">
                 <div class="file-step-heading">
@@ -250,7 +172,7 @@
                 </p>
                 <button class="file-button" type="button" id="outputButton" disabled>
                   <span class="button-symbol" aria-hidden="true">⌁</span>
-                  <span>새 IMG 저장 위치 선택</span>
+                  <span id="outputButtonText">새 IMG 저장 위치 선택</span>
                 </button>
                 <div class="file-selection" id="outputSelection" hidden>
                   <span class="file-type is-output" aria-hidden="true">NEW</span>
@@ -263,7 +185,7 @@
               </div>
               </section>
 
-              <section class="apply-card" data-workflow-step="patch" aria-labelledby="apply-heading" hidden>
+              <section class="apply-card" data-workflow-step="patch" aria-labelledby="apply-heading">
               <div>
                 <span class="step-label">STEP 4</span>
                 <h3 id="apply-heading">전체 검증 · 새 IMG 만들기</h3>

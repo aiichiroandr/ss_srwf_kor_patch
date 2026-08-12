@@ -38,10 +38,6 @@ const PUBLIC_GAME_IDS = new Set(["srwf-f", "srwf-final"]);
 
 const elements = {
   compatibilityBadge: byId("compatibilityBadge"),
-  availabilityBanner: byId("availabilityBanner"),
-  availabilityTitle: byId("availabilityTitle"),
-  availabilityDescription: byId("availabilityDescription"),
-  availabilityCode: byId("availabilityCode"),
   gameSelect: byId("gameSelect"),
   releaseSelect: byId("releaseSelect"),
   releaseState: byId("releaseState"),
@@ -49,6 +45,7 @@ const elements = {
   targetName: byId("targetName"),
   publishedAt: byId("publishedAt"),
   sourceButton: byId("sourceButton"),
+  sourceButtonText: byId("sourceButtonText"),
   sourceHelp: byId("sourceHelp"),
   sourceState: byId("sourceState"),
   sourceSelection: byId("sourceSelection"),
@@ -56,6 +53,7 @@ const elements = {
   sourceMeta: byId("sourceMeta"),
   sourceCheck: byId("sourceCheck"),
   outputButton: byId("outputButton"),
+  outputButtonText: byId("outputButtonText"),
   outputState: byId("outputState"),
   outputSelection: byId("outputSelection"),
   outputName: byId("outputName"),
@@ -146,24 +144,17 @@ function showBrowserCompatibility() {
   elements.compatibilityBadge.classList.remove("is-supported", "is-unsupported");
   if (state.fileSystemSupported) {
     elements.compatibilityBadge.classList.add("is-supported");
-    elements.compatibilityBadge.lastChild.textContent = " 이 기기에서 패치 지원";
+    elements.compatibilityBadge.lastChild.textContent = " 패치 지원";
     elements.sourceHelp.textContent = "원본은 읽기 전용으로 엽니다. 전체 SHA-256은 새 IMG를 만들면서 한 번의 읽기로 검사합니다.";
     return;
   }
 
   elements.compatibilityBadge.classList.add("is-unsupported");
-  elements.compatibilityBadge.lastChild.textContent = " 안전 저장 API 없음";
+  elements.compatibilityBadge.lastChild.textContent = " 안전 저장 불가";
   elements.sourceHelp.textContent = "이 브라우저에서는 약 579 MB의 새 IMG를 안전하게 저장할 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.";
 }
 
 async function loadReleaseIndex() {
-  setAvailability(
-    "loading",
-    "공개 릴리스 확인 중",
-    "검증된 패치 목록을 불러오고 있습니다.",
-    "CHECKING",
-  );
-
   const index = await fetchJsonDocument(RELEASE_INDEX_URL);
   validateReleaseIndex(index);
   state.games = validateGames(index.games);
@@ -411,7 +402,7 @@ async function activateGame(gameId) {
   state.visibleReleaseRows = state.releaseRows.filter((row) => row.gameId === game.id);
   resetFileWorkflow();
   if (game.status === NO_ACCEPTED_RELEASE) {
-    showPreparingState(game);
+    showPreparingState();
     announce(`${game.label}은 현재 공개 패치를 준비 중입니다.`);
     return;
   }
@@ -431,12 +422,6 @@ async function loadSelectedRelease(row) {
   elements.releaseSelect.disabled = true;
   elements.releaseState.textContent = "검증 중";
   elements.releaseState.classList.remove("is-ready");
-  setAvailability(
-    "loading",
-    "릴리스 서명값 확인 중",
-    `${row.label} 공개 명세의 SHA-256을 확인하고 있습니다.`,
-    "VERIFY MANIFEST",
-  );
 
   const manifestUrl = resolveLocalReference(row.manifest, SITE_ROOT_URL);
   const manifest = await fetchJsonDocument(manifestUrl, row.manifestSha256);
@@ -456,12 +441,6 @@ async function loadSelectedRelease(row) {
   elements.publishedAt.textContent = formatPublishedAt(release.publishedAt);
   elements.applyHint.textContent = "원본과 출력 위치 선택을 마치면 전체 검증과 패치를 시작할 수 있습니다.";
 
-  setAvailability(
-    "ready",
-    "검증된 공개 릴리스",
-    `${release.title} 명세의 무결성을 확인했습니다.`,
-    "ACCEPTED",
-  );
   setWorkflowPosition("source");
   updateControls();
 }
@@ -653,7 +632,7 @@ async function fetchJsonDocument(url, expectedSha256 = null, timeoutMs = MANIFES
   }
 }
 
-function showPreparingState(game = state.games.get(state.selectedGameId)) {
+function showPreparingState() {
   state.availability = "preparing";
   state.visibleReleaseRows = [];
   state.release = null;
@@ -668,13 +647,7 @@ function showPreparingState(game = state.games.get(state.selectedGameId)) {
   elements.targetName.textContent = "—";
   elements.publishedAt.textContent = "—";
   elements.applyHint.textContent = "검증과 승인을 마친 공개 패치가 등록되면 사용할 수 있습니다.";
-
-  setAvailability(
-    "preparing",
-    `${game?.label ?? "선택한 게임"} 패치 준비 중`,
-    "현재 공개 승인된 패치가 없어 파일 선택과 패치 실행을 잠갔습니다.",
-    NO_ACCEPTED_RELEASE,
-  );
+  elements.sourceState.textContent = "준비 중";
   setWorkflowPosition("release");
   updateControls();
 }
@@ -707,13 +680,11 @@ function handleIndexFailure(error) {
   elements.applyHint.textContent = serverUnavailable
     ? "로컬 미리보기 서버를 다시 실행하고 페이지를 새로고침해 주세요."
     : "릴리스 명세를 안전하게 확인하지 못해 패치를 차단했습니다.";
-  setAvailability(
-    "error",
+  showError(
     serverUnavailable ? "릴리스 목록을 불러올 수 없습니다" : "릴리스 무결성을 확인할 수 없습니다",
     serverUnavailable
       ? "로컬 미리보기 서버 연결이 끊겼습니다. 서버를 실행한 뒤 페이지를 새로고침해 주세요."
       : "안전을 위해 파일 선택과 패치 실행을 잠갔습니다. 잠시 후 페이지를 다시 열어 주세요.",
-    serverUnavailable ? "SERVER OFFLINE" : "HARD DISABLED",
   );
   setWorkflowPosition("release");
   updateControls();
@@ -765,6 +736,7 @@ async function chooseSource() {
   resetPreparedSource();
   state.sourceHandle = sourceHandle;
   state.sourceFile = sourceFile;
+  showSelectedSourceName(sourceFile.name);
   elements.sourceSelection.hidden = false;
   elements.sourceSelection.classList.add("is-verifying");
   elements.sourceName.textContent = sourceFile.name;
@@ -828,6 +800,7 @@ async function chooseOutput() {
   if (!IMG_FILENAME_PATTERN.test(outputHandle.name)) {
     state.outputHandle = null;
     elements.outputSelection.hidden = true;
+    resetOutputButtonLabel();
     elements.outputState.textContent = "이름 확인";
     elements.outputState.className = "step-state is-error";
     showError(
@@ -841,6 +814,7 @@ async function chooseOutput() {
   if (await isSameFileEntry(state.sourceHandle, outputHandle)) {
     state.outputHandle = null;
     elements.outputSelection.hidden = true;
+    resetOutputButtonLabel();
     elements.outputState.textContent = "원본 차단";
     elements.outputState.className = "step-state is-error";
     showError(
@@ -854,6 +828,7 @@ async function chooseOutput() {
 
   state.outputHandle = outputHandle;
   state.patchCompleted = false;
+  showSelectedOutputName(outputHandle.name);
   elements.outputSelection.hidden = false;
   elements.outputName.textContent = outputHandle.name;
   elements.outputState.textContent = "선택됨";
@@ -873,6 +848,7 @@ async function applyPatch() {
   if (await isSameFileEntry(state.sourceHandle, state.outputHandle)) {
     state.outputHandle = null;
     elements.outputSelection.hidden = true;
+    resetOutputButtonLabel();
     elements.outputState.textContent = "원본 차단";
     elements.outputState.className = "step-state is-error";
     showError(
@@ -1126,6 +1102,7 @@ function handleOperationFailure(error, operation = state.operation) {
     state.preparationToken = null;
     state.outputHandle = null;
     elements.outputSelection.hidden = true;
+    resetOutputButtonLabel();
     elements.outputState.textContent = "잠김";
     elements.outputState.className = "step-state";
     elements.sourceSelection.classList.remove("is-verifying");
@@ -1239,6 +1216,8 @@ function resetFileWorkflow() {
   elements.sourceSelection.hidden = true;
   elements.sourceSelection.classList.remove("is-verifying");
   elements.outputSelection.hidden = true;
+  resetSourceButtonLabel();
+  resetOutputButtonLabel();
   elements.progressPanel.hidden = true;
   elements.errorPanel.hidden = true;
   elements.successPanel.hidden = true;
@@ -1265,6 +1244,7 @@ function resetPreparedSource() {
   state.outputHandle = null;
   state.patchCompleted = false;
   elements.outputSelection.hidden = true;
+  resetOutputButtonLabel();
   elements.outputState.textContent = "잠김";
   elements.outputState.className = "step-state";
   elements.errorPanel.hidden = true;
@@ -1273,6 +1253,26 @@ function resetPreparedSource() {
   workflowSections.get("source")?.classList.remove("is-complete");
   workflowSections.get("output")?.classList.remove("is-active", "is-complete");
   workflowSections.get("patch")?.classList.remove("is-active", "is-complete");
+}
+
+function showSelectedSourceName(name) {
+  elements.sourceButtonText.textContent = `원본 선택됨 · ${name}`;
+  elements.sourceButton.title = `선택됨: ${name}. 다른 정품 원본 IMG를 선택하려면 누르세요.`;
+}
+
+function showSelectedOutputName(name) {
+  elements.outputButtonText.textContent = `저장 위치 · ${name}`;
+  elements.outputButton.title = `선택됨: ${name}. 다른 새 IMG 저장 위치를 선택하려면 누르세요.`;
+}
+
+function resetSourceButtonLabel() {
+  elements.sourceButtonText.textContent = "정품 원본 선택";
+  elements.sourceButton.removeAttribute("title");
+}
+
+function resetOutputButtonLabel() {
+  elements.outputButtonText.textContent = "새 IMG 저장 위치 선택";
+  elements.outputButton.removeAttribute("title");
 }
 
 function updateControls() {
@@ -1350,13 +1350,6 @@ function showUnsupportedBrowser() {
   announce(message);
 }
 
-function setAvailability(kind, title, description, code) {
-  elements.availabilityBanner.className = `availability-banner is-${kind}`;
-  elements.availabilityTitle.textContent = title;
-  elements.availabilityDescription.textContent = description;
-  elements.availabilityCode.textContent = code;
-}
-
 function setWorkflowPosition(current) {
   const order = ["release", "source", "output", "patch"];
   const currentIndex = current === "complete" ? order.length : order.indexOf(current);
@@ -1379,7 +1372,7 @@ function setWorkflowPosition(current) {
   for (const [name, section] of workflowSections) {
     const isActive = name === current;
     section.classList.toggle("is-active", isActive);
-    section.hidden = !isActive;
+    section.hidden = false;
   }
 }
 
