@@ -2,9 +2,9 @@ import { sha256Hex } from "./sha256.mjs";
 import {
   getPatchNotesForRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260813-1";
+} from "./release-notes.mjs?v=20260813-2";
 
-const STATIC_ASSET_REVISION = "20260813-1";
+const STATIC_ASSET_REVISION = "20260813-2";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -1008,21 +1008,14 @@ async function saveCueFile() {
   }
 }
 
-function buildMergedImageCue(imageName) {
+function buildPatchedImageCue(imageName) {
   requireSafeFilename(imageName, "CUE image filename");
   if (!IMG_FILENAME_PATTERN.test(imageName)) {
     throw new PatcherError("CUE_IMAGE_INVALID", "CUE image filename must be a safe IMG basename");
   }
-  return `CATALOG 0000000000000\r\n`
-    + `FILE "${imageName}" BINARY\r\n`
+  return `FILE "${imageName}" BINARY\r\n`
     + "  TRACK 01 MODE1/2352\r\n"
-    + "    INDEX 01 00:00:00\r\n"
-    + "  TRACK 02 MODE2/2352\r\n"
-    + "    INDEX 00 22:33:18\r\n"
-    + "    INDEX 01 22:36:18\r\n"
-    + "  TRACK 03 AUDIO\r\n"
-    + "    INDEX 00 54:17:41\r\n"
-    + "    INDEX 01 54:19:41\r\n";
+    + "    INDEX 01 00:00:00\r\n";
 }
 
 async function writeCueFile(directoryHandle, desiredName, imageName) {
@@ -1030,7 +1023,7 @@ async function writeCueFile(directoryHandle, desiredName, imageName) {
   let writable = null;
   try {
     writable = await cueHandle.createWritable({ keepExistingData: false });
-    await writable.write(buildMergedImageCue(imageName));
+    await writable.write(buildPatchedImageCue(imageName));
     await writable.close();
     writable = null;
     return cueHandle;
@@ -1210,7 +1203,7 @@ function handleOperationComplete(message) {
     elements.cueButton.hidden = true;
     elements.cueButton.disabled = true;
     elements.cueButton.textContent = "CUE 파일 다시 저장";
-    elements.cueStatus.textContent = "에뮬레이터용 3트랙 CUE를 같은 폴더에 자동으로 저장합니다.";
+    elements.cueStatus.textContent = "패치용 단일 데이터 트랙 CUE를 같은 폴더에 자동으로 저장합니다.";
     elements.successPanel.hidden = false;
     elements.applyHint.textContent = "패치를 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
     setWorkflowPhase("complete");
@@ -1933,7 +1926,7 @@ class PatcherError extends Error {
 export const __testHooks = Object.freeze({
   activateGame,
   beginWorkerOperation,
-  buildMergedImageCue,
+  buildPatchedImageCue,
   createUnusedFileHandle,
   detectFileSystemSupport,
   deriveFileControlState,

@@ -274,7 +274,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260813-1";
+  const revision = "20260813-2";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -428,23 +428,22 @@ test("same-folder output creation uses a high-entropy fresh filename", async () 
   assert.doesNotMatch(appSource, /\.removeEntry\s*\(/);
 });
 
-test("merged-image CUE content names the generated IMG and preserves Saturn track syntax", () => {
-  // Redump 29151: 101493 / 142823 / 1650 sectors with 225- and 150-sector pregaps.
-  assert.equal(
-    __testHooks.buildMergedImageCue("srwf-kor-v5-r001-0123456789abcdef01234567.img"),
-    "CATALOG 0000000000000\r\n"
-      + "FILE \"srwf-kor-v5-r001-0123456789abcdef01234567.img\" BINARY\r\n"
-      + "  TRACK 01 MODE1/2352\r\n"
-      + "    INDEX 01 00:00:00\r\n"
-      + "  TRACK 02 MODE2/2352\r\n"
-      + "    INDEX 00 22:33:18\r\n"
-      + "    INDEX 01 22:36:18\r\n"
-      + "  TRACK 03 AUDIO\r\n"
-      + "    INDEX 00 54:17:41\r\n"
-      + "    INDEX 01 54:19:41\r\n",
+test("patched-image CUE exposes the accepted flat image as one continuous data track", () => {
+  // The accepted public target relocates live data through sector 244948.  It
+  // must therefore retain the V5 single-track runtime geometry rather than
+  // reusing the stock Redump disc's original three-track boundaries.
+  const cue = __testHooks.buildPatchedImageCue(
+    "srwf-kor-v5-r001-0123456789abcdef01234567.img",
   );
+  assert.equal(
+    cue,
+    "FILE \"srwf-kor-v5-r001-0123456789abcdef01234567.img\" BINARY\r\n"
+      + "  TRACK 01 MODE1/2352\r\n"
+      + "    INDEX 01 00:00:00\r\n",
+  );
+  assert.doesNotMatch(cue, /TRACK 02|TRACK 03|AUDIO|CATALOG/);
   assert.throws(
-    () => __testHooks.buildMergedImageCue("patched.img\"\r\nFILE \"other.img"),
+    () => __testHooks.buildPatchedImageCue("patched.img\"\r\nFILE \"other.img"),
     (error) => error?.code === "MANIFEST_INVALID",
   );
 });
@@ -488,16 +487,9 @@ test("CUE writer creates a fresh sibling file and commits its complete contents"
 
   assert.match(cueHandle.name, /^srwf-kor-v5-r001-[a-f0-9]{24}\.cue$/);
   assert.deepEqual(writes, [
-    "CATALOG 0000000000000\r\n"
-      + "FILE \"srwf-kor-v5-r001-feedfacefeedfacefeedface.img\" BINARY\r\n"
+    "FILE \"srwf-kor-v5-r001-feedfacefeedfacefeedface.img\" BINARY\r\n"
       + "  TRACK 01 MODE1/2352\r\n"
-      + "    INDEX 01 00:00:00\r\n"
-      + "  TRACK 02 MODE2/2352\r\n"
-      + "    INDEX 00 22:33:18\r\n"
-      + "    INDEX 01 22:36:18\r\n"
-      + "  TRACK 03 AUDIO\r\n"
-      + "    INDEX 00 54:17:41\r\n"
-      + "    INDEX 01 54:19:41\r\n",
+      + "    INDEX 01 00:00:00\r\n",
   ]);
   assert.equal(closeCount, 1);
   assert.equal(abortCount, 0);
@@ -607,7 +599,7 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
   assert.match(appSource, /function warnWhileBusy\(event\)[\s\S]*?!state\.busy && !state\.cueSaving/);
 
   const cueSaveStart = appSource.indexOf("async function saveCueFile(");
-  const cueSaveEnd = appSource.indexOf("\nfunction buildMergedImageCue(", cueSaveStart);
+  const cueSaveEnd = appSource.indexOf("\nfunction buildPatchedImageCue(", cueSaveStart);
   const cueSaveSource = appSource.slice(cueSaveStart, cueSaveEnd);
   assert.match(cueSaveSource, /state\.cueSaving = true;[\s\S]*?updateControls\(\);/);
   assert.match(cueSaveSource, /elements\.errorPanel\.hidden = true;/);
