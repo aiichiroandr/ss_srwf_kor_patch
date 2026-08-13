@@ -2,8 +2,9 @@ import {
   PATCH_LIMITS,
   applyPatchToWritable,
   parsePatch,
-} from "./patch-core.mjs";
-import { sha256Hex } from "./sha256.mjs";
+} from "./patch-core.mjs?v=20260813-5";
+import { sha256Hex } from "./sha256.mjs?v=20260813-5";
+import { createPatchedImageZipWriter } from "./zip-writer.mjs?v=20260813-5";
 
 let activeJob = null;
 let preparedSource = null;
@@ -18,6 +19,9 @@ const DESCRIPTOR_KEYS = Object.freeze([
   "recordCount",
   "bodyUncompressedSize",
 ]);
+const SAFE_ARCHIVE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.zip$/;
+const SAFE_IMAGE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
+const SAFE_CUE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
 
 self.addEventListener("message", (event) => {
   const message = event.data;
@@ -39,7 +43,11 @@ self.addEventListener("message", (event) => {
     return;
   }
 
-  if (message.type === "PREPARE_SOURCE" || message.type === "APPLY_PATCH") {
+  if (
+    message.type === "PREPARE_SOURCE"
+    || message.type === "APPLY_PATCH"
+    || message.type === "APPLY_PATCH_ZIP"
+  ) {
     void runJob(message);
   }
 });
@@ -56,8 +64,10 @@ async function runJob(message) {
   try {
     if (message.type === "PREPARE_SOURCE") {
       await prepareSource(message, controller.signal);
-    } else {
+    } else if (message.type === "APPLY_PATCH") {
       await writePatchedImage(message, controller.signal);
+    } else {
+      await writePatchedImageZip(message, controller.signal);
     }
   } catch (error) {
     if (controller.signal.aborted || error?.name === "AbortError") {
@@ -113,6 +123,47 @@ async function prepareSource(message, signal) {
 }
 
 async function writePatchedImage(message, signal) {
+  const context = requirePreparedApplication(message);
+  const rawWritable = await createOutputWritable(message.outputHandle, signal);
+  await applyPreparedPatch(
+    message,
+    signal,
+    context,
+    rawWritable,
+    "APPLY_PATCH",
+  );
+}
+
+async function writePatchedImageZip(message, signal) {
+  const context = requirePreparedApplication(message);
+  const names = validateZipOutputNames(message);
+  const rawWritable = await createOutputWritable(message.outputHandle, signal);
+  let zipWritable;
+  try {
+    zipWritable = createPatchedImageZipWriter(rawWritable, {
+      imageName: names.imageName,
+      cueName: names.cueName,
+      imageSize: context.descriptor.targetSize,
+    });
+  } catch (error) {
+    try {
+      await rawWritable.abort(error);
+    } catch {
+      // Preserve the ZIP configuration failure.
+    }
+    throw error;
+  }
+  await applyPreparedPatch(
+    message,
+    signal,
+    context,
+    zipWritable,
+    "APPLY_PATCH_ZIP",
+    names,
+  );
+}
+
+function requirePreparedApplication(message) {
   requireJobId(message.jobId);
   requireString(message.releaseKey, "release key");
   requireString(message.preparationToken, "preparation token");
@@ -124,14 +175,18 @@ async function writePatchedImage(message, signal) {
   ) {
     throw new WorkerPatcherError("PREPARED_SOURCE_MISSING", "The prepared source state is unavailable");
   }
-  if (!message.outputHandle || typeof message.outputHandle.createWritable !== "function") {
+  return preparedSource;
+}
+
+async function createOutputWritable(outputHandle, signal) {
+  if (!outputHandle || typeof outputHandle.createWritable !== "function") {
     throw new WorkerPatcherError("OUTPUT_HANDLE_INVALID", "Output must be a File System Access handle");
   }
 
   throwIfAborted(signal);
   let writable;
   try {
-    writable = await message.outputHandle.createWritable({ keepExistingData: false });
+    writable = await outputHandle.createWritable({ keepExistingData: false });
   } catch (error) {
     throw remapOutputError(error);
   }
@@ -143,6 +198,17 @@ async function writePatchedImage(message, signal) {
     }
     throw createAbortError();
   }
+  return writable;
+}
+
+async function applyPreparedPatch(
+  message,
+  signal,
+  context,
+  writable,
+  operation,
+  outputNames,
+) {
 
   postPhase(message.jobId, "source-apply");
   let result;
@@ -150,15 +216,15 @@ async function writePatchedImage(message, signal) {
     // The core authenticates the source and output in the same source pass. It
     // closes only after both hashes and every record preimage match.
     result = await applyPatchToWritable(
-      preparedSource.sourceFile,
+      context.sourceFile,
       writable,
-      preparedSource.parsedPatch,
+      context.parsedPatch,
       {
         signal,
         onProgress: createProgressReporter(
           message.jobId,
           "source-apply",
-          preparedSource.descriptor.targetSize,
+          context.descriptor.targetSize,
           signal,
         ),
       },
@@ -175,8 +241,42 @@ async function writePatchedImage(message, signal) {
   postMessage({
     type: "complete",
     jobId: message.jobId,
-    operation: "APPLY_PATCH",
-    result: sanitizeResult(result),
+    operation,
+    result: Object.freeze({
+      ...sanitizeResult(result),
+      ...(outputNames ?? {}),
+    }),
+  });
+}
+
+function validateZipOutputNames(message) {
+  requireString(message.archiveName, "ZIP archive name");
+  requireString(message.imageName, "ZIP image name");
+  requireString(message.cueName, "ZIP CUE name");
+  if (!SAFE_ARCHIVE_NAME.test(message.archiveName)
+    || !SAFE_IMAGE_NAME.test(message.imageName)
+    || !SAFE_CUE_NAME.test(message.cueName)
+    || /["/\\\0\r\n]/.test(message.archiveName)
+    || /["/\\\0\r\n]/.test(message.imageName)
+    || /["/\\\0\r\n]/.test(message.cueName)) {
+    throw new WorkerPatcherError("ZIP_OUTPUT_NAME_INVALID", "ZIP output names must be safe flat filenames");
+  }
+  const archiveStem = message.archiveName.slice(0, -4);
+  const imageStem = message.imageName.slice(0, -4);
+  const cueStem = message.cueName.slice(0, -4);
+  if (archiveStem !== imageStem || archiveStem !== cueStem) {
+    throw new WorkerPatcherError("ZIP_OUTPUT_NAME_MISMATCH", "ZIP archive, image, and CUE basenames must match");
+  }
+  if (message.outputHandle?.name !== message.archiveName) {
+    throw new WorkerPatcherError(
+      "ZIP_OUTPUT_HANDLE_NAME_MISMATCH",
+      "ZIP archive metadata must match the file selected by the user",
+    );
+  }
+  return Object.freeze({
+    archiveName: message.archiveName,
+    imageName: message.imageName,
+    cueName: message.cueName,
   });
 }
 
@@ -382,8 +482,13 @@ function classifyError(error) {
   if (error?.name === "QuotaExceededError") {
     return "OUTPUT_QUOTA_EXCEEDED";
   }
-  if (error?.name === "NoModificationAllowedError") {
-    return "OUTPUT_PERMISSION_DENIED";
+  if (new Set([
+    "InvalidStateError",
+    "NotReadableError",
+    "UnknownError",
+    "NoModificationAllowedError",
+  ]).has(error?.name)) {
+    return "OUTPUT_PROVIDER_FAILED";
   }
   return "PATCH_OPERATION_FAILED";
 }

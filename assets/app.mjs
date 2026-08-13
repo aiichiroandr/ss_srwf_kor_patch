@@ -1,11 +1,11 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260813-4";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260813-5";
 import {
   getPatchNotesForRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260813-4";
+} from "./release-notes.mjs?v=20260813-5";
 
-const STATIC_ASSET_REVISION = "20260813-4";
+const STATIC_ASSET_REVISION = "20260813-5";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -27,6 +27,7 @@ const MIN_RECORD_BODY_BYTES = 45;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const BIN_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
 const CUE_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
+const ZIP_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.zip$/;
 const PINNED_STOCK_PROFILES = new Map([
   ["saturn-jp-stock-track01-mode1-2352-c198a930", Object.freeze({
     gameId: "srwf-f",
@@ -71,6 +72,7 @@ const elements = {
   patchRegion: byId("patchRegion"),
   applyState: byId("applyState"),
   patchButton: byId("patchButton"),
+  patchButtonText: byId("patchButtonText"),
   cancelButton: byId("cancelButton"),
   applyHint: byId("applyHint"),
   progressPanel: byId("progressPanel"),
@@ -123,6 +125,9 @@ const state = {
   preparationToken: null,
   outputHandle: null,
   outputDirectoryHandle: null,
+  outputMode: null,
+  archiveFallbackReady: false,
+  archivePlan: null,
   patchCompleted: false,
   cueSaving: false,
   cueSaveSequence: 0,
@@ -855,6 +860,10 @@ async function applyPatch() {
   if (!canApplyPatch()) {
     return;
   }
+  if (state.archiveFallbackReady) {
+    await applyPatchToArchive();
+    return;
+  }
   clearMessages();
   setWorkflowPhase("patch");
   elements.applyState.textContent = "새 BIN 준비";
@@ -866,12 +875,15 @@ async function applyPatch() {
     if (!outputDirectoryHandle) {
       throw new PatcherError("OUTPUT_DIRECTORY_MISSING", "The selected source directory is unavailable");
     }
+    await ensureDirectoryWritePermission(outputDirectoryHandle);
     outputHandle = await createUnusedFileHandle(outputDirectoryHandle, state.release.target.filename);
   } catch (error) {
-    showError(
-      "새 패치 BIN을 만들 수 없습니다",
-      "처음 선택한 원본 폴더의 쓰기 권한과 여유 공간을 확인해 주세요. 원본 폴더를 다시 고르면 권한을 다시 요청할 수 있습니다.",
-    );
+    if (canOfferArchiveFallback(error)) {
+      prepareArchiveFallback();
+      return;
+    }
+    const friendly = friendlyOutputCreationError(error);
+    showError(friendly.title, friendly.message);
     elements.applyState.textContent = "저장 준비 실패";
     elements.applyState.className = "zone-state is-error";
     setWorkflowPhase("patch");
@@ -881,6 +893,8 @@ async function applyPatch() {
   }
 
   state.outputHandle = outputHandle;
+  state.outputMode = "directory";
+  state.archivePlan = null;
   state.patchCompleted = false;
   announce(`${outputHandle.name} 저장을 확인했습니다. 원본 검증과 패치를 시작합니다.`);
   elements.applyHint.textContent = "원본을 검증하며 새 BIN을 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요.";
@@ -891,22 +905,230 @@ async function applyPatch() {
   });
 }
 
+async function applyPatchToArchive() {
+  if (typeof window.showSaveFilePicker !== "function") {
+    showError(
+      "이 브라우저에서는 ZIP 저장을 열 수 없습니다",
+      "원본 선택과 패치 준비는 유지됩니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 패치 ZIP 저장을 다시 시도해 주세요.",
+    );
+    return;
+  }
+
+  const plan = createArchiveOutputPlan(state.release.target.filename);
+  let pickerPromise;
+  try {
+    // This must be the first asynchronous browser operation in the second
+    // Patch-button click. Android save pickers require transient activation.
+    pickerPromise = window.showSaveFilePicker(archiveSavePickerOptions(plan));
+  } catch (error) {
+    handleArchivePickerFailure(error);
+    return;
+  }
+
+  let outputHandle;
+  try {
+    outputHandle = await pickerPromise;
+  } catch (error) {
+    handleArchivePickerFailure(error);
+    return;
+  }
+  if (!outputHandle || typeof outputHandle.createWritable !== "function") {
+    showError("ZIP 저장 파일을 열 수 없습니다", "브라우저가 쓸 수 있는 ZIP 파일 핸들을 반환하지 않았습니다.");
+    return;
+  }
+
+  const actualArchiveName = outputHandle.name;
+  if (typeof actualArchiveName !== "string" || !ZIP_FILENAME_PATTERN.test(actualArchiveName)) {
+    showError("ZIP 파일 이름이 올바르지 않습니다", "확장자를 .zip으로 유지하고 경로 문자가 없는 새 파일 이름을 선택해 주세요.");
+    return;
+  }
+  const actualStem = actualArchiveName.slice(0, -4);
+  const actualPlan = Object.freeze({
+    archiveName: actualArchiveName,
+    imageName: `${actualStem}.bin`,
+    cueName: `${actualStem}.cue`,
+  });
+
+  clearMessages();
+  state.outputHandle = outputHandle;
+  state.outputMode = "archive";
+  state.archivePlan = actualPlan;
+  state.archiveFallbackReady = false;
+  state.patchCompleted = false;
+  elements.applyState.textContent = "ZIP 패치 준비";
+  elements.applyState.className = "zone-state is-working";
+  elements.applyHint.textContent = "원본을 검증하며 ZIP 안에 새 BIN과 CUE를 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요.";
+  announce(`${actualArchiveName} 저장을 확인했습니다. 원본 검증과 ZIP 패치를 시작합니다.`);
+  beginWorkerOperation("APPLY_PATCH_ZIP", {
+    preparationToken: state.preparationToken,
+    releaseKey: releaseKey(state.release),
+    outputHandle,
+    archiveName: actualPlan.archiveName,
+    imageName: actualPlan.imageName,
+    cueName: actualPlan.cueName,
+  });
+}
+
+function createArchiveOutputPlan(desiredImageName, suffixFactory = createOutputSuffix) {
+  requireSafeFilename(desiredImageName, "archive target filename");
+  if (!BIN_FILENAME_PATTERN.test(desiredImageName)) {
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Archive target must be a canonical BIN filename");
+  }
+  const suffix = suffixFactory();
+  if (!/^[a-f0-9]{24}$/.test(suffix)) {
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Archive suffix is invalid");
+  }
+  const stem = `${desiredImageName.slice(0, -4)}-${suffix}`;
+  const plan = Object.freeze({
+    archiveName: `${stem}.zip`,
+    imageName: `${stem}.bin`,
+    cueName: `${stem}.cue`,
+  });
+  if (!ZIP_FILENAME_PATTERN.test(plan.archiveName)) {
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Archive filename is invalid");
+  }
+  return plan;
+}
+
+function archiveSavePickerOptions(plan) {
+  return Object.freeze({
+    id: "srwf-patched-archive",
+    suggestedName: plan.archiveName,
+    types: Object.freeze([Object.freeze({
+      description: "한글 패치 BIN/CUE ZIP",
+      accept: Object.freeze({ "application/zip": Object.freeze([".zip"]) }),
+    })]),
+    excludeAcceptAllOption: true,
+  });
+}
+
+function handleArchivePickerFailure(error) {
+  if (isPickerCancellation(error)) {
+    announce("ZIP 저장을 취소했습니다. 원본 선택과 패치 준비는 유지됩니다.");
+    return;
+  }
+  showError(
+    "패치 ZIP 저장 위치를 열 수 없습니다",
+    "원본 선택과 패치 준비는 유지됩니다. 브라우저의 파일 저장 권한을 허용한 뒤 ‘패치 ZIP 저장’을 다시 눌러 주세요.",
+  );
+}
+
+function canOfferArchiveFallback(error) {
+  if (typeof window.showSaveFilePicker !== "function") {
+    return false;
+  }
+  if ([
+    "OUTPUT_NAME_INVALID",
+    "OUTPUT_DIRECTORY_MISSING",
+    "MANIFEST_INVALID",
+  ].includes(error?.code)) {
+    return false;
+  }
+  return true;
+}
+
+function prepareArchiveFallback() {
+  state.archiveFallbackReady = true;
+  state.outputHandle = null;
+  state.outputMode = null;
+  state.archivePlan = null;
+  state.patchCompleted = false;
+  elements.applyState.textContent = "ZIP 저장 가능";
+  elements.applyState.className = "zone-state is-ready";
+  elements.applyHint.textContent = "원본 선택과 패치 준비는 유지됩니다. 패치 ZIP 저장을 누르면 BIN과 CUE가 든 ZIP의 저장 위치만 한 번 확인하고, 전체 SHA-256은 ZIP을 만들며 검증합니다.";
+  showError(
+    "이 브라우저가 원본 폴더의 새 파일 생성을 막았습니다",
+    "원본 폴더를 다시 고를 필요는 없습니다. 원본 전체 SHA-256은 패치 중 검증합니다. 아래 ‘패치 ZIP 저장’을 눌러 저장한 뒤 압축을 풀어 주세요.",
+  );
+  setWorkflowPhase("patch");
+  updateControls();
+  announce("원본 선택과 패치 준비는 유지됩니다. 패치 ZIP 저장을 눌러 주세요.");
+}
+
+async function ensureDirectoryWritePermission(directoryHandle) {
+  if (!directoryHandle || typeof directoryHandle.getFileHandle !== "function") {
+    throw new PatcherError("OUTPUT_DIRECTORY_MISSING", "The selected source directory is unavailable");
+  }
+
+  // A read/write directory picker normally grants both permissions at once.
+  // Android document providers can return a readable handle first and defer
+  // the edit grant, so explicitly settle that grant while this function still
+  // runs from the user's Patch button activation.  Older implementations that
+  // do not expose the permission methods fall through to the real create call.
+  const descriptor = { mode: "readwrite" };
+  if (typeof directoryHandle.requestPermission === "function") {
+    let permissionPromise;
+    try {
+      // Invoke before the first await so browsers that require transient user
+      // activation see the original Patch-button click.
+      permissionPromise = directoryHandle.requestPermission(descriptor);
+    } catch (error) {
+      if (error?.name === "TypeError") return;
+      throw error;
+    }
+    let permission;
+    try {
+      permission = await permissionPromise;
+    } catch (error) {
+      if (error?.name === "TypeError") return;
+      throw error;
+    }
+    if (permission !== "granted") {
+      throw new PatcherError("OUTPUT_PERMISSION_DENIED", "Read/write permission was not granted");
+    }
+    return;
+  }
+
+  if (typeof directoryHandle.queryPermission === "function") {
+    let permission;
+    try {
+      permission = await directoryHandle.queryPermission(descriptor);
+    } catch (error) {
+      if (error?.name === "TypeError") return;
+      throw error;
+    }
+    if (permission !== "granted") {
+      throw new PatcherError("OUTPUT_PERMISSION_DENIED", "Read/write permission was not granted");
+    }
+  }
+}
+
 async function createUnusedFileHandle(directoryHandle, desiredName, suffixFactory = createOutputSuffix) {
   requireSafeFilename(desiredName, "output filename");
   const extensionIndex = desiredName.lastIndexOf(".");
   const stem = desiredName.slice(0, extensionIndex);
   const extension = desiredName.slice(extensionIndex);
+  const existingNames = new Set();
+  if (typeof directoryHandle?.entries === "function") {
+    try {
+      for await (const [name] of directoryHandle.entries()) {
+        if (typeof name === "string") {
+          existingNames.add(name.toLocaleLowerCase("en-US"));
+        }
+      }
+    } catch (error) {
+      throw new PatcherError("OUTPUT_DIRECTORY_READ_FAILED", error?.message ?? "Output directory listing failed");
+    }
+  }
   for (let index = 0; index < 8; index += 1) {
     const suffix = suffixFactory();
     if (!/^[a-f0-9]{24}$/.test(suffix)) {
       throw new PatcherError("OUTPUT_NAME_INVALID", "Output suffix is invalid");
     }
     const candidateName = `${stem}-${suffix}${extension}`;
-    const handle = await directoryHandle.getFileHandle(candidateName, { create: true });
-    const initialFile = await handle.getFile();
-    if (initialFile.size === 0) {
-      return handle;
+    if (existingNames.has(candidateName.toLocaleLowerCase("en-US"))) {
+      continue;
     }
+    const handle = await directoryHandle.getFileHandle(candidateName, { create: true });
+    if (!handle || typeof handle.createWritable !== "function") {
+      throw new PatcherError("OUTPUT_HANDLE_INVALID", "Created output is not writable");
+    }
+    // Do not immediately call getFile() here.  Android's Storage Access
+    // Framework can expose the newly-created content URI before its metadata
+    // is readable, which incorrectly turns a successful create into an
+    // InvalidStateError/NotReadableError.  The 96-bit random basename plus the
+    // pre-create directory listing keeps existing user files out of scope.
+    return handle;
   }
   throw new PatcherError("OUTPUT_NAME_EXHAUSTED", "No fresh output filename is available");
 }
@@ -926,6 +1148,7 @@ async function saveCueFile() {
     || !state.patchCompleted
     || !outputHandle
     || !outputDirectoryHandle
+    || state.outputMode !== "directory"
     || state.cueSaving
   ) {
     return;
@@ -1065,7 +1288,7 @@ function getPatchWorker() {
     return state.worker;
   }
 
-  const worker = new Worker(new URL("./patch-worker.mjs", import.meta.url), {
+  const worker = new Worker(new URL(`./patch-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url), {
     type: "module",
     name: "srwf-local-patcher",
   });
@@ -1114,8 +1337,15 @@ function handleWorkerMessage(event) {
       void discardUncommittedOutput();
       elements.sourceState.textContent = "크기 일치";
       elements.sourceState.className = "zone-state is-prepared";
-      elements.applyState.textContent = "다시 실행 가능";
-      elements.applyState.className = "zone-state";
+      if (operation === "APPLY_PATCH_ZIP") {
+        state.archiveFallbackReady = true;
+        elements.applyState.textContent = "ZIP 저장 재시도";
+        elements.applyState.className = "zone-state is-ready";
+        elements.applyHint.textContent = "ZIP 생성을 중단했습니다. 원본 선택과 패치 준비는 유지되므로 패치 ZIP 저장을 다시 누를 수 있습니다.";
+      } else {
+        elements.applyState.textContent = "다시 실행 가능";
+        elements.applyState.className = "zone-state";
+      }
       setWorkflowPhase("patch");
     }
     updateControls();
@@ -1153,7 +1383,7 @@ function handleOperationComplete(message) {
     return;
   }
 
-  if (operation === "APPLY_PATCH") {
+  if (operation === "APPLY_PATCH" || operation === "APPLY_PATCH_ZIP") {
     state.patchCompleted = true;
     elements.sourceSelection.classList.remove("is-verifying");
     elements.sourceCheck.textContent = "✓";
@@ -1162,20 +1392,37 @@ function handleOperationComplete(message) {
     elements.sourceState.className = "zone-state is-complete";
     elements.applyState.textContent = "패치 완료";
     elements.applyState.className = "zone-state is-complete";
-    elements.successMessage.textContent = `${state.outputHandle.name}에 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`;
-    elements.cueAction.hidden = !state.release.target.cueFilename;
+    const archiveOutput = operation === "APPLY_PATCH_ZIP";
+    if (archiveOutput) {
+      // Once this browser has required the archive path, keep that preference
+      // sticky for repeat runs. Do not send the user back through the known-
+      // failing directory child-create attempt.
+      state.archiveFallbackReady = true;
+    }
+    const outputLabel = state.outputHandle.name
+      || (archiveOutput ? state.archivePlan?.archiveName : state.release.target.filename);
+    elements.successMessage.textContent = archiveOutput
+      ? `${outputLabel} 안의 BIN 전체 바이트 크기와 SHA-256이 목표값과 일치하며 CUE도 함께 들어 있습니다.`
+      : `${outputLabel}에 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`;
+    elements.cueAction.hidden = archiveOutput || !state.release.target.cueFilename;
     elements.cueButton.hidden = true;
     elements.cueButton.disabled = true;
     elements.cueButton.textContent = "CUE 파일 다시 저장";
     elements.cueStatus.textContent = "패치 BIN용 단일 데이터 트랙 CUE를 같은 폴더에 자동으로 저장합니다.";
     elements.successPanel.hidden = false;
-    elements.applyHint.textContent = "BIN/CUE 생성을 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
+    elements.applyHint.textContent = archiveOutput
+      ? "패치 ZIP 생성을 완료했습니다. ZIP을 풀면 서로 이름이 맞는 BIN과 CUE가 나옵니다."
+      : "BIN/CUE 생성을 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
     setWorkflowPhase("complete");
     updateControls();
     announce(
-      `${state.outputHandle.name} 패치를 완료했습니다. 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`,
+      archiveOutput
+        ? `${outputLabel} 패치를 완료했습니다. ZIP 안의 BIN 해시가 목표값과 일치합니다.`
+        : `${outputLabel} 패치를 완료했습니다. 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`,
     );
-    void saveCueFile();
+    if (!archiveOutput) {
+      void saveCueFile();
+    }
   }
 }
 
@@ -1194,7 +1441,7 @@ function handleOperationFailure(error, operation = state.operation) {
     "PREPARED_SOURCE_MISSING",
     "WORKER_STOPPED",
   ]).has(error?.code);
-  if (operation === "APPLY_PATCH") {
+  if (operation === "APPLY_PATCH" || operation === "APPLY_PATCH_ZIP") {
     void discardUncommittedOutput();
   }
   if (operation === "PREPARE_SOURCE" || sourceMismatch || preparationLost) {
@@ -1217,6 +1464,38 @@ function handleOperationFailure(error, operation = state.operation) {
     elements.applyState.className = "zone-state is-error";
     setWorkflowPhase("patch");
     setZoneState("patch", "error");
+  }
+
+  const outputProviderFailure = operation === "APPLY_PATCH"
+    && new Set([
+      "OUTPUT_PROVIDER_FAILED",
+      "OUTPUT_PERMISSION_DENIED",
+      "OUTPUT_QUOTA_EXCEEDED",
+    ]).has(error?.code);
+  if (outputProviderFailure && typeof window.showSaveFilePicker === "function") {
+    prepareArchiveFallback();
+    return;
+  }
+  if (
+    operation === "APPLY_PATCH_ZIP"
+    && new Set([
+      "OUTPUT_PROVIDER_FAILED",
+      "OUTPUT_PERMISSION_DENIED",
+      "OUTPUT_QUOTA_EXCEEDED",
+    ]).has(error?.code)
+  ) {
+    state.archiveFallbackReady = true;
+    elements.applyState.textContent = "ZIP 저장 재시도";
+    elements.applyState.className = "zone-state is-error";
+    elements.applyHint.textContent = "원본 선택과 패치 준비는 유지됩니다. 패치 ZIP 저장을 다시 눌러 다른 저장 위치를 선택해 주세요.";
+    showError("패치 ZIP을 기록하지 못했습니다", "원본 선택과 패치 준비는 유지됩니다. 다른 저장 위치를 골라 다시 시도해 주세요.");
+    updateControls();
+    return;
+  }
+
+  if (operation === "APPLY_PATCH_ZIP" && !sourceMismatch && !preparationLost) {
+    state.archiveFallbackReady = true;
+    elements.applyHint.textContent = "원본 선택과 패치 준비는 유지됩니다. 패치 ZIP 저장을 다시 눌러 재시도해 주세요.";
   }
 
   showError(friendly.title, friendly.message);
@@ -1443,6 +1722,8 @@ async function discardUncommittedOutput() {
     return;
   }
   state.outputHandle = null;
+  state.outputMode = null;
+  state.archivePlan = null;
 }
 
 function resetFileWorkflow() {
@@ -1459,6 +1740,9 @@ function resetFileWorkflow() {
   state.preparationToken = null;
   state.outputHandle = null;
   state.outputDirectoryHandle = null;
+  state.outputMode = null;
+  state.archiveFallbackReady = false;
+  state.archivePlan = null;
   state.patchCompleted = false;
   state.cueSaveSequence += 1;
   state.cueSaving = false;
@@ -1500,6 +1784,9 @@ function resetPreparedSource() {
   state.preparationToken = null;
   state.outputHandle = null;
   state.outputDirectoryHandle = null;
+  state.outputMode = null;
+  state.archiveFallbackReady = false;
+  state.archivePlan = null;
   state.patchCompleted = false;
   state.cueSaveSequence += 1;
   state.cueSaving = false;
@@ -1559,6 +1846,7 @@ function updateControls() {
   elements.patchNotesToggle.disabled = interactionBusy || !state.patchNotesReleaseId;
   elements.sourceButton.disabled = fileControls.sourceDisabled;
   elements.patchButton.disabled = fileControls.patchDisabled;
+  elements.patchButtonText.textContent = state.archiveFallbackReady ? "패치 ZIP 저장" : "패치 실행";
 
   if (releaseReady && !state.fileSystemSupported) {
     elements.applyHint.textContent = "Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 안전한 파일 저장을 지원합니다.";
@@ -1652,6 +1940,54 @@ function showError(title, message) {
   elements.errorMessage.textContent = message;
   elements.errorPanel.hidden = false;
   elements.successPanel.hidden = true;
+}
+
+function friendlyOutputCreationError(error) {
+  const code = error?.code;
+  const name = error?.name;
+  if (
+    code === "OUTPUT_PERMISSION_DENIED"
+    || name === "NotAllowedError"
+    || name === "SecurityError"
+  ) {
+    return Object.freeze({
+      title: "폴더 편집 권한이 필요합니다",
+      message: "패치 실행 버튼을 다시 누른 뒤 삼성 브라우저가 표시하는 파일 편집 권한을 허용해 주세요. 폴더를 다시 고를 필요는 없습니다.",
+    });
+  }
+  if (name === "QuotaExceededError") {
+    return Object.freeze({
+      title: "새 패치 BIN을 만들 공간이 부족합니다",
+      message: "선택한 저장공간에 최소 579 MB보다 넉넉한 여유 공간을 확보한 뒤 다시 실행해 주세요.",
+    });
+  }
+  if (
+    name === "InvalidStateError"
+    || name === "NotReadableError"
+    || name === "NoModificationAllowedError"
+    || name === "UnknownError"
+  ) {
+    return Object.freeze({
+      title: "브라우저가 새 파일 생성을 완료하지 못했습니다",
+      message: "원본이나 폴더 선택 문제는 아닙니다. 삼성 브라우저 또는 안드로이드 파일 공급자가 이 폴더의 새 파일 생성을 거부했습니다.",
+    });
+  }
+  if (code === "OUTPUT_DIRECTORY_MISSING") {
+    return Object.freeze({
+      title: "선택한 원본 폴더 연결이 끊겼습니다",
+      message: "페이지를 다시 연 경우에만 원본 폴더를 한 번 다시 선택해 주세요.",
+    });
+  }
+  if (code === "OUTPUT_DIRECTORY_READ_FAILED") {
+    return Object.freeze({
+      title: "출력 파일 이름을 안전하게 확인하지 못했습니다",
+      message: "원본 폴더의 파일 목록을 다시 읽을 수 없어 기존 파일 보호를 위해 생성을 중단했습니다.",
+    });
+  }
+  return Object.freeze({
+    title: "새 패치 BIN을 만들 수 없습니다",
+    message: "브라우저가 선택한 폴더에 새 파일을 만들지 못했습니다. 원본 선택은 유지되므로 패치 실행을 다시 시도해 주세요.",
+  });
 }
 
 function friendlyDiscSourceError(code) {
@@ -1780,6 +2116,7 @@ function friendlyWorkerError(code) {
     OUTPUT_HANDLE_INVALID: ["출력 파일을 사용할 수 없습니다", "새 BIN 저장 위치를 다시 선택해 주세요."],
     OUTPUT_PERMISSION_DENIED: ["출력 파일을 열 수 없습니다", "선택한 위치의 쓰기 권한을 확인하거나 다른 위치를 선택해 주세요."],
     OUTPUT_QUOTA_EXCEEDED: ["저장 공간이 부족합니다", "약 579 MB의 새 BIN을 만들 수 있도록 여유 공간을 확보한 뒤 다시 시도해 주세요."],
+    OUTPUT_PROVIDER_FAILED: ["브라우저가 출력 파일을 열지 못했습니다", "원본 문제는 아닙니다. 이 저장 위치의 안드로이드 파일 공급자가 새 파일 쓰기를 완료하지 못했습니다."],
     PREPARED_SOURCE_MISSING: ["원본 준비 상태가 만료되었습니다", "원본 폴더를 다시 선택해 패치 준비부터 진행해 주세요."],
     WORKER_BUSY: ["이전 파일 작업이 아직 끝나지 않았습니다", "잠시 기다린 뒤 다시 시도하거나 페이지를 새로 열어 주세요."],
     WORKER_MESSAGE_INVALID: ["파일 작업 요청을 확인할 수 없습니다", "페이지를 새로 연 뒤 원본 선택부터 다시 진행해 주세요."],
@@ -2015,15 +2352,20 @@ class PatcherError extends Error {
 
 export const __testHooks = Object.freeze({
   activateGame,
+  archiveSavePickerOptions,
   beginWorkerOperation,
   buildPatchedImageCue,
+  canOfferArchiveFallback,
+  createArchiveOutputPlan,
   createUnusedFileHandle,
   detectFileSystemSupport,
   deriveFileControlState,
+  ensureDirectoryWritePermission,
   expectedManifestReference,
   expectedPatchReference,
   fetchJsonDocument,
   friendlyDiscSourceError,
+  friendlyOutputCreationError,
   friendlyWorkerError,
   handleIndexFailure,
   isRfc3339DateTime,

@@ -277,13 +277,14 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260813-4";
+  const revision = "20260813-5";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`release-notes\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`disc-source\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`STATIC_ASSET_REVISION = "${revision}"`));
+  assert.match(appSource, /patch-worker\.mjs\?v=\$\{STATIC_ASSET_REVISION\}/);
   assert.match(appSource, /imageUrl\.searchParams\.set\("v", STATIC_ASSET_REVISION\)/);
 });
 
@@ -464,12 +465,18 @@ test("same-folder output creation uses a high-entropy fresh filename", async () 
     "222222222222222222222222",
   ];
   const directoryHandle = {
+    async *entries() {
+      yield ["PATCHED-111111111111111111111111.BIN", { kind: "file" }];
+    },
     async getFileHandle(name, options) {
       calls.push({ name, options });
       return {
         name,
         async getFile() {
-          return { size: name.includes("111111") ? 4 : 0 };
+          throw new Error("new Android content URI must not be read immediately");
+        },
+        async createWritable() {
+          return null;
         },
       };
     },
@@ -481,12 +488,109 @@ test("same-folder output creation uses a high-entropy fresh filename", async () 
   );
   assert.equal(handle.name, "patched-222222222222222222222222.bin");
   assert.deepEqual(calls, [
-    { name: "patched-111111111111111111111111.bin", options: { create: true } },
     { name: "patched-222222222222222222222222.bin", options: { create: true } },
   ]);
 
   const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
   assert.doesNotMatch(appSource, /\.removeEntry\s*\(/);
+});
+
+test("same-folder output permission request keeps the Patch-button activation path", async () => {
+  const calls = [];
+  let settlePermission;
+  const permissionResult = new Promise((resolve) => {
+    settlePermission = resolve;
+  });
+  const directoryHandle = {
+    async getFileHandle() {},
+    requestPermission(options) {
+      calls.push({ operation: "request", options });
+      return permissionResult;
+    },
+  };
+
+  const operation = __testHooks.ensureDirectoryWritePermission(directoryHandle);
+  assert.deepEqual(calls, [
+    { operation: "request", options: { mode: "readwrite" } },
+  ]);
+  settlePermission("granted");
+  await operation;
+
+  await assert.rejects(
+    () => __testHooks.ensureDirectoryWritePermission({
+      async getFileHandle() {},
+      requestPermission() {
+        return Promise.resolve("denied");
+      },
+    }),
+    (error) => error?.code === "OUTPUT_PERMISSION_DENIED",
+  );
+
+  await __testHooks.ensureDirectoryWritePermission({
+    async getFileHandle() {},
+  });
+});
+
+test("output creation failures distinguish permission, space, and Android provider errors", () => {
+  assert.match(
+    __testHooks.friendlyOutputCreationError({ name: "NotAllowedError" }).title,
+    /편집 권한/,
+  );
+  assert.match(
+    __testHooks.friendlyOutputCreationError({ name: "QuotaExceededError" }).message,
+    /579 MB/,
+  );
+  assert.match(
+    __testHooks.friendlyOutputCreationError({ name: "InvalidStateError" }).message,
+    /안드로이드 파일 공급자/,
+  );
+  assert.match(
+    __testHooks.friendlyOutputCreationError({ code: "OUTPUT_DIRECTORY_MISSING" }).message,
+    /다시 연 경우에만/,
+  );
+});
+
+test("Android output fallback saves one safe ZIP containing matching BIN and CUE names", async () => {
+  const suffix = "0123456789abcdef01234567";
+  const plan = __testHooks.createArchiveOutputPlan(
+    "SRWF-KOR-20260812-v1.1.bin",
+    () => suffix,
+  );
+  assert.deepEqual(plan, {
+    archiveName: `SRWF-KOR-20260812-v1.1-${suffix}.zip`,
+    imageName: `SRWF-KOR-20260812-v1.1-${suffix}.bin`,
+    cueName: `SRWF-KOR-20260812-v1.1-${suffix}.cue`,
+  });
+  const pickerOptions = __testHooks.archiveSavePickerOptions(plan);
+  assert.equal(pickerOptions.suggestedName, plan.archiveName);
+  assert.equal(pickerOptions.excludeAcceptAllOption, true);
+  assert.deepEqual(pickerOptions.types[0].accept, { "application/zip": [".zip"] });
+
+  const previousPicker = globalThis.window.showSaveFilePicker;
+  globalThis.window.showSaveFilePicker = async () => null;
+  try {
+    assert.equal(__testHooks.canOfferArchiveFallback({ name: "InvalidStateError" }), true);
+    assert.equal(__testHooks.canOfferArchiveFallback({ code: "OUTPUT_DIRECTORY_MISSING" }), false);
+  } finally {
+    if (previousPicker === undefined) delete globalThis.window.showSaveFilePicker;
+    else globalThis.window.showSaveFilePicker = previousPicker;
+  }
+
+  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
+  const fallbackStart = appSource.indexOf("async function applyPatchToArchive(");
+  const fallbackEnd = appSource.indexOf("\nfunction createArchiveOutputPlan(", fallbackStart);
+  const fallbackSource = appSource.slice(fallbackStart, fallbackEnd);
+  assert.ok(fallbackStart >= 0 && fallbackEnd > fallbackStart);
+  assert.match(fallbackSource, /pickerPromise\s*=\s*window\.showSaveFilePicker\(/);
+  assert.ok(
+    fallbackSource.indexOf("window.showSaveFilePicker(") < fallbackSource.indexOf("await pickerPromise"),
+    "the save picker must be invoked while Patch-button activation is live",
+  );
+  assert.match(appSource, /beginWorkerOperation\("APPLY_PATCH_ZIP"/);
+  assert.doesNotMatch(fallbackSource, /showDirectoryPicker/);
+  assert.match(appSource, /operation === "APPLY_PATCH_ZIP"[\s\S]*?state\.archiveFallbackReady = true;[\s\S]*?ZIP 저장 재시도/);
+  assert.match(appSource, /if \(archiveOutput\) \{[\s\S]*?state\.archiveFallbackReady = true;/);
+  assert.match(appSource, /operation === "APPLY_PATCH_ZIP" && !sourceMismatch && !preparationLost[\s\S]*?state\.archiveFallbackReady = true;/);
 });
 
 test("patched-image CUE exposes the accepted flat image as one continuous data track", () => {
@@ -624,7 +728,7 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
   const completionEnd = appSource.indexOf("\nfunction handleOperationFailure(", completionStart);
   assert.ok(completionStart >= 0 && completionEnd > completionStart);
   const completionSource = appSource.slice(completionStart, completionEnd);
-  const applyBranch = completionSource.indexOf('if (operation === "APPLY_PATCH")');
+  const applyBranch = completionSource.indexOf('if (operation === "APPLY_PATCH" || operation === "APPLY_PATCH_ZIP")');
   const completionFlag = completionSource.indexOf("state.patchCompleted = true", applyBranch);
   const automaticCueSave = completionSource.indexOf("void saveCueFile();", completionFlag);
   assert.ok(
@@ -632,6 +736,7 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
     "a verified APPLY_PATCH completion must trigger automatic CUE saving",
   );
   assert.equal([...completionSource.matchAll(/void saveCueFile\(\);/g)].length, 1);
+  assert.match(completionSource, /if \(!archiveOutput\) \{\s*void saveCueFile\(\);\s*\}/);
   assert.match(appSource, /elements\.cueButton\.addEventListener\("click", saveCueFile\);/);
 
   const retryVisibilityAssignments = [

@@ -70,7 +70,7 @@ class CountingBlob extends Blob {
   }
 }
 
-function outputHandle() {
+function outputHandle(name) {
   const chunks = [];
   const state = { abortCalls: 0, closeCalls: 0, createCalls: 0 };
   return {
@@ -79,6 +79,7 @@ function outputHandle() {
     },
     state,
     handle: {
+      ...(name === undefined ? {} : { name }),
       async createWritable() {
         state.createCalls += 1;
         return {
@@ -95,6 +96,30 @@ function outputHandle() {
       },
     },
   };
+}
+
+function parseStoredZip(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const decoder = new TextDecoder();
+  const entries = [];
+  let offset = 0;
+  while (view.getUint32(offset, true) === 0x04034b50) {
+    const nameLength = view.getUint16(offset + 26, true);
+    const nameStart = offset + 30;
+    const name = decoder.decode(bytes.subarray(nameStart, nameStart + nameLength));
+    const dataStart = nameStart + nameLength;
+    // Tests use the first central directory record as a trusted size oracle.
+    let central = dataStart;
+    while (central + 4 <= bytes.byteLength && view.getUint32(central, true) !== 0x08074b50) {
+      central += 1;
+    }
+    assert.ok(central + 16 <= bytes.byteLength, "ZIP entry data descriptor is required");
+    const size = view.getUint32(central + 8, true);
+    assert.equal(central - dataStart, size);
+    entries.push({ name, bytes: bytes.subarray(dataStart, central) });
+    offset = central + 16;
+  }
+  return entries;
 }
 
 let messageListener;
@@ -187,6 +212,140 @@ test('worker prepares without reading, applies in one pass, and keeps capability
   assert.equal(goodOutput.state.closeCalls, 1);
   assert.equal(goodOutput.state.abortCalls, 0);
   assert.deepEqual(goodOutput.bytes(), fixture.target);
+
+  const preparedZip = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'prepare-good-zip',
+    sourceFile: new CountingBlob([fixture.source]),
+    releaseKey,
+    patchUrl,
+    descriptor: fixture.descriptor,
+  });
+  assert.equal(preparedZip.type, 'complete');
+
+  const archiveName = 'SRWF-KOR-test-0123456789abcdef01234567.zip';
+  const imageName = 'SRWF-KOR-test-0123456789abcdef01234567.bin';
+  const cueName = 'SRWF-KOR-test-0123456789abcdef01234567.cue';
+  const zipOutput = outputHandle(archiveName);
+  const zipped = await dispatch({
+    type: 'APPLY_PATCH_ZIP',
+    jobId: 'apply-good-zip',
+    releaseKey,
+    preparationToken: preparedZip.preparationToken,
+    outputHandle: zipOutput.handle,
+    archiveName,
+    imageName,
+    cueName,
+  });
+  assert.equal(zipped.type, 'complete');
+  assert.equal(zipped.operation, 'APPLY_PATCH_ZIP');
+  assert.deepEqual(zipped.result, {
+    bytesWritten: fixture.target.byteLength,
+    sourceSha256: fixture.descriptor.sourceSha256,
+    targetSha256: fixture.descriptor.targetSha256,
+    archiveName,
+    imageName,
+    cueName,
+  });
+  assert.equal(zipOutput.state.createCalls, 1);
+  assert.equal(zipOutput.state.closeCalls, 1);
+  assert.equal(zipOutput.state.abortCalls, 0);
+  const zipEntries = parseStoredZip(zipOutput.bytes());
+  assert.equal(zipEntries.length, 2);
+  assert.equal(zipEntries[0].name, imageName);
+  assert.deepEqual(zipEntries[0].bytes, fixture.target);
+  assert.equal(zipEntries[1].name, cueName);
+  assert.equal(
+    new TextDecoder().decode(zipEntries[1].bytes),
+    `FILE "${imageName}" BINARY\r\n`
+      + '  TRACK 01 MODE1/2352\r\n'
+      + '    INDEX 01 00:00:00\r\n',
+  );
+
+  const changedPreimage = fixture.source.slice();
+  changedPreimage[97] ^= 0x01;
+  const preparedBadZipSource = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'prepare-bad-zip-preimage',
+    sourceFile: new CountingBlob([changedPreimage]),
+    releaseKey,
+    patchUrl,
+    descriptor: fixture.descriptor,
+  });
+  const badZipOutput = outputHandle(archiveName);
+  const badZipApplication = await dispatch({
+    type: 'APPLY_PATCH_ZIP',
+    jobId: 'apply-bad-zip-preimage',
+    releaseKey,
+    preparationToken: preparedBadZipSource.preparationToken,
+    outputHandle: badZipOutput.handle,
+    archiveName,
+    imageName,
+    cueName,
+  });
+  assert.equal(badZipApplication.type, 'error');
+  assert.equal(badZipApplication.error.code, 'PREIMAGE_MISMATCH');
+  assert.equal(badZipOutput.state.closeCalls, 0);
+  assert.equal(badZipOutput.state.abortCalls, 1);
+
+  const preparedUnsafeZip = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'prepare-unsafe-zip',
+    sourceFile: new CountingBlob([fixture.source]),
+    releaseKey,
+    patchUrl,
+    descriptor: fixture.descriptor,
+  });
+  const unsafeOutput = outputHandle();
+  const unsafeZip = await dispatch({
+    type: 'APPLY_PATCH_ZIP',
+    jobId: 'apply-unsafe-zip',
+    releaseKey,
+    preparationToken: preparedUnsafeZip.preparationToken,
+    outputHandle: unsafeOutput.handle,
+    archiveName: '../source.zip',
+    imageName: 'source.bin',
+    cueName: 'source.cue',
+  });
+  assert.equal(unsafeZip.type, 'error');
+  assert.equal(unsafeZip.error.code, 'ZIP_OUTPUT_NAME_INVALID');
+  assert.equal(unsafeOutput.state.createCalls, 0, 'unsafe metadata must fail before acquiring output');
+
+  const mismatchedHandleOutput = outputHandle('different.zip');
+  const mismatchedHandleZip = await dispatch({
+    type: 'APPLY_PATCH_ZIP',
+    jobId: 'apply-mismatched-zip-handle-name',
+    releaseKey,
+    preparationToken: preparedUnsafeZip.preparationToken,
+    outputHandle: mismatchedHandleOutput.handle,
+    archiveName,
+    imageName,
+    cueName,
+  });
+  assert.equal(mismatchedHandleZip.type, 'error');
+  assert.equal(mismatchedHandleZip.error.code, 'ZIP_OUTPUT_HANDLE_NAME_MISMATCH');
+  assert.equal(mismatchedHandleOutput.state.createCalls, 0);
+
+  for (const providerErrorName of [
+    'InvalidStateError',
+    'NotReadableError',
+    'UnknownError',
+    'NoModificationAllowedError',
+  ]) {
+    const providerFailure = await dispatch({
+      type: 'APPLY_PATCH',
+      jobId: `apply-provider-failure-${providerErrorName}`,
+      releaseKey,
+      preparationToken: preparedUnsafeZip.preparationToken,
+      outputHandle: {
+        async createWritable() {
+          throw new DOMException('synthetic Android provider failure', providerErrorName);
+        },
+      },
+    });
+    assert.equal(providerFailure.type, 'error');
+    assert.equal(providerFailure.error.code, 'OUTPUT_PROVIDER_FAILED');
+  }
 
   const changedSource = fixture.source.slice();
   changedSource[400] ^= 0xff;
