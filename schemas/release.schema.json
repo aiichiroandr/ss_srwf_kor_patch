@@ -73,7 +73,7 @@
       "properties": {
         "filename": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.img$"
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.bin$"
         },
         "cueFilename": {
           "type": "string",

@@ -921,10 +921,11 @@ a:focus-visible {
 }
 
 .file-type {
-  width: 42px;
+  min-width: 42px;
   height: 36px;
   display: grid;
   place-items: center;
+  padding: 0 6px;
   border-radius: 7px;
   color: var(--white);
   background: var(--blue);

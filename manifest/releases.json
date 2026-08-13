@@ -23,7 +23,7 @@
     {
       "gameId": "srwf-f",
       "id": "saturn-jp-stock-track01-mode1-2352-c198a930",
-      "label": "검증된 세가 새턴 일본어판 원본 (Track 01)",
+      "label": "검증된 세가 새턴 일본어판 Rev. B 전체 디스크",
       "size": 578512032,
       "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
       "sectorCount": 245966,
@@ -40,7 +40,7 @@
       "state": "ACCEPTED",
       "label": "2026.08.12 · v1.1",
       "manifest": "releases/srwf-f-20260812-v1-1.json",
-      "manifestSha256": "1da9f564069f0c619e5996b92c92967865c890748f21ad2057fad16633e777a0"
+      "manifestSha256": "0dd8494f40e1349d28824ce5da58706b0a48dfce629fab3c875210bf919e6ca1"
     },
     {
       "gameId": "srwf-f",
@@ -48,7 +48,7 @@
       "state": "ACCEPTED",
       "label": "2026.08.10 · v1.0",
       "manifest": "releases/srwf-f-20260810-v1-0.json",
-      "manifestSha256": "26933bc58dfa5fa29403796648a1ab61d1dbe16906ffe003734591730b56c364"
+      "manifestSha256": "7840c524cd99e12846474295e5a11ff23d5c86973f17d23084ad4a12da1b61a5"
     }
   ]
 }

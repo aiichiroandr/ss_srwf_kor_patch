@@ -1162,7 +1162,7 @@ def validate_schema_documents() -> None:
         release_props.get("target"), {"filename", "cueFilename", "size", "sha256"}, "public release target"
     )
     for key, expected in {
-        "filename": {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9._-]*\.img$"},
+        "filename": {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$"},
         "cueFilename": {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$"},
         "size": {"const": STOCK_PROFILE["size"]},
         "sha256": {"type": "string", "pattern": HEX64_PATTERN},
@@ -1391,8 +1391,8 @@ def validate_release_manifest(
     target = manifest.get("target")
     if exact_keys(target, {"filename", "cueFilename", "size", "sha256"}, f"release {release_id} target"):
         assert isinstance(target, dict)
-        if not isinstance(target.get("filename"), str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.img", target["filename"]) is None:
-            complain(f"release {release_id}: target filename must be a safe .img basename")
+        if not isinstance(target.get("filename"), str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.bin", target["filename"]) is None:
+            complain(f"release {release_id}: target filename must be a safe .bin basename")
         if not isinstance(target.get("cueFilename"), str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.cue", target["cueFilename"]) is None:
             complain(f"release {release_id}: CUE filename must be a safe basename")
         source_profile = (

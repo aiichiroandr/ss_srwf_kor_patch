@@ -202,7 +202,7 @@ function makeReleaseManifest(overrides = {}) {
       sha256: STOCK_PROFILE.sha256,
     },
     target: {
-      filename: "srwf-kor-v5-r001.img",
+      filename: "srwf-kor-v5-r001.bin",
       cueFilename: "srwf-kor-v5-r001.cue",
       size: STOCK_PROFILE.size,
       sha256: "b".repeat(64),
@@ -264,7 +264,8 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /aria-labelledby="progressTitle"/);
   assert.match(html, /aria-describedby="progressDetail"/);
   assert.doesNotMatch(html, /출력 파일의 SHA-256까지 확인했습니다/);
-  assert.match(html, /전체 SHA-256은\s*\n?\s*패치를 실행하며 새 IMG를 만드는 한 번의 읽기에서 검사/);
+  assert.match(html, /여러 파일은 브라우저에서 순서대로 가상 결합하며 원본 파일은 변경하지 않습니다/);
+  assert.match(html, /전체 SHA-256은 패치를 실행하며 가상 결합한 원본을 한 번 읽어 검사합니다/);
   assert.match(html, /저장 확인 · 패치 실행/);
   assert.doesNotMatch(html, /선택 직후 전체 파일의 SHA-256/);
 });
@@ -274,11 +275,12 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260813-2";
+  const revision = "20260813-3";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`release-notes\\.mjs\\?v=${revision}`));
+  assert.match(appSource, new RegExp(`disc-source\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`STATIC_ASSET_REVISION = "${revision}"`));
   assert.match(appSource, /imageUrl\.searchParams\.set\("v", STATIC_ASSET_REVISION\)/);
 });
@@ -396,6 +398,82 @@ test("prepared source enables patch execution without a separate output picker",
   );
 });
 
+test("source picker accepts one raw image or a four-file CUE/BIN selection", async () => {
+  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
+
+  const pickerOptions = __testHooks.sourcePickerOptions();
+  assert.equal(pickerOptions.multiple, true);
+  assert.equal(pickerOptions.excludeAcceptAllOption, false);
+  assert.deepEqual(pickerOptions.types[0].accept, {
+    "application/octet-stream": [".img", ".bin"],
+    "application/x-cue": [".cue"],
+  });
+  assert.match(appSource, /showOpenFilePicker\(sourcePickerOptions\(\)\)/);
+  assert.match(appSource, /normalizeSelectedSource\(handles, state\.release\.source\.size\)/);
+  assert.match(appSource, /state\.sourceHandles = \[\.\.\.selection\.handles\]/);
+  assert.match(appSource, /sourceFile: selection\.blob/);
+
+  const multiMeta = __testHooks.sourceSelectionMeta({
+    blob: new Blob([new Uint8Array(1024)]),
+    format: "cue-bin",
+    fileCount: 4,
+  }, "선택 확인");
+  assert.match(multiMeta, /1\.0 KB · 4개 파일 · CUE 순서로 가상 결합 · 선택 확인/);
+  const rawMeta = __testHooks.sourceSelectionMeta({
+    blob: new Blob([new Uint8Array(1024)]),
+    format: "raw",
+    fileCount: 1,
+  }, "선택 확인");
+  assert.match(rawMeta, /1\.0 KB · 단일 raw 파일 · 읽기 전용 · 선택 확인/);
+});
+
+test("output directory must directly contain every selected CUE/BIN source", async () => {
+  const handles = ["disc.cue", "track1.bin", "track2.bin", "track3.bin"]
+    .map((name) => ({ name }));
+  const resolved = [];
+  await assert.doesNotReject(() => __testHooks.requireDirectParentDirectory(
+    {
+      async resolve(handle) {
+        resolved.push(handle.name);
+        return [handle.name];
+      },
+    },
+    handles,
+  ));
+  assert.deepEqual(resolved, handles.map((handle) => handle.name));
+
+  await assert.rejects(
+    () => __testHooks.requireDirectParentDirectory(
+      {
+        async resolve(handle) {
+          return handle.name === "track3.bin" ? ["nested", handle.name] : [handle.name];
+        },
+      },
+      handles,
+    ),
+    (error) => error?.code === "OUTPUT_DIRECTORY_MISMATCH",
+  );
+});
+
+test("multi-file selection errors explain how to recover on mobile", () => {
+  assert.match(
+    __testHooks.friendlyDiscSourceError("SOURCE_FILE_COUNT_INVALID").message,
+    /IMG\/BIN은 한 개만.*CUE 한 개와 BIN 세 개를 한 번에/,
+  );
+  assert.match(
+    __testHooks.friendlyDiscSourceError("CUE_REFERENCE_MISSING").message,
+    /Track 1·2·3 BIN.*한 번에 모두 선택/,
+  );
+  assert.match(
+    __testHooks.friendlyDiscSourceError("TRACK_SIZE_MISMATCH").message,
+    /Rev\. B/,
+  );
+  assert.match(
+    __testHooks.friendlyDiscSourceError("UNKNOWN_DISC_SOURCE_ERROR").message,
+    /CUE와 BIN 세 개를 한 번에 다시 선택/,
+  );
+});
+
 test("same-folder output creation uses a high-entropy fresh filename", async () => {
   const calls = [];
   const suffixes = [
@@ -415,13 +493,13 @@ test("same-folder output creation uses a high-entropy fresh filename", async () 
   };
   const handle = await __testHooks.createUnusedFileHandle(
     directoryHandle,
-    "patched.img",
+    "patched.bin",
     () => suffixes.shift(),
   );
-  assert.equal(handle.name, "patched-222222222222222222222222.img");
+  assert.equal(handle.name, "patched-222222222222222222222222.bin");
   assert.deepEqual(calls, [
-    { name: "patched-111111111111111111111111.img", options: { create: true } },
-    { name: "patched-222222222222222222222222.img", options: { create: true } },
+    { name: "patched-111111111111111111111111.bin", options: { create: true } },
+    { name: "patched-222222222222222222222222.bin", options: { create: true } },
   ]);
 
   const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
@@ -433,17 +511,17 @@ test("patched-image CUE exposes the accepted flat image as one continuous data t
   // must therefore retain the V5 single-track runtime geometry rather than
   // reusing the stock Redump disc's original three-track boundaries.
   const cue = __testHooks.buildPatchedImageCue(
-    "srwf-kor-v5-r001-0123456789abcdef01234567.img",
+    "srwf-kor-v5-r001-0123456789abcdef01234567.bin",
   );
   assert.equal(
     cue,
-    "FILE \"srwf-kor-v5-r001-0123456789abcdef01234567.img\" BINARY\r\n"
+    "FILE \"srwf-kor-v5-r001-0123456789abcdef01234567.bin\" BINARY\r\n"
       + "  TRACK 01 MODE1/2352\r\n"
       + "    INDEX 01 00:00:00\r\n",
   );
   assert.doesNotMatch(cue, /TRACK 02|TRACK 03|AUDIO|CATALOG/);
   assert.throws(
-    () => __testHooks.buildPatchedImageCue("patched.img\"\r\nFILE \"other.img"),
+    () => __testHooks.buildPatchedImageCue("patched.bin\"\r\nFILE \"other.bin"),
     (error) => error?.code === "MANIFEST_INVALID",
   );
 });
@@ -482,12 +560,12 @@ test("CUE writer creates a fresh sibling file and commits its complete contents"
   const cueHandle = await __testHooks.writeCueFile(
     directoryHandle,
     "srwf-kor-v5-r001.cue",
-    "srwf-kor-v5-r001-feedfacefeedfacefeedface.img",
+    "srwf-kor-v5-r001-feedfacefeedfacefeedface.bin",
   );
 
   assert.match(cueHandle.name, /^srwf-kor-v5-r001-[a-f0-9]{24}\.cue$/);
   assert.deepEqual(writes, [
-    "FILE \"srwf-kor-v5-r001-feedfacefeedfacefeedface.img\" BINARY\r\n"
+    "FILE \"srwf-kor-v5-r001-feedfacefeedfacefeedface.bin\" BINARY\r\n"
       + "  TRACK 01 MODE1/2352\r\n"
       + "    INDEX 01 00:00:00\r\n",
   ]);
@@ -533,7 +611,7 @@ test("CUE writer aborts write and close failures without masking the original er
         () => __testHooks.writeCueFile(
           directoryHandle,
           "srwf-kor-v5-r001.cue",
-          "srwf-kor-v5-r001-feedfacefeedfacefeedface.img",
+          "srwf-kor-v5-r001-feedfacefeedfacefeedface.bin",
         ),
         (error) => error === operationFailure,
       );

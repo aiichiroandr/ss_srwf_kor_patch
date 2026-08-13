@@ -1,10 +1,11 @@
 import { sha256Hex } from "./sha256.mjs";
+import { normalizeSelectedSource } from "./disc-source.mjs?v=20260813-3";
 import {
   getPatchNotesForRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260813-2";
+} from "./release-notes.mjs?v=20260813-3";
 
-const STATIC_ASSET_REVISION = "20260813-2";
+const STATIC_ASSET_REVISION = "20260813-3";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -24,7 +25,7 @@ const MAX_PATCH_BODY_BYTES = 64 * 1024 * 1024;
 const MAX_PATCH_RECORDS = 1_000_000;
 const MIN_RECORD_BODY_BYTES = 45;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const IMG_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.img$/;
+const BIN_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
 const CUE_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
 const PINNED_STOCK_PROFILES = new Map([
   ["saturn-jp-stock-track01-mode1-2352-c198a930", Object.freeze({
@@ -115,7 +116,9 @@ const state = {
   patchNotesReleaseId: null,
   renderedPatchNotesReleaseId: null,
   sourceHandle: null,
+  sourceHandles: [],
   sourceFile: null,
+  sourceFormat: null,
   sourcePrepared: false,
   preparationToken: null,
   outputHandle: null,
@@ -173,13 +176,13 @@ function showBrowserCompatibility() {
   if (state.fileSystemSupported) {
     elements.compatibilityBadge.classList.add("is-supported");
     elements.compatibilityBadge.lastChild.textContent = " 패치 지원";
-    elements.sourceHelp.textContent = "원본은 읽기 전용으로 엽니다. 패치를 실행하는 한 번의 읽기에서 전체 SHA-256을 검사하고, 확인한 원본 폴더에 새 IMG를 만듭니다.";
+    elements.sourceHelp.textContent = "합본 IMG/BIN 1개 또는 CUE와 Track 1·2·3 BIN을 한 번에 고르세요. 여러 파일은 브라우저에서 가상 결합하며 원본은 변경하지 않습니다.";
     return;
   }
 
   elements.compatibilityBadge.classList.add("is-unsupported");
   elements.compatibilityBadge.lastChild.textContent = " 안전 저장 불가";
-  elements.sourceHelp.textContent = "이 브라우저에서는 원본 폴더에 약 579 MB의 새 IMG를 안전하게 만들 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.";
+  elements.sourceHelp.textContent = "이 브라우저에서는 원본 폴더에 약 579 MB의 새 BIN/CUE를 안전하게 만들 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.";
 }
 
 async function loadReleaseIndex() {
@@ -485,7 +488,7 @@ async function loadSelectedRelease(row) {
   elements.sourceState.className = "zone-state";
   elements.applyState.textContent = "원본 대기";
   elements.applyState.className = "zone-state";
-  elements.applyHint.textContent = "정품 원본을 고르면 원본 폴더를 확인하고 새 IMG를 만들 수 있습니다.";
+  elements.applyHint.textContent = "정품 원본 파일을 고르면 원본 폴더를 확인하고 새 BIN/CUE를 만들 수 있습니다.";
 
   setWorkflowPhase("source");
   updateControls();
@@ -548,8 +551,8 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
     throw new PatcherError("SOURCE_PROFILE_MISMATCH", "Release source does not match a pinned stock profile");
   }
   requireSafeFilename(manifest.target.filename, "target filename");
-  if (!IMG_FILENAME_PATTERN.test(manifest.target.filename)) {
-    throw new PatcherError("MANIFEST_INVALID", "Target IMG filename is not canonical");
+  if (!BIN_FILENAME_PATTERN.test(manifest.target.filename)) {
+    throw new PatcherError("MANIFEST_INVALID", "Target BIN filename is not canonical");
   }
   requireSafeFilename(manifest.target.cueFilename, "target CUE filename");
   if (!CUE_FILENAME_PATTERN.test(manifest.target.cueFilename)) {
@@ -757,17 +760,7 @@ async function chooseSource() {
 
   let handles;
   try {
-    handles = await window.showOpenFilePicker({
-      id: "srwf-stock-image",
-      multiple: false,
-      excludeAcceptAllOption: false,
-      types: [
-        {
-          description: "Saturn 디스크 이미지",
-          accept: { "application/octet-stream": [".img"] },
-        },
-      ],
-    });
+    handles = await window.showOpenFilePicker(sourcePickerOptions());
   } catch (error) {
     if (!isPickerCancellation(error)) {
       if (state.sourcePrepared) {
@@ -783,49 +776,59 @@ async function chooseSource() {
     return;
   }
 
-  const sourceHandle = handles?.[0];
-  if (!sourceHandle) {
+  if (!Array.isArray(handles) || handles.length === 0) {
     return;
   }
 
-  let sourceFile;
+  let selection;
   try {
-    sourceFile = await sourceHandle.getFile();
-  } catch {
+    selection = await normalizeSelectedSource(handles, state.release.source.size);
+  } catch (error) {
+    const friendly = friendlyDiscSourceError(error?.code);
     if (state.sourcePrepared) {
-      announce("새 원본 파일을 읽지 못했습니다. 기존 원본 선택은 그대로 유지합니다.");
+      showError(friendly.title, `${friendly.message} 기존에 확인한 원본 선택은 그대로 유지됩니다.`);
+      announce("새 원본 파일 구성을 사용할 수 없어 기존 원본 선택을 유지했습니다.");
     } else {
       clearMessages();
-      showError("원본 파일을 읽을 수 없습니다", "파일이 이동되었거나 읽기 권한이 없습니다. 다시 선택해 주세요.");
-      elements.sourceState.textContent = "읽기 실패";
+      showError(friendly.title, friendly.message);
+      elements.sourceState.textContent = "선택 확인 필요";
       elements.sourceState.className = "zone-state is-error";
       setZoneState("source", "error");
     }
+    updateControls();
     return;
   }
 
   clearMessages();
   resetPreparedSource();
-  state.sourceHandle = sourceHandle;
-  state.sourceFile = sourceFile;
-  showSelectedSourceName(sourceFile.name);
+  state.sourceHandle = selection.anchorHandle;
+  state.sourceHandles = [...selection.handles];
+  state.sourceFile = selection.blob;
+  state.sourceFormat = selection.format;
+  showSelectedSourceName(selection);
   elements.sourceSelection.hidden = false;
   elements.sourceSelection.classList.add("is-verifying");
-  elements.sourceName.textContent = sourceFile.name;
-  elements.sourceMeta.textContent = `${formatBytes(sourceFile.size)} · 읽기 전용`;
+  elements.sourceName.textContent = selection.format === "cue-bin"
+    ? `${selection.displayName} + BIN 3개`
+    : selection.displayName;
+  elements.sourceMeta.textContent = sourceSelectionMeta(selection, "선택 확인");
+  const sourceType = elements.sourceSelection.querySelector?.(".file-type");
+  if (sourceType) {
+    sourceType.textContent = selection.format === "cue-bin" ? "CUE+BIN" : "RAW";
+  }
   elements.sourceCheck.textContent = "…";
-  elements.sourceState.textContent = "파일 확인 중";
+  elements.sourceState.textContent = selection.format === "cue-bin" ? "4개 파일 확인 중" : "파일 확인 중";
   elements.sourceState.className = "zone-state is-working";
   setZoneState("source", "busy", { busy: true });
 
-  if (sourceFile.size !== state.release.source.size) {
+  if (selection.blob.size !== state.release.source.size) {
     elements.sourceSelection.classList.remove("is-verifying");
     elements.sourceCheck.textContent = "×";
     elements.sourceState.textContent = "불일치";
     elements.sourceState.className = "zone-state is-error";
     showError(
       "원본 크기가 일치하지 않습니다",
-      `이 릴리스는 ${formatBytes(state.release.source.size)} 원본만 지원합니다. 다른 IMG를 선택해 주세요.`,
+      `이 릴리스는 정규화 후 ${formatBytes(state.release.source.size)}인 원본만 지원합니다. 다른 IMG/BIN 또는 CUE+BIN 세트를 선택해 주세요.`,
     );
     setWorkflowPhase("source");
     setZoneState("source", "error");
@@ -834,10 +837,27 @@ async function chooseSource() {
   }
 
   beginWorkerOperation("PREPARE_SOURCE", {
-    sourceFile,
+    sourceFile: selection.blob,
     releaseKey: releaseKey(state.release),
     patchUrl: state.release.patch.url,
     descriptor: state.release.descriptor,
+  });
+}
+
+function sourcePickerOptions() {
+  return Object.freeze({
+    id: "srwf-stock-image",
+    multiple: true,
+    excludeAcceptAllOption: false,
+    types: [
+      {
+        description: "Saturn IMG/BIN 또는 CUE+BIN",
+        accept: {
+          "application/octet-stream": [".img", ".bin"],
+          "application/x-cue": [".cue"],
+        },
+      },
+    ],
   });
 }
 
@@ -878,14 +898,14 @@ async function applyPatch() {
 
   let outputHandle;
   try {
-    await requireDirectParentDirectory(outputDirectoryHandle, state.sourceHandle);
+    await requireDirectParentDirectory(outputDirectoryHandle, state.sourceHandles);
     outputHandle = await createUnusedFileHandle(outputDirectoryHandle, state.release.target.filename);
   } catch (error) {
     const parentMismatch = error?.code === "OUTPUT_DIRECTORY_MISMATCH";
     showError(
-      parentMismatch ? "정품 원본이 있는 폴더를 선택해 주세요" : "새 패치 IMG를 만들 수 없습니다",
+      parentMismatch ? "선택한 원본 파일이 모두 있는 폴더를 골라 주세요" : "새 패치 BIN을 만들 수 없습니다",
       parentMismatch
-        ? "앞에서 고른 원본 IMG가 바로 들어 있는 폴더를 선택해야 합니다."
+        ? "앞에서 고른 IMG/BIN 또는 CUE와 BIN 세 개가 모두 바로 들어 있는 같은 폴더여야 합니다."
         : "같은 이름의 기존 파일을 덮어쓰지 못하도록 차단했습니다. 폴더 권한과 여유 공간을 확인해 주세요.",
     );
     elements.applyState.textContent = "저장 준비 실패";
@@ -900,7 +920,7 @@ async function applyPatch() {
   state.outputHandle = outputHandle;
   state.patchCompleted = false;
   announce(`${outputHandle.name} 저장을 확인했습니다. 원본 검증과 패치를 시작합니다.`);
-  elements.applyHint.textContent = "원본을 검증하며 새 IMG를 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요.";
+  elements.applyHint.textContent = "원본을 검증하며 새 BIN을 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요.";
   beginWorkerOperation("APPLY_PATCH", {
     preparationToken: state.preparationToken,
     releaseKey: releaseKey(state.release),
@@ -916,14 +936,20 @@ function outputDirectoryPickerOptions(sourceHandle) {
   });
 }
 
-async function requireDirectParentDirectory(directoryHandle, sourceHandle) {
-  const relativePath = await directoryHandle.resolve(sourceHandle);
-  if (
-    !Array.isArray(relativePath)
-    || relativePath.length !== 1
-    || relativePath[0] !== sourceHandle.name
-  ) {
-    throw new PatcherError("OUTPUT_DIRECTORY_MISMATCH", "Selected directory is not the source parent");
+async function requireDirectParentDirectory(directoryHandle, sourceHandles) {
+  const handles = Array.isArray(sourceHandles) ? sourceHandles : [sourceHandles];
+  if (!handles.length || handles.some((handle) => !handle || typeof handle.name !== "string")) {
+    throw new PatcherError("OUTPUT_DIRECTORY_MISMATCH", "Source handles are unavailable");
+  }
+  for (const sourceHandle of handles) {
+    const relativePath = await directoryHandle.resolve(sourceHandle);
+    if (
+      !Array.isArray(relativePath)
+      || relativePath.length !== 1
+      || relativePath[0] !== sourceHandle.name
+    ) {
+      throw new PatcherError("OUTPUT_DIRECTORY_MISMATCH", "Selected directory is not the source parent");
+    }
   }
 }
 
@@ -972,7 +998,7 @@ async function saveCueFile() {
   elements.cueButton.disabled = true;
   elements.cueButton.hidden = true;
   elements.cueAction.hidden = false;
-  elements.cueStatus.textContent = "패치 IMG와 같은 폴더에 CUE를 만들고 있습니다.";
+  elements.cueStatus.textContent = "패치 BIN과 같은 폴더에 CUE를 만들고 있습니다.";
   updateControls();
   try {
     const cueHandle = await writeCueFile(
@@ -990,7 +1016,7 @@ async function saveCueFile() {
       elements.cueButton.disabled = true;
       elements.cueButton.hidden = true;
       elements.cueStatus.textContent = `${cueHandle.name}도 자동으로 저장했습니다.`;
-      announce(`${cueHandle.name}도 패치 IMG와 같은 폴더에 자동으로 저장했습니다.`);
+      announce(`${cueHandle.name}도 패치 BIN과 같은 폴더에 자동으로 저장했습니다.`);
     }
   } catch (error) {
     if (
@@ -998,7 +1024,7 @@ async function saveCueFile() {
       && state.patchCompleted
       && state.outputHandle === outputHandle
     ) {
-      showCueFailure("CUE 파일을 자동으로 저장하지 못했습니다. 이미 검증된 IMG는 그대로 유지됩니다.");
+      showCueFailure("CUE 파일을 자동으로 저장하지 못했습니다. 이미 검증된 BIN은 그대로 유지됩니다.");
     }
   } finally {
     if (state.cueSaveSequence === cueSaveSequence) {
@@ -1010,8 +1036,8 @@ async function saveCueFile() {
 
 function buildPatchedImageCue(imageName) {
   requireSafeFilename(imageName, "CUE image filename");
-  if (!IMG_FILENAME_PATTERN.test(imageName)) {
-    throw new PatcherError("CUE_IMAGE_INVALID", "CUE image filename must be a safe IMG basename");
+  if (!BIN_FILENAME_PATTERN.test(imageName)) {
+    throw new PatcherError("CUE_IMAGE_INVALID", "CUE image filename must be a safe BIN basename");
   }
   return `FILE "${imageName}" BINARY\r\n`
     + "  TRACK 01 MODE1/2352\r\n"
@@ -1177,13 +1203,15 @@ function handleOperationComplete(message) {
     state.preparationToken = message.preparationToken;
     elements.sourceSelection.classList.remove("is-verifying");
     elements.sourceCheck.textContent = "→";
-    elements.sourceMeta.textContent = `${formatBytes(state.sourceFile.size)} · 크기 일치 · 전체 검증 대기`;
+    elements.sourceMeta.textContent = sourceSelectionMeta(state, "크기 일치 · 전체 검증 대기");
     elements.sourceState.textContent = "크기 일치";
     elements.sourceState.className = "zone-state is-prepared";
     elements.applyState.textContent = "실행 가능";
     elements.applyState.className = "zone-state is-ready";
     setWorkflowPhase("patch");
-    elements.applyHint.textContent = "패치 실행을 누르면 원본 IMG가 있는 폴더의 확인창이 열립니다.";
+    elements.applyHint.textContent = state.sourceFormat === "cue-bin"
+      ? "패치 실행을 누르면 CUE와 BIN 세 개가 있는 폴더의 확인창이 열립니다."
+      : "패치 실행을 누르면 원본 IMG/BIN이 있는 폴더의 확인창이 열립니다.";
     updateControls();
     announce("원본 크기가 일치합니다. 전체 SHA-256은 패치를 실행하며 검증합니다.");
     return;
@@ -1193,7 +1221,7 @@ function handleOperationComplete(message) {
     state.patchCompleted = true;
     elements.sourceSelection.classList.remove("is-verifying");
     elements.sourceCheck.textContent = "✓";
-    elements.sourceMeta.textContent = `${formatBytes(state.sourceFile.size)} · 전체 SHA-256 일치 · 원본 보존`;
+    elements.sourceMeta.textContent = sourceSelectionMeta(state, "전체 SHA-256 일치 · 원본 보존");
     elements.sourceState.textContent = "SHA-256 일치";
     elements.sourceState.className = "zone-state is-complete";
     elements.applyState.textContent = "패치 완료";
@@ -1203,9 +1231,9 @@ function handleOperationComplete(message) {
     elements.cueButton.hidden = true;
     elements.cueButton.disabled = true;
     elements.cueButton.textContent = "CUE 파일 다시 저장";
-    elements.cueStatus.textContent = "패치용 단일 데이터 트랙 CUE를 같은 폴더에 자동으로 저장합니다.";
+    elements.cueStatus.textContent = "패치 BIN용 단일 데이터 트랙 CUE를 같은 폴더에 자동으로 저장합니다.";
     elements.successPanel.hidden = false;
-    elements.applyHint.textContent = "패치를 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
+    elements.applyHint.textContent = "BIN/CUE 생성을 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
     setWorkflowPhase("complete");
     updateControls();
     announce(
@@ -1296,8 +1324,8 @@ function showProgressPhase(phase) {
   const copy = {
     "patch-download": ["PATCH DATA", "검증된 패치 데이터를 준비하고 있습니다", "같은 저장소의 패치 데이터만 읽습니다."],
     "patch-parse": ["PATCH VERIFY", "패치 데이터의 무결성을 확인하고 있습니다", "명세에 고정된 크기와 SHA-256을 비교합니다."],
-    "source-apply": ["VERIFY & WRITE", "원본을 검증하며 새 IMG를 만들고 있습니다", "전체 SHA-256과 변경 구간을 한 번의 읽기로 확인하며 별도 출력에 기록합니다."],
-    "output-verify": ["OUTPUT VERIFY", "출력 검증을 마무리하고 있습니다", "새 IMG에 기록한 전체 바이트를 목표 크기와 SHA-256으로 확인했습니다."],
+    "source-apply": ["VERIFY & WRITE", "원본을 검증하며 새 BIN을 만들고 있습니다", "전체 SHA-256과 변경 구간을 한 번의 읽기로 확인하며 별도 출력에 기록합니다."],
+    "output-verify": ["OUTPUT VERIFY", "출력 검증을 마무리하고 있습니다", "새 BIN에 기록한 전체 바이트를 목표 크기와 SHA-256으로 확인했습니다."],
   }[phase] ?? ["WORKING", "안전하게 처리하고 있습니다", "이 탭을 닫지 마세요."];
 
   const phaseChanged = elements.progressPanel.dataset.phase !== phase;
@@ -1489,7 +1517,9 @@ function resetFileWorkflow() {
   state.worker?.postMessage({ type: "RESET" });
   finishBusyState();
   state.sourceHandle = null;
+  state.sourceHandles = [];
   state.sourceFile = null;
+  state.sourceFormat = null;
   state.sourcePrepared = false;
   state.preparationToken = null;
   state.outputHandle = null;
@@ -1500,6 +1530,10 @@ function resetFileWorkflow() {
   clearPatchNotes();
   elements.sourceSelection.hidden = true;
   elements.sourceSelection.classList.remove("is-verifying");
+  const sourceType = elements.sourceSelection.querySelector?.(".file-type");
+  if (sourceType) {
+    sourceType.textContent = "RAW";
+  }
   resetSourceButtonLabel();
   elements.progressPanel.hidden = true;
   elements.errorPanel.hidden = true;
@@ -1545,14 +1579,29 @@ function resetPreparedSource() {
   setWorkflowPhase("source");
 }
 
-function showSelectedSourceName(name) {
-  elements.sourceButtonText.textContent = `원본 선택됨 · ${name}`;
-  elements.sourceButton.title = `선택됨: ${name}. 다른 정품 원본 IMG를 선택하려면 누르세요.`;
+function showSelectedSourceName(selection) {
+  const isCueBin = selection.format === "cue-bin";
+  const label = isCueBin ? "원본 4개 선택됨" : `원본 선택됨 · ${selection.displayName}`;
+  const detail = isCueBin
+    ? `${selection.displayName}와 CUE가 참조하는 BIN 세 개`
+    : selection.displayName;
+  elements.sourceButtonText.textContent = label;
+  elements.sourceButton.title = `선택됨: ${detail}. 다른 정품 원본 파일을 선택하려면 누르세요.`;
 }
 
 function resetSourceButtonLabel() {
-  elements.sourceButtonText.textContent = "정품 원본 선택";
+  elements.sourceButtonText.textContent = "원본 파일 선택";
   elements.sourceButton.removeAttribute("title");
+}
+
+function sourceSelectionMeta(source, suffix) {
+  const blob = source.blob ?? source.sourceFile;
+  const format = source.format ?? source.sourceFormat;
+  const fileCount = source.fileCount ?? source.sourceHandles?.length ?? 1;
+  const inputDescription = format === "cue-bin"
+    ? `${fileCount}개 파일 · CUE 순서로 가상 결합`
+    : "단일 raw 파일 · 읽기 전용";
+  return `${formatBytes(blob.size)} · ${inputDescription} · ${suffix}`;
 }
 
 function updateControls() {
@@ -1612,7 +1661,7 @@ function canApplyPatch() {
 }
 
 function showUnsupportedBrowser() {
-  const message = "이 브라우저에는 원본 폴더에 약 579 MB의 새 IMG를 안전하게 만들 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.";
+  const message = "이 브라우저에는 원본 폴더에 약 579 MB의 새 BIN/CUE를 안전하게 만들 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.";
   elements.sourceHelp.textContent = message;
   elements.sourceState.textContent = "환경 확인";
   elements.sourceState.className = "zone-state is-error";
@@ -1666,12 +1715,94 @@ function showError(title, message) {
   elements.successPanel.hidden = true;
 }
 
+function friendlyDiscSourceError(code) {
+  const errors = {
+    SOURCE_FILE_COUNT_INVALID: [
+      "원본 파일 수를 확인해 주세요",
+      "합본 IMG/BIN은 한 개만, 멀티트랙 원본은 CUE 한 개와 BIN 세 개를 한 번에 선택해야 합니다.",
+    ],
+    SOURCE_HANDLE_INVALID: [
+      "선택한 파일을 열 수 없습니다",
+      "폴더나 바로가기가 아닌 원본 파일만 선택한 뒤 다시 시도해 주세요.",
+    ],
+    SOURCE_NAME_DUPLICATE: [
+      "파일 이름이 중복됩니다",
+      "서로 다른 CUE 한 개와 BIN 세 개를 같은 폴더에서 선택해 주세요.",
+    ],
+    SOURCE_FILE_INVALID: [
+      "원본 파일을 읽을 수 없습니다",
+      "파일이 이동되거나 변경되지 않았는지 확인한 뒤 네 파일을 다시 선택해 주세요.",
+    ],
+    SOURCE_FILE_READ_FAILED: [
+      "원본 파일을 읽을 수 없습니다",
+      "파일 앱의 읽기 권한을 확인한 뒤 CUE와 BIN 세 개를 다시 선택해 주세요.",
+    ],
+    SOURCE_FORMAT_UNSUPPORTED: [
+      "지원하지 않는 디스크 이미지입니다",
+      "단일 raw IMG/BIN 또는 압축을 푼 CUE 한 개와 BIN 세 개를 선택해 주세요. 일반 ISO와 CHD는 아직 지원하지 않습니다.",
+    ],
+    SOURCE_SIZE_MISMATCH: [
+      "원본 크기가 일치하지 않습니다",
+      "세가 새턴 일본판 Rev. B의 단일 raw IMG/BIN인지 확인해 주세요.",
+    ],
+    SOURCE_PROFILE_UNSUPPORTED: [
+      "선택한 패치와 원본 구성이 다릅니다",
+      "슈퍼로봇대전 F 일본판 Rev. B용 CUE와 BIN 세 개를 선택해 주세요.",
+    ],
+    SOURCE_SET_INVALID: [
+      "원본 네 파일을 모두 선택해 주세요",
+      "압축을 푼 같은 폴더에서 CUE 한 개와 Track 1·2·3 BIN 세 개를 한 번에 선택해야 합니다.",
+    ],
+    CUE_NAME_MISMATCH: [
+      "지원하는 Rev. B CUE가 아닙니다",
+      "압축을 푼 파일 이름을 바꾸지 말고 Rev. B CUE와 BIN 세 개를 모두 선택해 주세요.",
+    ],
+    CUE_SIZE_INVALID: [
+      "CUE 파일을 읽을 수 없습니다",
+      "비어 있거나 비정상적으로 큰 CUE입니다. 원본 압축을 다시 풀어 선택해 주세요.",
+    ],
+    CUE_ENCODING_INVALID: [
+      "CUE 문자 형식을 읽을 수 없습니다",
+      "원본 CUE를 수정하지 말고 압축에서 다시 풀어 BIN 세 개와 함께 선택해 주세요.",
+    ],
+    CUE_REFERENCE_MISSING: [
+      "CUE가 참조하는 BIN이 빠졌습니다",
+      "CUE와 Track 1·2·3 BIN을 같은 폴더에서 한 번에 모두 선택해 주세요.",
+    ],
+    TRACK_SIZE_MISMATCH: [
+      "BIN 트랙 크기가 일치하지 않습니다",
+      "슈퍼로봇대전 F 일본판 Rev. B의 수정하지 않은 Track 1·2·3 BIN인지 확인해 주세요.",
+    ],
+  };
+  const cueStructureCodes = new Set([
+    "CUE_LAYOUT_INVALID",
+    "CUE_CATALOG_INVALID",
+    "CUE_FILE_INVALID",
+    "CUE_FILE_MISMATCH",
+    "CUE_TRACK_INVALID",
+    "CUE_TRACK_MISMATCH",
+    "CUE_INDEX_INVALID",
+    "CUE_INDEX_MISMATCH",
+  ]);
+  const [title, message] = errors[code]
+    ?? (cueStructureCodes.has(code)
+      ? [
+        "CUE 트랙 구성이 지원 원본과 다릅니다",
+        "Rev. B 원본 CUE를 수정하지 말고 Track 1·2·3 BIN과 함께 다시 선택해 주세요.",
+      ]
+      : [
+        "원본 파일 구성을 확인할 수 없습니다",
+        "합본 IMG/BIN 한 개 또는 같은 폴더의 CUE와 BIN 세 개를 한 번에 다시 선택해 주세요.",
+      ]);
+  return Object.freeze({ title, message });
+}
+
 function friendlyWorkerError(code) {
   const errors = {
-    SOURCE_SIZE_MISMATCH: ["원본 크기가 일치하지 않습니다", "지원하는 정품 원본 IMG인지 확인하고 다른 파일을 선택해 주세요."],
+    SOURCE_SIZE_MISMATCH: ["원본 크기가 일치하지 않습니다", "지원하는 정품 원본 IMG/BIN 또는 CUE+BIN 구성인지 확인해 주세요."],
     SOURCE_HASH_MISMATCH: ["지원하는 원본이 아닙니다", "전체 SHA-256이 공개 명세와 다릅니다. 원본을 수정하지 않은 정품 이미지인지 확인해 주세요."],
-    SOURCE_FILE_INVALID: ["원본 파일을 읽을 수 없습니다", "원본 IMG를 다시 선택해 패치 준비부터 진행해 주세요."],
-    BAD_BLOB_STREAM: ["원본 파일을 끝까지 읽을 수 없습니다", "파일이 이동·변경되지 않았는지 확인한 뒤 원본 IMG를 다시 선택해 주세요."],
+    SOURCE_FILE_INVALID: ["원본 파일을 읽을 수 없습니다", "원본 IMG/BIN 또는 CUE와 BIN 세 개를 다시 선택해 주세요."],
+    BAD_BLOB_STREAM: ["원본 파일을 끝까지 읽을 수 없습니다", "파일이 이동·변경되지 않았는지 확인한 뒤 원본 파일을 다시 선택해 주세요."],
     PATCH_SIZE_MISMATCH: ["패치 데이터 검증에 실패했습니다", "배포된 패치 데이터의 크기가 명세와 달라 작업을 차단했습니다."],
     PATCH_HASH_MISMATCH: ["패치 데이터 검증에 실패했습니다", "배포된 패치 데이터의 SHA-256이 명세와 달라 작업을 차단했습니다."],
     PATCH_PARSE_FAILED: ["패치 데이터를 읽을 수 없습니다", "공개 패치 형식을 안전하게 확인하지 못해 작업을 차단했습니다."],
@@ -1687,10 +1818,10 @@ function friendlyWorkerError(code) {
     TARGET_HASH_MISMATCH: ["출력 데이터 검증에 실패했습니다", "기록할 전체 바이트의 SHA-256이 목표값과 달라 저장을 확정하지 않았습니다."],
     PATCH_FETCH_FAILED: ["패치 데이터를 불러오지 못했습니다", "네트워크 연결을 확인한 뒤 다시 시도해 주세요. 원본 파일은 전송되지 않았습니다."],
     EXTERNAL_URL_REJECTED: ["외부 패치 주소를 차단했습니다", "패치 데이터는 이 사이트와 같은 출처에서만 읽을 수 있습니다."],
-    OUTPUT_HANDLE_INVALID: ["출력 파일을 사용할 수 없습니다", "새 IMG 저장 위치를 다시 선택해 주세요."],
+    OUTPUT_HANDLE_INVALID: ["출력 파일을 사용할 수 없습니다", "새 BIN 저장 위치를 다시 선택해 주세요."],
     OUTPUT_PERMISSION_DENIED: ["출력 파일을 열 수 없습니다", "선택한 위치의 쓰기 권한을 확인하거나 다른 위치를 선택해 주세요."],
-    OUTPUT_QUOTA_EXCEEDED: ["저장 공간이 부족합니다", "약 579 MB의 새 IMG를 만들 수 있도록 여유 공간을 확보한 뒤 다시 시도해 주세요."],
-    PREPARED_SOURCE_MISSING: ["원본 준비 상태가 만료되었습니다", "원본 IMG를 다시 선택해 패치 준비부터 진행해 주세요."],
+    OUTPUT_QUOTA_EXCEEDED: ["저장 공간이 부족합니다", "약 579 MB의 새 BIN을 만들 수 있도록 여유 공간을 확보한 뒤 다시 시도해 주세요."],
+    PREPARED_SOURCE_MISSING: ["원본 준비 상태가 만료되었습니다", "원본 파일을 다시 선택해 패치 준비부터 진행해 주세요."],
     WORKER_BUSY: ["이전 파일 작업이 아직 끝나지 않았습니다", "잠시 기다린 뒤 다시 시도하거나 페이지를 새로 열어 주세요."],
     WORKER_MESSAGE_INVALID: ["파일 작업 요청을 확인할 수 없습니다", "페이지를 새로 연 뒤 원본 선택부터 다시 진행해 주세요."],
     WORKER_MESSAGE_FAILED: ["이 브라우저에서 파일 작업을 시작할 수 없습니다", "데스크톱 Chrome 또는 Edge 최신 버전에서 다시 시도해 주세요."],
@@ -1933,6 +2064,7 @@ export const __testHooks = Object.freeze({
   expectedManifestReference,
   expectedPatchReference,
   fetchJsonDocument,
+  friendlyDiscSourceError,
   friendlyWorkerError,
   handleIndexFailure,
   isRfc3339DateTime,
@@ -1943,9 +2075,11 @@ export const __testHooks = Object.freeze({
   openPatchNotes,
   renderPatchNotesForRelease,
   requireDirectParentDirectory,
+  sourcePickerOptions,
   showUnsupportedBrowser,
   setWorkflowPhase,
   setZoneState,
+  sourceSelectionMeta,
   validateReleaseIndex,
   validateGames,
   validateReleaseRow,

@@ -123,7 +123,7 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
     "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
   },
   "target": {
-    "filename": "SRWF-KOR-YYYYMMDD-version.img",
+    "filename": "SRWF-KOR-YYYYMMDD-version.bin",
     "cueFilename": "SRWF-KOR-YYYYMMDD-version.cue",
     "size": 578512032,
     "sha256": "<accepted target SHA-256>"

@@ -574,7 +574,7 @@ class RepositoryPolicyTests(unittest.TestCase):
                     "sha256": verifier.STOCK_PROFILE["sha256"],
                 },
                 "target": {
-                    "filename": "SRWF-KOR-r999.img",
+                    "filename": "SRWF-KOR-r999.bin",
                     "cueFilename": "SRWF-KOR-r999.cue",
                     "size": verifier.STOCK_PROFILE["size"],
                     "sha256": target_hash,
