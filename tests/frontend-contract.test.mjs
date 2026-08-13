@@ -277,7 +277,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260813-5";
+  const revision = "20260813-6";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -382,7 +382,10 @@ test("prepared source enables patch execution without a separate output picker",
   assert.equal(controls.patchDisabled, false);
   assert.equal("outputDisabled" in controls, false);
 
-  const options = __testHooks.sourceDirectoryPickerOptions();
+  const options = __testHooks.sourceDirectoryPickerOptions({
+    userAgentData: { mobile: false },
+    userAgent: "Desktop Chrome",
+  });
   assert.equal(options.mode, "readwrite");
   assert.equal(options.id, "srwf-stock-directory");
 
@@ -401,7 +404,10 @@ test("prepared source enables patch execution without a separate output picker",
 test("one folder picker discovers raw or CUE/BIN and is never reopened by patch execution", async () => {
   const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
 
-  const pickerOptions = __testHooks.sourceDirectoryPickerOptions();
+  const pickerOptions = __testHooks.sourceDirectoryPickerOptions({
+    userAgentData: { mobile: false },
+    userAgent: "Desktop Chrome",
+  });
   assert.deepEqual(pickerOptions, { id: "srwf-stock-directory", mode: "readwrite" });
   assert.equal((appSource.match(/showDirectoryPicker\(/g) ?? []).length, 1);
   assert.doesNotMatch(appSource, /showOpenFilePicker\(/);
@@ -426,6 +432,33 @@ test("one folder picker discovers raw or CUE/BIN and is never reopened by patch 
     fileCount: 1,
   }, "선택 확인");
   assert.match(rawMeta, /1\.0 KB · 단일 raw 파일 · 읽기 전용 · 선택 확인/);
+  assert.equal(__testHooks.isPickerCancellation({ name: "AbortError" }), true);
+  assert.equal(__testHooks.isPickerCancellation({ name: "NotAllowedError" }), false);
+});
+
+test("mobile browsers select the source read-only and skip direct provider output creation", async () => {
+  assert.equal(__testHooks.prefersDownloadOutput({ userAgentData: { mobile: true } }), true);
+  assert.equal(__testHooks.prefersDownloadOutput({ userAgent: "Mozilla/5.0 (Linux; Android 16)" }), true);
+  assert.equal(__testHooks.prefersDownloadOutput({ userAgent: "SamsungBrowser/28.0 Mobile" }), true);
+  assert.equal(__testHooks.prefersDownloadOutput({
+    userAgentData: { mobile: false },
+    userAgent: "Mozilla/5.0 (Macintosh) Chrome/140",
+  }), false);
+  assert.deepEqual(
+    __testHooks.sourceDirectoryPickerOptions({ userAgentData: { mobile: true } }),
+    { id: "srwf-stock-directory", mode: "read" },
+  );
+
+  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
+  const applyStart = appSource.indexOf("async function applyPatch(");
+  const applyEnd = appSource.indexOf("\nfunction startPatchDownloadFallback(", applyStart);
+  const applySource = appSource.slice(applyStart, applyEnd);
+  assert.match(applySource, /const mobileDownload = prefersDownloadOutput\(\)/);
+  assert.ok(
+    applySource.indexOf("startPatchDownloadFallback")
+      < applySource.indexOf("ensureDirectoryWritePermission"),
+    "mobile output must branch before any document-provider create attempt",
+  );
 });
 
 test("folder discovery errors explain how to recover on mobile", () => {
@@ -550,47 +583,68 @@ test("output creation failures distinguish permission, space, and Android provid
   );
 });
 
-test("Android output fallback saves one safe ZIP containing matching BIN and CUE names", async () => {
+test("Android output failure automatically prepares verified BIN and CUE downloads", async () => {
   const suffix = "0123456789abcdef01234567";
-  const plan = __testHooks.createArchiveOutputPlan(
+  const plan = __testHooks.createDownloadOutputPlan(
     "SRWF-KOR-20260812-v1.1.bin",
     () => suffix,
   );
   assert.deepEqual(plan, {
-    archiveName: `SRWF-KOR-20260812-v1.1-${suffix}.zip`,
     imageName: `SRWF-KOR-20260812-v1.1-${suffix}.bin`,
     cueName: `SRWF-KOR-20260812-v1.1-${suffix}.cue`,
   });
-  const pickerOptions = __testHooks.archiveSavePickerOptions(plan);
-  assert.equal(pickerOptions.suggestedName, plan.archiveName);
-  assert.equal(pickerOptions.excludeAcceptAllOption, true);
-  assert.deepEqual(pickerOptions.types[0].accept, { "application/zip": [".zip"] });
+  assert.equal(__testHooks.canOfferDownloadFallback({ name: "InvalidStateError" }), true);
+  assert.equal(__testHooks.canOfferDownloadFallback({ code: "OUTPUT_PROVIDER_FAILED" }), true);
+  assert.equal(__testHooks.canOfferDownloadFallback({ code: "OUTPUT_DIRECTORY_MISSING" }), false);
 
-  const previousPicker = globalThis.window.showSaveFilePicker;
-  globalThis.window.showSaveFilePicker = async () => null;
-  try {
-    assert.equal(__testHooks.canOfferArchiveFallback({ name: "InvalidStateError" }), true);
-    assert.equal(__testHooks.canOfferArchiveFallback({ code: "OUTPUT_DIRECTORY_MISSING" }), false);
-  } finally {
-    if (previousPicker === undefined) delete globalThis.window.showSaveFilePicker;
-    else globalThis.window.showSaveFilePicker = previousPicker;
-  }
-
-  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
-  const fallbackStart = appSource.indexOf("async function applyPatchToArchive(");
-  const fallbackEnd = appSource.indexOf("\nfunction createArchiveOutputPlan(", fallbackStart);
-  const fallbackSource = appSource.slice(fallbackStart, fallbackEnd);
-  assert.ok(fallbackStart >= 0 && fallbackEnd > fallbackStart);
-  assert.match(fallbackSource, /pickerPromise\s*=\s*window\.showSaveFilePicker\(/);
-  assert.ok(
-    fallbackSource.indexOf("window.showSaveFilePicker(") < fallbackSource.indexOf("await pickerPromise"),
-    "the save picker must be invoked while Patch-button activation is live",
+  const [appSource, html, css] = await Promise.all([
+    readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../assets/style.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(appSource, /beginWorkerOperation\("BUILD_PATCH_DOWNLOAD"/);
+  assert.match(appSource, /canOfferDownloadFallback\(error\)[\s\S]*?startPatchDownloadFallback\(\{ reason: "provider" \}\)/);
+  assert.match(appSource, /operation === "BUILD_PATCH_DOWNLOAD"[\s\S]*?state\.downloadFallbackReady = true;[\s\S]*?다운로드 재시도/);
+  assert.doesNotMatch(appSource, /showSaveFilePicker|APPLY_PATCH_ZIP|archiveFallbackReady/);
+  assert.match(html, /id="downloadActions" hidden/);
+  assert.match(html, /<a class="download-link is-bin" id="downloadBinLink">패치 BIN 다운로드<\/a>/);
+  assert.match(html, /<a class="download-link is-cue" id="downloadCueLink">CUE 다운로드<\/a>/);
+  assert.match(
+    await readFile(new URL("../assets/style.css", import.meta.url), "utf8"),
+    /@media \(max-height: 620px\) and \(max-width: 760px\)[\s\S]*?\.apply-card\.is-complete \.apply-main\s*\{\s*display:\s*none;/,
+    "short mobile completion must give the verified download panel the full patch zone",
   );
-  assert.match(appSource, /beginWorkerOperation\("APPLY_PATCH_ZIP"/);
-  assert.doesNotMatch(fallbackSource, /showDirectoryPicker/);
-  assert.match(appSource, /operation === "APPLY_PATCH_ZIP"[\s\S]*?state\.archiveFallbackReady = true;[\s\S]*?ZIP 저장 재시도/);
-  assert.match(appSource, /if \(archiveOutput\) \{[\s\S]*?state\.archiveFallbackReady = true;/);
-  assert.match(appSource, /operation === "APPLY_PATCH_ZIP" && !sourceMismatch && !preparationLost[\s\S]*?state\.archiveFallbackReady = true;/);
+  assert.match(appSource, /elements\.successTitle\.textContent = downloadOutput\s*\? "검증 완료 · BIN\/CUE 다운로드 준비"/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.download-link \{[\s\S]*?min-height: 44px;/);
+
+  const revoked = [];
+  const originalCreateObjectUrl = URL.createObjectURL;
+  const originalRevokeObjectUrl = URL.revokeObjectURL;
+  let nextUrl = 0;
+  URL.createObjectURL = () => `blob:test-${nextUrl += 1}`;
+  URL.revokeObjectURL = (url) => revoked.push(url);
+  try {
+    __testHooks.installDownloadArtifacts({
+      outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
+      imageName: plan.imageName,
+      cueName: plan.cueName,
+    }, plan, 3);
+    assert.equal(element("downloadBinLink").getAttribute("href"), "blob:test-1");
+    assert.equal(element("downloadBinLink").getAttribute("download"), plan.imageName);
+    assert.equal(element("downloadCueLink").getAttribute("href"), "blob:test-2");
+    assert.equal(element("downloadCueLink").getAttribute("download"), plan.cueName);
+    assert.equal(element("downloadActions").hidden, false);
+    assert.deepEqual(revoked, [], "links must remain valid after being exposed");
+
+    __testHooks.clearDownloadArtifacts();
+    assert.deepEqual(revoked, ["blob:test-1", "blob:test-2"]);
+    assert.equal(element("downloadBinLink").hasAttribute("href"), false);
+    assert.equal(element("downloadCueLink").hasAttribute("href"), false);
+    assert.equal(element("downloadActions").hidden, true);
+  } finally {
+    URL.createObjectURL = originalCreateObjectUrl;
+    URL.revokeObjectURL = originalRevokeObjectUrl;
+  }
 });
 
 test("patched-image CUE exposes the accepted flat image as one continuous data track", () => {
@@ -728,7 +782,7 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
   const completionEnd = appSource.indexOf("\nfunction handleOperationFailure(", completionStart);
   assert.ok(completionStart >= 0 && completionEnd > completionStart);
   const completionSource = appSource.slice(completionStart, completionEnd);
-  const applyBranch = completionSource.indexOf('if (operation === "APPLY_PATCH" || operation === "APPLY_PATCH_ZIP")');
+  const applyBranch = completionSource.indexOf('if (operation === "APPLY_PATCH" || operation === "BUILD_PATCH_DOWNLOAD")');
   const completionFlag = completionSource.indexOf("state.patchCompleted = true", applyBranch);
   const automaticCueSave = completionSource.indexOf("void saveCueFile();", completionFlag);
   assert.ok(
@@ -736,7 +790,7 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
     "a verified APPLY_PATCH completion must trigger automatic CUE saving",
   );
   assert.equal([...completionSource.matchAll(/void saveCueFile\(\);/g)].length, 1);
-  assert.match(completionSource, /if \(!archiveOutput\) \{\s*void saveCueFile\(\);\s*\}/);
+  assert.match(completionSource, /if \(!downloadOutput\) \{\s*void saveCueFile\(\);\s*\}/);
   assert.match(appSource, /elements\.cueButton\.addEventListener\("click", saveCueFile\);/);
 
   const retryVisibilityAssignments = [

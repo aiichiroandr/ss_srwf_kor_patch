@@ -48,6 +48,8 @@ PINNED_STOCK_PROFILES = {
 PATCH_MAX = 32 * 1024 * 1024
 BODY_MAX = 64 * 1024 * 1024
 RECORD_MAX = 1_000_000
+DOWNLOAD_CAPTURE_CHUNK_BYTES = 1024 * 1024
+MAX_DOWNLOAD_CAPTURE_BYTES = 32 * 1024 * 1024
 JS_SAFE_INTEGER_MAX = 9_007_199_254_740_991
 PATCH_MAGIC = b"SRWFKP1\0"
 PATCH_HEADER_SIZE = 100
@@ -553,6 +555,9 @@ def inspect_srwfp(data: bytes) -> dict[str, int | str]:
     position = 0
     previous_offset = -1
     previous_end = -1
+    capture_window_start: int | None = None
+    capture_window_end: int | None = None
+    captured_bytes = 0
     for index in range(record_count):
         if position + RECORD_HEADER_SIZE > len(body):
             raise SrwfpFormatError(f"record {index} header is truncated")
@@ -574,9 +579,42 @@ def inspect_srwfp(data: bytes) -> dict[str, int | str]:
             )
         if offset > source_size or length > source_size - offset:
             raise SrwfpFormatError(f"record {index} exceeds source/target bounds")
+
+        record_end = offset + length
+        window_start = offset // DOWNLOAD_CAPTURE_CHUNK_BYTES * DOWNLOAD_CAPTURE_CHUNK_BYTES
+        window_end = min(
+            target_size,
+            (
+                (record_end + DOWNLOAD_CAPTURE_CHUNK_BYTES - 1)
+                // DOWNLOAD_CAPTURE_CHUNK_BYTES
+            ) * DOWNLOAD_CAPTURE_CHUNK_BYTES,
+        )
+        if capture_window_start is None:
+            capture_window_start = window_start
+            capture_window_end = window_end
+        elif window_start <= capture_window_end:
+            capture_window_end = max(capture_window_end, window_end)
+        else:
+            captured_bytes += capture_window_end - capture_window_start
+            if captured_bytes > MAX_DOWNLOAD_CAPTURE_BYTES:
+                raise SrwfpFormatError(
+                    "sparse download requires more than "
+                    f"{MAX_DOWNLOAD_CAPTURE_BYTES} captured bytes"
+                )
+            capture_window_start = window_start
+            capture_window_end = window_end
+
         position += length
         previous_offset = offset
-        previous_end = offset + length
+        previous_end = record_end
+
+    if capture_window_start is not None:
+        captured_bytes += capture_window_end - capture_window_start
+        if captured_bytes > MAX_DOWNLOAD_CAPTURE_BYTES:
+            raise SrwfpFormatError(
+                "sparse download requires more than "
+                f"{MAX_DOWNLOAD_CAPTURE_BYTES} captured bytes"
+            )
 
     if position != len(body):
         raise SrwfpFormatError(f"body has {len(body) - position} trailing bytes")

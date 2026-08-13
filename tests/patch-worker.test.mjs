@@ -70,7 +70,7 @@ class CountingBlob extends Blob {
   }
 }
 
-function outputHandle(name) {
+function outputHandle() {
   const chunks = [];
   const state = { abortCalls: 0, closeCalls: 0, createCalls: 0 };
   return {
@@ -79,7 +79,6 @@ function outputHandle(name) {
     },
     state,
     handle: {
-      ...(name === undefined ? {} : { name }),
       async createWritable() {
         state.createCalls += 1;
         return {
@@ -98,32 +97,9 @@ function outputHandle(name) {
   };
 }
 
-function parseStoredZip(bytes) {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const decoder = new TextDecoder();
-  const entries = [];
-  let offset = 0;
-  while (view.getUint32(offset, true) === 0x04034b50) {
-    const nameLength = view.getUint16(offset + 26, true);
-    const nameStart = offset + 30;
-    const name = decoder.decode(bytes.subarray(nameStart, nameStart + nameLength));
-    const dataStart = nameStart + nameLength;
-    // Tests use the first central directory record as a trusted size oracle.
-    let central = dataStart;
-    while (central + 4 <= bytes.byteLength && view.getUint32(central, true) !== 0x08074b50) {
-      central += 1;
-    }
-    assert.ok(central + 16 <= bytes.byteLength, "ZIP entry data descriptor is required");
-    const size = view.getUint32(central + 8, true);
-    assert.equal(central - dataStart, size);
-    entries.push({ name, bytes: bytes.subarray(dataStart, central) });
-    offset = central + 16;
-  }
-  return entries;
-}
-
 let messageListener;
 const terminalWaiters = new Map();
+const terminalPostCalls = new Map();
 const workerLocation = new URL('https://patcher.example/assets/patch-worker.mjs');
 
 globalThis.self = {
@@ -134,13 +110,17 @@ globalThis.self = {
     }
   },
 };
-globalThis.postMessage = (message) => {
+globalThis.postMessage = function postWorkerMessage(message, transferOrOptions) {
   if (!['complete', 'error', 'cancelled'].includes(message?.type)) {
     return;
   }
   const resolve = terminalWaiters.get(message.jobId);
   if (resolve) {
     terminalWaiters.delete(message.jobId);
+    terminalPostCalls.set(message.jobId, {
+      argumentCount: arguments.length,
+      transferOrOptions,
+    });
     resolve(message);
   }
 };
@@ -213,118 +193,131 @@ test('worker prepares without reading, applies in one pass, and keeps capability
   assert.equal(goodOutput.state.abortCalls, 0);
   assert.deepEqual(goodOutput.bytes(), fixture.target);
 
-  const preparedZip = await dispatch({
+  const imageName = 'SRWF-KOR-test-0123456789abcdef01234567.bin';
+  const cueName = 'SRWF-KOR-test-0123456789abcdef01234567.cue';
+  const downloadSource = new CountingBlob([fixture.source]);
+  const preparedDownload = await dispatch({
     type: 'PREPARE_SOURCE',
-    jobId: 'prepare-good-zip',
-    sourceFile: new CountingBlob([fixture.source]),
+    jobId: 'prepare-good-download',
+    sourceFile: downloadSource,
     releaseKey,
     patchUrl,
     descriptor: fixture.descriptor,
   });
-  assert.equal(preparedZip.type, 'complete');
+  assert.equal(preparedDownload.type, 'complete');
+  assert.equal(downloadSource.streamCalls, 0);
 
-  const archiveName = 'SRWF-KOR-test-0123456789abcdef01234567.zip';
-  const imageName = 'SRWF-KOR-test-0123456789abcdef01234567.bin';
-  const cueName = 'SRWF-KOR-test-0123456789abcdef01234567.cue';
-  const zipOutput = outputHandle(archiveName);
-  const zipped = await dispatch({
-    type: 'APPLY_PATCH_ZIP',
-    jobId: 'apply-good-zip',
+  const downloaded = await dispatch({
+    type: 'BUILD_PATCH_DOWNLOAD',
+    jobId: 'build-good-download',
     releaseKey,
-    preparationToken: preparedZip.preparationToken,
-    outputHandle: zipOutput.handle,
-    archiveName,
+    preparationToken: preparedDownload.preparationToken,
     imageName,
     cueName,
   });
-  assert.equal(zipped.type, 'complete');
-  assert.equal(zipped.operation, 'APPLY_PATCH_ZIP');
-  assert.deepEqual(zipped.result, {
-    bytesWritten: fixture.target.byteLength,
-    sourceSha256: fixture.descriptor.sourceSha256,
-    targetSha256: fixture.descriptor.targetSha256,
-    archiveName,
-    imageName,
-    cueName,
-  });
-  assert.equal(zipOutput.state.createCalls, 1);
-  assert.equal(zipOutput.state.closeCalls, 1);
-  assert.equal(zipOutput.state.abortCalls, 0);
-  const zipEntries = parseStoredZip(zipOutput.bytes());
-  assert.equal(zipEntries.length, 2);
-  assert.equal(zipEntries[0].name, imageName);
-  assert.deepEqual(zipEntries[0].bytes, fixture.target);
-  assert.equal(zipEntries[1].name, cueName);
-  assert.equal(
-    new TextDecoder().decode(zipEntries[1].bytes),
-    `FILE "${imageName}" BINARY\r\n`
-      + '  TRACK 01 MODE1/2352\r\n'
-      + '    INDEX 01 00:00:00\r\n',
+  assert.equal(downloaded.type, 'complete');
+  assert.equal(downloaded.operation, 'BUILD_PATCH_DOWNLOAD');
+  assert.ok(downloaded.result.outputBlob instanceof Blob);
+  assert.deepEqual(
+    new Uint8Array(await downloaded.result.outputBlob.arrayBuffer()),
+    fixture.target,
   );
+  assert.deepEqual(
+    { ...downloaded.result, outputBlob: undefined },
+    {
+      bytesWritten: fixture.target.byteLength,
+      sourceSha256: fixture.descriptor.sourceSha256,
+      targetSha256: fixture.descriptor.targetSha256,
+      capturedBytes: fixture.target.byteLength,
+      captureWindowCount: 1,
+      outputBlob: undefined,
+      imageName,
+      cueName,
+    },
+  );
+  assert.equal(downloadSource.streamCalls, 1);
+  assert.deepEqual(
+    terminalPostCalls.get('build-good-download'),
+    { argumentCount: 1, transferOrOptions: undefined },
+    'Blob completion must use ordinary structured cloning without a transfer list',
+  );
+
+  const unsafeDownloadSource = new CountingBlob([fixture.source]);
+  const preparedUnsafeDownload = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'prepare-unsafe-download',
+    sourceFile: unsafeDownloadSource,
+    releaseKey,
+    patchUrl,
+    descriptor: fixture.descriptor,
+  });
+  const unsafeDownload = await dispatch({
+    type: 'BUILD_PATCH_DOWNLOAD',
+    jobId: 'build-unsafe-download',
+    releaseKey,
+    preparationToken: preparedUnsafeDownload.preparationToken,
+    imageName: '../source.bin',
+    cueName: 'source.cue',
+  });
+  assert.equal(unsafeDownload.type, 'error');
+  assert.equal(unsafeDownload.error.code, 'DOWNLOAD_OUTPUT_NAME_INVALID');
+  assert.equal(unsafeDownloadSource.streamCalls, 0, 'unsafe names must fail before source scanning');
+
+  const mismatchedDownload = await dispatch({
+    type: 'BUILD_PATCH_DOWNLOAD',
+    jobId: 'build-mismatched-download',
+    releaseKey,
+    preparationToken: preparedUnsafeDownload.preparationToken,
+    imageName: 'source.bin',
+    cueName: 'different.cue',
+  });
+  assert.equal(mismatchedDownload.type, 'error');
+  assert.equal(mismatchedDownload.error.code, 'DOWNLOAD_OUTPUT_NAME_MISMATCH');
+  assert.equal(unsafeDownloadSource.streamCalls, 0, 'mismatched names must fail before source scanning');
 
   const changedPreimage = fixture.source.slice();
   changedPreimage[97] ^= 0x01;
-  const preparedBadZipSource = await dispatch({
+  const badDownloadSource = new CountingBlob([changedPreimage]);
+  const preparedBadDownloadSource = await dispatch({
     type: 'PREPARE_SOURCE',
-    jobId: 'prepare-bad-zip-preimage',
-    sourceFile: new CountingBlob([changedPreimage]),
+    jobId: 'prepare-bad-download-preimage',
+    sourceFile: badDownloadSource,
     releaseKey,
     patchUrl,
     descriptor: fixture.descriptor,
   });
-  const badZipOutput = outputHandle(archiveName);
-  const badZipApplication = await dispatch({
-    type: 'APPLY_PATCH_ZIP',
-    jobId: 'apply-bad-zip-preimage',
+  const badDownloadApplication = await dispatch({
+    type: 'BUILD_PATCH_DOWNLOAD',
+    jobId: 'build-bad-download-preimage',
     releaseKey,
-    preparationToken: preparedBadZipSource.preparationToken,
-    outputHandle: badZipOutput.handle,
-    archiveName,
+    preparationToken: preparedBadDownloadSource.preparationToken,
     imageName,
     cueName,
   });
-  assert.equal(badZipApplication.type, 'error');
-  assert.equal(badZipApplication.error.code, 'PREIMAGE_MISMATCH');
-  assert.equal(badZipOutput.state.closeCalls, 0);
-  assert.equal(badZipOutput.state.abortCalls, 1);
+  assert.equal(badDownloadApplication.type, 'error');
+  assert.equal(badDownloadApplication.error.code, 'PREIMAGE_MISMATCH');
+  assert.equal(badDownloadSource.streamCalls, 1);
 
-  const preparedUnsafeZip = await dispatch({
+  const revokedDownloadApplication = await dispatch({
+    type: 'BUILD_PATCH_DOWNLOAD',
+    jobId: 'build-revoked-download-preimage',
+    releaseKey,
+    preparationToken: preparedBadDownloadSource.preparationToken,
+    imageName,
+    cueName,
+  });
+  assert.equal(revokedDownloadApplication.type, 'error');
+  assert.equal(revokedDownloadApplication.error.code, 'PREPARED_SOURCE_MISSING');
+
+  const preparedProviderSource = await dispatch({
     type: 'PREPARE_SOURCE',
-    jobId: 'prepare-unsafe-zip',
+    jobId: 'prepare-provider-failure',
     sourceFile: new CountingBlob([fixture.source]),
     releaseKey,
     patchUrl,
     descriptor: fixture.descriptor,
   });
-  const unsafeOutput = outputHandle();
-  const unsafeZip = await dispatch({
-    type: 'APPLY_PATCH_ZIP',
-    jobId: 'apply-unsafe-zip',
-    releaseKey,
-    preparationToken: preparedUnsafeZip.preparationToken,
-    outputHandle: unsafeOutput.handle,
-    archiveName: '../source.zip',
-    imageName: 'source.bin',
-    cueName: 'source.cue',
-  });
-  assert.equal(unsafeZip.type, 'error');
-  assert.equal(unsafeZip.error.code, 'ZIP_OUTPUT_NAME_INVALID');
-  assert.equal(unsafeOutput.state.createCalls, 0, 'unsafe metadata must fail before acquiring output');
-
-  const mismatchedHandleOutput = outputHandle('different.zip');
-  const mismatchedHandleZip = await dispatch({
-    type: 'APPLY_PATCH_ZIP',
-    jobId: 'apply-mismatched-zip-handle-name',
-    releaseKey,
-    preparationToken: preparedUnsafeZip.preparationToken,
-    outputHandle: mismatchedHandleOutput.handle,
-    archiveName,
-    imageName,
-    cueName,
-  });
-  assert.equal(mismatchedHandleZip.type, 'error');
-  assert.equal(mismatchedHandleZip.error.code, 'ZIP_OUTPUT_HANDLE_NAME_MISMATCH');
-  assert.equal(mismatchedHandleOutput.state.createCalls, 0);
+  assert.equal(preparedProviderSource.type, 'complete');
 
   for (const providerErrorName of [
     'InvalidStateError',
@@ -336,7 +329,7 @@ test('worker prepares without reading, applies in one pass, and keeps capability
       type: 'APPLY_PATCH',
       jobId: `apply-provider-failure-${providerErrorName}`,
       releaseKey,
-      preparationToken: preparedUnsafeZip.preparationToken,
+      preparationToken: preparedProviderSource.preparationToken,
       outputHandle: {
         async createWritable() {
           throw new DOMException('synthetic Android provider failure', providerErrorName);

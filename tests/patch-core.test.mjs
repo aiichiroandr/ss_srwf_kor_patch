@@ -8,6 +8,7 @@ import {
   PatchError,
   Sha256,
   applyPatchToWritable,
+  buildVerifiedPatchedBlob,
   parsePatch,
   sha256Hex,
   verifySourceBlob,
@@ -204,6 +205,125 @@ test('public parser safety caps are fixed', () => {
   assert.equal(PATCH_LIMITS.maxPatchBytes, 32 * 1024 * 1024);
   assert.equal(PATCH_LIMITS.maxBodyUncompressedBytes, 64 * 1024 * 1024);
   assert.equal(PATCH_LIMITS.maxRecordCount, 1_000_000);
+  assert.equal(PATCH_LIMITS.downloadCaptureChunkBytes, 1024 * 1024);
+  assert.equal(PATCH_LIMITS.maxDownloadCaptureBytes, 32 * 1024 * 1024);
+});
+
+test('verified download Blob captures only bounded changed windows and reuses source gaps', async () => {
+  const size = (4 * 1024 * 1024) + 123;
+  const source = Uint8Array.from({ length: size }, (_, index) => (
+    (Math.imul(index, 29) + Math.imul(index >>> 11, 71) + 13) & 0xff
+  ));
+  const edits = [
+    { offset: 23, targetBytes: Uint8Array.of(0xa1, 0xb2, 0xc3) },
+    { offset: size - 17, targetBytes: Uint8Array.of(9, 8, 7, 6, 5) },
+  ];
+  const target = source.slice();
+  const records = edits.map(({ offset, targetBytes }) => {
+    const differing = Uint8Array.from(targetBytes, (byte, index) => (
+      byte === source[offset + index] ? byte ^ 0xff : byte
+    ));
+    target.set(differing, offset);
+    return {
+      offset,
+      targetBytes: differing,
+      preimageSha256: sha256Hex(source.subarray(offset, offset + differing.byteLength)),
+    };
+  });
+  const patch = makePatch({ source, target, records });
+  const parsed = await parsePatch(patch);
+
+  class SliceCountingBlob extends CountingBlob {
+    sliceCalls = [];
+
+    slice(start, end, type) {
+      this.sliceCalls.push({ start, end });
+      return super.slice(start, end, type);
+    }
+  }
+
+  const sourceBlob = new SliceCountingBlob([source]);
+  const progress = [];
+  const result = await buildVerifiedPatchedBlob(sourceBlob, parsed, {
+    onProgress: (value) => progress.push(value),
+  });
+  assert.equal(sourceBlob.streamCalls, 1, 'verification and sparse capture share one source pass');
+  assert.equal(result.blob.size, target.byteLength);
+  assert.equal(result.sourceSha256, sha256Hex(source));
+  assert.equal(result.targetSha256, sha256Hex(target));
+  assert.equal(result.bytesWritten, target.byteLength);
+  assert.equal(result.captureWindowCount, 2);
+  assert.equal(result.capturedBytes, (1024 * 1024) + 123);
+  assert.deepEqual(sourceBlob.sliceCalls, [{
+    start: 1024 * 1024,
+    end: 4 * 1024 * 1024,
+  }]);
+  assert.deepEqual(new Uint8Array(await result.blob.arrayBuffer()), target);
+  assert.equal(progress.at(-1).processedBytes, target.byteLength);
+
+  const cappedSource = new SliceCountingBlob([source]);
+  await expectPatchError(
+    buildVerifiedPatchedBlob(cappedSource, parsed, { maxCapturedBytes: 1024 * 1024 }),
+    'DOWNLOAD_CAPTURE_TOO_LARGE',
+  );
+  assert.equal(cappedSource.streamCalls, 0, 'capture cap fails before reading the source');
+  assert.deepEqual(cappedSource.sliceCalls, []);
+});
+
+test('verified download capture merges windows when a record crosses a chunk boundary', async () => {
+  const chunkSize = PATCH_LIMITS.downloadCaptureChunkBytes;
+  const size = (3 * chunkSize) + 29;
+  const source = Uint8Array.from({ length: size }, (_, index) => (
+    (Math.imul(index, 43) + Math.imul(index >>> 9, 17) + 91) & 0xff
+  ));
+  const target = source.slice();
+  const edits = [
+    { offset: chunkSize - 2, length: 5 },
+    { offset: (2 * chunkSize) + 11, length: 3 },
+  ];
+  const records = edits.map(({ offset, length }, recordIndex) => {
+    const targetBytes = Uint8Array.from(
+      source.subarray(offset, offset + length),
+      (byte, index) => byte ^ (0x81 + recordIndex + index),
+    );
+    target.set(targetBytes, offset);
+    return {
+      offset,
+      targetBytes,
+      preimageSha256: sha256Hex(source.subarray(offset, offset + length)),
+    };
+  });
+  const parsed = await parsePatch(makePatch({ source, target, records }));
+  const result = await buildVerifiedPatchedBlob(new CountingBlob([source]), parsed);
+
+  assert.equal(result.captureWindowCount, 1);
+  assert.equal(result.capturedBytes, 3 * chunkSize);
+  assert.deepEqual(new Uint8Array(await result.blob.arrayBuffer()), target);
+  assert.equal(sha256Hex(new Uint8Array(await result.blob.arrayBuffer())), sha256Hex(target));
+});
+
+test('verified download Blob is never returned for unauthenticated source or target output', async () => {
+  const fixture = syntheticFixture();
+  const parsed = await parsePatch(fixture.patch);
+
+  const badSource = fixture.source.slice();
+  badSource[fixture.records[0].offset] ^= 0x01;
+  await expectPatchError(
+    buildVerifiedPatchedBlob(new CountingBlob([badSource]), parsed),
+    'PREIMAGE_MISMATCH',
+  );
+
+  const badTargetPatch = makePatch({
+    source: fixture.source,
+    target: fixture.target,
+    records: fixture.records,
+    targetSha256: '00'.repeat(32),
+  });
+  const badTargetParsed = await parsePatch(badTargetPatch);
+  await expectPatchError(
+    buildVerifiedPatchedBlob(new CountingBlob([fixture.source]), badTargetParsed),
+    'TARGET_HASH_MISMATCH',
+  );
 });
 
 test('Blob source is authenticated and patched to a streaming writable', async () => {

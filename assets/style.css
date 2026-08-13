@@ -1148,6 +1148,46 @@ a:focus-visible {
   font-size: 10px;
 }
 
+.download-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr);
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.download-link {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  border: 1px solid rgba(8, 125, 104, 0.35);
+  border-radius: 8px;
+  color: #fff;
+  background: var(--green);
+  font-size: 11px;
+  font-weight: 850;
+  text-align: center;
+  text-decoration: none;
+}
+
+.download-link.is-cue {
+  color: var(--green);
+  background: var(--white);
+}
+
+.download-link:hover,
+.download-link:focus-visible {
+  border-color: var(--green);
+  filter: brightness(0.96);
+}
+
+.download-help {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
 .message-panel.is-error {
   border-color: rgba(200, 62, 67, 0.25);
   background: #fff1f0;
@@ -3118,6 +3158,22 @@ main {
     overflow: visible;
     -webkit-line-clamp: unset;
   }
+
+  .download-actions {
+    gap: 6px;
+    margin-top: 7px;
+  }
+
+  .download-link {
+    min-height: 44px;
+    padding: 6px 7px;
+    font-size: 10px;
+  }
+
+  .download-help {
+    font-size: 9px;
+    line-height: 1.25;
+  }
 }
 
 @media (max-width: 360px) {
@@ -3175,6 +3231,18 @@ main {
   .patch-feedback .progress-panel,
   .patch-feedback .message-panel {
     padding: 7px 9px;
+  }
+
+  .apply-card.is-complete {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .apply-card.is-complete .apply-main {
+    display: none;
+  }
+
+  .apply-card.is-complete .patch-feedback {
+    height: 100%;
   }
 }
 

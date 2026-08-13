@@ -1,10 +1,10 @@
 import {
   PATCH_LIMITS,
   applyPatchToWritable,
+  buildVerifiedPatchedBlob,
   parsePatch,
-} from "./patch-core.mjs?v=20260813-5";
-import { sha256Hex } from "./sha256.mjs?v=20260813-5";
-import { createPatchedImageZipWriter } from "./zip-writer.mjs?v=20260813-5";
+} from "./patch-core.mjs?v=20260813-6";
+import { sha256Hex } from "./sha256.mjs?v=20260813-6";
 
 let activeJob = null;
 let preparedSource = null;
@@ -19,7 +19,6 @@ const DESCRIPTOR_KEYS = Object.freeze([
   "recordCount",
   "bodyUncompressedSize",
 ]);
-const SAFE_ARCHIVE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.zip$/;
 const SAFE_IMAGE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
 const SAFE_CUE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
 
@@ -46,7 +45,7 @@ self.addEventListener("message", (event) => {
   if (
     message.type === "PREPARE_SOURCE"
     || message.type === "APPLY_PATCH"
-    || message.type === "APPLY_PATCH_ZIP"
+    || message.type === "BUILD_PATCH_DOWNLOAD"
   ) {
     void runJob(message);
   }
@@ -67,7 +66,7 @@ async function runJob(message) {
     } else if (message.type === "APPLY_PATCH") {
       await writePatchedImage(message, controller.signal);
     } else {
-      await writePatchedImageZip(message, controller.signal);
+      await buildPatchedDownload(message, controller.signal);
     }
   } catch (error) {
     if (controller.signal.aborted || error?.name === "AbortError") {
@@ -134,33 +133,51 @@ async function writePatchedImage(message, signal) {
   );
 }
 
-async function writePatchedImageZip(message, signal) {
+async function buildPatchedDownload(message, signal) {
   const context = requirePreparedApplication(message);
-  const names = validateZipOutputNames(message);
-  const rawWritable = await createOutputWritable(message.outputHandle, signal);
-  let zipWritable;
+  const names = validateDownloadOutputNames(message);
+
+  postPhase(message.jobId, "source-apply");
+  let result;
   try {
-    zipWritable = createPatchedImageZipWriter(rawWritable, {
-      imageName: names.imageName,
-      cueName: names.cueName,
-      imageSize: context.descriptor.targetSize,
-    });
+    // This path never opens an Android document-provider output. The core
+    // retains only bounded windows containing changed records and reuses
+    // source Blob slices for every unchanged gap. It returns nothing until the
+    // complete source hash, every record preimage, and the target hash match.
+    result = await buildVerifiedPatchedBlob(
+      context.sourceFile,
+      context.parsedPatch,
+      {
+        signal,
+        onProgress: createProgressReporter(
+          message.jobId,
+          "source-apply",
+          context.descriptor.targetSize,
+          signal,
+        ),
+      },
+    );
   } catch (error) {
-    try {
-      await rawWritable.abort(error);
-    } catch {
-      // Preserve the ZIP configuration failure.
+    if (isSourceAuthenticationError(error)) {
+      preparedSource = null;
     }
     throw error;
   }
-  await applyPreparedPatch(
-    message,
-    signal,
-    context,
-    zipWritable,
-    "APPLY_PATCH_ZIP",
-    names,
-  );
+
+  postPhase(message.jobId, "output-verify");
+  // Blob is structured-cloneable but not transferable. Do not pass a transfer
+  // list: the browser can preserve its immutable backing store without
+  // materializing the full disc image in JavaScript memory.
+  postMessage({
+    type: "complete",
+    jobId: message.jobId,
+    operation: "BUILD_PATCH_DOWNLOAD",
+    result: Object.freeze({
+      ...sanitizeResult(result),
+      outputBlob: result.blob,
+      ...names,
+    }),
+  });
 }
 
 function requirePreparedApplication(message) {
@@ -249,32 +266,27 @@ async function applyPreparedPatch(
   });
 }
 
-function validateZipOutputNames(message) {
-  requireString(message.archiveName, "ZIP archive name");
-  requireString(message.imageName, "ZIP image name");
-  requireString(message.cueName, "ZIP CUE name");
-  if (!SAFE_ARCHIVE_NAME.test(message.archiveName)
-    || !SAFE_IMAGE_NAME.test(message.imageName)
+function validateDownloadOutputNames(message) {
+  requireString(message.imageName, "download image name");
+  requireString(message.cueName, "download CUE name");
+  if (!SAFE_IMAGE_NAME.test(message.imageName)
     || !SAFE_CUE_NAME.test(message.cueName)
-    || /["/\\\0\r\n]/.test(message.archiveName)
     || /["/\\\0\r\n]/.test(message.imageName)
     || /["/\\\0\r\n]/.test(message.cueName)) {
-    throw new WorkerPatcherError("ZIP_OUTPUT_NAME_INVALID", "ZIP output names must be safe flat filenames");
+    throw new WorkerPatcherError(
+      "DOWNLOAD_OUTPUT_NAME_INVALID",
+      "Download output names must be safe flat filenames",
+    );
   }
-  const archiveStem = message.archiveName.slice(0, -4);
   const imageStem = message.imageName.slice(0, -4);
   const cueStem = message.cueName.slice(0, -4);
-  if (archiveStem !== imageStem || archiveStem !== cueStem) {
-    throw new WorkerPatcherError("ZIP_OUTPUT_NAME_MISMATCH", "ZIP archive, image, and CUE basenames must match");
-  }
-  if (message.outputHandle?.name !== message.archiveName) {
+  if (imageStem !== cueStem) {
     throw new WorkerPatcherError(
-      "ZIP_OUTPUT_HANDLE_NAME_MISMATCH",
-      "ZIP archive metadata must match the file selected by the user",
+      "DOWNLOAD_OUTPUT_NAME_MISMATCH",
+      "Download image and CUE basenames must match",
     );
   }
   return Object.freeze({
-    archiveName: message.archiveName,
     imageName: message.imageName,
     cueName: message.cueName,
   });
@@ -506,7 +518,15 @@ function sanitizeResult(result) {
     return null;
   }
   const safe = {};
-  for (const key of ["bytesWritten", "size", "sha256", "sourceSha256", "targetSha256"]) {
+  for (const key of [
+    "bytesWritten",
+    "size",
+    "sha256",
+    "sourceSha256",
+    "targetSha256",
+    "capturedBytes",
+    "captureWindowCount",
+  ]) {
     if (typeof result[key] === "number" || typeof result[key] === "string") {
       safe[key] = result[key];
     }

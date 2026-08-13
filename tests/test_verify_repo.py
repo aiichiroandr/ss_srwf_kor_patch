@@ -125,6 +125,30 @@ def make_patch(
     return bytes(header) + zlib.compress(body), bytes(target), len(body)
 
 
+def make_structural_patch(source_size: int, edits: list[tuple[int, bytes]]) -> bytes:
+    """Build a wire-valid patch without allocating a source-sized fixture."""
+    body = b"".join(
+        struct.pack(">QI", offset, len(replacement))
+        + bytes(32)
+        + replacement
+        for offset, replacement in edits
+    )
+    header = bytearray(verifier.PATCH_HEADER_SIZE)
+    header[:8] = verifier.PATCH_MAGIC
+    struct.pack_into(
+        ">IQQQ",
+        header,
+        8,
+        len(edits),
+        source_size,
+        source_size,
+        len(body),
+    )
+    header[36:68] = bytes.fromhex("11" * 32)
+    header[68:100] = bytes.fromhex("22" * 32)
+    return bytes(header) + zlib.compress(body)
+
+
 class SrwfpInspectionTests(unittest.TestCase):
     def setUp(self) -> None:
         verifier.errors.clear()
@@ -182,6 +206,37 @@ class SrwfpInspectionTests(unittest.TestCase):
 
         with self.assertRaisesRegex(verifier.SrwfpFormatError, "advertised zlib window"):
             verifier.inspect_srwfp(bytes(forged))
+
+    def test_sparse_download_capture_windows_merge_before_budgeting(self) -> None:
+        chunk = verifier.DOWNLOAD_CAPTURE_CHUNK_BYTES
+        edits = [(index * 2, b"\xff") for index in range(33)]
+        patch = make_structural_patch(chunk, edits)
+
+        descriptor = verifier.inspect_srwfp(patch)
+        self.assertEqual(descriptor["recordCount"], len(edits))
+
+    def test_sparse_download_capture_budget_accepts_boundary_and_rejects_excess(self) -> None:
+        chunk = verifier.DOWNLOAD_CAPTURE_CHUNK_BYTES
+        maximum_windows = verifier.MAX_DOWNLOAD_CAPTURE_BYTES // chunk
+
+        exact_offsets = [index * 2 * chunk for index in range(maximum_windows)]
+        exact_patch = make_structural_patch(
+            exact_offsets[-1] + chunk,
+            [(offset, b"\xff") for offset in exact_offsets],
+        )
+        descriptor = verifier.inspect_srwfp(exact_patch)
+        self.assertEqual(descriptor["recordCount"], maximum_windows)
+
+        excess_offsets = [index * 2 * chunk for index in range(maximum_windows + 1)]
+        excess_patch = make_structural_patch(
+            excess_offsets[-1] + chunk,
+            [(offset, b"\xff") for offset in excess_offsets],
+        )
+        with self.assertRaisesRegex(
+            verifier.SrwfpFormatError,
+            rf"sparse download requires more than {verifier.MAX_DOWNLOAD_CAPTURE_BYTES}",
+        ):
+            verifier.inspect_srwfp(excess_patch)
 
     def test_manifest_descriptor_mismatch_is_reported(self) -> None:
         source = {

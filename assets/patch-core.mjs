@@ -5,10 +5,14 @@ export { Sha256, sha256Hex };
 export const PATCH_HEADER_SIZE = 100;
 const RECORD_HEADER_SIZE = 44;
 const MAX_BODY_UNCOMPRESSED_BYTES = 64 * 1024 * 1024;
+const DOWNLOAD_CAPTURE_CHUNK_BYTES = 1024 * 1024;
+const MAX_DOWNLOAD_CAPTURE_BYTES = 32 * 1024 * 1024;
 export const PATCH_LIMITS = Object.freeze({
   maxPatchBytes: 32 * 1024 * 1024,
   maxBodyUncompressedBytes: MAX_BODY_UNCOMPRESSED_BYTES,
   maxRecordCount: 1_000_000,
+  downloadCaptureChunkBytes: DOWNLOAD_CAPTURE_CHUNK_BYTES,
+  maxDownloadCaptureBytes: MAX_DOWNLOAD_CAPTURE_BYTES,
 });
 
 const MAGIC = new Uint8Array([0x53, 0x52, 0x57, 0x46, 0x4b, 0x50, 0x31, 0x00]);
@@ -1001,4 +1005,248 @@ export async function applyPatchToWritable(blob, writable, parsedPatch, options 
       writer.releaseLock();
     }
   }
+}
+
+function buildDownloadCaptureWindows(parsedPatch, internals, maxCapturedBytes) {
+  if (!Number.isSafeInteger(maxCapturedBytes)
+    || maxCapturedBytes <= 0
+    || maxCapturedBytes > MAX_DOWNLOAD_CAPTURE_BYTES) {
+    fail(
+      'DOWNLOAD_CAPTURE_LIMIT_INVALID',
+      `Download capture limit must be between 1 and ${MAX_DOWNLOAD_CAPTURE_BYTES} bytes`,
+    );
+  }
+
+  const windows = [];
+  for (const record of internals.records) {
+    const start = Math.floor(record.offset / DOWNLOAD_CAPTURE_CHUNK_BYTES)
+      * DOWNLOAD_CAPTURE_CHUNK_BYTES;
+    const recordEnd = record.offset + record.length;
+    const end = Math.min(
+      parsedPatch.targetSize,
+      Math.ceil(recordEnd / DOWNLOAD_CAPTURE_CHUNK_BYTES) * DOWNLOAD_CAPTURE_CHUNK_BYTES,
+    );
+    const previous = windows.at(-1);
+    if (previous && start <= previous.end) {
+      previous.end = Math.max(previous.end, end);
+    } else {
+      windows.push({ start, end });
+    }
+  }
+
+  let capturedBytes = 0;
+  for (const window of windows) {
+    const length = window.end - window.start;
+    if (!Number.isSafeInteger(length) || length <= 0) {
+      fail('DOWNLOAD_CAPTURE_WINDOW_INVALID', 'Download capture window is invalid');
+    }
+    if (capturedBytes > maxCapturedBytes - length) {
+      fail(
+        'DOWNLOAD_CAPTURE_TOO_LARGE',
+        `Sparse download requires more than ${maxCapturedBytes} captured bytes`,
+      );
+    }
+    capturedBytes += length;
+  }
+
+  return Object.freeze({
+    capturedBytes,
+    windows: Object.freeze(windows.map(({ start, end }) => Object.freeze({ start, end }))),
+  });
+}
+
+function createSparseCaptureWriter(targetSize, capturePlan) {
+  const captures = capturePlan.windows.map((window) => ({
+    ...window,
+    bytes: new Uint8Array(window.end - window.start),
+    written: 0,
+  }));
+  let position = 0;
+  let nextWindowIndex = 0;
+  let state = 'open';
+
+  const clearCapturedBytes = () => {
+    for (const capture of captures) {
+      capture.bytes.fill(0);
+      capture.written = 0;
+    }
+  };
+
+  const writer = {
+    async write(value) {
+      if (state !== 'open') {
+        fail('DOWNLOAD_CAPTURE_WRITER_CLOSED', 'Download capture writer is not open');
+      }
+      const bytes = asByteView(value);
+      if (bytes === null) {
+        throw new TypeError('Download capture chunks must be ArrayBuffers or views');
+      }
+      if (position > targetSize - bytes.byteLength) {
+        fail('DOWNLOAD_CAPTURE_OUTPUT_OVERFLOW', 'Patched output exceeded its target size');
+      }
+
+      const chunkStart = position;
+      const chunkEnd = position + bytes.byteLength;
+      while (nextWindowIndex < captures.length
+        && captures[nextWindowIndex].end <= chunkStart) {
+        nextWindowIndex += 1;
+      }
+
+      for (let index = nextWindowIndex; index < captures.length; index += 1) {
+        const capture = captures[index];
+        if (capture.start >= chunkEnd) {
+          break;
+        }
+        const intersectionStart = Math.max(chunkStart, capture.start);
+        const intersectionEnd = Math.min(chunkEnd, capture.end);
+        if (intersectionStart >= intersectionEnd) {
+          continue;
+        }
+        const captureOffset = intersectionStart - capture.start;
+        if (captureOffset !== capture.written) {
+          fail(
+            'DOWNLOAD_CAPTURE_OUTPUT_GAP',
+            'Patched output did not fill a capture window sequentially',
+          );
+        }
+        const sourceOffset = intersectionStart - chunkStart;
+        const length = intersectionEnd - intersectionStart;
+        capture.bytes.set(bytes.subarray(sourceOffset, sourceOffset + length), captureOffset);
+        capture.written += length;
+      }
+      position = chunkEnd;
+    },
+
+    async close() {
+      if (state !== 'open') {
+        fail('DOWNLOAD_CAPTURE_WRITER_CLOSED', 'Download capture writer is not open');
+      }
+      if (position !== targetSize) {
+        fail(
+          'DOWNLOAD_CAPTURE_OUTPUT_SIZE_MISMATCH',
+          `Patched output produced ${position} bytes, expected ${targetSize}`,
+        );
+      }
+      for (const capture of captures) {
+        if (capture.written !== capture.bytes.byteLength) {
+          fail(
+            'DOWNLOAD_CAPTURE_OUTPUT_GAP',
+            'Patched output did not completely fill every capture window',
+          );
+        }
+      }
+      state = 'closed';
+    },
+
+    async abort() {
+      if (state === 'aborted') {
+        return;
+      }
+      state = 'aborted';
+      clearCapturedBytes();
+    },
+  };
+
+  return Object.freeze({
+    writer,
+    parts() {
+      if (state !== 'closed') {
+        fail('DOWNLOAD_CAPTURE_NOT_COMMITTED', 'Download capture has not been verified and committed');
+      }
+      return captures.map((capture) => Object.freeze({
+        start: capture.start,
+        end: capture.end,
+        bytes: capture.bytes,
+      }));
+    },
+    discard() {
+      clearCapturedBytes();
+      state = 'aborted';
+    },
+  });
+}
+
+/**
+ * Authenticate and patch a source in one pass, while retaining only bounded
+ * windows that contain changed records. The returned Blob reuses immutable
+ * source slices for unchanged gaps, so a stock-sized output is not buffered in
+ * JavaScript memory. No Blob is returned until the complete source hash, every
+ * record preimage, and the complete target hash have all matched.
+ */
+export async function buildVerifiedPatchedBlob(blob, parsedPatch, options = {}) {
+  const {
+    maxCapturedBytes = MAX_DOWNLOAD_CAPTURE_BYTES,
+    onProgress,
+    signal,
+  } = options;
+  if (onProgress !== undefined && typeof onProgress !== 'function') {
+    throw new TypeError('onProgress must be a function');
+  }
+  const internals = getInternals(parsedPatch);
+  validateSourceBlob(blob, parsedPatch);
+  throwIfAborted(signal);
+  const capturePlan = buildDownloadCaptureWindows(
+    parsedPatch,
+    internals,
+    maxCapturedBytes,
+  );
+  const capture = createSparseCaptureWriter(parsedPatch.targetSize, capturePlan);
+
+  let applied;
+  try {
+    applied = await applyPatchToWritable(blob, capture.writer, parsedPatch, {
+      onProgress,
+      signal,
+    });
+    throwIfAborted(signal);
+  } catch (error) {
+    capture.discard();
+    throw error;
+  }
+
+  const parts = [];
+  let position = 0;
+  for (const window of capture.parts()) {
+    if (position < window.start) {
+      parts.push(blob.slice(position, window.start));
+    }
+    parts.push(window.bytes);
+    position = window.end;
+  }
+  if (position < parsedPatch.targetSize) {
+    parts.push(blob.slice(position, parsedPatch.targetSize));
+  }
+  // A valid zero-record patch still needs one source-backed part.
+  if (parts.length === 0) {
+    parts.push(blob.slice(0, parsedPatch.targetSize));
+  }
+
+  let outputBlob;
+  try {
+    outputBlob = new Blob(parts, { type: 'application/octet-stream' });
+  } catch (error) {
+    capture.discard();
+    throw error;
+  }
+  if (outputBlob.size !== parsedPatch.targetSize) {
+    capture.discard();
+    fail(
+      'DOWNLOAD_BLOB_SIZE_MISMATCH',
+      `Composed download Blob is ${outputBlob.size} bytes, expected ${parsedPatch.targetSize}`,
+    );
+  }
+  // Blob construction snapshots BufferSource parts. Clear the mutable capture
+  // windows immediately so only the immutable Blob backing remains live.
+  capture.discard();
+  throwIfAborted(signal);
+
+  return Object.freeze({
+    ok: true,
+    blob: outputBlob,
+    bytesWritten: applied.bytesWritten,
+    sourceSha256: applied.sourceSha256,
+    targetSha256: applied.targetSha256,
+    capturedBytes: capturePlan.capturedBytes,
+    captureWindowCount: capturePlan.windows.length,
+  });
 }

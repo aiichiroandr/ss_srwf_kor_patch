@@ -1,11 +1,11 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260813-5";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260813-6";
 import {
   getPatchNotesForRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260813-5";
+} from "./release-notes.mjs?v=20260813-6";
 
-const STATIC_ASSET_REVISION = "20260813-5";
+const STATIC_ASSET_REVISION = "20260813-6";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -27,7 +27,6 @@ const MIN_RECORD_BODY_BYTES = 45;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const BIN_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
 const CUE_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
-const ZIP_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.zip$/;
 const PINNED_STOCK_PROFILES = new Map([
   ["saturn-jp-stock-track01-mode1-2352-c198a930", Object.freeze({
     gameId: "srwf-f",
@@ -85,10 +84,15 @@ const elements = {
   errorTitle: byId("errorTitle"),
   errorMessage: byId("errorMessage"),
   successPanel: byId("successPanel"),
+  successTitle: byId("successTitle"),
   successMessage: byId("successMessage"),
   cueAction: byId("cueAction"),
   cueButton: byId("cueButton"),
   cueStatus: byId("cueStatus"),
+  downloadActions: byId("downloadActions"),
+  downloadBinLink: byId("downloadBinLink"),
+  downloadCueLink: byId("downloadCueLink"),
+  downloadHelp: byId("downloadHelp"),
   liveRegion: byId("liveRegion"),
 };
 
@@ -126,8 +130,9 @@ const state = {
   outputHandle: null,
   outputDirectoryHandle: null,
   outputMode: null,
-  archiveFallbackReady: false,
-  archivePlan: null,
+  downloadFallbackReady: false,
+  downloadPlan: null,
+  downloadArtifacts: null,
   patchCompleted: false,
   cueSaving: false,
   cueSaveSequence: 0,
@@ -147,6 +152,7 @@ elements.patchButton.addEventListener("click", applyPatch);
 elements.cancelButton.addEventListener("click", cancelCurrentOperation);
 elements.cueButton.addEventListener("click", saveCueFile);
 window.addEventListener("beforeunload", warnWhileBusy);
+window.addEventListener("pagehide", handlePageHide);
 
 showBrowserCompatibility();
 setWorkflowPhase("release");
@@ -492,7 +498,7 @@ async function loadSelectedRelease(row) {
   elements.sourceState.className = "zone-state";
   elements.applyState.textContent = "원본 대기";
   elements.applyState.className = "zone-state";
-  elements.applyHint.textContent = "정품 원본 폴더를 한 번 고르면 같은 폴더에 새 BIN/CUE를 만들 수 있습니다.";
+  elements.applyHint.textContent = "데스크톱은 원본 폴더에 새 BIN/CUE를 만들고, 모바일은 검증 후 다운로드를 준비합니다.";
 
   setWorkflowPhase("source");
   updateControls();
@@ -771,7 +777,7 @@ async function chooseSource() {
         announce("새 원본 폴더를 열지 못했습니다. 기존 원본 선택은 그대로 유지합니다.");
       } else {
         clearMessages();
-        showError("원본 폴더를 열 수 없습니다", "브라우저의 폴더 읽기·쓰기 권한을 허용한 뒤 다시 선택해 주세요.");
+        showError("원본 폴더를 열 수 없습니다", "브라우저가 표시하는 폴더 접근 권한을 허용한 뒤 다시 선택해 주세요.");
         elements.sourceState.textContent = "열기 실패";
         elements.sourceState.className = "zone-state is-error";
         setZoneState("source", "error");
@@ -849,19 +855,30 @@ async function chooseSource() {
   });
 }
 
-function sourceDirectoryPickerOptions() {
+function sourceDirectoryPickerOptions(navigatorLike = globalThis.navigator) {
   return Object.freeze({
     id: "srwf-stock-directory",
-    mode: "readwrite",
+    mode: prefersDownloadOutput(navigatorLike) ? "read" : "readwrite",
   });
+}
+
+function prefersDownloadOutput(navigatorLike = globalThis.navigator) {
+  if (navigatorLike?.userAgentData?.mobile === true) {
+    return true;
+  }
+  const userAgent = typeof navigatorLike?.userAgent === "string"
+    ? navigatorLike.userAgent
+    : "";
+  return /Android|SamsungBrowser|Mobile/i.test(userAgent);
 }
 
 async function applyPatch() {
   if (!canApplyPatch()) {
     return;
   }
-  if (state.archiveFallbackReady) {
-    await applyPatchToArchive();
+  const mobileDownload = prefersDownloadOutput();
+  if (state.downloadFallbackReady || mobileDownload) {
+    startPatchDownloadFallback({ reason: mobileDownload ? "mobile" : "retry" });
     return;
   }
   clearMessages();
@@ -878,8 +895,8 @@ async function applyPatch() {
     await ensureDirectoryWritePermission(outputDirectoryHandle);
     outputHandle = await createUnusedFileHandle(outputDirectoryHandle, state.release.target.filename);
   } catch (error) {
-    if (canOfferArchiveFallback(error)) {
-      prepareArchiveFallback();
+    if (canOfferDownloadFallback(error)) {
+      startPatchDownloadFallback({ reason: "provider" });
       return;
     }
     const friendly = friendlyOutputCreationError(error);
@@ -894,7 +911,7 @@ async function applyPatch() {
 
   state.outputHandle = outputHandle;
   state.outputMode = "directory";
-  state.archivePlan = null;
+  state.downloadPlan = null;
   state.patchCompleted = false;
   announce(`${outputHandle.name} 저장을 확인했습니다. 원본 검증과 패치를 시작합니다.`);
   elements.applyHint.textContent = "원본을 검증하며 새 BIN을 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요.";
@@ -905,116 +922,140 @@ async function applyPatch() {
   });
 }
 
-async function applyPatchToArchive() {
-  if (typeof window.showSaveFilePicker !== "function") {
-    showError(
-      "이 브라우저에서는 ZIP 저장을 열 수 없습니다",
-      "원본 선택과 패치 준비는 유지됩니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 패치 ZIP 저장을 다시 시도해 주세요.",
-    );
+function startPatchDownloadFallback({ reason = "retry" } = {}) {
+  if (!canApplyPatch()) {
     return;
   }
-
-  const plan = createArchiveOutputPlan(state.release.target.filename);
-  let pickerPromise;
-  try {
-    // This must be the first asynchronous browser operation in the second
-    // Patch-button click. Android save pickers require transient activation.
-    pickerPromise = window.showSaveFilePicker(archiveSavePickerOptions(plan));
-  } catch (error) {
-    handleArchivePickerFailure(error);
-    return;
-  }
-
-  let outputHandle;
-  try {
-    outputHandle = await pickerPromise;
-  } catch (error) {
-    handleArchivePickerFailure(error);
-    return;
-  }
-  if (!outputHandle || typeof outputHandle.createWritable !== "function") {
-    showError("ZIP 저장 파일을 열 수 없습니다", "브라우저가 쓸 수 있는 ZIP 파일 핸들을 반환하지 않았습니다.");
-    return;
-  }
-
-  const actualArchiveName = outputHandle.name;
-  if (typeof actualArchiveName !== "string" || !ZIP_FILENAME_PATTERN.test(actualArchiveName)) {
-    showError("ZIP 파일 이름이 올바르지 않습니다", "확장자를 .zip으로 유지하고 경로 문자가 없는 새 파일 이름을 선택해 주세요.");
-    return;
-  }
-  const actualStem = actualArchiveName.slice(0, -4);
-  const actualPlan = Object.freeze({
-    archiveName: actualArchiveName,
-    imageName: `${actualStem}.bin`,
-    cueName: `${actualStem}.cue`,
-  });
-
+  const plan = createDownloadOutputPlan(state.release.target.filename);
   clearMessages();
-  state.outputHandle = outputHandle;
-  state.outputMode = "archive";
-  state.archivePlan = actualPlan;
-  state.archiveFallbackReady = false;
+  clearDownloadArtifacts();
+  state.downloadFallbackReady = true;
+  state.outputHandle = null;
+  state.outputMode = "download";
+  state.downloadPlan = plan;
   state.patchCompleted = false;
-  elements.applyState.textContent = "ZIP 패치 준비";
+  elements.applyState.textContent = "다운로드 패치 준비";
   elements.applyState.className = "zone-state is-working";
-  elements.applyHint.textContent = "원본을 검증하며 ZIP 안에 새 BIN과 CUE를 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요.";
-  announce(`${actualArchiveName} 저장을 확인했습니다. 원본 검증과 ZIP 패치를 시작합니다.`);
-  beginWorkerOperation("APPLY_PATCH_ZIP", {
+  elements.applyHint.textContent = reason === "provider"
+    ? "폴더의 새 파일 생성이 차단되어 브라우저 다운로드 방식으로 자동 전환했습니다. 원본을 검증하며 BIN을 만들고 있습니다."
+    : reason === "mobile"
+      ? "모바일 저장 호환성을 위해 브라우저 다운로드 방식으로 원본을 검증하며 BIN/CUE를 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요."
+      : "원본 선택을 유지한 채 브라우저 다운로드용 BIN/CUE를 다시 만들고 있습니다. 이 탭을 닫거나 다른 앱으로 전환하지 마세요.";
+  announce(reason === "provider"
+    ? "폴더 저장이 차단되어 다운로드 방식으로 자동 전환했습니다. 원본 검증과 패치를 계속합니다."
+    : reason === "mobile"
+      ? "모바일 저장 호환성을 위해 브라우저 다운로드 방식으로 원본 검증과 패치를 시작합니다."
+      : "브라우저 다운로드용 패치를 다시 만들기 시작합니다.");
+  beginWorkerOperation("BUILD_PATCH_DOWNLOAD", {
     preparationToken: state.preparationToken,
     releaseKey: releaseKey(state.release),
-    outputHandle,
-    archiveName: actualPlan.archiveName,
-    imageName: actualPlan.imageName,
-    cueName: actualPlan.cueName,
+    imageName: plan.imageName,
+    cueName: plan.cueName,
   });
 }
 
-function createArchiveOutputPlan(desiredImageName, suffixFactory = createOutputSuffix) {
-  requireSafeFilename(desiredImageName, "archive target filename");
+function createDownloadOutputPlan(desiredImageName, suffixFactory = createOutputSuffix) {
+  requireSafeFilename(desiredImageName, "download target filename");
   if (!BIN_FILENAME_PATTERN.test(desiredImageName)) {
-    throw new PatcherError("OUTPUT_NAME_INVALID", "Archive target must be a canonical BIN filename");
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Download target must be a canonical BIN filename");
   }
   const suffix = suffixFactory();
   if (!/^[a-f0-9]{24}$/.test(suffix)) {
-    throw new PatcherError("OUTPUT_NAME_INVALID", "Archive suffix is invalid");
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Download suffix is invalid");
   }
   const stem = `${desiredImageName.slice(0, -4)}-${suffix}`;
   const plan = Object.freeze({
-    archiveName: `${stem}.zip`,
     imageName: `${stem}.bin`,
     cueName: `${stem}.cue`,
   });
-  if (!ZIP_FILENAME_PATTERN.test(plan.archiveName)) {
-    throw new PatcherError("OUTPUT_NAME_INVALID", "Archive filename is invalid");
+  if (!BIN_FILENAME_PATTERN.test(plan.imageName) || !CUE_FILENAME_PATTERN.test(plan.cueName)) {
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Download filenames are invalid");
   }
   return plan;
 }
 
-function archiveSavePickerOptions(plan) {
-  return Object.freeze({
-    id: "srwf-patched-archive",
-    suggestedName: plan.archiveName,
-    types: Object.freeze([Object.freeze({
-      description: "한글 패치 BIN/CUE ZIP",
-      accept: Object.freeze({ "application/zip": Object.freeze([".zip"]) }),
-    })]),
-    excludeAcceptAllOption: true,
-  });
-}
-
-function handleArchivePickerFailure(error) {
-  if (isPickerCancellation(error)) {
-    announce("ZIP 저장을 취소했습니다. 원본 선택과 패치 준비는 유지됩니다.");
-    return;
+function installDownloadArtifacts(result, expectedPlan, expectedSize) {
+  if (
+    !result
+    || !(result.outputBlob instanceof Blob)
+    || !Number.isSafeInteger(expectedSize)
+    || result.outputBlob.size !== expectedSize
+    || !expectedPlan
+    || result.imageName !== expectedPlan.imageName
+    || result.cueName !== expectedPlan.cueName
+    || !BIN_FILENAME_PATTERN.test(result.imageName ?? "")
+    || !CUE_FILENAME_PATTERN.test(result.cueName ?? "")
+    || result.imageName.slice(0, -4) !== result.cueName.slice(0, -4)
+  ) {
+    throw new PatcherError(
+      "DOWNLOAD_RESULT_INVALID",
+      "The verified download result does not match the requested target",
+    );
   }
-  showError(
-    "패치 ZIP 저장 위치를 열 수 없습니다",
-    "원본 선택과 패치 준비는 유지됩니다. 브라우저의 파일 저장 권한을 허용한 뒤 ‘패치 ZIP 저장’을 다시 눌러 주세요.",
-  );
+  if (
+    typeof globalThis.URL?.createObjectURL !== "function"
+    || typeof globalThis.URL?.revokeObjectURL !== "function"
+  ) {
+    throw new PatcherError("DOWNLOAD_LINK_FAILED", "Blob download URLs are unavailable");
+  }
+
+  clearDownloadArtifacts();
+  let binUrl = null;
+  let cueUrl = null;
+  try {
+    binUrl = globalThis.URL.createObjectURL(result.outputBlob);
+    const cueBlob = new Blob(
+      [buildPatchedImageCue(result.imageName)],
+      { type: "application/x-cue;charset=utf-8" },
+    );
+    cueUrl = globalThis.URL.createObjectURL(cueBlob);
+  } catch (error) {
+    if (binUrl) globalThis.URL.revokeObjectURL(binUrl);
+    if (cueUrl) globalThis.URL.revokeObjectURL(cueUrl);
+    throw new PatcherError("DOWNLOAD_LINK_FAILED", error?.message ?? "Blob download URLs could not be created");
+  }
+
+  state.downloadArtifacts = Object.freeze({
+    binUrl,
+    cueUrl,
+    imageName: result.imageName,
+    cueName: result.cueName,
+  });
+  elements.downloadBinLink.setAttribute("href", binUrl);
+  elements.downloadBinLink.setAttribute("download", result.imageName);
+  elements.downloadCueLink.setAttribute("href", cueUrl);
+  elements.downloadCueLink.setAttribute("download", result.cueName);
+  elements.downloadHelp.textContent = "두 파일을 각각 내려받아 이름을 바꾸지 말고 같은 폴더에 두세요.";
+  elements.downloadActions.hidden = false;
 }
 
-function canOfferArchiveFallback(error) {
-  if (typeof window.showSaveFilePicker !== "function") {
+function clearDownloadArtifacts() {
+  const artifacts = state.downloadArtifacts;
+  state.downloadArtifacts = null;
+  if (artifacts && typeof globalThis.URL?.revokeObjectURL === "function") {
+    for (const url of [artifacts.binUrl, artifacts.cueUrl]) {
+      if (typeof url === "string") {
+        try {
+          globalThis.URL.revokeObjectURL(url);
+        } catch {
+          // Object URL cleanup is best-effort during reset or navigation.
+        }
+      }
+    }
+  }
+  elements.downloadBinLink.removeAttribute("href");
+  elements.downloadBinLink.removeAttribute("download");
+  elements.downloadCueLink.removeAttribute("href");
+  elements.downloadCueLink.removeAttribute("download");
+  elements.downloadActions.hidden = true;
+}
+
+function canOfferDownloadFallback(error) {
+  if (
+    typeof Blob !== "function"
+    || typeof globalThis.URL?.createObjectURL !== "function"
+    || typeof globalThis.URL?.revokeObjectURL !== "function"
+  ) {
     return false;
   }
   if ([
@@ -1024,25 +1065,28 @@ function canOfferArchiveFallback(error) {
   ].includes(error?.code)) {
     return false;
   }
-  return true;
-}
-
-function prepareArchiveFallback() {
-  state.archiveFallbackReady = true;
-  state.outputHandle = null;
-  state.outputMode = null;
-  state.archivePlan = null;
-  state.patchCompleted = false;
-  elements.applyState.textContent = "ZIP 저장 가능";
-  elements.applyState.className = "zone-state is-ready";
-  elements.applyHint.textContent = "원본 선택과 패치 준비는 유지됩니다. 패치 ZIP 저장을 누르면 BIN과 CUE가 든 ZIP의 저장 위치만 한 번 확인하고, 전체 SHA-256은 ZIP을 만들며 검증합니다.";
-  showError(
-    "이 브라우저가 원본 폴더의 새 파일 생성을 막았습니다",
-    "원본 폴더를 다시 고를 필요는 없습니다. 원본 전체 SHA-256은 패치 중 검증합니다. 아래 ‘패치 ZIP 저장’을 눌러 저장한 뒤 압축을 풀어 주세요.",
-  );
-  setWorkflowPhase("patch");
-  updateControls();
-  announce("원본 선택과 패치 준비는 유지됩니다. 패치 ZIP 저장을 눌러 주세요.");
+  const providerCodes = new Set([
+    "OUTPUT_DIRECTORY_READ_FAILED",
+    "OUTPUT_HANDLE_INVALID",
+    "OUTPUT_NAME_EXHAUSTED",
+    "OUTPUT_PERMISSION_DENIED",
+    "OUTPUT_PROVIDER_FAILED",
+    "OUTPUT_QUOTA_EXCEEDED",
+  ]);
+  const providerNames = new Set([
+    "AbortError",
+    "InvalidModificationError",
+    "InvalidStateError",
+    "NoModificationAllowedError",
+    "NotAllowedError",
+    "NotFoundError",
+    "NotReadableError",
+    "OperationError",
+    "QuotaExceededError",
+    "SecurityError",
+    "UnknownError",
+  ]);
+  return providerCodes.has(error?.code) || providerNames.has(error?.name);
 }
 
 async function ensureDirectoryWritePermission(directoryHandle) {
@@ -1174,6 +1218,7 @@ async function saveCueFile() {
     ) {
       elements.errorPanel.hidden = true;
       elements.successPanel.hidden = false;
+      elements.successTitle.textContent = "한국어 패치 BIN/CUE 저장을 완료했습니다";
       elements.cueButton.disabled = true;
       elements.cueButton.hidden = true;
       elements.cueStatus.textContent = `${cueHandle.name}도 자동으로 저장했습니다.`;
@@ -1337,11 +1382,13 @@ function handleWorkerMessage(event) {
       void discardUncommittedOutput();
       elements.sourceState.textContent = "크기 일치";
       elements.sourceState.className = "zone-state is-prepared";
-      if (operation === "APPLY_PATCH_ZIP") {
-        state.archiveFallbackReady = true;
-        elements.applyState.textContent = "ZIP 저장 재시도";
+      if (operation === "BUILD_PATCH_DOWNLOAD") {
+        state.downloadFallbackReady = true;
+        state.downloadPlan = null;
+        state.outputMode = null;
+        elements.applyState.textContent = "다운로드 재시도";
         elements.applyState.className = "zone-state is-ready";
-        elements.applyHint.textContent = "ZIP 생성을 중단했습니다. 원본 선택과 패치 준비는 유지되므로 패치 ZIP 저장을 다시 누를 수 있습니다.";
+        elements.applyHint.textContent = "다운로드 파일 생성을 중단했습니다. 원본 선택과 패치 준비는 유지되므로 다시 만들 수 있습니다.";
       } else {
         elements.applyState.textContent = "다시 실행 가능";
         elements.applyState.className = "zone-state";
@@ -1377,50 +1424,67 @@ function handleOperationComplete(message) {
     elements.applyState.textContent = "실행 가능";
     elements.applyState.className = "zone-state is-ready";
     setWorkflowPhase("patch");
-    elements.applyHint.textContent = "처음 선택한 원본 폴더가 저장 위치로 준비됐습니다. 패치 실행 시 폴더를 다시 묻지 않습니다.";
+    elements.applyHint.textContent = prefersDownloadOutput()
+      ? "원본 읽기 준비가 끝났습니다. 패치 실행 시 전체를 검증한 뒤 BIN/CUE 다운로드를 준비하며 폴더를 다시 묻지 않습니다."
+      : "처음 선택한 원본 폴더가 저장 위치로 준비됐습니다. 패치 실행 시 폴더를 다시 묻지 않습니다.";
     updateControls();
     announce("원본 크기가 일치합니다. 전체 SHA-256은 패치를 실행하며 검증합니다.");
     return;
   }
 
-  if (operation === "APPLY_PATCH" || operation === "APPLY_PATCH_ZIP") {
+  if (operation === "APPLY_PATCH" || operation === "BUILD_PATCH_DOWNLOAD") {
+    const downloadOutput = operation === "BUILD_PATCH_DOWNLOAD";
+    if (downloadOutput) {
+      try {
+        installDownloadArtifacts(
+          message.result,
+          state.downloadPlan,
+          state.release.target.size,
+        );
+      } catch (error) {
+        handleOperationFailure(
+          { code: error?.code ?? "DOWNLOAD_RESULT_INVALID", message: error?.message },
+          operation,
+        );
+        return;
+      }
+      state.downloadFallbackReady = true;
+    }
     state.patchCompleted = true;
     elements.sourceSelection.classList.remove("is-verifying");
     elements.sourceCheck.textContent = "✓";
     elements.sourceMeta.textContent = sourceSelectionMeta(state, "전체 SHA-256 일치 · 원본 보존");
     elements.sourceState.textContent = "SHA-256 일치";
     elements.sourceState.className = "zone-state is-complete";
-    elements.applyState.textContent = "패치 완료";
+    elements.applyState.textContent = downloadOutput ? "다운로드 준비" : "패치 완료";
     elements.applyState.className = "zone-state is-complete";
-    const archiveOutput = operation === "APPLY_PATCH_ZIP";
-    if (archiveOutput) {
-      // Once this browser has required the archive path, keep that preference
-      // sticky for repeat runs. Do not send the user back through the known-
-      // failing directory child-create attempt.
-      state.archiveFallbackReady = true;
-    }
-    const outputLabel = state.outputHandle.name
-      || (archiveOutput ? state.archivePlan?.archiveName : state.release.target.filename);
-    elements.successMessage.textContent = archiveOutput
-      ? `${outputLabel} 안의 BIN 전체 바이트 크기와 SHA-256이 목표값과 일치하며 CUE도 함께 들어 있습니다.`
+    const outputLabel = downloadOutput
+      ? state.downloadPlan.imageName
+      : (state.outputHandle?.name || state.release.target.filename);
+    elements.successTitle.textContent = downloadOutput
+      ? "검증 완료 · BIN/CUE 다운로드 준비"
+      : "한국어 패치 BIN/CUE를 만들었습니다";
+    elements.successMessage.textContent = downloadOutput
+      ? `${outputLabel}의 전체 바이트 크기와 SHA-256이 목표값과 일치합니다. 아래 BIN과 CUE를 모두 받아 같은 폴더에 두세요.`
       : `${outputLabel}에 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`;
-    elements.cueAction.hidden = archiveOutput || !state.release.target.cueFilename;
+    elements.downloadActions.hidden = !downloadOutput;
+    elements.cueAction.hidden = downloadOutput || !state.release.target.cueFilename;
     elements.cueButton.hidden = true;
     elements.cueButton.disabled = true;
     elements.cueButton.textContent = "CUE 파일 다시 저장";
     elements.cueStatus.textContent = "패치 BIN용 단일 데이터 트랙 CUE를 같은 폴더에 자동으로 저장합니다.";
     elements.successPanel.hidden = false;
-    elements.applyHint.textContent = archiveOutput
-      ? "패치 ZIP 생성을 완료했습니다. ZIP을 풀면 서로 이름이 맞는 BIN과 CUE가 나옵니다."
+    elements.applyHint.textContent = downloadOutput
+      ? "검증된 BIN/CUE를 준비했습니다. 아래 두 다운로드를 각각 누른 뒤 같은 폴더에 두세요."
       : "BIN/CUE 생성을 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
     setWorkflowPhase("complete");
     updateControls();
     announce(
-      archiveOutput
-        ? `${outputLabel} 패치를 완료했습니다. ZIP 안의 BIN 해시가 목표값과 일치합니다.`
+      downloadOutput
+        ? `${outputLabel} 패치를 완료했습니다. BIN과 CUE 다운로드 링크를 준비했습니다.`
         : `${outputLabel} 패치를 완료했습니다. 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`,
     );
-    if (!archiveOutput) {
+    if (!downloadOutput) {
       void saveCueFile();
     }
   }
@@ -1441,13 +1505,16 @@ function handleOperationFailure(error, operation = state.operation) {
     "PREPARED_SOURCE_MISSING",
     "WORKER_STOPPED",
   ]).has(error?.code);
-  if (operation === "APPLY_PATCH" || operation === "APPLY_PATCH_ZIP") {
+  if (operation === "APPLY_PATCH" || operation === "BUILD_PATCH_DOWNLOAD") {
     void discardUncommittedOutput();
   }
   if (operation === "PREPARE_SOURCE" || sourceMismatch || preparationLost) {
     state.sourcePrepared = false;
     state.preparationToken = null;
     state.outputHandle = null;
+    state.downloadFallbackReady = false;
+    state.downloadPlan = null;
+    clearDownloadArtifacts();
     elements.sourceSelection.classList.remove("is-verifying");
     elements.sourceCheck.textContent = "×";
     elements.sourceState.textContent = sourceMismatch ? "불일치" : "준비 실패";
@@ -1472,30 +1539,20 @@ function handleOperationFailure(error, operation = state.operation) {
       "OUTPUT_PERMISSION_DENIED",
       "OUTPUT_QUOTA_EXCEEDED",
     ]).has(error?.code);
-  if (outputProviderFailure && typeof window.showSaveFilePicker === "function") {
-    prepareArchiveFallback();
+  if (outputProviderFailure && canOfferDownloadFallback(error)) {
+    startPatchDownloadFallback({ reason: "provider" });
     return;
   }
-  if (
-    operation === "APPLY_PATCH_ZIP"
-    && new Set([
-      "OUTPUT_PROVIDER_FAILED",
-      "OUTPUT_PERMISSION_DENIED",
-      "OUTPUT_QUOTA_EXCEEDED",
-    ]).has(error?.code)
-  ) {
-    state.archiveFallbackReady = true;
-    elements.applyState.textContent = "ZIP 저장 재시도";
+  if (operation === "BUILD_PATCH_DOWNLOAD" && !sourceMismatch && !preparationLost) {
+    state.downloadFallbackReady = true;
+    state.downloadPlan = null;
+    state.outputMode = null;
+    elements.applyState.textContent = "다운로드 재시도";
     elements.applyState.className = "zone-state is-error";
-    elements.applyHint.textContent = "원본 선택과 패치 준비는 유지됩니다. 패치 ZIP 저장을 다시 눌러 다른 저장 위치를 선택해 주세요.";
-    showError("패치 ZIP을 기록하지 못했습니다", "원본 선택과 패치 준비는 유지됩니다. 다른 저장 위치를 골라 다시 시도해 주세요.");
+    elements.applyHint.textContent = "원본 선택과 패치 준비는 유지됩니다. 다운로드 만들기를 다시 눌러 재시도해 주세요.";
+    showError(friendly.title, `${friendly.message} 원본을 다시 고를 필요 없이 다운로드 만들기를 재시도할 수 있습니다.`);
     updateControls();
     return;
-  }
-
-  if (operation === "APPLY_PATCH_ZIP" && !sourceMismatch && !preparationLost) {
-    state.archiveFallbackReady = true;
-    elements.applyHint.textContent = "원본 선택과 패치 준비는 유지됩니다. 패치 ZIP 저장을 다시 눌러 재시도해 주세요.";
   }
 
   showError(friendly.title, friendly.message);
@@ -1539,8 +1596,8 @@ function showProgressPhase(phase) {
   const copy = {
     "patch-download": ["PATCH DATA", "검증된 패치 데이터를 준비하고 있습니다", "같은 저장소의 패치 데이터만 읽습니다."],
     "patch-parse": ["PATCH VERIFY", "패치 데이터의 무결성을 확인하고 있습니다", "명세에 고정된 크기와 SHA-256을 비교합니다."],
-    "source-apply": ["VERIFY & WRITE", "원본을 검증하며 새 BIN을 만들고 있습니다", "전체 SHA-256과 변경 구간을 한 번의 읽기로 확인하며 별도 출력에 기록합니다."],
-    "output-verify": ["OUTPUT VERIFY", "출력 검증을 마무리하고 있습니다", "새 BIN에 기록한 전체 바이트를 목표 크기와 SHA-256으로 확인했습니다."],
+    "source-apply": ["VERIFY & BUILD", "원본을 검증하며 새 BIN을 만들고 있습니다", "전체 SHA-256과 변경 구간을 한 번의 읽기로 확인하며 별도 결과를 구성합니다."],
+    "output-verify": ["OUTPUT VERIFY", "출력 검증을 마무리하고 있습니다", "새 BIN으로 구성한 전체 바이트를 목표 크기와 SHA-256으로 확인했습니다."],
   }[phase] ?? ["WORKING", "안전하게 처리하고 있습니다", "이 탭을 닫지 마세요."];
 
   const phaseChanged = elements.progressPanel.dataset.phase !== phase;
@@ -1723,7 +1780,7 @@ async function discardUncommittedOutput() {
   }
   state.outputHandle = null;
   state.outputMode = null;
-  state.archivePlan = null;
+  state.downloadPlan = null;
 }
 
 function resetFileWorkflow() {
@@ -1741,8 +1798,9 @@ function resetFileWorkflow() {
   state.outputHandle = null;
   state.outputDirectoryHandle = null;
   state.outputMode = null;
-  state.archiveFallbackReady = false;
-  state.archivePlan = null;
+  state.downloadFallbackReady = false;
+  state.downloadPlan = null;
+  clearDownloadArtifacts();
   state.patchCompleted = false;
   state.cueSaveSequence += 1;
   state.cueSaving = false;
@@ -1757,6 +1815,7 @@ function resetFileWorkflow() {
   elements.progressPanel.hidden = true;
   elements.errorPanel.hidden = true;
   elements.successPanel.hidden = true;
+  elements.downloadActions.hidden = true;
   elements.cueAction.hidden = true;
   elements.cueButton.hidden = true;
   elements.cueButton.disabled = false;
@@ -1785,13 +1844,15 @@ function resetPreparedSource() {
   state.outputHandle = null;
   state.outputDirectoryHandle = null;
   state.outputMode = null;
-  state.archiveFallbackReady = false;
-  state.archivePlan = null;
+  state.downloadFallbackReady = false;
+  state.downloadPlan = null;
+  clearDownloadArtifacts();
   state.patchCompleted = false;
   state.cueSaveSequence += 1;
   state.cueSaving = false;
   elements.errorPanel.hidden = true;
   elements.successPanel.hidden = true;
+  elements.downloadActions.hidden = true;
   elements.cueAction.hidden = true;
   elements.cueButton.hidden = true;
   elements.sourceState.textContent = "원본 선택";
@@ -1846,7 +1907,9 @@ function updateControls() {
   elements.patchNotesToggle.disabled = interactionBusy || !state.patchNotesReleaseId;
   elements.sourceButton.disabled = fileControls.sourceDisabled;
   elements.patchButton.disabled = fileControls.patchDisabled;
-  elements.patchButtonText.textContent = state.archiveFallbackReady ? "패치 ZIP 저장" : "패치 실행";
+  elements.patchButtonText.textContent = state.downloadFallbackReady
+    ? (state.patchCompleted ? "다운로드 다시 만들기" : "다운로드 만들기")
+    : "패치 실행";
 
   if (releaseReady && !state.fileSystemSupported) {
     elements.applyHint.textContent = "Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 안전한 파일 저장을 지원합니다.";
@@ -2122,6 +2185,8 @@ function friendlyWorkerError(code) {
     WORKER_MESSAGE_INVALID: ["파일 작업 요청을 확인할 수 없습니다", "페이지를 새로 연 뒤 원본 선택부터 다시 진행해 주세요."],
     WORKER_MESSAGE_FAILED: ["이 브라우저에서 파일 작업을 시작할 수 없습니다", "데스크톱 Chrome 또는 Edge 최신 버전에서 다시 시도해 주세요."],
     WORKER_STOPPED: ["로컬 패치 작업이 중단되었습니다", "출력 저장을 확정하지 않았습니다. 페이지를 새로 연 뒤 다시 시도해 주세요."],
+    DOWNLOAD_RESULT_INVALID: ["다운로드 결과 검증에 실패했습니다", "완성된 BIN의 크기나 파일 이름이 요청한 공개 릴리스와 달라 다운로드를 차단했습니다."],
+    DOWNLOAD_LINK_FAILED: ["다운로드 링크를 만들 수 없습니다", "원본 선택과 패치 준비는 유지됩니다. 브라우저 메모리를 확보한 뒤 다운로드 만들기를 다시 시도해 주세요."],
     UNSUPPORTED_BROWSER: ["이 브라우저에서는 패치 데이터를 열 수 없습니다", "DecompressionStream을 지원하는 데스크톱 Chrome 또는 Edge 최신 버전에서 다시 시도해 주세요."],
   };
 
@@ -2334,6 +2399,12 @@ function announce(message) {
   });
 }
 
+function handlePageHide(event) {
+  if (!event?.persisted) {
+    clearDownloadArtifacts();
+  }
+}
+
 function warnWhileBusy(event) {
   if (!state.busy && !state.cueSaving) {
     return;
@@ -2352,11 +2423,11 @@ class PatcherError extends Error {
 
 export const __testHooks = Object.freeze({
   activateGame,
-  archiveSavePickerOptions,
   beginWorkerOperation,
   buildPatchedImageCue,
-  canOfferArchiveFallback,
-  createArchiveOutputPlan,
+  canOfferDownloadFallback,
+  clearDownloadArtifacts,
+  createDownloadOutputPlan,
   createUnusedFileHandle,
   detectFileSystemSupport,
   deriveFileControlState,
@@ -2368,11 +2439,14 @@ export const __testHooks = Object.freeze({
   friendlyOutputCreationError,
   friendlyWorkerError,
   handleIndexFailure,
+  installDownloadArtifacts,
+  isPickerCancellation,
   isRfc3339DateTime,
   normalizeReleaseManifest,
   clearPatchNotes,
   closePatchNotes,
   openPatchNotes,
+  prefersDownloadOutput,
   renderPatchNotesForRelease,
   sourceDirectoryPickerOptions,
   showUnsupportedBrowser,
