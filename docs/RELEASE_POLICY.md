@@ -4,9 +4,8 @@
 
 이 저장소는 현재 `HAS_ACCEPTED_RELEASE`이며,
 [`manifest/releases.json`](../manifest/releases.json)에
-`srwf-f-20260812-v1-1`과 `srwf-f-20260810-v1-0` 두 항목이 등록되어 있습니다.
-공개 payload는 각 영수증·릴리스 명세와 해시가 일치하는 희소 `.srwfp`
-두 개뿐입니다.
+`srwf-f-20260814-v0-1` 한 항목이 등록되어 있습니다. 공개 payload는 영수증·릴리스
+명세와 해시가 일치하는 희소 `.srwfp` 한 개뿐입니다.
 
 게임 카탈로그에는 `srwf-f`와 `srwf-final`이 함께 등록되어 있습니다. F는
 `HAS_ACCEPTED_RELEASE`, F 완결편은 `NO_ACCEPTED_RELEASE`이며, 완결편에는
@@ -23,7 +22,7 @@
 - candidate, test, ready, frontier, draft, RC
 - runtime gate가 일부만 끝난 build
 - 실패하거나 철회된 build
-- V4/DR 이미지나 그 aggregate sector diff를 binary base로 쓴 build
+- 정품 원본이 아닌 이전 작업 이미지나 집계 sector diff를 binary base로 쓴 build
 
 승인 릴리스가 하나 이상 생길 때만 project status를
 `HAS_ACCEPTED_RELEASE`로 바꿉니다. `NO_ACCEPTED_RELEASE` 상태에서는 schema와
@@ -41,8 +40,8 @@
 | track | `TRACK 01 MODE1/2352` |
 | geometry | `245966 × 2352`, user data `16 + 2048` |
 
-V4 자료는 의미·번역 migration evidence일 수 있지만 binary donor나 암묵적인
-build base가 될 수 없습니다. 공개 artifact는 V5에서 stock-derived build와
+이전 작업 자료는 의미·번역 이관 근거일 수 있지만 binary donor나 암묵적인 build
+base가 될 수 없습니다. 공개 artifact는 별도 빌드 저장소에서 stock-derived build와
 각 owner의 검증을 마친 뒤에만 이 저장소로 옮깁니다.
 
 ## ACCEPTED 영수증 gate
@@ -56,7 +55,7 @@ build base가 될 수 없습니다. 공개 artifact는 V5에서 stock-derived bu
 - visual layout
 - long-play progression
 
-영수증은 release id, stock profile/source hash, target hash, patch hash, V5
+영수증은 release id, stock profile/source hash, target hash, patch hash, 빌드
 commit, 결정 시각과 decision authority를 고정합니다. build receipt hash만
 있는 경우에는 승격할 수 없습니다. 구조는
 [`schemas/acceptance-receipt.schema.json`](../schemas/acceptance-receipt.schema.json)에
@@ -79,7 +78,7 @@ commit, 결정 시각과 decision authority를 고정합니다. build receipt ha
 index의 `manifestSha256`은 release manifest 파일 bytes의 SHA-256입니다.
 release manifest의 `patch.size`/`patch.sha256`은 payload와 같아야 하며
 `provenance.acceptanceReceiptSha256`은 receipt 파일 bytes와 같아야 합니다.
-release manifest와 receipt가 가리키는 source, target, patch, V5 commit도
+release manifest와 receipt가 가리키는 source, target, patch, build commit도
 서로 같아야 합니다.
 
 완성 disc image와 CUE는 이 단계에서 추가하지 않습니다. CUE는 승인된
@@ -114,7 +113,7 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
   "schema": "srwf-kor.public-release.v1",
   "id": "srwf-f-YYYYMMDD-version",
   "state": "ACCEPTED",
-  "version": "v1.1",
+  "version": "v0.1",
   "title": "표시 이름",
   "publishedAt": "YYYY-MM-DDTHH:MM:SSZ",
   "source": {
@@ -137,7 +136,7 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
     "bodyUncompressedSize": 0
   },
   "provenance": {
-    "v5Commit": "<full V5 commit id>",
+    "v5Commit": "<full build commit id>",
     "buildReceiptSha256": "<build receipt SHA-256>",
     "acceptanceReceiptSha256": "<ACCEPTED receipt SHA-256>"
   }
@@ -161,9 +160,9 @@ allowlist에 함께 고정해야 합니다. allowlist에 들어간 PNG, WebP, IC
 파일 8 MiB, 전체 24 MiB 상한과 기존 container 구조 검사를 모두 통과해야 합니다.
 단순히 확장자를 바꾸거나 유효한 container 안에 다른 payload를 넣는 것만으로는
 승인되지 않습니다. `.srwfp`는 이 UI asset 절차에 포함하지 않고 기존의 ACCEPTED
-index와 전용 parser gate를 그대로 거칩니다. 현재 allowlist에는 버전별 패치노트의
-저해상도 AS-IS/TO-BE PNG만 들어 있으며, 실제 공개 빌드 반영 자료와 후속 RAM 배치
-참고 자료를 화면에서 명확히 구분합니다. 전체 디스크 이미지, 세이브·상태 파일과
+index와 전용 parser gate를 그대로 거칩니다. 현재 allowlist에는 패치노트의
+저해상도 AS-IS/TO-BE PNG만 들어 있으며, 실제 공개 빌드 반영 자료와 동일 기능의
+선행 검증 화면을 화면에서 명확히 구분합니다. 전체 디스크 이미지, 세이브·상태 파일과
 에뮬레이터 캐시는 이 절차로도 승인할 수 없습니다.
 
 외부 URL·network write 검사는 `.html`, `.htm`, `.shtml`, `.xhtml`, SVG/XML/XSL, CSS,

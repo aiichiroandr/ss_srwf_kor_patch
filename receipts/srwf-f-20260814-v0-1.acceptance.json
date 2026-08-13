@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-f-20260814-v0-1",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-08-13T22:10:29Z",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
+  "sourceSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+  "targetSha256": "6f6fd50207f69e240dfe6c3ddeac5b7a7f3816fb7e94d65143a89395995ea27a",
+  "patchSha256": "84f9e0bfb15789464dda0afe7254489e9ab5f37f0fc2d3af9df27b204c411f68",
+  "v5Commit": "3dfae34b49a0cfa966aba7542a2f6591d8770c87",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "PASS"
+  },
+  "decisionAuthority": "저장소 소유자 지시: 기존 v1.0·v1.1을 내리고 2026.08.14 v0.1 단일 공개판으로 교체 승인"
+}

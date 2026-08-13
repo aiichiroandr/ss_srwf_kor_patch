@@ -239,7 +239,7 @@ test("directory discovery ignores a prior generated patch BIN beside one raw sou
   const source = new File([new Uint8Array(32)], "stock.img");
   const priorOutput = new File(
     [new Uint8Array(32)],
-    "SRWF-KOR-20260812-v1.1-0123456789abcdef01234567.bin",
+    "SRWF-KOR-20260814-v0.1-0123456789abcdef01234567.bin",
   );
   const selectedDirectory = directoryHandle([
     fileHandle(priorOutput),

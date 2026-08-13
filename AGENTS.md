@@ -3,12 +3,13 @@
 ## Outcome lock
 
 This repository is the public, static distribution surface for an accepted
-SRWF Korean patch. It is not a continuation of the V4/DR binary lineage and it
-is not a candidate-testing area.
+SRWF Korean patch. It is not a continuation of an internal binary lineage and
+it is not a candidate-testing area.
 
-The current repository state is `NO_ACCEPTED_RELEASE`. Keep
-`manifest/releases.json` at that state with an empty `releases` array until an
-explicit, hash-pinned `ACCEPTED` receipt exists.
+The current repository state is `HAS_ACCEPTED_RELEASE`. The only indexed public
+release is `srwf-f-20260814-v0-1`, backed by its explicit, hash-pinned
+`ACCEPTED` receipt. Do not reintroduce withdrawn release rows or publish a new
+row without another complete acceptance chain.
 
 ## Publication gate
 
@@ -22,9 +23,9 @@ explicit, hash-pinned `ACCEPTED` receipt exists.
 - The accepted receipt is a release decision. A build receipt, identity pass,
   static pass, isolated runtime sample, or candidate registration is not a
   substitute.
-- Do not copy from mutable V4/DR or candidate outputs. The V5 build repository
-  remains the source of reviewed release evidence; this repository receives
-  only the accepted public artifact set.
+- Do not copy from mutable candidate outputs or prior working images. The
+  reviewed build repository remains the source of release evidence; this
+  repository receives only the accepted public artifact set.
 
 ## Binary and legal boundary
 

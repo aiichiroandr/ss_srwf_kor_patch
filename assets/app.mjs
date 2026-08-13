@@ -1,11 +1,11 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260813-6";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260814-1";
 import {
   getPatchNotesForRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260813-6";
+} from "./release-notes.mjs?v=20260814-1";
 
-const STATIC_ASSET_REVISION = "20260813-6";
+const STATIC_ASSET_REVISION = "20260814-1";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -593,7 +593,7 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
     throw new PatcherError("MANIFEST_INVALID", "Patch body is too small for its declared non-empty records");
   }
   if (typeof manifest.provenance.v5Commit !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(manifest.provenance.v5Commit)) {
-    throw new PatcherError("PROVENANCE_INVALID", "V5 commit provenance is missing or invalid");
+    throw new PatcherError("PROVENANCE_INVALID", "Build commit provenance is missing or invalid");
   }
   requireSha256(manifest.provenance.buildReceiptSha256, "build receipt SHA-256");
   requireSha256(manifest.provenance.acceptanceReceiptSha256, "acceptance receipt SHA-256");

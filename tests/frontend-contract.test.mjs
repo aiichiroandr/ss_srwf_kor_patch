@@ -277,7 +277,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260813-6";
+  const revision = "20260814-1";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -586,12 +586,12 @@ test("output creation failures distinguish permission, space, and Android provid
 test("Android output failure automatically prepares verified BIN and CUE downloads", async () => {
   const suffix = "0123456789abcdef01234567";
   const plan = __testHooks.createDownloadOutputPlan(
-    "SRWF-KOR-20260812-v1.1.bin",
+    "SRWF-KOR-20260814-v0.1.bin",
     () => suffix,
   );
   assert.deepEqual(plan, {
-    imageName: `SRWF-KOR-20260812-v1.1-${suffix}.bin`,
-    cueName: `SRWF-KOR-20260812-v1.1-${suffix}.cue`,
+    imageName: `SRWF-KOR-20260814-v0.1-${suffix}.bin`,
+    cueName: `SRWF-KOR-20260814-v0.1-${suffix}.cue`,
   });
   assert.equal(__testHooks.canOfferDownloadFallback({ name: "InvalidStateError" }), true);
   assert.equal(__testHooks.canOfferDownloadFallback({ code: "OUTPUT_PROVIDER_FAILED" }), true);
@@ -649,7 +649,7 @@ test("Android output failure automatically prepares verified BIN and CUE downloa
 
 test("patched-image CUE exposes the accepted flat image as one continuous data track", () => {
   // The accepted public target relocates live data through sector 244948.  It
-  // must therefore retain the V5 single-track runtime geometry rather than
+  // must therefore retain the accepted single-track runtime geometry rather than
   // reusing the stock Redump disc's original three-track boundaries.
   const cue = __testHooks.buildPatchedImageCue(
     "srwf-kor-v5-r001-0123456789abcdef01234567.bin",
@@ -949,17 +949,27 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
     }
   }
 
-  const v11Items = getPatchNotesForRelease("srwf-f-20260812-v1-1").items;
-  const v11RamReferences = v11Items.filter((item) => item.evidenceType === "ram-reference");
+  const v01Items = getPatchNotesForRelease("srwf-f-20260814-v0-1").items;
   assert.deepEqual(
-    v11RamReferences.map((item) => item.id).sort(),
-    ["disconnect-confirmation", "parts-window-width", "split-confirmation", "turn-end-boundary"],
+    v01Items.map((item) => item.id).sort(),
+    [
+      "disconnect-confirmation",
+      "parts-window-width",
+      "preview-body-translation",
+      "preview-heading-translation",
+      "protagonist-names",
+      "sortie-count-position",
+      "sortie-unit-pilot-names",
+      "split-confirmation",
+      "turn-end-boundary",
+    ],
   );
-  assert.ok(v11Items.some((item) => item.id === "sortie-count-position"));
-  assert.equal(v11Items.some((item) => item.id.endsWith("-inherited")), false);
-  const sortieCountPosition = v11Items.find((item) => item.id === "sortie-count-position");
+  assert.equal(v01Items.length, 9);
+  assert.equal(v01Items.some((item) => item.evidenceType === "ram-reference"), false);
+  assert.equal(v01Items.some((item) => item.id.endsWith("-inherited")), false);
+  const sortieCountPosition = v01Items.find((item) => item.id === "sortie-count-position");
   assert.match(sortieCountPosition.title, /NN기.*위치/);
-  assert.match(sortieCountPosition.description, /출격유닛 선택.*붙어 있던 NN기.*반각 한 칸 오른쪽/);
+  assert.match(sortieCountPosition.description, /출격유닛 선택.*붙어 있던.*NN기.*반각 한 칸 오른쪽/);
   assert.deepEqual(
     [sortieCountPosition.asIs.width, sortieCountPosition.asIs.height],
     [188, 42],
@@ -970,28 +980,20 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
   );
   assert.match(sortieCountPosition.asIs.alt, /제목에 13기가 붙어/);
   assert.match(sortieCountPosition.toBe.alt, /13기 사이.*반각 한 칸/);
-  const protagonistNames = getPatchNotesForRelease("srwf-f-20260810-v1-0").items
-    .find((item) => item.id === "protagonist-names");
-  assert.match(protagonistNames.description, /이미 한글화된.*설명과 항목명.*그대로.*8명분.*이름·애칭 표시 경로만.*한국어 데이터/);
+  const protagonistNames = v01Items.find((item) => item.id === "protagonist-names");
+  assert.match(protagonistNames.description, /이미 한글화된.*설명과 항목명.*유지하고.*주인공 8명.*이름·애칭 표시 경로만.*한국어 데이터/);
   assert.match(protagonistNames.asIs.alt, /설명과 항목명은 한국어.*헥토르.*이름과 애칭은 일본어/);
-  assert.match(protagonistNames.toBe.alt, /같은 주인공 설정.*헥토르.*한국어/);
-  assert.ok(v11Items.some((item) => item.evidenceType === "included"));
-  assert.ok(v11Items.some((item) => item.evidenceType === "included-reference"));
-  const v10Items = getPatchNotesForRelease("srwf-f-20260810-v1-0").items;
-  for (const requiredId of ["protagonist-names", "sortie-unit-pilot-names"]) {
-    assert.ok(v10Items.some((item) => item.id === requiredId), `v1.0 is missing ${requiredId}`);
-  }
+  assert.match(protagonistNames.toBe.alt, /같은 설정.*헥토르.*한국어.*주인공 설정/);
+  assert.ok(v01Items.some((item) => item.evidenceType === "included"));
+  assert.ok(v01Items.some((item) => item.evidenceType === "included-reference"));
   assert.equal(
-    v10Items.every((item) => ["included", "included-reference"].includes(item.evidenceType)),
+    v01Items.every((item) => ["included", "included-reference"].includes(item.evidenceType)),
     true,
   );
-  const v10ComparisonPairs = new Set(
-    v10Items.map((item) => `${item.asIs.src}\u0000${item.toBe.src}`),
-  );
   assert.equal(
-    v11Items.some((item) => v10ComparisonPairs.has(`${item.asIs.src}\u0000${item.toBe.src}`)),
-    false,
-    "v1.1 must show only its own comparison cards instead of repeating v1.0 pairs",
+    new Set(v01Items.map((item) => `${item.asIs.src}\u0000${item.toBe.src}`)).size,
+    v01Items.length,
+    "v0.1 must not repeat an AS-IS/TO-BE comparison pair",
   );
 
   assert.deepEqual(Object.keys(publicAssetAllowlist).sort(), [...referencedAssets.keys()].sort());
@@ -1023,39 +1025,38 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
   }
 });
 
-test("patch-note images are created lazily and release replacement closes stale content", async () => {
+test("patch-note images are created lazily and an unknown release clears stale content", async () => {
   const { getPatchNotesForRelease } = await import("../assets/release-notes.mjs");
-  const firstReleaseId = "srwf-f-20260812-v1-1";
-  const secondReleaseId = "srwf-f-20260810-v1-0";
-  const firstNotes = getPatchNotesForRelease(firstReleaseId);
-  const secondNotes = getPatchNotesForRelease(secondReleaseId);
+  const releaseId = "srwf-f-20260814-v0-1";
+  const notes = getPatchNotesForRelease(releaseId);
   const toggle = element("patchNotesToggle");
   const dialog = element("patchNotesDialog");
   const list = element("patchNotesList");
 
   __testHooks.clearPatchNotes();
-  __testHooks.renderPatchNotesForRelease(firstReleaseId);
+  __testHooks.renderPatchNotesForRelease(releaseId);
   assert.equal(toggle.disabled, false);
   assert.equal(dialog.open, false);
   assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
-  assert.equal(element("patchNotesVersion").textContent, firstNotes.version);
-  assert.match(element("patchNotesCount").textContent, new RegExp(String(firstNotes.items.length)));
+  assert.equal(element("patchNotesVersion").textContent, notes.version);
+  assert.match(element("patchNotesCount").textContent, new RegExp(String(notes.items.length)));
 
   __testHooks.openPatchNotes();
   assert.equal(dialog.open, true);
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
-  const firstImages = findDescendants(list, (node) => node.tagName === "IMG");
-  assert.equal(firstImages.length, firstNotes.items.length * 2);
-  for (const image of firstImages) {
+  const images = findDescendants(list, (node) => node.tagName === "IMG");
+  assert.equal(images.length, notes.items.length * 2);
+  for (const image of images) {
     assert.equal(image.loading ?? image.getAttribute("loading"), "lazy");
     assert.equal(image.decoding ?? image.getAttribute("decoding"), "async");
     assert.ok((image.alt ?? image.getAttribute("alt") ?? "").trim().length > 0);
     assert.ok(Number(image.width ?? image.getAttribute("width")) > 0);
     assert.ok(Number(image.height ?? image.getAttribute("height")) > 0);
   }
-  assert.ok(descendantText(list).includes(firstNotes.items[0].title));
+  assert.ok(descendantText(list).includes(notes.items[0].title));
   assert.ok(descendantText(list).includes("공개 릴리스 반영"));
-  assert.ok(descendantText(list).includes("RAM 변조 참고 시안 · 릴리스 통과 증거 아님"));
+  assert.ok(descendantText(list).includes("공개 릴리스 반영 · 기능 화면 참고"));
+  assert.equal(descendantText(list).includes("RAM 변조 참고 시안"), false);
   const wideStripComparison = findDescendants(
     list,
     (node) => node.className === "patch-note-comparison"
@@ -1064,24 +1065,13 @@ test("patch-note images are created lazily and release replacement closes stale 
   assert.equal(wideStripComparison.length, 1);
   assert.equal(wideStripComparison[0].parentNode.classList.contains("is-wide-strip-card"), true);
 
-  __testHooks.renderPatchNotesForRelease(secondReleaseId);
-  assert.equal(dialog.open, false);
-  assert.equal(toggle.getAttribute("aria-expanded"), "false");
-  assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
-  assert.equal(element("patchNotesVersion").textContent, secondNotes.version);
-  assert.match(element("patchNotesCount").textContent, new RegExp(String(secondNotes.items.length)));
-
-  __testHooks.openPatchNotes();
-  assert.ok(descendantText(list).includes(secondNotes.items[0].title));
-  if (secondNotes.items[0].title !== firstNotes.items[0].title) {
-    assert.equal(descendantText(list).includes(firstNotes.items[0].title), false);
-  }
-
   __testHooks.renderPatchNotesForRelease("not-a-public-release");
   assert.equal(dialog.open, false);
   assert.equal(toggle.disabled, true);
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
+  assert.equal(element("patchNotesVersion").textContent, "—");
+  assert.equal(element("patchNotesCount").textContent, "준비 중");
 });
 
 test("patch-note UI explicitly distinguishes included changes from RAM reference mockups", async () => {
