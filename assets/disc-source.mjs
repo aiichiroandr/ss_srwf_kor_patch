@@ -1,4 +1,5 @@
 const MAX_CUE_BYTES = 16 * 1024;
+const MAX_DIRECTORY_ENTRIES = 64;
 
 export const SRWF_REV_B_TRACKS = Object.freeze([
   Object.freeze({
@@ -33,6 +34,10 @@ export const SRWF_REV_B_MERGED_SIZE = SRWF_REV_B_TRACKS.reduce(
 );
 
 const RAW_EXTENSION_PATTERN = /\.(?:bin|img|iso)$/i;
+const DIRECTORY_RAW_EXTENSION_PATTERN = /\.(?:bin|img)$/i;
+const DIRECTORY_UNSUPPORTED_DISC_PATTERN = /\.(?:iso|chd)$/i;
+const GENERATED_PATCH_OUTPUT_PATTERN =
+  /^SRWF-KOR-\d{8}-v\d+\.\d+-[a-f0-9]{24}\.bin$/i;
 
 export class DiscSourceError extends Error {
   constructor(code, message, options) {
@@ -49,6 +54,103 @@ function fail(code, message, options) {
 function requireExpectedSize(expectedSize) {
   if (!Number.isSafeInteger(expectedSize) || expectedSize <= 0) {
     throw new TypeError("expectedSize must be a positive safe integer");
+  }
+}
+
+function casefoldName(name) {
+  return name.normalize("NFKC").toLocaleLowerCase("en-US");
+}
+
+function validateDirectoryHandle(directoryHandle) {
+  if (
+    directoryHandle === null
+    || typeof directoryHandle !== "object"
+    || (directoryHandle.kind !== undefined && directoryHandle.kind !== "directory")
+    || typeof directoryHandle.entries !== "function"
+  ) {
+    fail("SOURCE_DIRECTORY_INVALID", "Source directory must be a readable directory handle");
+  }
+}
+
+/**
+ * Enumerate only the directory's direct children. The hard cap bounds both the
+ * work performed here and the number of handles retained from an untrusted
+ * browser picker result.
+ */
+async function readDirectFileHandles(directoryHandle) {
+  validateDirectoryHandle(directoryHandle);
+
+  const handles = [];
+  const casefoldedNames = new Set();
+  let entryCount = 0;
+  try {
+    for await (const entry of directoryHandle.entries()) {
+      if (!Array.isArray(entry) || entry.length !== 2) {
+        fail("SOURCE_DIRECTORY_INVALID", "Source directory returned an invalid entry");
+      }
+      const [name, handle] = entry;
+      if (
+        typeof name !== "string"
+        || name.length === 0
+        || name.includes("\0")
+        || name.includes("/")
+        || name.includes("\\")
+        || handle === null
+        || typeof handle !== "object"
+        || handle.name !== name
+      ) {
+        fail("SOURCE_DIRECTORY_INVALID", "Source directory returned an unsafe entry");
+      }
+
+      entryCount += 1;
+      if (entryCount > MAX_DIRECTORY_ENTRIES) {
+        fail(
+          "SOURCE_DIRECTORY_TOO_MANY_ENTRIES",
+          `Source directory may contain at most ${MAX_DIRECTORY_ENTRIES} direct entries`,
+        );
+      }
+
+      // Directory selection is intentionally non-recursive. Unrelated child
+      // folders are ignored rather than traversed or treated as source data.
+      if (handle.kind === "directory") {
+        continue;
+      }
+
+      const foldedName = casefoldName(name);
+      if (casefoldedNames.has(foldedName)) {
+        fail("SOURCE_NAME_DUPLICATE", "Source directory contains duplicate case-insensitive names");
+      }
+      casefoldedNames.add(foldedName);
+
+      if (handle.kind !== undefined && handle.kind !== "file") {
+        fail("SOURCE_DIRECTORY_INVALID", "Source directory contains an unsupported entry type");
+      }
+      if (typeof handle.getFile !== "function") {
+        fail("SOURCE_DIRECTORY_INVALID", "Source directory contains an unreadable file handle");
+      }
+      handles.push(handle);
+    }
+  } catch (error) {
+    if (error instanceof DiscSourceError) {
+      throw error;
+    }
+    fail("SOURCE_DIRECTORY_READ_FAILED", "Source directory could not be read", { cause: error });
+  }
+  return handles;
+}
+
+async function fileSizeForDirectoryCandidate(handle) {
+  try {
+    const file = await handle.getFile();
+    if (!(file instanceof Blob) || file.name !== handle.name) {
+      fail("SOURCE_FILE_INVALID", "A source directory handle returned an unexpected file");
+    }
+    return file.size;
+  } catch (error) {
+    if (error instanceof DiscSourceError) {
+      throw error;
+    }
+    fail("SOURCE_FILE_READ_FAILED", "A source directory file could not be read", { cause: error });
   }
 }
 
@@ -276,4 +378,63 @@ export async function normalizeSelectedSource(handles, expectedSize) {
   return handles.length === 1
     ? normalizeRaw(handles, files, expectedSize)
     : normalizeCueBin(handles, files, expectedSize);
+}
+
+/**
+ * Discover one supported source representation among the direct children of a
+ * user-selected folder. This never descends into subdirectories and never
+ * reads an entire disc image while deciding which handles to normalize.
+ */
+export async function normalizeSourceDirectory(directoryHandle, expectedSize) {
+  requireExpectedSize(expectedSize);
+  const handles = await readDirectFileHandles(directoryHandle);
+  const handlesByName = new Map(handles.map((handle) => [handle.name, handle]));
+  const pinnedNames = [SRWF_REV_B_CUE_NAME, ...SRWF_REV_B_TRACKS.map((track) => track.name)];
+  const cueBinHandles = pinnedNames.map((name) => handlesByName.get(name));
+  const hasCompleteCueBinSet = cueBinHandles.every((handle) => handle !== undefined);
+
+  // A completed run intentionally leaves its fresh BIN beside the user's
+  // source. Do not turn that known generated naming form into a second source
+  // candidate on the next visit to the same folder.
+  const possibleRawHandles = handles.filter((handle) => (
+    DIRECTORY_RAW_EXTENSION_PATTERN.test(handle.name)
+    && !GENERATED_PATCH_OUTPUT_PATTERN.test(handle.name)
+  ));
+  const matchingRawHandles = [];
+  for (const handle of possibleRawHandles) {
+    if (await fileSizeForDirectoryCandidate(handle) === expectedSize) {
+      matchingRawHandles.push(handle);
+    }
+  }
+
+  if (!hasCompleteCueBinSet && matchingRawHandles.length > 1) {
+    fail(
+      "SOURCE_SET_AMBIGUOUS",
+      "Source directory contains more than one supported disc representation",
+    );
+  }
+
+  let normalized;
+  if (hasCompleteCueBinSet) {
+    normalized = await normalizeSelectedSource(cueBinHandles, expectedSize);
+  } else if (matchingRawHandles.length === 1) {
+    normalized = await normalizeSelectedSource(matchingRawHandles, expectedSize);
+  } else {
+    const hasUnsupportedDisc = handles.some((handle) => DIRECTORY_UNSUPPORTED_DISC_PATTERN.test(handle.name));
+    if (hasUnsupportedDisc && possibleRawHandles.length === 0) {
+      fail(
+        "SOURCE_FORMAT_UNSUPPORTED",
+        "Cooked ISO and CHD sources are not supported; select a raw IMG/BIN or the pinned CUE/BIN set",
+      );
+    }
+    fail(
+      "SOURCE_SET_NOT_FOUND",
+      "Source directory does not contain the pinned CUE/BIN set or one exact-size raw IMG/BIN",
+    );
+  }
+
+  return Object.freeze({
+    ...normalized,
+    directoryHandle,
+  });
 }

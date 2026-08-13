@@ -15,8 +15,8 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F Rev. B 디스크 이미지로 새 한글 패치 BIN/CUE를 만드는 웹 패처"
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20260813-3">
-    <script type="module" src="assets/app.mjs?v=20260813-3"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20260813-4">
+    <script type="module" src="assets/app.mjs?v=20260813-4"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -129,17 +129,17 @@
             >
               <div class="source-zone-body">
                 <div class="zone-heading">
-                  <h3 id="source-heading">정품 원본 파일 찾기</h3>
+                  <h3 id="source-heading">정품 원본 폴더 찾기</h3>
                   <span class="zone-state" id="sourceState" role="status" aria-live="polite">선택 대기</span>
                 </div>
                 <p id="sourceHelp">
-                  합본 IMG/BIN 1개 또는 같은 폴더의 CUE와 Track 1·2·3 BIN을 한 번에 고르세요.
-                  여러 파일은 브라우저에서 순서대로 가상 결합하며 원본 파일은 변경하지 않습니다.
+                  원본 파일이 들어 있는 폴더를 한 번만 고르세요. 합본 IMG/BIN 또는
+                  CUE와 Track 1·2·3 BIN을 자동으로 찾아 순서대로 가상 결합하며 원본은 변경하지 않습니다.
                   전체 SHA-256은 패치를 실행하며 가상 결합한 원본을 한 번 읽어 검사합니다.
                 </p>
                 <button class="file-button" type="button" id="sourceButton" disabled>
                   <span class="button-symbol" aria-hidden="true">＋</span>
-                  <span id="sourceButtonText">원본 파일 선택</span>
+                  <span id="sourceButtonText">원본 폴더 선택</span>
                 </button>
                 <div class="file-selection" id="sourceSelection" hidden>
                   <span class="file-type" aria-hidden="true">RAW</span>
@@ -169,7 +169,7 @@
                 <p id="applyHint">공개 릴리스가 준비되면 패치를 실행할 수 있습니다.</p>
                 <div class="apply-actions">
                   <button class="primary-button" type="button" id="patchButton" disabled>
-                    저장 확인 · 패치 실행
+                    패치 실행
                     <span aria-hidden="true">→</span>
                   </button>
                 </div>

@@ -1,11 +1,11 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSelectedSource } from "./disc-source.mjs?v=20260813-3";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260813-4";
 import {
   getPatchNotesForRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260813-3";
+} from "./release-notes.mjs?v=20260813-4";
 
-const STATIC_ASSET_REVISION = "20260813-3";
+const STATIC_ASSET_REVISION = "20260813-4";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -160,11 +160,10 @@ function byId(id) {
 function detectFileSystemSupport() {
   return Boolean(
     window.isSecureContext
-      && typeof window.showOpenFilePicker === "function"
       && typeof window.showDirectoryPicker === "function"
       && typeof FileSystemDirectoryHandle !== "undefined"
-      && typeof FileSystemDirectoryHandle.prototype.resolve === "function"
       && typeof FileSystemDirectoryHandle.prototype.getFileHandle === "function"
+      && typeof FileSystemDirectoryHandle.prototype.entries === "function"
       && typeof globalThis.crypto?.getRandomValues === "function"
       && typeof DecompressionStream === "function"
       && typeof Worker === "function",
@@ -176,7 +175,7 @@ function showBrowserCompatibility() {
   if (state.fileSystemSupported) {
     elements.compatibilityBadge.classList.add("is-supported");
     elements.compatibilityBadge.lastChild.textContent = " 패치 지원";
-    elements.sourceHelp.textContent = "합본 IMG/BIN 1개 또는 CUE와 Track 1·2·3 BIN을 한 번에 고르세요. 여러 파일은 브라우저에서 가상 결합하며 원본은 변경하지 않습니다.";
+    elements.sourceHelp.textContent = "원본 파일이 들어 있는 폴더를 한 번만 고르세요. 합본 IMG/BIN 또는 CUE와 Track 1·2·3 BIN을 자동으로 찾아 가상 결합하며 원본은 변경하지 않습니다.";
     return;
   }
 
@@ -488,7 +487,7 @@ async function loadSelectedRelease(row) {
   elements.sourceState.className = "zone-state";
   elements.applyState.textContent = "원본 대기";
   elements.applyState.className = "zone-state";
-  elements.applyHint.textContent = "정품 원본 파일을 고르면 원본 폴더를 확인하고 새 BIN/CUE를 만들 수 있습니다.";
+  elements.applyHint.textContent = "정품 원본 폴더를 한 번 고르면 같은 폴더에 새 BIN/CUE를 만들 수 있습니다.";
 
   setWorkflowPhase("source");
   updateControls();
@@ -758,16 +757,16 @@ async function chooseSource() {
     return;
   }
 
-  let handles;
+  let directoryHandle;
   try {
-    handles = await window.showOpenFilePicker(sourcePickerOptions());
+    directoryHandle = await window.showDirectoryPicker(sourceDirectoryPickerOptions());
   } catch (error) {
     if (!isPickerCancellation(error)) {
       if (state.sourcePrepared) {
-        announce("새 원본 파일을 열지 못했습니다. 기존 원본 선택은 그대로 유지합니다.");
+        announce("새 원본 폴더를 열지 못했습니다. 기존 원본 선택은 그대로 유지합니다.");
       } else {
         clearMessages();
-        showError("원본 파일을 열 수 없습니다", "브라우저의 파일 읽기 권한을 확인한 뒤 다시 선택해 주세요.");
+        showError("원본 폴더를 열 수 없습니다", "브라우저의 폴더 읽기·쓰기 권한을 허용한 뒤 다시 선택해 주세요.");
         elements.sourceState.textContent = "열기 실패";
         elements.sourceState.className = "zone-state is-error";
         setZoneState("source", "error");
@@ -776,13 +775,13 @@ async function chooseSource() {
     return;
   }
 
-  if (!Array.isArray(handles) || handles.length === 0) {
+  if (!directoryHandle) {
     return;
   }
 
   let selection;
   try {
-    selection = await normalizeSelectedSource(handles, state.release.source.size);
+    selection = await normalizeSourceDirectory(directoryHandle, state.release.source.size);
   } catch (error) {
     const friendly = friendlyDiscSourceError(error?.code);
     if (state.sourcePrepared) {
@@ -805,6 +804,7 @@ async function chooseSource() {
   state.sourceHandles = [...selection.handles];
   state.sourceFile = selection.blob;
   state.sourceFormat = selection.format;
+  state.outputDirectoryHandle = directoryHandle;
   showSelectedSourceName(selection);
   elements.sourceSelection.hidden = false;
   elements.sourceSelection.classList.add("is-verifying");
@@ -844,20 +844,10 @@ async function chooseSource() {
   });
 }
 
-function sourcePickerOptions() {
+function sourceDirectoryPickerOptions() {
   return Object.freeze({
-    id: "srwf-stock-image",
-    multiple: true,
-    excludeAcceptAllOption: false,
-    types: [
-      {
-        description: "Saturn IMG/BIN 또는 CUE+BIN",
-        accept: {
-          "application/octet-stream": [".img", ".bin"],
-          "application/x-cue": [".cue"],
-        },
-      },
-    ],
+    id: "srwf-stock-directory",
+    mode: "readwrite",
   });
 }
 
@@ -867,46 +857,20 @@ async function applyPatch() {
   }
   clearMessages();
   setWorkflowPhase("patch");
-  elements.applyState.textContent = "저장 폴더 확인";
+  elements.applyState.textContent = "새 BIN 준비";
   elements.applyState.className = "zone-state is-working";
 
-  let outputDirectoryHandle;
-  try {
-    outputDirectoryHandle = await window.showDirectoryPicker(outputDirectoryPickerOptions(state.sourceHandle));
-  } catch (error) {
-    if (!isPickerCancellation(error)) {
-      showError("원본 폴더를 확인할 수 없습니다", "브라우저의 폴더 쓰기 권한을 확인한 뒤 다시 시도해 주세요.");
-      elements.applyState.textContent = "폴더 확인 실패";
-      elements.applyState.className = "zone-state is-error";
-      setZoneState("patch", "error");
-    } else {
-      elements.applyState.textContent = "실행 가능";
-      elements.applyState.className = "zone-state is-ready";
-      setWorkflowPhase("patch");
-    }
-    updateControls();
-    return;
-  }
-
-  if (!outputDirectoryHandle) {
-    elements.applyState.textContent = "실행 가능";
-    elements.applyState.className = "zone-state is-ready";
-    setWorkflowPhase("patch");
-    updateControls();
-    return;
-  }
-
+  const outputDirectoryHandle = state.outputDirectoryHandle;
   let outputHandle;
   try {
-    await requireDirectParentDirectory(outputDirectoryHandle, state.sourceHandles);
+    if (!outputDirectoryHandle) {
+      throw new PatcherError("OUTPUT_DIRECTORY_MISSING", "The selected source directory is unavailable");
+    }
     outputHandle = await createUnusedFileHandle(outputDirectoryHandle, state.release.target.filename);
   } catch (error) {
-    const parentMismatch = error?.code === "OUTPUT_DIRECTORY_MISMATCH";
     showError(
-      parentMismatch ? "선택한 원본 파일이 모두 있는 폴더를 골라 주세요" : "새 패치 BIN을 만들 수 없습니다",
-      parentMismatch
-        ? "앞에서 고른 IMG/BIN 또는 CUE와 BIN 세 개가 모두 바로 들어 있는 같은 폴더여야 합니다."
-        : "같은 이름의 기존 파일을 덮어쓰지 못하도록 차단했습니다. 폴더 권한과 여유 공간을 확인해 주세요.",
+      "새 패치 BIN을 만들 수 없습니다",
+      "처음 선택한 원본 폴더의 쓰기 권한과 여유 공간을 확인해 주세요. 원본 폴더를 다시 고르면 권한을 다시 요청할 수 있습니다.",
     );
     elements.applyState.textContent = "저장 준비 실패";
     elements.applyState.className = "zone-state is-error";
@@ -916,7 +880,6 @@ async function applyPatch() {
     return;
   }
 
-  state.outputDirectoryHandle = outputDirectoryHandle;
   state.outputHandle = outputHandle;
   state.patchCompleted = false;
   announce(`${outputHandle.name} 저장을 확인했습니다. 원본 검증과 패치를 시작합니다.`);
@@ -926,31 +889,6 @@ async function applyPatch() {
     releaseKey: releaseKey(state.release),
     outputHandle: state.outputHandle,
   });
-}
-
-function outputDirectoryPickerOptions(sourceHandle) {
-  return Object.freeze({
-    id: "srwf-patch-output-directory",
-    startIn: sourceHandle,
-    mode: "readwrite",
-  });
-}
-
-async function requireDirectParentDirectory(directoryHandle, sourceHandles) {
-  const handles = Array.isArray(sourceHandles) ? sourceHandles : [sourceHandles];
-  if (!handles.length || handles.some((handle) => !handle || typeof handle.name !== "string")) {
-    throw new PatcherError("OUTPUT_DIRECTORY_MISMATCH", "Source handles are unavailable");
-  }
-  for (const sourceHandle of handles) {
-    const relativePath = await directoryHandle.resolve(sourceHandle);
-    if (
-      !Array.isArray(relativePath)
-      || relativePath.length !== 1
-      || relativePath[0] !== sourceHandle.name
-    ) {
-      throw new PatcherError("OUTPUT_DIRECTORY_MISMATCH", "Selected directory is not the source parent");
-    }
-  }
 }
 
 async function createUnusedFileHandle(directoryHandle, desiredName, suffixFactory = createOutputSuffix) {
@@ -1209,9 +1147,7 @@ function handleOperationComplete(message) {
     elements.applyState.textContent = "실행 가능";
     elements.applyState.className = "zone-state is-ready";
     setWorkflowPhase("patch");
-    elements.applyHint.textContent = state.sourceFormat === "cue-bin"
-      ? "패치 실행을 누르면 CUE와 BIN 세 개가 있는 폴더의 확인창이 열립니다."
-      : "패치 실행을 누르면 원본 IMG/BIN이 있는 폴더의 확인창이 열립니다.";
+    elements.applyHint.textContent = "처음 선택한 원본 폴더가 저장 위치로 준비됐습니다. 패치 실행 시 폴더를 다시 묻지 않습니다.";
     updateControls();
     announce("원본 크기가 일치합니다. 전체 SHA-256은 패치를 실행하며 검증합니다.");
     return;
@@ -1506,7 +1442,6 @@ async function discardUncommittedOutput() {
   if (state.patchCompleted) {
     return;
   }
-  state.outputDirectoryHandle = null;
   state.outputHandle = null;
 }
 
@@ -1581,16 +1516,16 @@ function resetPreparedSource() {
 
 function showSelectedSourceName(selection) {
   const isCueBin = selection.format === "cue-bin";
-  const label = isCueBin ? "원본 4개 선택됨" : `원본 선택됨 · ${selection.displayName}`;
+  const label = isCueBin ? "원본 4개 자동 확인" : `원본 자동 확인 · ${selection.displayName}`;
   const detail = isCueBin
     ? `${selection.displayName}와 CUE가 참조하는 BIN 세 개`
     : selection.displayName;
   elements.sourceButtonText.textContent = label;
-  elements.sourceButton.title = `선택됨: ${detail}. 다른 정품 원본 파일을 선택하려면 누르세요.`;
+  elements.sourceButton.title = `확인됨: ${detail}. 다른 정품 원본 폴더를 선택하려면 누르세요.`;
 }
 
 function resetSourceButtonLabel() {
-  elements.sourceButtonText.textContent = "원본 파일 선택";
+  elements.sourceButtonText.textContent = "원본 폴더 선택";
   elements.sourceButton.removeAttribute("title");
 }
 
@@ -1612,6 +1547,7 @@ function updateControls() {
     fileSystemSupported: state.fileSystemSupported,
     sourcePrepared: state.sourcePrepared,
     hasSourceHandle: Boolean(state.sourceHandle),
+    hasOutputDirectoryHandle: Boolean(state.outputDirectoryHandle),
     hasPreparationToken: Boolean(state.preparationToken),
     busy: interactionBusy,
   });
@@ -1634,6 +1570,7 @@ function deriveFileControlState({
   fileSystemSupported,
   sourcePrepared,
   hasSourceHandle,
+  hasOutputDirectoryHandle = hasSourceHandle,
   hasPreparationToken,
   busy,
 }) {
@@ -1643,6 +1580,7 @@ function deriveFileControlState({
       || !fileSystemSupported
       || !sourcePrepared
       || !hasSourceHandle
+      || !hasOutputDirectoryHandle
       || !hasPreparationToken
       || busy,
   });
@@ -1657,6 +1595,7 @@ function canApplyPatch() {
     && state.fileSystemSupported
     && state.sourcePrepared
     && state.sourceHandle
+    && state.outputDirectoryHandle
     && state.preparationToken;
 }
 
@@ -1717,29 +1656,49 @@ function showError(title, message) {
 
 function friendlyDiscSourceError(code) {
   const errors = {
+    SOURCE_DIRECTORY_INVALID: [
+      "선택한 폴더를 열 수 없습니다",
+      "원본 파일이 바로 들어 있는 일반 폴더를 선택해 주세요.",
+    ],
+    SOURCE_DIRECTORY_READ_FAILED: [
+      "원본 폴더를 읽을 수 없습니다",
+      "삼성 브라우저의 폴더 접근 권한을 허용한 뒤 원본 폴더를 다시 선택해 주세요.",
+    ],
+    SOURCE_DIRECTORY_TOO_MANY_ENTRIES: [
+      "선택한 폴더에 파일이 너무 많습니다",
+      "원본 IMG/BIN 또는 CUE와 Track 1·2·3 BIN만 둔 별도 폴더를 선택해 주세요.",
+    ],
+    SOURCE_SET_AMBIGUOUS: [
+      "패치할 원본이 두 개 이상 발견됐습니다",
+      "579 MB 크기의 원본 IMG/BIN은 하나만 남긴 폴더를 선택해 주세요. 기존 패치 결과는 다른 폴더로 옮겨 주세요.",
+    ],
+    SOURCE_SET_NOT_FOUND: [
+      "지원하는 원본을 폴더에서 찾지 못했습니다",
+      "세가 새턴 일본판 Rev. B의 합본 IMG/BIN 또는 원래 이름의 CUE와 Track 1·2·3 BIN이 바로 들어 있는 폴더를 선택해 주세요.",
+    ],
     SOURCE_FILE_COUNT_INVALID: [
       "원본 파일 수를 확인해 주세요",
-      "합본 IMG/BIN은 한 개만, 멀티트랙 원본은 CUE 한 개와 BIN 세 개를 한 번에 선택해야 합니다.",
+      "합본 IMG/BIN 하나 또는 CUE 한 개와 BIN 세 개가 바로 들어 있는 폴더를 선택해 주세요.",
     ],
     SOURCE_HANDLE_INVALID: [
-      "선택한 파일을 열 수 없습니다",
-      "폴더나 바로가기가 아닌 원본 파일만 선택한 뒤 다시 시도해 주세요.",
+      "원본 파일을 열 수 없습니다",
+      "원본 폴더 안의 파일이 이동되거나 변경되지 않았는지 확인한 뒤 폴더를 다시 선택해 주세요.",
     ],
     SOURCE_NAME_DUPLICATE: [
       "파일 이름이 중복됩니다",
-      "서로 다른 CUE 한 개와 BIN 세 개를 같은 폴더에서 선택해 주세요.",
+      "대소문자만 다른 중복 파일을 정리한 뒤 원본 폴더를 다시 선택해 주세요.",
     ],
     SOURCE_FILE_INVALID: [
       "원본 파일을 읽을 수 없습니다",
-      "파일이 이동되거나 변경되지 않았는지 확인한 뒤 네 파일을 다시 선택해 주세요.",
+      "파일이 이동되거나 변경되지 않았는지 확인한 뒤 원본 폴더를 다시 선택해 주세요.",
     ],
     SOURCE_FILE_READ_FAILED: [
       "원본 파일을 읽을 수 없습니다",
-      "파일 앱의 읽기 권한을 확인한 뒤 CUE와 BIN 세 개를 다시 선택해 주세요.",
+      "브라우저의 폴더 접근 권한을 확인한 뒤 원본 폴더를 다시 선택해 주세요.",
     ],
     SOURCE_FORMAT_UNSUPPORTED: [
       "지원하지 않는 디스크 이미지입니다",
-      "단일 raw IMG/BIN 또는 압축을 푼 CUE 한 개와 BIN 세 개를 선택해 주세요. 일반 ISO와 CHD는 아직 지원하지 않습니다.",
+      "raw IMG/BIN 또는 압축을 푼 CUE와 BIN 세 개가 든 폴더를 선택해 주세요. 일반 ISO와 CHD는 아직 지원하지 않습니다.",
     ],
     SOURCE_SIZE_MISMATCH: [
       "원본 크기가 일치하지 않습니다",
@@ -1747,15 +1706,15 @@ function friendlyDiscSourceError(code) {
     ],
     SOURCE_PROFILE_UNSUPPORTED: [
       "선택한 패치와 원본 구성이 다릅니다",
-      "슈퍼로봇대전 F 일본판 Rev. B용 CUE와 BIN 세 개를 선택해 주세요.",
+      "슈퍼로봇대전 F 일본판 Rev. B용 CUE와 BIN 세 개가 든 폴더를 선택해 주세요.",
     ],
     SOURCE_SET_INVALID: [
       "원본 네 파일을 모두 선택해 주세요",
-      "압축을 푼 같은 폴더에서 CUE 한 개와 Track 1·2·3 BIN 세 개를 한 번에 선택해야 합니다.",
+      "압축을 푼 CUE 한 개와 Track 1·2·3 BIN 세 개가 바로 들어 있는 폴더를 선택해 주세요.",
     ],
     CUE_NAME_MISMATCH: [
       "지원하는 Rev. B CUE가 아닙니다",
-      "압축을 푼 파일 이름을 바꾸지 말고 Rev. B CUE와 BIN 세 개를 모두 선택해 주세요.",
+      "압축을 푼 파일 이름을 바꾸지 말고 Rev. B CUE와 BIN 세 개가 든 폴더를 선택해 주세요.",
     ],
     CUE_SIZE_INVALID: [
       "CUE 파일을 읽을 수 없습니다",
@@ -1767,7 +1726,7 @@ function friendlyDiscSourceError(code) {
     ],
     CUE_REFERENCE_MISSING: [
       "CUE가 참조하는 BIN이 빠졌습니다",
-      "CUE와 Track 1·2·3 BIN을 같은 폴더에서 한 번에 모두 선택해 주세요.",
+      "CUE와 Track 1·2·3 BIN이 모두 바로 들어 있는 원본 폴더를 선택해 주세요.",
     ],
     TRACK_SIZE_MISMATCH: [
       "BIN 트랙 크기가 일치하지 않습니다",
@@ -1788,11 +1747,11 @@ function friendlyDiscSourceError(code) {
     ?? (cueStructureCodes.has(code)
       ? [
         "CUE 트랙 구성이 지원 원본과 다릅니다",
-        "Rev. B 원본 CUE를 수정하지 말고 Track 1·2·3 BIN과 함께 다시 선택해 주세요.",
+        "Rev. B 원본 CUE를 수정하지 말고 Track 1·2·3 BIN과 함께 둔 폴더를 다시 선택해 주세요.",
       ]
       : [
         "원본 파일 구성을 확인할 수 없습니다",
-        "합본 IMG/BIN 한 개 또는 같은 폴더의 CUE와 BIN 세 개를 한 번에 다시 선택해 주세요.",
+        "합본 IMG/BIN 한 개 또는 CUE와 BIN 세 개가 바로 들어 있는 원본 폴더를 다시 선택해 주세요.",
       ]);
   return Object.freeze({ title, message });
 }
@@ -1801,8 +1760,8 @@ function friendlyWorkerError(code) {
   const errors = {
     SOURCE_SIZE_MISMATCH: ["원본 크기가 일치하지 않습니다", "지원하는 정품 원본 IMG/BIN 또는 CUE+BIN 구성인지 확인해 주세요."],
     SOURCE_HASH_MISMATCH: ["지원하는 원본이 아닙니다", "전체 SHA-256이 공개 명세와 다릅니다. 원본을 수정하지 않은 정품 이미지인지 확인해 주세요."],
-    SOURCE_FILE_INVALID: ["원본 파일을 읽을 수 없습니다", "원본 IMG/BIN 또는 CUE와 BIN 세 개를 다시 선택해 주세요."],
-    BAD_BLOB_STREAM: ["원본 파일을 끝까지 읽을 수 없습니다", "파일이 이동·변경되지 않았는지 확인한 뒤 원본 파일을 다시 선택해 주세요."],
+    SOURCE_FILE_INVALID: ["원본 파일을 읽을 수 없습니다", "원본 IMG/BIN 또는 CUE와 BIN 세 개가 든 폴더를 다시 선택해 주세요."],
+    BAD_BLOB_STREAM: ["원본 파일을 끝까지 읽을 수 없습니다", "파일이 이동·변경되지 않았는지 확인한 뒤 원본 폴더를 다시 선택해 주세요."],
     PATCH_SIZE_MISMATCH: ["패치 데이터 검증에 실패했습니다", "배포된 패치 데이터의 크기가 명세와 달라 작업을 차단했습니다."],
     PATCH_HASH_MISMATCH: ["패치 데이터 검증에 실패했습니다", "배포된 패치 데이터의 SHA-256이 명세와 달라 작업을 차단했습니다."],
     PATCH_PARSE_FAILED: ["패치 데이터를 읽을 수 없습니다", "공개 패치 형식을 안전하게 확인하지 못해 작업을 차단했습니다."],
@@ -1821,7 +1780,7 @@ function friendlyWorkerError(code) {
     OUTPUT_HANDLE_INVALID: ["출력 파일을 사용할 수 없습니다", "새 BIN 저장 위치를 다시 선택해 주세요."],
     OUTPUT_PERMISSION_DENIED: ["출력 파일을 열 수 없습니다", "선택한 위치의 쓰기 권한을 확인하거나 다른 위치를 선택해 주세요."],
     OUTPUT_QUOTA_EXCEEDED: ["저장 공간이 부족합니다", "약 579 MB의 새 BIN을 만들 수 있도록 여유 공간을 확보한 뒤 다시 시도해 주세요."],
-    PREPARED_SOURCE_MISSING: ["원본 준비 상태가 만료되었습니다", "원본 파일을 다시 선택해 패치 준비부터 진행해 주세요."],
+    PREPARED_SOURCE_MISSING: ["원본 준비 상태가 만료되었습니다", "원본 폴더를 다시 선택해 패치 준비부터 진행해 주세요."],
     WORKER_BUSY: ["이전 파일 작업이 아직 끝나지 않았습니다", "잠시 기다린 뒤 다시 시도하거나 페이지를 새로 열어 주세요."],
     WORKER_MESSAGE_INVALID: ["파일 작업 요청을 확인할 수 없습니다", "페이지를 새로 연 뒤 원본 선택부터 다시 진행해 주세요."],
     WORKER_MESSAGE_FAILED: ["이 브라우저에서 파일 작업을 시작할 수 없습니다", "데스크톱 Chrome 또는 Edge 최신 버전에서 다시 시도해 주세요."],
@@ -2069,13 +2028,11 @@ export const __testHooks = Object.freeze({
   handleIndexFailure,
   isRfc3339DateTime,
   normalizeReleaseManifest,
-  outputDirectoryPickerOptions,
   clearPatchNotes,
   closePatchNotes,
   openPatchNotes,
   renderPatchNotesForRelease,
-  requireDirectParentDirectory,
-  sourcePickerOptions,
+  sourceDirectoryPickerOptions,
   showUnsupportedBrowser,
   setWorkflowPhase,
   setZoneState,

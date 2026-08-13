@@ -11,6 +11,7 @@ import {
   SRWF_REV_B_MERGED_SIZE,
   SRWF_REV_B_TRACKS,
   normalizeSelectedSource,
+  normalizeSourceDirectory,
   parseSrwfRevBCue,
 } from "../assets/disc-source.mjs";
 
@@ -51,6 +52,21 @@ function fileHandle(file) {
     name: file.name,
     async getFile() {
       return file;
+    },
+  });
+}
+
+function directoryHandle(entries, { name = "source", readError = null } = {}) {
+  return Object.freeze({
+    kind: "directory",
+    name,
+    async *entries() {
+      if (readError) {
+        throw readError;
+      }
+      for (const entry of entries) {
+        yield [entry.name, entry];
+      }
     },
   });
 }
@@ -166,4 +182,114 @@ test("single raw BIN/IMG/ISO path remains supported and size gated", async () =>
   }
   const file = new File([new Uint8Array(31)], "stock.img");
   await expectDiscError(normalizeSelectedSource([fileHandle(file)], 32), "SOURCE_SIZE_MISMATCH");
+});
+
+test("directory discovery accepts an unordered pinned CUE/BIN set without descending", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "srwf-disc-directory-cue-"));
+  try {
+    const cue = new File([cueText()], SRWF_REV_B_CUE_NAME);
+    const tracks = await Promise.all(SRWF_REV_B_TRACKS.map(
+      (track, index) => sparseFile(directory, track.name, track.size, index + 1),
+    ));
+    const priorOutput = await sparseFile(directory, "previous-patched.bin", SRWF_REV_B_MERGED_SIZE, 9);
+    let nestedRead = false;
+    const nestedDirectory = Object.freeze({
+      kind: "directory",
+      name: "unrelated-subfolder",
+      async *entries() {
+        nestedRead = true;
+        throw new Error("must not descend");
+      },
+    });
+    const selectedDirectory = directoryHandle([
+      nestedDirectory,
+      fileHandle(tracks[2]),
+      fileHandle(priorOutput),
+      fileHandle(cue),
+      fileHandle(tracks[0]),
+      fileHandle(tracks[1]),
+    ]);
+
+    const normalized = await normalizeSourceDirectory(selectedDirectory, SRWF_REV_B_MERGED_SIZE);
+    assert.equal(normalized.format, "cue-bin");
+    assert.equal(normalized.directoryHandle, selectedDirectory);
+    assert.equal(normalized.displayName, SRWF_REV_B_CUE_NAME);
+    assert.deepEqual(normalized.trackFiles.map((file) => file.name), SRWF_REV_B_TRACKS.map((track) => track.name));
+    assert.equal(nestedRead, false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("directory discovery accepts one exact-size IMG/BIN and ignores unrelated files", async () => {
+  for (const rawName of ["stock.img", "stock.bin"]) {
+    const raw = new File([new Uint8Array(32)], rawName);
+    const selectedDirectory = directoryHandle([
+      fileHandle(new File(["notes"], "readme.txt")),
+      fileHandle(raw),
+    ]);
+    const normalized = await normalizeSourceDirectory(selectedDirectory, 32);
+    assert.equal(normalized.format, "raw");
+    assert.equal(normalized.blob, raw);
+    assert.equal(normalized.directoryHandle, selectedDirectory);
+  }
+});
+
+test("directory discovery ignores a prior generated patch BIN beside one raw source", async () => {
+  const source = new File([new Uint8Array(32)], "stock.img");
+  const priorOutput = new File(
+    [new Uint8Array(32)],
+    "SRWF-KOR-20260812-v1.1-0123456789abcdef01234567.bin",
+  );
+  const selectedDirectory = directoryHandle([
+    fileHandle(priorOutput),
+    fileHandle(source),
+  ]);
+  const normalized = await normalizeSourceDirectory(selectedDirectory, 32);
+  assert.equal(normalized.format, "raw");
+  assert.equal(normalized.blob, source);
+});
+
+test("directory discovery rejects ambiguous full-size raw candidates without a pinned CUE set", async () => {
+  const first = new File([new Uint8Array(32)], "first.img");
+  const second = new File([new Uint8Array(32)], "second.bin");
+  await expectDiscError(
+    normalizeSourceDirectory(directoryHandle([fileHandle(first), fileHandle(second)]), 32),
+    "SOURCE_SET_AMBIGUOUS",
+  );
+});
+
+test("directory discovery caps entries and rejects duplicate casefolded file names", async () => {
+  const tooMany = Array.from({ length: 65 }, (_, index) => (
+    fileHandle(new File([Uint8Array.of(index)], `entry-${index}.txt`))
+  ));
+  await expectDiscError(
+    normalizeSourceDirectory(directoryHandle(tooMany), 32),
+    "SOURCE_DIRECTORY_TOO_MANY_ENTRIES",
+  );
+
+  const first = fileHandle(new File([new Uint8Array(32)], "Stock.img"));
+  const second = fileHandle(new File([new Uint8Array(32)], "stock.IMG"));
+  await expectDiscError(
+    normalizeSourceDirectory(directoryHandle([first, second]), 32),
+    "SOURCE_NAME_DUPLICATE",
+  );
+});
+
+test("directory discovery rejects cooked ISO/CHD, no match, invalid handles, and read failures", async () => {
+  for (const name of ["cooked.iso", "compressed.chd"]) {
+    await expectDiscError(
+      normalizeSourceDirectory(directoryHandle([fileHandle(new File([new Uint8Array(32)], name))]), 32),
+      "SOURCE_FORMAT_UNSUPPORTED",
+    );
+  }
+  await expectDiscError(
+    normalizeSourceDirectory(directoryHandle([fileHandle(new File([new Uint8Array(31)], "wrong-size.img"))]), 32),
+    "SOURCE_SET_NOT_FOUND",
+  );
+  await expectDiscError(normalizeSourceDirectory(null, 32), "SOURCE_DIRECTORY_INVALID");
+  await expectDiscError(
+    normalizeSourceDirectory(directoryHandle([], { readError: new DOMException("denied", "NotAllowedError") }), 32),
+    "SOURCE_DIRECTORY_READ_FAILED",
+  );
 });

@@ -264,9 +264,11 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /aria-labelledby="progressTitle"/);
   assert.match(html, /aria-describedby="progressDetail"/);
   assert.doesNotMatch(html, /출력 파일의 SHA-256까지 확인했습니다/);
-  assert.match(html, /여러 파일은 브라우저에서 순서대로 가상 결합하며 원본 파일은 변경하지 않습니다/);
+  assert.match(html, /원본 파일이 들어 있는 폴더를 한 번만 고르세요/);
+  assert.match(html, /자동으로 찾아 순서대로 가상 결합하며 원본은 변경하지 않습니다/);
   assert.match(html, /전체 SHA-256은 패치를 실행하며 가상 결합한 원본을 한 번 읽어 검사합니다/);
-  assert.match(html, /저장 확인 · 패치 실행/);
+  assert.match(html, />\s*패치 실행\s*</);
+  assert.doesNotMatch(html, /저장 확인 · 패치 실행/);
   assert.doesNotMatch(html, /선택 직후 전체 파일의 SHA-256/);
 });
 
@@ -275,7 +277,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260813-3";
+  const revision = "20260813-4";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -306,8 +308,8 @@ test("mobile browsers with the complete native file API are not blocked by user-
   const originalConsoleError = console.error;
 
   class CapableFileSystemDirectoryHandle {}
-  CapableFileSystemDirectoryHandle.prototype.resolve = async () => [];
   CapableFileSystemDirectoryHandle.prototype.getFileHandle = async () => null;
+  CapableFileSystemDirectoryHandle.prototype.entries = async function* entries() {};
 
   Object.defineProperty(globalThis, "navigator", {
     configurable: true,
@@ -319,7 +321,6 @@ test("mobile browsers with the complete native file API are not blocked by user-
     addEventListener() {},
     isSecureContext: true,
     location: { origin: "null" },
-    showOpenFilePicker: async () => [],
     showDirectoryPicker: async () => null,
   };
   globalThis.fetch = async () => {
@@ -372,6 +373,7 @@ test("prepared source enables patch execution without a separate output picker",
     fileSystemSupported: true,
     sourcePrepared: true,
     hasSourceHandle: true,
+    hasOutputDirectoryHandle: true,
     hasPreparationToken: true,
     busy: false,
   });
@@ -379,39 +381,37 @@ test("prepared source enables patch execution without a separate output picker",
   assert.equal(controls.patchDisabled, false);
   assert.equal("outputDisabled" in controls, false);
 
-  const sourceHandle = { name: "stock.img" };
-  const options = __testHooks.outputDirectoryPickerOptions(sourceHandle);
-  assert.equal(options.startIn, sourceHandle);
+  const options = __testHooks.sourceDirectoryPickerOptions();
   assert.equal(options.mode, "readwrite");
-  assert.equal(options.id, "srwf-patch-output-directory");
+  assert.equal(options.id, "srwf-stock-directory");
 
-  await assert.doesNotReject(() => __testHooks.requireDirectParentDirectory(
-    { resolve: async () => ["stock.img"] },
-    sourceHandle,
-  ));
-  await assert.rejects(
-    () => __testHooks.requireDirectParentDirectory(
-      { resolve: async () => ["nested", "stock.img"] },
-      sourceHandle,
-    ),
-    (error) => error?.code === "OUTPUT_DIRECTORY_MISMATCH",
-  );
+  const missingDirectory = __testHooks.deriveFileControlState({
+    releaseReady: true,
+    fileSystemSupported: true,
+    sourcePrepared: true,
+    hasSourceHandle: true,
+    hasOutputDirectoryHandle: false,
+    hasPreparationToken: true,
+    busy: false,
+  });
+  assert.equal(missingDirectory.patchDisabled, true);
 });
 
-test("source picker accepts one raw image or a four-file CUE/BIN selection", async () => {
+test("one folder picker discovers raw or CUE/BIN and is never reopened by patch execution", async () => {
   const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
 
-  const pickerOptions = __testHooks.sourcePickerOptions();
-  assert.equal(pickerOptions.multiple, true);
-  assert.equal(pickerOptions.excludeAcceptAllOption, false);
-  assert.deepEqual(pickerOptions.types[0].accept, {
-    "application/octet-stream": [".img", ".bin"],
-    "application/x-cue": [".cue"],
-  });
-  assert.match(appSource, /showOpenFilePicker\(sourcePickerOptions\(\)\)/);
-  assert.match(appSource, /normalizeSelectedSource\(handles, state\.release\.source\.size\)/);
+  const pickerOptions = __testHooks.sourceDirectoryPickerOptions();
+  assert.deepEqual(pickerOptions, { id: "srwf-stock-directory", mode: "readwrite" });
+  assert.equal((appSource.match(/showDirectoryPicker\(/g) ?? []).length, 1);
+  assert.doesNotMatch(appSource, /showOpenFilePicker\(/);
+  assert.match(appSource, /showDirectoryPicker\(sourceDirectoryPickerOptions\(\)\)/);
+  assert.match(appSource, /normalizeSourceDirectory\(directoryHandle, state\.release\.source\.size\)/);
   assert.match(appSource, /state\.sourceHandles = \[\.\.\.selection\.handles\]/);
+  assert.match(appSource, /state\.outputDirectoryHandle = directoryHandle/);
   assert.match(appSource, /sourceFile: selection\.blob/);
+  const discardBody = /async function discardUncommittedOutput\(\) \{([\s\S]*?)\n\}/.exec(appSource)?.[1] ?? "";
+  assert.doesNotMatch(discardBody, /outputDirectoryHandle\s*=\s*null/);
+  assert.match(discardBody, /outputHandle\s*=\s*null/);
 
   const multiMeta = __testHooks.sourceSelectionMeta({
     blob: new Blob([new Uint8Array(1024)]),
@@ -427,42 +427,14 @@ test("source picker accepts one raw image or a four-file CUE/BIN selection", asy
   assert.match(rawMeta, /1\.0 KB · 단일 raw 파일 · 읽기 전용 · 선택 확인/);
 });
 
-test("output directory must directly contain every selected CUE/BIN source", async () => {
-  const handles = ["disc.cue", "track1.bin", "track2.bin", "track3.bin"]
-    .map((name) => ({ name }));
-  const resolved = [];
-  await assert.doesNotReject(() => __testHooks.requireDirectParentDirectory(
-    {
-      async resolve(handle) {
-        resolved.push(handle.name);
-        return [handle.name];
-      },
-    },
-    handles,
-  ));
-  assert.deepEqual(resolved, handles.map((handle) => handle.name));
-
-  await assert.rejects(
-    () => __testHooks.requireDirectParentDirectory(
-      {
-        async resolve(handle) {
-          return handle.name === "track3.bin" ? ["nested", handle.name] : [handle.name];
-        },
-      },
-      handles,
-    ),
-    (error) => error?.code === "OUTPUT_DIRECTORY_MISMATCH",
-  );
-});
-
-test("multi-file selection errors explain how to recover on mobile", () => {
+test("folder discovery errors explain how to recover on mobile", () => {
   assert.match(
     __testHooks.friendlyDiscSourceError("SOURCE_FILE_COUNT_INVALID").message,
-    /IMG\/BIN은 한 개만.*CUE 한 개와 BIN 세 개를 한 번에/,
+    /IMG\/BIN 하나.*CUE 한 개와 BIN 세 개가 바로 들어 있는 폴더/,
   );
   assert.match(
     __testHooks.friendlyDiscSourceError("CUE_REFERENCE_MISSING").message,
-    /Track 1·2·3 BIN.*한 번에 모두 선택/,
+    /Track 1·2·3 BIN이 모두 바로 들어 있는 원본 폴더/,
   );
   assert.match(
     __testHooks.friendlyDiscSourceError("TRACK_SIZE_MISMATCH").message,
@@ -470,8 +442,19 @@ test("multi-file selection errors explain how to recover on mobile", () => {
   );
   assert.match(
     __testHooks.friendlyDiscSourceError("UNKNOWN_DISC_SOURCE_ERROR").message,
-    /CUE와 BIN 세 개를 한 번에 다시 선택/,
+    /원본 폴더를 다시 선택/,
   );
+  for (const code of [
+    "SOURCE_DIRECTORY_INVALID",
+    "SOURCE_DIRECTORY_READ_FAILED",
+    "SOURCE_DIRECTORY_TOO_MANY_ENTRIES",
+    "SOURCE_SET_AMBIGUOUS",
+    "SOURCE_SET_NOT_FOUND",
+  ]) {
+    const friendly = __testHooks.friendlyDiscSourceError(code);
+    assert.match(friendly.title, /폴더|원본/);
+    assert.match(friendly.message, /폴더/);
+  }
 });
 
 test("same-folder output creation uses a high-entropy fresh filename", async () => {
