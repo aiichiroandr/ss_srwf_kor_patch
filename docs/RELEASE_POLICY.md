@@ -4,8 +4,11 @@
 
 이 저장소는 현재 `HAS_ACCEPTED_RELEASE`이며,
 [`manifest/releases.json`](../manifest/releases.json)에
-`srwf-f-20260814-v0-1-1` 한 항목이 등록되어 있습니다. 인덱스가 제공하는 payload는
-영수증·릴리스 명세와 해시가 일치하는 희소 `.srwfp` 한 개뿐입니다. 철회된
+기본 릴리스 `srwf-f-20260815-v0-1-2`와 이전 핫픽스
+`srwf-f-20260814-v0-1-1`이 등록되어 있습니다. 각 payload는 독립된
+영수증·릴리스 명세와 해시가 일치하는 희소 `.srwfp`입니다. v0.1.2는 v0.1.1에서
+발생한 프롤로그 제목 화면의 그래픽 깨짐을 수정하며, v0.1.1은 재현과 비교를 위한
+이전 공개판으로 남습니다. 철회된
 `srwf-f-20260814-v0-1`의 manifest, acceptance receipt, payload는 공개 인덱스에서
 제외되며 검증기에 고정된 SHA-256의 바이트 불변 역사 자료로만 남습니다.
 
