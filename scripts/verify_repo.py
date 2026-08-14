@@ -152,6 +152,20 @@ PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
     "assets/patch-notes/srwf-final-v0-1-karaoke-caption-after.png": "050abe1022b43aaeffdfdb56a2e8abaf1fdebebc7a3fb375eefb85593119d85f",
     "assets/patch-notes/srwf-final-v0-1-karaoke-caption-before.png": "5b09e30ca6f897550cdc4dce41d881a4758b618b5abdf045b360f67a23d5d221",
 }
+# The withdrawn SRWF F v0.1 release contained the rejected final-003
+# KORPROL helper gate.  Its three public artifacts remain byte-immutable
+# historical evidence, but they must never re-enter the accepted index.
+WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST: dict[str, str] = {
+    "patches/srwf-f-20260814-v0-1.srwfp": (
+        "84f9e0bfb15789464dda0afe7254489e9ab5f37f0fc2d3af9df27b204c411f68"
+    ),
+    "receipts/srwf-f-20260814-v0-1.acceptance.json": (
+        "05745c1c2edadf8c48a285668ba51aa82429298d2f0d8f6ed02c9ebe28f6dfaf"
+    ),
+    "releases/srwf-f-20260814-v0-1.json": (
+        "b4ac6d616c3f09d59eee946387de7926cc20969da4d5c0f723170cca32ac6f10"
+    ),
+}
 ACTIVE_WEB_SUFFIXES = {
     ".html", ".htm", ".shtml", ".xhtml", ".xht", ".svg",
     ".xml", ".xsl", ".xslt",
@@ -1706,12 +1720,45 @@ def validate_index(files: list[Path]) -> None:
         and PurePosixPath(name).parts[0].lower() == "receipts"
         and PurePosixPath(name).suffix.lower() == ".json"
     }
-    for name in sorted(actual_manifests - referenced_manifests):
+    withdrawn_manifests = {
+        name
+        for name in WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST
+        if name.startswith("releases/")
+    }
+    withdrawn_patches = {
+        name
+        for name in WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST
+        if name.startswith("patches/")
+    }
+    withdrawn_receipts = {
+        name
+        for name in WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST
+        if name.startswith("receipts/")
+    }
+    for name in sorted(referenced_manifests & withdrawn_manifests):
+        complain(f"withdrawn release manifest must not be indexed: {name}")
+    for name in sorted(referenced_patches & withdrawn_patches):
+        complain(f"withdrawn .srwfp payload must not be indexed: {name}")
+    for name in sorted(referenced_receipts & withdrawn_receipts):
+        complain(f"withdrawn acceptance receipt must not be indexed: {name}")
+    for name in sorted(actual_manifests - referenced_manifests - withdrawn_manifests):
         complain(f"unindexed candidate release manifest is forbidden: {name}")
-    for name in sorted(actual_patches - referenced_patches):
+    for name in sorted(actual_patches - referenced_patches - withdrawn_patches):
         complain(f"unaccepted or unindexed .srwfp payload is forbidden: {name}")
-    for name in sorted(actual_receipts - referenced_receipts):
+    for name in sorted(actual_receipts - referenced_receipts - withdrawn_receipts):
         complain(f"unindexed acceptance receipt is forbidden: {name}")
+
+
+def validate_withdrawn_release_artifacts(files: list[Path]) -> None:
+    present = {relative(path): path for path in files}
+    for name, expected_sha256 in WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST.items():
+        path = present.get(name)
+        if path is None:
+            complain(f"withdrawn historical artifact is missing: {name}")
+        elif path.is_symlink() or not path.is_file():
+            complain(f"withdrawn historical artifact is not a regular file: {name}")
+        elif sha256_file(path) != expected_sha256:
+            complain(f"withdrawn historical artifact hash mismatch: {name}")
 
 
 class ActiveMarkupInspector(HTMLParser):
@@ -2016,6 +2063,7 @@ def main() -> int:
     validate_forbidden_artifacts(files)
     validate_public_binary_assets(files)
     validate_schema_documents()
+    validate_withdrawn_release_artifacts(files)
     validate_index(files)
     validate_static_site(files)
     validate_pre_commit_hook()

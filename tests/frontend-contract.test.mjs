@@ -290,7 +290,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260814-3";
+  const revision = "20260814-4";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -945,7 +945,7 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
     const notes = getPatchNotesForRelease(releaseId);
     assert.ok(notes, `missing patch notes for ${releaseId}`);
     assert.deepEqual(Object.keys(notes).sort(), ["items", "summary", "version"]);
-    assert.match(notes.version, /^v\d+\.\d+$/);
+    assert.match(notes.version, /^v\d+\.\d+(?:\.\d+)?$/);
     assert.equal(typeof notes.summary, "string");
     assert.ok(notes.summary.trim().length > 0);
     assert.ok(Array.isArray(notes.items) && notes.items.length > 0);
@@ -981,9 +981,9 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
     }
   }
 
-  const v01Items = getPatchNotesForRelease("srwf-f-20260814-v0-1").items;
+  const v011Items = getPatchNotesForRelease("srwf-f-20260814-v0-1-1").items;
   assert.deepEqual(
-    v01Items.map((item) => item.id).sort(),
+    v011Items.map((item) => item.id).sort(),
     [
       "disconnect-confirmation",
       "parts-window-width",
@@ -996,10 +996,10 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
       "turn-end-boundary",
     ],
   );
-  assert.equal(v01Items.length, 9);
-  assert.equal(v01Items.some((item) => item.evidenceType === "ram-reference"), false);
-  assert.equal(v01Items.some((item) => item.id.endsWith("-inherited")), false);
-  const sortieCountPosition = v01Items.find((item) => item.id === "sortie-count-position");
+  assert.equal(v011Items.length, 9);
+  assert.equal(v011Items.some((item) => item.evidenceType === "ram-reference"), false);
+  assert.equal(v011Items.some((item) => item.id.endsWith("-inherited")), false);
+  const sortieCountPosition = v011Items.find((item) => item.id === "sortie-count-position");
   assert.match(sortieCountPosition.title, /NN기.*위치/);
   assert.match(sortieCountPosition.description, /출격유닛 선택.*붙어 있던.*NN기.*반각 한 칸 오른쪽/);
   assert.deepEqual(
@@ -1012,20 +1012,20 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
   );
   assert.match(sortieCountPosition.asIs.alt, /제목에 13기가 붙어/);
   assert.match(sortieCountPosition.toBe.alt, /13기 사이.*반각 한 칸/);
-  const protagonistNames = v01Items.find((item) => item.id === "protagonist-names");
+  const protagonistNames = v011Items.find((item) => item.id === "protagonist-names");
   assert.match(protagonistNames.description, /이미 한글화된.*설명과 항목명.*유지하고.*주인공 8명.*이름·애칭 표시 경로만.*한국어 데이터/);
   assert.match(protagonistNames.asIs.alt, /설명과 항목명은 한국어.*헥토르.*이름과 애칭은 일본어/);
   assert.match(protagonistNames.toBe.alt, /같은 설정.*헥토르.*한국어.*주인공 설정/);
-  assert.ok(v01Items.some((item) => item.evidenceType === "included"));
-  assert.ok(v01Items.some((item) => item.evidenceType === "included-reference"));
+  assert.ok(v011Items.some((item) => item.evidenceType === "included"));
+  assert.ok(v011Items.some((item) => item.evidenceType === "included-reference"));
   assert.equal(
-    v01Items.every((item) => ["included", "included-reference"].includes(item.evidenceType)),
+    v011Items.every((item) => ["included", "included-reference"].includes(item.evidenceType)),
     true,
   );
   assert.equal(
-    new Set(v01Items.map((item) => `${item.asIs.src}\u0000${item.toBe.src}`)).size,
-    v01Items.length,
-    "v0.1 must not repeat an AS-IS/TO-BE comparison pair",
+    new Set(v011Items.map((item) => `${item.asIs.src}\u0000${item.toBe.src}`)).size,
+    v011Items.length,
+    "v0.1.1 must not repeat an AS-IS/TO-BE comparison pair",
   );
 
   assert.deepEqual(Object.keys(publicAssetAllowlist).sort(), [...referencedAssets.keys()].sort());
@@ -1059,7 +1059,7 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
 
 test("patch-note images are created lazily and an unknown release clears stale content", async () => {
   const { getPatchNotesForRelease } = await import("../assets/release-notes.mjs");
-  const releaseId = "srwf-f-20260814-v0-1";
+  const releaseId = "srwf-f-20260814-v0-1-1";
   const notes = getPatchNotesForRelease(releaseId);
   const toggle = element("patchNotesToggle");
   const dialog = element("patchNotesDialog");

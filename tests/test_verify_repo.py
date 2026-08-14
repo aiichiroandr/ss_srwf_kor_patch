@@ -393,6 +393,41 @@ class RepositoryPolicyTests(unittest.TestCase):
                 self.assertIn("unindexed candidate release manifest", joined)
                 self.assertIn("unindexed acceptance receipt", joined)
 
+    def test_withdrawn_v01_artifacts_are_byte_immutable_and_unindexed(self) -> None:
+        verifier.errors.clear()
+        files = verifier.repository_files()
+        verifier.validate_withdrawn_release_artifacts(files)
+        self.assertEqual(verifier.errors, [])
+
+        index = json.loads((PROJECT_ROOT / "manifest/releases.json").read_text(encoding="utf-8"))
+        withdrawn_id = "srwf-f-20260814-v0-1"
+        self.assertNotIn(withdrawn_id, {row["id"] for row in index["releases"]})
+        self.assertNotIn(
+            withdrawn_id,
+            {game["defaultReleaseId"] for game in index["games"]},
+        )
+        for name, expected_sha256 in verifier.WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST.items():
+            self.assertEqual(
+                hashlib.sha256((PROJECT_ROOT / name).read_bytes()).hexdigest(),
+                expected_sha256,
+            )
+
+    def test_withdrawn_v01_artifact_tampering_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            for name in verifier.WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"tampered")
+
+            with verifier_root(root):
+                files = [path for path in root.rglob("*") if path.is_file()]
+                verifier.validate_withdrawn_release_artifacts(files)
+                self.assertEqual(
+                    sum("withdrawn historical artifact hash mismatch" in error for error in verifier.errors),
+                    len(verifier.WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST),
+                )
+
     def test_symbolic_links_are_forbidden(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()

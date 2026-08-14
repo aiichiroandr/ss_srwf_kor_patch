@@ -10,7 +10,7 @@
       "id": "srwf-f",
       "label": "슈퍼로봇대전 F",
       "status": "HAS_ACCEPTED_RELEASE",
-      "defaultReleaseId": "srwf-f-20260814-v0-1"
+      "defaultReleaseId": "srwf-f-20260814-v0-1-1"
     },
     {
       "id": "srwf-final",
@@ -48,11 +48,11 @@
   "releases": [
     {
       "gameId": "srwf-f",
-      "id": "srwf-f-20260814-v0-1",
+      "id": "srwf-f-20260814-v0-1-1",
       "state": "ACCEPTED",
-      "label": "2026.08.14 · v0.1",
-      "manifest": "releases/srwf-f-20260814-v0-1.json",
-      "manifestSha256": "b4ac6d616c3f09d59eee946387de7926cc20969da4d5c0f723170cca32ac6f10"
+      "label": "2026.08.14 · v0.1.1",
+      "manifest": "releases/srwf-f-20260814-v0-1-1.json",
+      "manifestSha256": "46a454df5cdf6f4a97c9d3ef569b8d1a5112d9f5a54e632040e1b95c2a7f00fe"
     },
     {
       "gameId": "srwf-final",

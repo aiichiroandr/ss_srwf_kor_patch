@@ -6,10 +6,12 @@ This repository is the public, static distribution surface for an accepted
 SRWF Korean patch. It is not a continuation of an internal binary lineage and
 it is not a candidate-testing area.
 
-The current repository state is `HAS_ACCEPTED_RELEASE`. The only indexed public
-release is `srwf-f-20260814-v0-1`, backed by its explicit, hash-pinned
-`ACCEPTED` receipt. Do not reintroduce withdrawn release rows or publish a new
-row without another complete acceptance chain.
+The current repository state is `HAS_ACCEPTED_RELEASE`. The indexed SRWF F
+release is `srwf-f-20260814-v0-1-1`, backed by its explicit, hash-pinned
+`ACCEPTED` receipt. The broken `srwf-f-20260814-v0-1` artifact triplet is
+withdrawn, non-indexed, and retained only as byte-immutable historical
+evidence. Do not reintroduce withdrawn release rows or publish a new row
+without another complete acceptance chain.
 
 ## Publication gate
 
