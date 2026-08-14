@@ -277,7 +277,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260814-2";
+  const revision = "20260814-3";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -491,15 +491,11 @@ test("folder discovery errors explain how to recover on mobile", () => {
   }
 });
 
-test("same-folder output creation uses a high-entropy fresh filename", async () => {
+test("same-folder output creation uses the exact fixed name and refuses existing BIN or CUE", async () => {
   const calls = [];
-  const suffixes = [
-    "111111111111111111111111",
-    "222222222222222222222222",
-  ];
   const directoryHandle = {
     async *entries() {
-      yield ["PATCHED-111111111111111111111111.BIN", { kind: "file" }];
+      yield ["unrelated.txt", { kind: "file" }];
     },
     async getFileHandle(name, options) {
       calls.push({ name, options });
@@ -517,15 +513,87 @@ test("same-folder output creation uses a high-entropy fresh filename", async () 
   const handle = await __testHooks.createUnusedFileHandle(
     directoryHandle,
     "patched.bin",
-    () => suffixes.shift(),
+    ["patched.cue"],
   );
-  assert.equal(handle.name, "patched-222222222222222222222222.bin");
+  assert.equal(handle.name, "patched.bin");
   assert.deepEqual(calls, [
-    { name: "patched-222222222222222222222222.bin", options: { create: true } },
+    { name: "patched.bin", options: { create: true } },
   ]);
+
+  for (const existingName of ["PATCHED.BIN", "Patched.Cue"]) {
+    let createCalls = 0;
+    await assert.rejects(
+      () => __testHooks.createUnusedFileHandle({
+        async *entries() {
+          yield [existingName, { kind: "file" }];
+        },
+        async getFileHandle() {
+          createCalls += 1;
+        },
+      }, "patched.bin", ["patched.cue"]),
+      (error) => error?.code === "OUTPUT_NAME_EXISTS",
+    );
+    assert.equal(createCalls, 0, "known existing outputs must never be opened or overwritten");
+  }
 
   const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
   assert.doesNotMatch(appSource, /\.removeEntry\s*\(/);
+  assert.doesNotMatch(appSource, /createOutputSuffix|\[a-f0-9\]\{24\}/);
+});
+
+test("a failed fixed-name output retries only through its session-owned handle", async () => {
+  const ownedHandle = {
+    name: "patched.bin",
+    async createWritable() {
+      return null;
+    },
+  };
+  let directoryReads = 0;
+  let createCalls = 0;
+  const directoryHandle = {
+    async *entries() {
+      directoryReads += 1;
+      yield ["patched.bin", { kind: "file" }];
+    },
+    async getFileHandle() {
+      createCalls += 1;
+      throw new Error("an owned retry must not reopen a same-name directory entry");
+    },
+  };
+
+  const retryHandle = await __testHooks.getOrCreateOwnedOutputHandle(
+    directoryHandle,
+    "patched.bin",
+    ["patched.cue"],
+    ownedHandle,
+  );
+  assert.equal(retryHandle, ownedHandle);
+  assert.equal(directoryReads, 0);
+  assert.equal(createCalls, 0);
+
+  await assert.rejects(
+    () => __testHooks.getOrCreateOwnedOutputHandle(
+      directoryHandle,
+      "other.bin",
+      [],
+      ownedHandle,
+    ),
+    (error) => error?.code === "OUTPUT_HANDLE_INVALID",
+  );
+
+  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
+  assert.match(
+    appSource,
+    /state\.cueHandle\s*=\s*cueHandle;\s*const savedCueHandle\s*=\s*await writeCueFile/s,
+  );
+  assert.match(
+    appSource,
+    /state\.cueHandle\s*=\s*null;\s*elements\.errorPanel\.hidden\s*=\s*true;/s,
+  );
+  assert.match(
+    appSource,
+    /state\.outputMode === "directory" && state\.outputHandle[\s\S]*?return;/,
+  );
 });
 
 test("same-folder output permission request keeps the Patch-button activation path", async () => {
@@ -581,21 +649,29 @@ test("output creation failures distinguish permission, space, and Android provid
     __testHooks.friendlyOutputCreationError({ code: "OUTPUT_DIRECTORY_MISSING" }).message,
     /다시 연 경우에만/,
   );
+  assert.match(
+    __testHooks.friendlyOutputCreationError({ code: "OUTPUT_NAME_EXISTS" }).title,
+    /같은 이름/,
+  );
 });
 
-test("Android output failure automatically prepares verified BIN and CUE downloads", async () => {
-  const suffix = "0123456789abcdef01234567";
+test("Android output failure automatically prepares fixed-name verified BIN and CUE downloads", async () => {
   const plan = __testHooks.createDownloadOutputPlan(
-    "SRWF-KOR-20260814-v0.1.bin",
-    () => suffix,
+    "SRWF-KOR-20260814-v0.1.1.bin",
+    "SRWF-KOR-20260814-v0.1.1.cue",
   );
   assert.deepEqual(plan, {
-    imageName: `SRWF-KOR-20260814-v0.1-${suffix}.bin`,
-    cueName: `SRWF-KOR-20260814-v0.1-${suffix}.cue`,
+    imageName: "SRWF-KOR-20260814-v0.1.1.bin",
+    cueName: "SRWF-KOR-20260814-v0.1.1.cue",
   });
+  assert.throws(
+    () => __testHooks.createDownloadOutputPlan("patched.bin", "different.cue"),
+    (error) => error?.code === "OUTPUT_NAME_INVALID",
+  );
   assert.equal(__testHooks.canOfferDownloadFallback({ name: "InvalidStateError" }), true);
   assert.equal(__testHooks.canOfferDownloadFallback({ code: "OUTPUT_PROVIDER_FAILED" }), true);
   assert.equal(__testHooks.canOfferDownloadFallback({ code: "OUTPUT_DIRECTORY_MISSING" }), false);
+  assert.equal(__testHooks.canOfferDownloadFallback({ code: "OUTPUT_NAME_EXISTS" }), false);
 
   const [appSource, html, css] = await Promise.all([
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
@@ -616,6 +692,10 @@ test("Android output failure automatically prepares verified BIN and CUE downloa
   );
   assert.match(appSource, /elements\.successTitle\.textContent = downloadOutput\s*\? "검증 완료 · BIN\/CUE 다운로드 준비"/);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.download-link \{[\s\S]*?min-height: 44px;/);
+  assert.match(css, /\.download-actions\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;/s);
+  assert.match(css, /\.download-link\s*\{[^}]*flex:\s*1 1 0;[^}]*min-width:\s*0;[^}]*justify-content:\s*center;/s);
+  assert.match(css, /\.download-help\s*\{[^}]*flex:\s*0 0 100%;[^}]*min-width:\s*0;/s);
+  assert.doesNotMatch(css, /\.download-actions\s*\{[^}]*grid-template-columns:/s);
 
   const revoked = [];
   const originalCreateObjectUrl = URL.createObjectURL;
@@ -647,16 +727,34 @@ test("Android output failure automatically prepares verified BIN and CUE downloa
   }
 });
 
+test("the accepted v0.1.1 manifest exposes clean version-only BIN and CUE names", async () => {
+  const release = JSON.parse(await readFile(
+    new URL("../releases/srwf-f-20260814-v0-1-1.json", import.meta.url),
+    "utf8",
+  ));
+  assert.equal(release.target.filename, "SRWF-KOR-20260814-v0.1.1.bin");
+  assert.equal(release.target.cueFilename, "SRWF-KOR-20260814-v0.1.1.cue");
+  assert.doesNotMatch(release.target.filename, /-[a-f0-9]{24}\.bin$/i);
+  assert.doesNotMatch(release.target.cueFilename, /-[a-f0-9]{24}\.cue$/i);
+  assert.deepEqual(
+    __testHooks.createDownloadOutputPlan(release.target.filename, release.target.cueFilename),
+    {
+      imageName: "SRWF-KOR-20260814-v0.1.1.bin",
+      cueName: "SRWF-KOR-20260814-v0.1.1.cue",
+    },
+  );
+});
+
 test("patched-image CUE exposes the accepted flat image as one continuous data track", () => {
   // The accepted public target relocates live data through sector 244948.  It
   // must therefore retain the accepted single-track runtime geometry rather than
   // reusing the stock Redump disc's original three-track boundaries.
   const cue = __testHooks.buildPatchedImageCue(
-    "srwf-kor-v5-r001-0123456789abcdef01234567.bin",
+    "srwf-kor-v5-r001.bin",
   );
   assert.equal(
     cue,
-    "FILE \"srwf-kor-v5-r001-0123456789abcdef01234567.bin\" BINARY\r\n"
+    "FILE \"srwf-kor-v5-r001.bin\" BINARY\r\n"
       + "  TRACK 01 MODE1/2352\r\n"
       + "    INDEX 01 00:00:00\r\n",
   );
@@ -667,13 +765,13 @@ test("patched-image CUE exposes the accepted flat image as one continuous data t
   );
 });
 
-test("CUE writer creates a fresh sibling file and commits its complete contents", async () => {
+test("CUE writer creates the exact fixed sibling file and commits its complete contents", async () => {
   const writes = [];
   let closeCount = 0;
   let abortCount = 0;
   const directoryHandle = {
     async getFileHandle(name, options) {
-      assert.match(name, /^srwf-kor-v5-r001-[a-f0-9]{24}\.cue$/);
+      assert.equal(name, "srwf-kor-v5-r001.cue");
       assert.deepEqual(options, { create: true });
       return {
         name,
@@ -701,12 +799,12 @@ test("CUE writer creates a fresh sibling file and commits its complete contents"
   const cueHandle = await __testHooks.writeCueFile(
     directoryHandle,
     "srwf-kor-v5-r001.cue",
-    "srwf-kor-v5-r001-feedfacefeedfacefeedface.bin",
+    "srwf-kor-v5-r001.bin",
   );
 
-  assert.match(cueHandle.name, /^srwf-kor-v5-r001-[a-f0-9]{24}\.cue$/);
+  assert.equal(cueHandle.name, "srwf-kor-v5-r001.cue");
   assert.deepEqual(writes, [
-    "FILE \"srwf-kor-v5-r001-feedfacefeedfacefeedface.bin\" BINARY\r\n"
+    "FILE \"srwf-kor-v5-r001.bin\" BINARY\r\n"
       + "  TRACK 01 MODE1/2352\r\n"
       + "    INDEX 01 00:00:00\r\n",
   ]);
@@ -752,7 +850,7 @@ test("CUE writer aborts write and close failures without masking the original er
         () => __testHooks.writeCueFile(
           directoryHandle,
           "srwf-kor-v5-r001.cue",
-          "srwf-kor-v5-r001-feedfacefeedfacefeedface.bin",
+          "srwf-kor-v5-r001.bin",
         ),
         (error) => error === operationFailure,
       );
@@ -761,6 +859,54 @@ test("CUE writer aborts write and close failures without masking the original er
       assert.equal(closeCount, failurePoint === "close" ? 1 : 0);
     });
   }
+});
+
+test("CUE retry reuses the exact handle created by this page after a write failure", async () => {
+  const operationFailure = new Error("synthetic first CUE write failure");
+  let writableCount = 0;
+  let successfulText = null;
+  const ownedCueHandle = {
+    name: "srwf-kor-v5-r001.cue",
+    async createWritable() {
+      writableCount += 1;
+      const attempt = writableCount;
+      return {
+        async write(value) {
+          if (attempt === 1) throw operationFailure;
+          successfulText = value;
+        },
+        async close() {},
+        async abort() {},
+      };
+    },
+  };
+  const directoryHandle = {
+    async *entries() {
+      yield [ownedCueHandle.name, { kind: "file" }];
+    },
+    async getFileHandle() {
+      throw new Error("retry must not reopen or overwrite the fixed-name CUE");
+    },
+  };
+
+  await assert.rejects(
+    () => __testHooks.writeCueFile(
+      directoryHandle,
+      ownedCueHandle.name,
+      "srwf-kor-v5-r001.bin",
+      ownedCueHandle,
+    ),
+    (error) => error === operationFailure,
+  );
+  const result = await __testHooks.writeCueFile(
+    directoryHandle,
+    ownedCueHandle.name,
+    "srwf-kor-v5-r001.bin",
+    ownedCueHandle,
+  );
+  assert.equal(result, ownedCueHandle);
+  assert.equal(writableCount, 2);
+  assert.match(successfulText, /^FILE "srwf-kor-v5-r001\.bin" BINARY\r\n/);
 });
 
 test("successful patch completion auto-saves CUE and exposes retry only after CUE failure", async () => {

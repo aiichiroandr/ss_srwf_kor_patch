@@ -235,19 +235,23 @@ test("directory discovery accepts one exact-size IMG/BIN and ignores unrelated f
   }
 });
 
-test("directory discovery ignores a prior generated patch BIN beside one raw source", async () => {
-  const source = new File([new Uint8Array(32)], "stock.img");
-  const priorOutput = new File(
-    [new Uint8Array(32)],
+test("directory discovery ignores fixed and legacy generated patch BINs beside one raw source", async () => {
+  for (const outputName of [
+    "SRWF-KOR-20260814-v0.1.bin",
+    "SRWF-KOR-20260814-v0.1.1.bin",
     "SRWF-KOR-20260814-v0.1-0123456789abcdef01234567.bin",
-  );
-  const selectedDirectory = directoryHandle([
-    fileHandle(priorOutput),
-    fileHandle(source),
-  ]);
-  const normalized = await normalizeSourceDirectory(selectedDirectory, 32);
-  assert.equal(normalized.format, "raw");
-  assert.equal(normalized.blob, source);
+    "SRWF-KOR-20260814-v0.1.1-0123456789abcdef01234567.bin",
+  ]) {
+    const source = new File([new Uint8Array(32)], "stock.img");
+    const priorOutput = new File([new Uint8Array(32)], outputName);
+    const selectedDirectory = directoryHandle([
+      fileHandle(priorOutput),
+      fileHandle(source),
+    ]);
+    const normalized = await normalizeSourceDirectory(selectedDirectory, 32);
+    assert.equal(normalized.format, "raw");
+    assert.equal(normalized.blob, source);
+  }
 });
 
 test("directory discovery rejects ambiguous full-size raw candidates without a pinned CUE set", async () => {

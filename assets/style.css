@@ -1149,13 +1149,16 @@ a:focus-visible {
 }
 
 .download-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
   gap: 8px;
   margin-top: 11px;
 }
 
 .download-link {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 38px;
   display: inline-flex;
   align-items: center;
@@ -1183,7 +1186,8 @@ a:focus-visible {
 }
 
 .download-help {
-  grid-column: 1 / -1;
+  flex: 0 0 100%;
+  min-width: 0;
   color: var(--ink-soft);
   font-size: 10px;
 }
