@@ -37,7 +37,7 @@ const RAW_EXTENSION_PATTERN = /\.(?:bin|img|iso)$/i;
 const DIRECTORY_RAW_EXTENSION_PATTERN = /\.(?:bin|img)$/i;
 const DIRECTORY_UNSUPPORTED_DISC_PATTERN = /\.(?:iso|chd)$/i;
 const GENERATED_PATCH_OUTPUT_PATTERN =
-  /^SRWF-KOR-\d{8}-v\d+\.\d+-[a-f0-9]{24}\.bin$/i;
+  /^SRWF-KOR-\d{8}-v\d+(?:\.\d+)+(?:-[a-f0-9]{24})?\.bin$/i;
 
 export class DiscSourceError extends Error {
   constructor(code, message, options) {

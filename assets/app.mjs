@@ -1,11 +1,11 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260814-2";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260814-3";
 import {
   getPatchNotesForRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260814-2";
+} from "./release-notes.mjs?v=20260814-3";
 
-const STATIC_ASSET_REVISION = "20260814-2";
+const STATIC_ASSET_REVISION = "20260814-3";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -128,6 +128,7 @@ const state = {
   sourcePrepared: false,
   preparationToken: null,
   outputHandle: null,
+  cueHandle: null,
   outputDirectoryHandle: null,
   outputMode: null,
   downloadFallbackReady: false,
@@ -175,7 +176,6 @@ function detectFileSystemSupport() {
       && typeof FileSystemDirectoryHandle !== "undefined"
       && typeof FileSystemDirectoryHandle.prototype.getFileHandle === "function"
       && typeof FileSystemDirectoryHandle.prototype.entries === "function"
-      && typeof globalThis.crypto?.getRandomValues === "function"
       && typeof DecompressionStream === "function"
       && typeof Worker === "function",
   );
@@ -893,7 +893,15 @@ async function applyPatch() {
       throw new PatcherError("OUTPUT_DIRECTORY_MISSING", "The selected source directory is unavailable");
     }
     await ensureDirectoryWritePermission(outputDirectoryHandle);
-    outputHandle = await createUnusedFileHandle(outputDirectoryHandle, state.release.target.filename);
+    const ownedRetryHandle = !state.patchCompleted && state.outputMode === "directory"
+      ? state.outputHandle
+      : null;
+    outputHandle = await getOrCreateOwnedOutputHandle(
+      outputDirectoryHandle,
+      state.release.target.filename,
+      state.release.target.cueFilename ? [state.release.target.cueFilename] : [],
+      ownedRetryHandle,
+    );
   } catch (error) {
     if (canOfferDownloadFallback(error)) {
       startPatchDownloadFallback({ reason: "provider" });
@@ -909,6 +917,9 @@ async function applyPatch() {
     return;
   }
 
+  if (outputHandle !== state.outputHandle) {
+    state.cueHandle = null;
+  }
   state.outputHandle = outputHandle;
   state.outputMode = "directory";
   state.downloadPlan = null;
@@ -926,11 +937,15 @@ function startPatchDownloadFallback({ reason = "retry" } = {}) {
   if (!canApplyPatch()) {
     return;
   }
-  const plan = createDownloadOutputPlan(state.release.target.filename);
+  const plan = createDownloadOutputPlan(
+    state.release.target.filename,
+    state.release.target.cueFilename,
+  );
   clearMessages();
   clearDownloadArtifacts();
   state.downloadFallbackReady = true;
   state.outputHandle = null;
+  state.cueHandle = null;
   state.outputMode = "download";
   state.downloadPlan = plan;
   state.patchCompleted = false;
@@ -954,22 +969,21 @@ function startPatchDownloadFallback({ reason = "retry" } = {}) {
   });
 }
 
-function createDownloadOutputPlan(desiredImageName, suffixFactory = createOutputSuffix) {
+function createDownloadOutputPlan(desiredImageName, desiredCueName) {
   requireSafeFilename(desiredImageName, "download target filename");
   if (!BIN_FILENAME_PATTERN.test(desiredImageName)) {
     throw new PatcherError("OUTPUT_NAME_INVALID", "Download target must be a canonical BIN filename");
   }
-  const suffix = suffixFactory();
-  if (!/^[a-f0-9]{24}$/.test(suffix)) {
-    throw new PatcherError("OUTPUT_NAME_INVALID", "Download suffix is invalid");
+  requireSafeFilename(desiredCueName, "download CUE filename");
+  if (!CUE_FILENAME_PATTERN.test(desiredCueName)) {
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Download target must include a canonical CUE filename");
   }
-  const stem = `${desiredImageName.slice(0, -4)}-${suffix}`;
   const plan = Object.freeze({
-    imageName: `${stem}.bin`,
-    cueName: `${stem}.cue`,
+    imageName: desiredImageName,
+    cueName: desiredCueName,
   });
-  if (!BIN_FILENAME_PATTERN.test(plan.imageName) || !CUE_FILENAME_PATTERN.test(plan.cueName)) {
-    throw new PatcherError("OUTPUT_NAME_INVALID", "Download filenames are invalid");
+  if (plan.imageName.slice(0, -4) !== plan.cueName.slice(0, -4)) {
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Download BIN and CUE basenames must match");
   }
   return plan;
 }
@@ -1025,7 +1039,7 @@ function installDownloadArtifacts(result, expectedPlan, expectedSize) {
   elements.downloadBinLink.setAttribute("download", result.imageName);
   elements.downloadCueLink.setAttribute("href", cueUrl);
   elements.downloadCueLink.setAttribute("download", result.cueName);
-  elements.downloadHelp.textContent = "두 파일을 각각 내려받아 이름을 바꾸지 말고 같은 폴더에 두세요.";
+  elements.downloadHelp.textContent = "두 파일을 각각 내려받아 같은 폴더에 두세요. 같은 이름의 이전 다운로드가 있으면 먼저 삭제해 이름 뒤에 (1)이 붙지 않게 해 주세요.";
   elements.downloadActions.hidden = false;
 }
 
@@ -1060,6 +1074,7 @@ function canOfferDownloadFallback(error) {
   }
   if ([
     "OUTPUT_NAME_INVALID",
+    "OUTPUT_NAME_EXISTS",
     "OUTPUT_DIRECTORY_MISSING",
     "MANIFEST_INVALID",
   ].includes(error?.code)) {
@@ -1068,7 +1083,6 @@ function canOfferDownloadFallback(error) {
   const providerCodes = new Set([
     "OUTPUT_DIRECTORY_READ_FAILED",
     "OUTPUT_HANDLE_INVALID",
-    "OUTPUT_NAME_EXHAUSTED",
     "OUTPUT_PERMISSION_DENIED",
     "OUTPUT_PROVIDER_FAILED",
     "OUTPUT_QUOTA_EXCEEDED",
@@ -1137,11 +1151,18 @@ async function ensureDirectoryWritePermission(directoryHandle) {
   }
 }
 
-async function createUnusedFileHandle(directoryHandle, desiredName, suffixFactory = createOutputSuffix) {
+async function createUnusedFileHandle(directoryHandle, desiredName, alsoRequireUnused = []) {
   requireSafeFilename(desiredName, "output filename");
-  const extensionIndex = desiredName.lastIndexOf(".");
-  const stem = desiredName.slice(0, extensionIndex);
-  const extension = desiredName.slice(extensionIndex);
+  if (!Array.isArray(alsoRequireUnused)) {
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Companion output filenames must be an array");
+  }
+  const requiredNames = [desiredName, ...alsoRequireUnused];
+  for (const name of requiredNames) {
+    requireSafeFilename(name, "output filename");
+  }
+  if (new Set(requiredNames.map((name) => name.toLocaleLowerCase("en-US"))).size !== requiredNames.length) {
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Output filenames must be distinct");
+  }
   const existingNames = new Set();
   if (typeof directoryHandle?.entries === "function") {
     try {
@@ -1154,33 +1175,38 @@ async function createUnusedFileHandle(directoryHandle, desiredName, suffixFactor
       throw new PatcherError("OUTPUT_DIRECTORY_READ_FAILED", error?.message ?? "Output directory listing failed");
     }
   }
-  for (let index = 0; index < 8; index += 1) {
-    const suffix = suffixFactory();
-    if (!/^[a-f0-9]{24}$/.test(suffix)) {
-      throw new PatcherError("OUTPUT_NAME_INVALID", "Output suffix is invalid");
-    }
-    const candidateName = `${stem}-${suffix}${extension}`;
-    if (existingNames.has(candidateName.toLocaleLowerCase("en-US"))) {
-      continue;
-    }
-    const handle = await directoryHandle.getFileHandle(candidateName, { create: true });
-    if (!handle || typeof handle.createWritable !== "function") {
-      throw new PatcherError("OUTPUT_HANDLE_INVALID", "Created output is not writable");
-    }
-    // Do not immediately call getFile() here.  Android's Storage Access
-    // Framework can expose the newly-created content URI before its metadata
-    // is readable, which incorrectly turns a successful create into an
-    // InvalidStateError/NotReadableError.  The 96-bit random basename plus the
-    // pre-create directory listing keeps existing user files out of scope.
-    return handle;
+  if (requiredNames.some((name) => existingNames.has(name.toLocaleLowerCase("en-US")))) {
+    throw new PatcherError("OUTPUT_NAME_EXISTS", "The fixed output filename already exists");
   }
-  throw new PatcherError("OUTPUT_NAME_EXHAUSTED", "No fresh output filename is available");
+  const handle = await directoryHandle.getFileHandle(desiredName, { create: true });
+  if (!handle || handle.name !== desiredName || typeof handle.createWritable !== "function") {
+    throw new PatcherError("OUTPUT_HANDLE_INVALID", "Created output is not the requested writable file");
+  }
+  // Do not immediately call getFile() here. Android's Storage Access
+  // Framework can expose a newly-created content URI before its metadata is
+  // readable. The pre-create listing prevents an existing fixed-name output
+  // from being intentionally reused or overwritten.
+  return handle;
 }
 
-function createOutputSuffix() {
-  const bytes = new Uint8Array(12);
-  globalThis.crypto.getRandomValues(bytes);
-  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+async function getOrCreateOwnedOutputHandle(
+  directoryHandle,
+  desiredName,
+  alsoRequireUnused = [],
+  ownedHandle = null,
+) {
+  if (ownedHandle !== null) {
+    requireSafeFilename(desiredName, "output filename");
+    if (
+      !ownedHandle
+      || ownedHandle.name !== desiredName
+      || typeof ownedHandle.createWritable !== "function"
+    ) {
+      throw new PatcherError("OUTPUT_HANDLE_INVALID", "The session-owned output handle is invalid");
+    }
+    return ownedHandle;
+  }
+  return createUnusedFileHandle(directoryHandle, desiredName, alsoRequireUnused);
 }
 
 async function saveCueFile() {
@@ -1206,23 +1232,42 @@ async function saveCueFile() {
   elements.cueStatus.textContent = "패치 BIN과 같은 폴더에 CUE를 만들고 있습니다.";
   updateControls();
   try {
-    const cueHandle = await writeCueFile(
+    const cueHandle = await getOrCreateOwnedOutputHandle(
+      outputDirectoryHandle,
+      cueFilename,
+      [],
+      state.cueHandle,
+    );
+    if (
+      state.cueSaveSequence !== cueSaveSequence
+      || !state.patchCompleted
+      || state.outputHandle !== outputHandle
+    ) {
+      return;
+    }
+    state.cueHandle = cueHandle;
+    const savedCueHandle = await writeCueFile(
       outputDirectoryHandle,
       cueFilename,
       outputHandle.name,
+      cueHandle,
     );
     if (
       state.cueSaveSequence === cueSaveSequence
       && state.patchCompleted
       && state.outputHandle === outputHandle
     ) {
+      // The CUE is committed. Revoke this page's retry privilege so any later
+      // call sees the existing fixed-name file and fails closed instead of
+      // reopening it for overwrite.
+      state.cueHandle = null;
       elements.errorPanel.hidden = true;
       elements.successPanel.hidden = false;
       elements.successTitle.textContent = "한국어 패치 BIN/CUE 저장을 완료했습니다";
       elements.cueButton.disabled = true;
       elements.cueButton.hidden = true;
-      elements.cueStatus.textContent = `${cueHandle.name}도 자동으로 저장했습니다.`;
-      announce(`${cueHandle.name}도 패치 BIN과 같은 폴더에 자동으로 저장했습니다.`);
+      elements.cueStatus.textContent = `${savedCueHandle.name}도 자동으로 저장했습니다.`;
+      announce(`${savedCueHandle.name}도 패치 BIN과 같은 폴더에 자동으로 저장했습니다.`);
     }
   } catch (error) {
     if (
@@ -1250,8 +1295,13 @@ function buildPatchedImageCue(imageName) {
     + "    INDEX 01 00:00:00\r\n";
 }
 
-async function writeCueFile(directoryHandle, desiredName, imageName) {
-  const cueHandle = await createUnusedFileHandle(directoryHandle, desiredName);
+async function writeCueFile(directoryHandle, desiredName, imageName, ownedHandle = null) {
+  const cueHandle = await getOrCreateOwnedOutputHandle(
+    directoryHandle,
+    desiredName,
+    [],
+    ownedHandle,
+  );
   let writable = null;
   try {
     writable = await cueHandle.createWritable({ keepExistingData: false });
@@ -1476,7 +1526,7 @@ function handleOperationComplete(message) {
     elements.successPanel.hidden = false;
     elements.applyHint.textContent = downloadOutput
       ? "검증된 BIN/CUE를 준비했습니다. 아래 두 다운로드를 각각 누른 뒤 같은 폴더에 두세요."
-      : "BIN/CUE 생성을 완료했습니다. 다시 실행하면 같은 폴더에 겹치지 않는 새 이름으로 만듭니다.";
+      : "BIN/CUE 생성을 완료했습니다. 다시 만들려면 같은 이름의 기존 결과를 먼저 옮기거나 삭제해 주세요.";
     setWorkflowPhase("complete");
     updateControls();
     announce(
@@ -1778,7 +1828,15 @@ async function discardUncommittedOutput() {
   if (state.patchCompleted) {
     return;
   }
+  // A fixed-name file entry may already exist after createWritable() aborts.
+  // Keep only the handle created by this page so a retry can reuse that exact
+  // entry without opening or overwriting an unrelated pre-existing file.
+  if (state.outputMode === "directory" && state.outputHandle) {
+    state.downloadPlan = null;
+    return;
+  }
   state.outputHandle = null;
+  state.cueHandle = null;
   state.outputMode = null;
   state.downloadPlan = null;
 }
@@ -1796,6 +1854,7 @@ function resetFileWorkflow() {
   state.sourcePrepared = false;
   state.preparationToken = null;
   state.outputHandle = null;
+  state.cueHandle = null;
   state.outputDirectoryHandle = null;
   state.outputMode = null;
   state.downloadFallbackReady = false;
@@ -1842,6 +1901,7 @@ function resetPreparedSource() {
   state.sourcePrepared = false;
   state.preparationToken = null;
   state.outputHandle = null;
+  state.cueHandle = null;
   state.outputDirectoryHandle = null;
   state.outputMode = null;
   state.downloadFallbackReady = false;
@@ -2045,6 +2105,12 @@ function friendlyOutputCreationError(error) {
     return Object.freeze({
       title: "출력 파일 이름을 안전하게 확인하지 못했습니다",
       message: "원본 폴더의 파일 목록을 다시 읽을 수 없어 기존 파일 보호를 위해 생성을 중단했습니다.",
+    });
+  }
+  if (code === "OUTPUT_NAME_EXISTS") {
+    return Object.freeze({
+      title: "같은 이름의 패치 파일이 이미 있습니다",
+      message: "기존 BIN/CUE를 다른 곳으로 옮기거나 삭제한 뒤 다시 실행해 주세요. 기존 파일은 덮어쓰지 않습니다.",
     });
   }
   return Object.freeze({
@@ -2428,6 +2494,7 @@ export const __testHooks = Object.freeze({
   canOfferDownloadFallback,
   clearDownloadArtifacts,
   createDownloadOutputPlan,
+  getOrCreateOwnedOutputHandle,
   createUnusedFileHandle,
   detectFileSystemSupport,
   deriveFileControlState,
