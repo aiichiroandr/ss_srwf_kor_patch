@@ -149,7 +149,7 @@ PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
     "assets/patch-notes/srwf-final-v0-1-battle-dialogue-before.png": "1ec3e4bfd4c72529de5ca8cac97c1e4cdd300935951cad6ae53f5d9f5f1afd21",
     "assets/patch-notes/srwf-final-v0-1-battle-speaker-after.png": "811f06a0e0f9a0570c28cf65b32dd7b06f7eca2bf36c7e03bbf39539ff6a9e0e",
     "assets/patch-notes/srwf-final-v0-1-battle-speaker-before.png": "4d2598abdae18fca2db23ca3cc69a22654f1725d53f329406c40eb12297bf8f0",
-    "assets/patch-notes/srwf-final-v0-1-karaoke-caption-after.png": "0fce046bddf4b4a2f03b3d2221b68f99e4280a63d7c3efc32084dfeb6210e6b8",
+    "assets/patch-notes/srwf-final-v0-1-karaoke-caption-after.png": "050abe1022b43aaeffdfdb56a2e8abaf1fdebebc7a3fb375eefb85593119d85f",
     "assets/patch-notes/srwf-final-v0-1-karaoke-caption-before.png": "5b09e30ca6f897550cdc4dce41d881a4758b618b5abdf045b360f67a23d5d221",
 }
 ACTIVE_WEB_SUFFIXES = {

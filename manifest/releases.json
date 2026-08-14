@@ -60,7 +60,7 @@
       "state": "ACCEPTED",
       "label": "2026.08.14 · v0.1 시험판",
       "manifest": "releases/srwf-final-20260814-v0-1.json",
-      "manifestSha256": "4996d62716f1ae86d38ba0af976bb01e89fe44956465fe514af2a3d805f2739b"
+      "manifestSha256": "172143d06e155c9fb35716c9a60bb09db628b4ac351166cd5aa49df4a6c482fb"
     }
   ]
 }

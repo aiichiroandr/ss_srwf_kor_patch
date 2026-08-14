@@ -60,7 +60,7 @@ const RAW_EXTENSION_PATTERN = /\.(?:bin|img|iso)$/i;
 const DIRECTORY_RAW_EXTENSION_PATTERN = /\.(?:bin|img)$/i;
 const DIRECTORY_UNSUPPORTED_DISC_PATTERN = /\.(?:iso|chd)$/i;
 const GENERATED_PATCH_OUTPUT_PATTERN =
-  /^SRWF(?:IN)?-KOR-\d{8}-v\d+\.\d+-[a-f0-9]{24}\.bin$/i;
+  /^SRWF(?:IN)?-KOR-\d{8}-v\d+\.\d+(?:-[a-f0-9]{24})?\.bin$/i;
 
 export class DiscSourceError extends Error {
   constructor(code, message, options) {
@@ -428,9 +428,9 @@ export async function normalizeSourceDirectory(directoryHandle, expectedSize) {
   const hasCompleteCueBinSet = pinnedNames.length > 0
     && cueBinHandles.every((handle) => handle !== undefined);
 
-  // A completed run intentionally leaves its fresh BIN beside the user's
-  // source. Do not turn that known generated naming form into a second source
-  // candidate on the next visit to the same folder.
+  // A completed run intentionally leaves its fixed-name BIN beside the user's
+  // source. Legacy random-suffix outputs are ignored too. Do not turn either
+  // generated naming form into a second source candidate on the next visit.
   const possibleRawHandles = handles.filter((handle) => (
     DIRECTORY_RAW_EXTENSION_PATTERN.test(handle.name)
     && !GENERATED_PATCH_OUTPUT_PATTERN.test(handle.name)

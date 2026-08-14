@@ -193,8 +193,8 @@ test('worker prepares without reading, applies in one pass, and keeps capability
   assert.equal(goodOutput.state.abortCalls, 0);
   assert.deepEqual(goodOutput.bytes(), fixture.target);
 
-  const imageName = 'SRWF-KOR-test-0123456789abcdef01234567.bin';
-  const cueName = 'SRWF-KOR-test-0123456789abcdef01234567.cue';
+  const imageName = 'SRWF-KOR-test.bin';
+  const cueName = 'SRWF-KOR-test.cue';
   const downloadSource = new CountingBlob([fixture.source]);
   const preparedDownload = await dispatch({
     type: 'PREPARE_SOURCE',
