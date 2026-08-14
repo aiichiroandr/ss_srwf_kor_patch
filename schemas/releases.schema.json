@@ -128,55 +128,110 @@
       "maxItems": 16,
       "uniqueItems": true,
       "items": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "gameId",
-            "id",
-            "label",
-            "size",
-            "sha256",
-            "sectorCount",
-            "sectorSize",
-            "userDataOffset",
-            "userDataSize",
-            "track"
-          ],
-          "properties": {
-            "gameId": {
-              "const": "srwf-f"
-            },
-            "id": {
-              "const": "saturn-jp-stock-track01-mode1-2352-c198a930"
-            },
-            "label": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 160,
-              "pattern": "\\S"
-            },
-            "size": {
-              "const": 578512032
-            },
-            "sha256": {
-              "const": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
-            },
-            "sectorCount": {
-              "const": 245966
-            },
-            "sectorSize": {
-              "const": 2352
-            },
-            "userDataOffset": {
-              "const": 16
-            },
-            "userDataSize": {
-              "const": 2048
-            },
-            "track": {
-              "const": "TRACK 01 MODE1/2352"
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "gameId",
+              "id",
+              "label",
+              "sectorCount",
+              "sectorSize",
+              "sha256",
+              "size",
+              "track",
+              "userDataOffset",
+              "userDataSize"
+            ],
+            "properties": {
+              "gameId": {
+                "const": "srwf-f"
+              },
+              "id": {
+                "const": "saturn-jp-stock-track01-mode1-2352-c198a930"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "\\S"
+              },
+              "size": {
+                "const": 578512032
+              },
+              "sha256": {
+                "const": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+              },
+              "sectorCount": {
+                "const": 245966
+              },
+              "sectorSize": {
+                "const": 2352
+              },
+              "userDataOffset": {
+                "const": 16
+              },
+              "userDataSize": {
+                "const": 2048
+              },
+              "track": {
+                "const": "TRACK 01 MODE1/2352"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "gameId",
+              "id",
+              "label",
+              "sectorCount",
+              "sectorSize",
+              "sha256",
+              "size",
+              "track",
+              "userDataOffset",
+              "userDataSize"
+            ],
+            "properties": {
+              "gameId": {
+                "const": "srwf-final"
+              },
+              "id": {
+                "const": "saturn-jp-stock-track01-mode1-2352-ff7192ab"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "\\S"
+              },
+              "size": {
+                "const": 520408224
+              },
+              "sha256": {
+                "const": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb"
+              },
+              "sectorCount": {
+                "const": 221262
+              },
+              "sectorSize": {
+                "const": 2352
+              },
+              "userDataOffset": {
+                "const": 16
+              },
+              "userDataSize": {
+                "const": 2048
+              },
+              "track": {
+                "const": "TRACK 01 MODE1/2352"
+              }
             }
           }
+        ]
       }
     },
     "releases": {

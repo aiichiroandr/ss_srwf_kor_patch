@@ -697,7 +697,9 @@ class RepositoryPolicyTests(unittest.TestCase):
             index = json.loads(index_path.read_text(encoding="utf-8"))
             final_game = next(game for game in index["games"] if game["id"] == "srwf-final")
             final_game["status"] = "HAS_ACCEPTED_RELEASE"
-            final_game["defaultReleaseId"] = index["releases"][0]["id"]
+            first_f_release = next(row for row in index["releases"] if row["gameId"] == "srwf-f")
+            final_game["defaultReleaseId"] = first_f_release["id"]
+            index["releases"] = [row for row in index["releases"] if row["gameId"] != "srwf-final"]
             write_json(index_path, index)
 
             with verifier_root(root):

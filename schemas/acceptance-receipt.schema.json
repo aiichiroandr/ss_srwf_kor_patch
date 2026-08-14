@@ -33,10 +33,16 @@
       "format": "date-time"
     },
     "stockProfileId": {
-      "const": "saturn-jp-stock-track01-mode1-2352-c198a930"
+      "enum": [
+        "saturn-jp-stock-track01-mode1-2352-c198a930",
+        "saturn-jp-stock-track01-mode1-2352-ff7192ab"
+      ]
     },
     "sourceSha256": {
-      "const": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+      "enum": [
+        "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+        "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb"
+      ]
     },
     "targetSha256": {
       "type": "string",

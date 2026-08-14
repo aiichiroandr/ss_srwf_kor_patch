@@ -176,6 +176,19 @@ const STOCK_PROFILE = Object.freeze({
   track: "TRACK 01 MODE1/2352",
 });
 
+const FINAL_STOCK_PROFILE = Object.freeze({
+  gameId: "srwf-final",
+  id: "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+  label: "검증된 세가 새턴 일본어판 원본 (F 완결편)",
+  size: 520408224,
+  sha256: "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+  sectorCount: 221262,
+  sectorSize: 2352,
+  userDataOffset: 16,
+  userDataSize: 2048,
+  track: "TRACK 01 MODE1/2352",
+});
+
 function makeReleaseRow(overrides = {}) {
   return {
     gameId: "srwf-f",
@@ -224,7 +237,7 @@ function makeReleaseManifest(overrides = {}) {
   return { ...manifest, ...overrides };
 }
 
-const stockProfiles = __testHooks.validateStockProfiles([{ ...STOCK_PROFILE }]);
+const stockProfiles = __testHooks.validateStockProfiles([{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }]);
 const manifestUrl = new URL("../releases/v5-r001.json", import.meta.url);
 const normalizeManifest = (manifest) => __testHooks.normalizeReleaseManifest(
   manifest,
@@ -243,7 +256,7 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /비공식 팬 프로젝트, 게임 원본 미포함, 권리자 및 플랫폼과 무관/);
   assert.match(html, /비공식 · 원본 미포함/);
   assert.match(html, /권리자·플랫폼과 무관/);
-  assert.match(html, /<title>세가새턴 슈퍼로봇대전 F 한글패치<\/title>/);
+  assert.match(html, /<title>세가새턴 슈퍼로봇대전 F·F완결편 한글패치<\/title>/);
   assert.match(html, /지원 원본: 일본판 Rev\. B/);
   assert.match(html, /디스크 이미지를 한글로 패치합니다/);
   assert.doesNotMatch(html, /한국어 패치 만들기/);
@@ -277,7 +290,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260814-1";
+  const revision = "20260814-2";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -472,7 +485,7 @@ test("folder discovery errors explain how to recover on mobile", () => {
   );
   assert.match(
     __testHooks.friendlyDiscSourceError("TRACK_SIZE_MISMATCH").message,
-    /Rev\. B/,
+    /선택한 게임의 일본판 원본.*Track 1·2·3 BIN/,
   );
   assert.match(
     __testHooks.friendlyDiscSourceError("UNKNOWN_DISC_SOURCE_ERROR").message,
@@ -842,15 +855,15 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.doesNotMatch(html, /data-workflow-(?:step|zone)="output"/);
   assert.doesNotMatch(html, /id="output(?:Button|ButtonText|State|Selection|Name)"/);
   assert.doesNotMatch(html, /data-workflow-zone="(?:release|source|patch)"[^>]*hidden/);
-  assert.match(css, /html,\s*\nbody\s*\{[^}]*height:\s*100%[^}]*overflow:\s*hidden/s);
+  assert.match(css, /body\s*\{[^}]*height:\s*100%;[^}]*overflow:\s*hidden/s);
   assert.match(css, /\.patch-section\s*\{[^}]*height:\s*100%[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)/s);
-  assert.match(css, /\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(245px,[^}]*minmax\(300px,[^}]*minmax\(320px,/s);
-  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*grid-template-rows:\s*minmax\(128px,/s);
-  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.file-selection\s*\{[^}]*display:\s*none\s*!important/s);
+  assert.match(css, /\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(258px,[^}]*minmax\(292px,[^}]*minmax\(330px,/s);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*grid-auto-rows:\s*auto/s);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?body\s*\{[^}]*overflow:\s*auto/s);
   assert.match(css, /@media \(max-width: 980px\) and \(min-width: 761px\)[\s\S]*?grid-template-columns:\s*minmax\(0,[^}]*minmax\(0,[^}]*minmax\(0,/s);
-  assert.match(css, /\.workflow-zone\.is-active::after,[\s\S]*?animation:\s*workflow-border-flow/);
-  assert.match(css, /\.workflow-zone\.is-complete\s*\{[^}]*linear-gradient/s);
-  assert.match(css, /\.workflow-zone\.is-error\s*\{[^}]*linear-gradient/s);
+  assert.match(css, /\.workflow-zone\.is-busy::after,[\s\S]*?animation:\s*zone-pulse/);
+  assert.match(css, /\.workflow-zone\.is-complete\s*\{[^}]*border-color/s);
+  assert.match(css, /\.workflow-zone\.is-error\s*\{[^}]*border-color/s);
   assert.doesNotMatch(css, /\.workflow-zone\.is-complete\s+\.apply-actions\s*\{[^}]*display:\s*none/s);
   assert.match(css, /\.patch-feedback \.message-panel\.is-error p\s*\{[^}]*display:\s*block[^}]*overflow:\s*visible/s);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.workflow-zone::after\s*\{[^}]*animation:\s*none\s*!important/s);
@@ -1113,7 +1126,7 @@ test("runtime accepts an exact public index and accepted release contract", () =
       { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: "v5-r001" },
       { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
     ],
-    stock_profiles: [{ ...STOCK_PROFILE }],
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }],
     releases: [makeReleaseRow()],
   };
 
@@ -1143,7 +1156,7 @@ test("runtime rejects unknown or missing keys at every public object layer", () 
       { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: "v5-r001" },
       { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
     ],
-    stock_profiles: [{ ...STOCK_PROFILE }],
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }],
     releases: [makeReleaseRow()],
   };
   const { releases: _removedReleases, ...indexMissingKey } = exactIndex;
@@ -1193,7 +1206,7 @@ test("runtime enforces local schemas, bounded strings, RFC 3339, and lowercase i
       { id: "srwf-f", label: "슈퍼로봇대전 F", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
       { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
     ],
-    stock_profiles: [{ ...STOCK_PROFILE }],
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }],
     releases: [],
   };
   assert.throws(() => __testHooks.validateReleaseIndex({
@@ -1420,7 +1433,7 @@ test("a delayed F manifest cannot revive controls after switching to the unavail
       { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: releaseId },
       { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
     ],
-    stock_profiles: [{ ...STOCK_PROFILE }],
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }],
     releases: [makeReleaseRow({
       id: releaseId,
       manifest: `releases/${releaseId}.json`,

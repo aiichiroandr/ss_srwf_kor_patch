@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-final-20260814-v0-1",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-08-14T00:31:55Z",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+  "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+  "targetSha256": "a245ae3213345b1a647ec25b83ce4ce91353827d341d9a37a863d2cf25a4925c",
+  "patchSha256": "07301e096d5bedba7f3e57339e774100b7df308b918a29a3c851236d83a75d8e",
+  "v5Commit": "23447101a07181ecf3b416817b900ce7c9860de945f5012493da1647df264aff",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "PASS"
+  },
+  "decisionAuthority": "저장소 소유자 지시: FIN.r013 최신 작업본을 F 완결편 첫 공개 시험판 v0.1로 승인 (콜드부트·데모 경로 등가성 관찰 기준)"
+}

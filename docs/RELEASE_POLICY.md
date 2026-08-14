@@ -4,12 +4,13 @@
 
 이 저장소는 현재 `HAS_ACCEPTED_RELEASE`이며,
 [`manifest/releases.json`](../manifest/releases.json)에
-`srwf-f-20260814-v0-1` 한 항목이 등록되어 있습니다. 공개 payload는 영수증·릴리스
-명세와 해시가 일치하는 희소 `.srwfp` 한 개뿐입니다.
+`srwf-f-20260814-v0-1`과 `srwf-final-20260814-v0-1` 두 항목이 등록되어
+있습니다. 공개 payload는 영수증·릴리스 명세와 해시가 일치하는 희소
+`.srwfp` 두 개뿐입니다.
 
-게임 카탈로그에는 `srwf-f`와 `srwf-final`이 함께 등록되어 있습니다. F는
-`HAS_ACCEPTED_RELEASE`, F 완결편은 `NO_ACCEPTED_RELEASE`이며, 완결편에는
-공개 릴리스 행·기본 릴리스·원본 프로필을 아직 연결하지 않습니다.
+게임 카탈로그에는 `srwf-f`와 `srwf-final`이 함께 등록되어 있으며 두 게임
+모두 `HAS_ACCEPTED_RELEASE`입니다. 각 게임은 자신의 기본 릴리스와 stock
+원본 프로필 하나씩에 연결됩니다.
 
 후속 `latest`, 새 빌드, 실행 가능 후보, 정적 검증 통과, identity rebuild 또는
 일부 화면의 runtime 확인만으로 새 항목을 추가할 수 없습니다.
@@ -30,7 +31,9 @@
 
 ## source authority
 
-현재 공개된 F용 patch는 아래 stock profile 하나에만 적용됩니다.
+공개된 patch는 게임별 stock profile 하나에만 각각 적용됩니다.
+
+슈퍼로봇대전 F (`srwf-f`):
 
 | field | exact value |
 |---|---|
@@ -39,6 +42,16 @@
 | SHA-256 | `c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8` |
 | track | `TRACK 01 MODE1/2352` |
 | geometry | `245966 × 2352`, user data `16 + 2048` |
+
+슈퍼로봇대전 F 완결편 (`srwf-final`):
+
+| field | exact value |
+|---|---|
+| profile id | `saturn-jp-stock-track01-mode1-2352-ff7192ab` |
+| size | `520408224` bytes |
+| SHA-256 | `ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb` |
+| track | `TRACK 01 MODE1/2352` |
+| geometry | `221262 × 2352`, user data `16 + 2048` |
 
 이전 작업 자료는 의미·번역 이관 근거일 수 있지만 binary donor나 암묵적인 build
 base가 될 수 없습니다. 공개 artifact는 별도 빌드 저장소에서 stock-derived build와

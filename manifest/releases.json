@@ -15,8 +15,8 @@
     {
       "id": "srwf-final",
       "label": "슈퍼로봇대전 F 완결편",
-      "status": "NO_ACCEPTED_RELEASE",
-      "defaultReleaseId": null
+      "status": "HAS_ACCEPTED_RELEASE",
+      "defaultReleaseId": "srwf-final-20260814-v0-1"
     }
   ],
   "stock_profiles": [
@@ -31,6 +31,18 @@
       "userDataOffset": 16,
       "userDataSize": 2048,
       "track": "TRACK 01 MODE1/2352"
+    },
+    {
+      "gameId": "srwf-final",
+      "id": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+      "label": "검증된 세가 새턴 일본어판 Rev. A 전체 디스크",
+      "size": 520408224,
+      "sha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+      "sectorCount": 221262,
+      "sectorSize": 2352,
+      "userDataOffset": 16,
+      "userDataSize": 2048,
+      "track": "TRACK 01 MODE1/2352"
     }
   ],
   "releases": [
@@ -41,6 +53,14 @@
       "label": "2026.08.14 · v0.1",
       "manifest": "releases/srwf-f-20260814-v0-1.json",
       "manifestSha256": "b4ac6d616c3f09d59eee946387de7926cc20969da4d5c0f723170cca32ac6f10"
+    },
+    {
+      "gameId": "srwf-final",
+      "id": "srwf-final-20260814-v0-1",
+      "state": "ACCEPTED",
+      "label": "2026.08.14 · v0.1 시험판",
+      "manifest": "releases/srwf-final-20260814-v0-1.json",
+      "manifestSha256": "4996d62716f1ae86d38ba0af976bb01e89fe44956465fe514af2a3d805f2739b"
     }
   ]
 }

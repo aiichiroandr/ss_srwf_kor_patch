@@ -1,11 +1,11 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260814-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260814-2";
 import {
   getPatchNotesForRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260814-1";
+} from "./release-notes.mjs?v=20260814-2";
 
-const STATIC_ASSET_REVISION = "20260814-1";
+const STATIC_ASSET_REVISION = "20260814-2";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -34,6 +34,17 @@ const PINNED_STOCK_PROFILES = new Map([
     size: 578512032,
     sha256: "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
     sectorCount: 245966,
+    sectorSize: 2352,
+    userDataOffset: 16,
+    userDataSize: 2048,
+    track: "TRACK 01 MODE1/2352",
+  })],
+  ["saturn-jp-stock-track01-mode1-2352-ff7192ab", Object.freeze({
+    gameId: "srwf-final",
+    id: "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+    size: 520408224,
+    sha256: "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+    sectorCount: 221262,
     sectorSize: 2352,
     userDataOffset: 16,
     userDataSize: 2048,
@@ -192,7 +203,7 @@ function showBrowserCompatibility() {
 
   elements.compatibilityBadge.classList.add("is-unsupported");
   elements.compatibilityBadge.lastChild.textContent = " 안전 저장 불가";
-  elements.sourceHelp.textContent = "이 브라우저에서는 원본 폴더에 약 579 MB의 새 BIN/CUE를 안전하게 만들 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.";
+  elements.sourceHelp.textContent = "이 브라우저에서는 원본 폴더에 약 520~579 MB의 새 BIN/CUE를 안전하게 만들 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.";
 }
 
 async function loadReleaseIndex() {
@@ -1951,7 +1962,7 @@ function canApplyPatch() {
 }
 
 function showUnsupportedBrowser() {
-  const message = "이 브라우저에는 원본 폴더에 약 579 MB의 새 BIN/CUE를 안전하게 만들 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.";
+  const message = "이 브라우저에는 원본 폴더에 약 520~579 MB의 새 BIN/CUE를 안전하게 만들 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.";
   elements.sourceHelp.textContent = message;
   elements.sourceState.textContent = "환경 확인";
   elements.sourceState.className = "zone-state is-error";
@@ -2021,7 +2032,7 @@ function friendlyOutputCreationError(error) {
   if (name === "QuotaExceededError") {
     return Object.freeze({
       title: "새 패치 BIN을 만들 공간이 부족합니다",
-      message: "선택한 저장공간에 최소 579 MB보다 넉넉한 여유 공간을 확보한 뒤 다시 실행해 주세요.",
+      message: "선택한 저장공간에 새 BIN 크기(약 520~579 MB)보다 넉넉한 여유 공간을 확보한 뒤 다시 실행해 주세요.",
     });
   }
   if (
@@ -2069,11 +2080,11 @@ function friendlyDiscSourceError(code) {
     ],
     SOURCE_SET_AMBIGUOUS: [
       "패치할 원본이 두 개 이상 발견됐습니다",
-      "579 MB 크기의 원본 IMG/BIN은 하나만 남긴 폴더를 선택해 주세요. 기존 패치 결과는 다른 폴더로 옮겨 주세요.",
+      "릴리스와 크기가 일치하는 원본 IMG/BIN은 하나만 남긴 폴더를 선택해 주세요. 기존 패치 결과는 다른 폴더로 옮겨 주세요.",
     ],
     SOURCE_SET_NOT_FOUND: [
       "지원하는 원본을 폴더에서 찾지 못했습니다",
-      "세가 새턴 일본판 Rev. B의 합본 IMG/BIN 또는 원래 이름의 CUE와 Track 1·2·3 BIN이 바로 들어 있는 폴더를 선택해 주세요.",
+      "선택한 게임의 세가 새턴 일본판 합본 IMG/BIN 또는 원래 이름의 CUE와 Track 1·2·3 BIN이 바로 들어 있는 폴더를 선택해 주세요.",
     ],
     SOURCE_FILE_COUNT_INVALID: [
       "원본 파일 수를 확인해 주세요",
@@ -2101,19 +2112,19 @@ function friendlyDiscSourceError(code) {
     ],
     SOURCE_SIZE_MISMATCH: [
       "원본 크기가 일치하지 않습니다",
-      "세가 새턴 일본판 Rev. B의 단일 raw IMG/BIN인지 확인해 주세요.",
+      "선택한 게임의 세가 새턴 일본판 단일 raw IMG/BIN인지 확인해 주세요.",
     ],
     SOURCE_PROFILE_UNSUPPORTED: [
       "선택한 패치와 원본 구성이 다릅니다",
-      "슈퍼로봇대전 F 일본판 Rev. B용 CUE와 BIN 세 개가 든 폴더를 선택해 주세요.",
+      "선택한 게임의 일본판 CUE와 BIN 세 개가 든 폴더를 선택해 주세요.",
     ],
     SOURCE_SET_INVALID: [
       "원본 네 파일을 모두 선택해 주세요",
       "압축을 푼 CUE 한 개와 Track 1·2·3 BIN 세 개가 바로 들어 있는 폴더를 선택해 주세요.",
     ],
     CUE_NAME_MISMATCH: [
-      "지원하는 Rev. B CUE가 아닙니다",
-      "압축을 푼 파일 이름을 바꾸지 말고 Rev. B CUE와 BIN 세 개가 든 폴더를 선택해 주세요.",
+      "지원하는 원본 CUE가 아닙니다",
+      "압축을 푼 파일 이름을 바꾸지 말고 선택한 게임의 원본 CUE와 BIN 세 개가 든 폴더를 선택해 주세요.",
     ],
     CUE_SIZE_INVALID: [
       "CUE 파일을 읽을 수 없습니다",
@@ -2129,7 +2140,7 @@ function friendlyDiscSourceError(code) {
     ],
     TRACK_SIZE_MISMATCH: [
       "BIN 트랙 크기가 일치하지 않습니다",
-      "슈퍼로봇대전 F 일본판 Rev. B의 수정하지 않은 Track 1·2·3 BIN인지 확인해 주세요.",
+      "선택한 게임의 일본판 원본에서 수정하지 않은 Track 1·2·3 BIN인지 확인해 주세요.",
     ],
   };
   const cueStructureCodes = new Set([
@@ -2146,7 +2157,7 @@ function friendlyDiscSourceError(code) {
     ?? (cueStructureCodes.has(code)
       ? [
         "CUE 트랙 구성이 지원 원본과 다릅니다",
-        "Rev. B 원본 CUE를 수정하지 말고 Track 1·2·3 BIN과 함께 둔 폴더를 다시 선택해 주세요.",
+        "원본 CUE를 수정하지 말고 Track 1·2·3 BIN과 함께 둔 폴더를 다시 선택해 주세요.",
       ]
       : [
         "원본 파일 구성을 확인할 수 없습니다",
@@ -2178,7 +2189,7 @@ function friendlyWorkerError(code) {
     EXTERNAL_URL_REJECTED: ["외부 패치 주소를 차단했습니다", "패치 데이터는 이 사이트와 같은 출처에서만 읽을 수 있습니다."],
     OUTPUT_HANDLE_INVALID: ["출력 파일을 사용할 수 없습니다", "새 BIN 저장 위치를 다시 선택해 주세요."],
     OUTPUT_PERMISSION_DENIED: ["출력 파일을 열 수 없습니다", "선택한 위치의 쓰기 권한을 확인하거나 다른 위치를 선택해 주세요."],
-    OUTPUT_QUOTA_EXCEEDED: ["저장 공간이 부족합니다", "약 579 MB의 새 BIN을 만들 수 있도록 여유 공간을 확보한 뒤 다시 시도해 주세요."],
+    OUTPUT_QUOTA_EXCEEDED: ["저장 공간이 부족합니다", "약 520~579 MB의 새 BIN을 만들 수 있도록 여유 공간을 확보한 뒤 다시 시도해 주세요."],
     OUTPUT_PROVIDER_FAILED: ["브라우저가 출력 파일을 열지 못했습니다", "원본 문제는 아닙니다. 이 저장 위치의 안드로이드 파일 공급자가 새 파일 쓰기를 완료하지 못했습니다."],
     PREPARED_SOURCE_MISSING: ["원본 준비 상태가 만료되었습니다", "원본 폴더를 다시 선택해 패치 준비부터 진행해 주세요."],
     WORKER_BUSY: ["이전 파일 작업이 아직 끝나지 않았습니다", "잠시 기다린 뒤 다시 시도하거나 페이지를 새로 열어 주세요."],

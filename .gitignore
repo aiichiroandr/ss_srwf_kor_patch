@@ -6,6 +6,7 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+.claude/
 
 # Dependencies, caches, coverage, and generated output
 node_modules/
