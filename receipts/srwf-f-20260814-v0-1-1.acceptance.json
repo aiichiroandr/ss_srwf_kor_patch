@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-f-20260814-v0-1-1",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-08-14T01:56:17Z",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
+  "sourceSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+  "targetSha256": "b6364d14688f6dc68dfc4199f144c102de2061eea49f81e482276a620eff1e1c",
+  "patchSha256": "a63a985113caef05152e828776330a0b19000d1b970e428aeb72378100cf7a2c",
+  "v5Commit": "b7e60d5fb259dae32223702e5e237b23883aec48",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "PASS"
+  },
+  "decisionAuthority": "저장소 소유자 지시: 웹매펜, 패쳐 GitHub 원격까지 다 반영"
+}

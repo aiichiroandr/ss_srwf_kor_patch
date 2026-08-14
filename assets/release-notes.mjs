@@ -16,9 +16,9 @@ const release = (version, summary, items) => Object.freeze({
 });
 
 export const PATCH_NOTES = Object.freeze({
-  "srwf-f-20260814-v0-1": release(
-    "v0.1",
-    "정품 Rev. B부터 현재 승인 결과까지의 누적 변경을 하나로 묶고, 시나리오 실행 경계, 파일럿 풀네임, 지형 화살표, 저장·상세 이름, 쉼표와 대화 줄 배치, ‘대설산 떨구기’ 표기를 반영한 초기 공개판입니다.",
+  "srwf-f-20260814-v0-1-1": release(
+    "v0.1.1",
+    "v0.1의 누적 변경을 유지하면서 잘못된 KORPROL 프롤로그 helper gate를 현재 BOOT gate와 동기화해 새 게임 프롤로그가 한국어 경로를 사용하도록 바로잡은 핫픽스입니다.",
     [
       item({
         id: "protagonist-names",

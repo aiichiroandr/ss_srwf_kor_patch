@@ -4,8 +4,10 @@
 
 이 저장소는 현재 `HAS_ACCEPTED_RELEASE`이며,
 [`manifest/releases.json`](../manifest/releases.json)에
-`srwf-f-20260814-v0-1` 한 항목이 등록되어 있습니다. 공개 payload는 영수증·릴리스
-명세와 해시가 일치하는 희소 `.srwfp` 한 개뿐입니다.
+`srwf-f-20260814-v0-1-1` 한 항목이 등록되어 있습니다. 인덱스가 제공하는 payload는
+영수증·릴리스 명세와 해시가 일치하는 희소 `.srwfp` 한 개뿐입니다. 철회된
+`srwf-f-20260814-v0-1`의 manifest, acceptance receipt, payload는 공개 인덱스에서
+제외되며 검증기에 고정된 SHA-256의 바이트 불변 역사 자료로만 남습니다.
 
 게임 카탈로그에는 `srwf-f`와 `srwf-final`이 함께 등록되어 있습니다. F는
 `HAS_ACCEPTED_RELEASE`, F 완결편은 `NO_ACCEPTED_RELEASE`이며, 완결편에는
