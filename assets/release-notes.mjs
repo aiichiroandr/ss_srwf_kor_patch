@@ -18,7 +18,7 @@ const release = (version, summary, items) => Object.freeze({
 export const PATCH_NOTES = Object.freeze({
   "srwf-f-20260814-v0-1-1": release(
     "v0.1.1",
-    "v0.1의 누적 변경을 유지하면서 잘못된 KORPROL 프롤로그 helper gate를 현재 BOOT gate와 동기화해 새 게임 프롤로그가 한국어 경로를 사용하도록 바로잡은 핫픽스입니다.",
+    "v0.1에서 한국어 프롤로그가 출력되지 않던 문제를 수정한 핫픽스입니다.",
     [
       item({
         id: "protagonist-names",
@@ -184,10 +184,24 @@ export const PATCH_NOTES = Object.freeze({
       }),
     ],
   ),
+  "srwf-f-20260815-v0-1-2": release(
+    "v0.1.2",
+    "v0.1.1의 프롤로그 제목 화면에서 발생하던 그래픽 깨짐을 수정한 핫픽스입니다.",
+    [],
+  ),
 });
+
+const SUMMARY_ONLY_RELEASE_IDS = new Set([
+  "srwf-f-20260814-v0-1-1",
+  "srwf-f-20260815-v0-1-2",
+]);
 
 export function getPatchNotesForRelease(releaseId) {
   return Object.hasOwn(PATCH_NOTES, releaseId) ? PATCH_NOTES[releaseId] : null;
+}
+
+export function isSummaryOnlyPatchNotesRelease(releaseId) {
+  return SUMMARY_ONLY_RELEASE_IDS.has(releaseId);
 }
 
 export function isSafePatchNoteAssetPath(value) {

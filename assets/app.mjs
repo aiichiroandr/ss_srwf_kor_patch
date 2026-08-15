@@ -1,11 +1,12 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260814-3";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260815-1";
 import {
   getPatchNotesForRelease,
+  isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260814-3";
+} from "./release-notes.mjs?v=20260815-1";
 
-const STATIC_ASSET_REVISION = "20260814-3";
+const STATIC_ASSET_REVISION = "20260815-1";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -52,9 +53,11 @@ const elements = {
   patchNotesVersion: byId("patchNotesVersion"),
   patchNotesCount: byId("patchNotesCount"),
   patchNotesDialog: byId("patchNotesDialog"),
+  patchNotesKicker: byId("patchNotesKicker"),
   patchNotesHeading: byId("patchNotesHeading"),
   patchNotesSummary: byId("patchNotesSummary"),
   patchNotesList: byId("patchNotesList"),
+  patchNotesFooter: byId("patchNotesFooter"),
   patchNotesClose: byId("patchNotesClose"),
   sourceProfile: byId("sourceProfile"),
   targetName: byId("targetName"),
@@ -1702,9 +1705,11 @@ function renderPatchNotesForRelease(releaseId) {
     return;
   }
 
+  const summaryOnly = isSummaryOnlyPatchNotesRelease(releaseId);
+  setPatchNotesPresentation(summaryOnly);
   state.patchNotesReleaseId = releaseId;
   elements.patchNotesVersion.textContent = notes.version;
-  elements.patchNotesCount.textContent = `${notes.items.length}건 · 열기`;
+  elements.patchNotesCount.textContent = summaryOnly ? "요약 · 열기" : `${notes.items.length}건 · 열기`;
   elements.patchNotesHeading.textContent = `${notes.version} 패치노트`;
   elements.patchNotesSummary.textContent = notes.summary;
   elements.patchNotesToggle.disabled = false;
@@ -1716,6 +1721,7 @@ function hasSafePatchNoteImages(note) {
 
 function clearPatchNotes() {
   closePatchNotes();
+  setPatchNotesPresentation(false);
   state.patchNotesReleaseId = null;
   state.renderedPatchNotesReleaseId = null;
   elements.patchNotesToggle.disabled = true;
@@ -1734,10 +1740,15 @@ function openPatchNotes() {
     return;
   }
 
-  if (state.renderedPatchNotesReleaseId !== releaseId) {
+  const summaryOnly = isSummaryOnlyPatchNotesRelease(releaseId);
+  setPatchNotesPresentation(summaryOnly);
+  if (!summaryOnly && state.renderedPatchNotesReleaseId !== releaseId) {
     const fragment = document.createDocumentFragment();
     notes.items.forEach((note, index) => fragment.append(createPatchNoteCard(note, index)));
     elements.patchNotesList.replaceChildren(fragment);
+    state.renderedPatchNotesReleaseId = releaseId;
+  } else if (summaryOnly) {
+    elements.patchNotesList.replaceChildren();
     state.renderedPatchNotesReleaseId = releaseId;
   }
 
@@ -1747,7 +1758,16 @@ function openPatchNotes() {
   } else {
     elements.patchNotesDialog.setAttribute("open", "");
   }
-  announce(`${notes.version} 패치노트 ${notes.items.length}건을 열었습니다.`);
+  announce(summaryOnly
+    ? `${notes.version} 패치노트 요약을 열었습니다.`
+    : `${notes.version} 패치노트 ${notes.items.length}건을 열었습니다.`);
+}
+
+function setPatchNotesPresentation(summaryOnly) {
+  elements.patchNotesDialog.classList.toggle("is-summary-only", summaryOnly);
+  elements.patchNotesKicker.hidden = summaryOnly;
+  elements.patchNotesList.hidden = summaryOnly;
+  elements.patchNotesFooter.hidden = summaryOnly;
 }
 
 function createPatchNoteCard(note, index) {

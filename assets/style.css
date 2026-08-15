@@ -1823,6 +1823,17 @@ a:focus-visible {
   gap: 0;
 }
 
+.patch-note-dialog.is-summary-only {
+  height: max-content;
+  max-height: calc(100dvh - 28px);
+  overflow: auto;
+}
+
+.patch-note-dialog.is-summary-only .patch-note-dialog-shell {
+  height: auto;
+  grid-template-rows: auto auto;
+}
+
 .patch-note-dialog-header {
   display: flex;
   align-items: center;

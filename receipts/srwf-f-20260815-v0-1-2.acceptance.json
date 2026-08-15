@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-f-20260815-v0-1-2",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-08-15T08:30:54+09:00",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
+  "sourceSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+  "targetSha256": "12a9614e16ffc9b0020bb2536ccc2f4b8dddcd9619ff6a24823d86cfc87ea27e",
+  "patchSha256": "c4949a301f2444659d877d27e88680592c52dd813cf0f3b612e17a7f69becd8d",
+  "v5Commit": "2c1ac6245d71eeb769b637bcc568f42b05530773",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "PASS"
+  },
+  "decisionAuthority": "저장소 소유자 승인: final004의 수락된 장기 진행 범위를 계승. final005는 LBA 2029의 프롤로그 경계 4바이트만 수정하고 런타임·시각 재검증 완료. 후속 723b 검수는 v0.1.2 범위 밖."
+}

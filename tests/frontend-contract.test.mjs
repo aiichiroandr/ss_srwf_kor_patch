@@ -113,13 +113,6 @@ function findDescendants(node, predicate) {
   return result;
 }
 
-function descendantText(node) {
-  return [
-    typeof node?.textContent === "string" ? node.textContent : "",
-    ...(node?.children ?? []).map(descendantText),
-  ].join(" ");
-}
-
 const elements = new Map();
 const element = (id) => {
   if (!elements.has(id)) elements.set(id, new FakeElement());
@@ -277,7 +270,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260814-3";
+  const revision = "20260815-1";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -727,22 +720,44 @@ test("Android output failure automatically prepares fixed-name verified BIN and 
   }
 });
 
-test("the accepted v0.1.1 manifest exposes clean version-only BIN and CUE names", async () => {
-  const release = JSON.parse(await readFile(
-    new URL("../releases/srwf-f-20260814-v0-1-1.json", import.meta.url),
+test("accepted release manifests expose clean version-only BIN and CUE names", async () => {
+  for (const [manifestName, imageName, cueName] of [
+    ["srwf-f-20260814-v0-1-1.json", "SRWF-KOR-20260814-v0.1.1.bin", "SRWF-KOR-20260814-v0.1.1.cue"],
+    ["srwf-f-20260815-v0-1-2.json", "SRWF-KOR-20260815-v0.1.2.bin", "SRWF-KOR-20260815-v0.1.2.cue"],
+  ]) {
+    const release = JSON.parse(await readFile(
+      new URL(`../releases/${manifestName}`, import.meta.url),
+      "utf8",
+    ));
+    assert.equal(release.target.filename, imageName);
+    assert.equal(release.target.cueFilename, cueName);
+    assert.doesNotMatch(release.target.filename, /-[a-f0-9]{24}\.bin$/i);
+    assert.doesNotMatch(release.target.cueFilename, /-[a-f0-9]{24}\.cue$/i);
+    assert.deepEqual(
+      __testHooks.createDownloadOutputPlan(release.target.filename, release.target.cueFilename),
+      { imageName, cueName },
+    );
+  }
+});
+
+test("v0.1.2 is the default release while v0.1.1 remains selectable as history", async () => {
+  const index = JSON.parse(await readFile(
+    new URL("../manifest/releases.json", import.meta.url),
     "utf8",
   ));
-  assert.equal(release.target.filename, "SRWF-KOR-20260814-v0.1.1.bin");
-  assert.equal(release.target.cueFilename, "SRWF-KOR-20260814-v0.1.1.cue");
-  assert.doesNotMatch(release.target.filename, /-[a-f0-9]{24}\.bin$/i);
-  assert.doesNotMatch(release.target.cueFilename, /-[a-f0-9]{24}\.cue$/i);
+  const game = index.games.find((entry) => entry.id === "srwf-f");
+  const fReleases = index.releases.filter((entry) => entry.gameId === "srwf-f");
+
+  assert.equal(game.defaultReleaseId, "srwf-f-20260815-v0-1-2");
   assert.deepEqual(
-    __testHooks.createDownloadOutputPlan(release.target.filename, release.target.cueFilename),
-    {
-      imageName: "SRWF-KOR-20260814-v0.1.1.bin",
-      cueName: "SRWF-KOR-20260814-v0.1.1.cue",
-    },
+    fReleases.map((entry) => entry.id),
+    ["srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
   );
+  assert.deepEqual(
+    fReleases.map((entry) => entry.label),
+    ["2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
+  );
+  assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
 });
 
 test("patched-image CUE exposes the accepted flat image as one continuous data track", () => {
@@ -1004,7 +1019,10 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
 });
 
 test("patch notes sit between release selection and source selection without adding another workflow zone", async () => {
-  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const [html, css] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../assets/style.css", import.meta.url), "utf8"),
+  ]);
   const releaseSelectPosition = html.indexOf('id="releaseSelect"');
   const patchNotesPosition = html.indexOf('id="patchNotesToggle"');
   const sourceButtonPosition = html.indexOf('id="sourceButton"');
@@ -1026,18 +1044,27 @@ test("patch notes sit between release selection and source selection without add
   assert.match(dialogTag, /\baria-modal="true"/);
   assert.match(html, /id="patchNotesVersion"/);
   assert.match(html, /id="patchNotesCount"/);
+  assert.match(html, /id="patchNotesKicker"/);
   assert.match(html, /id="patchNotesList"/);
+  assert.match(html, /id="patchNotesFooter"/);
   const closeButton = html.match(
     /<button\b[^>]*\bid="patchNotesClose"[^>]*>[\s\S]*?<\/button>/,
   )?.[0] ?? "";
   const closeTag = closeButton.match(/^<button\b[^>]*>/)?.[0] ?? "";
   assert.match(closeTag, /\btype="button"/);
   assert.match(closeButton, /닫기/);
+  assert.match(css, /\.patch-note-dialog\.is-summary-only\s*\{[^}]*height:\s*max-content[^}]*max-height:/s);
+  assert.match(css, /\.patch-note-dialog\.is-summary-only \.patch-note-dialog-shell\s*\{[^}]*grid-template-rows:\s*auto auto/s);
 });
 
-test("every accepted release has exact, safe, one-line patch-note comparison data", async () => {
+test("every accepted release has safe patch-note data and summary-only hotfixes preserve old evidence", async () => {
   const [
-    { PATCH_NOTES, getPatchNotesForRelease, isSafePatchNoteAssetPath },
+    {
+      PATCH_NOTES,
+      getPatchNotesForRelease,
+      isSafePatchNoteAssetPath,
+      isSummaryOnlyPatchNotesRelease,
+    },
     releaseIndex,
     verifierSource,
   ] = await Promise.all([
@@ -1062,7 +1089,10 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
     assert.match(notes.version, /^v\d+\.\d+(?:\.\d+)?$/);
     assert.equal(typeof notes.summary, "string");
     assert.ok(notes.summary.trim().length > 0);
-    assert.ok(Array.isArray(notes.items) && notes.items.length > 0);
+    assert.ok(Array.isArray(notes.items));
+    if (!isSummaryOnlyPatchNotesRelease(releaseId)) {
+      assert.ok(notes.items.length > 0);
+    }
     assert.equal(new Set(notes.items.map((item) => item.id)).size, notes.items.length);
 
     for (const item of notes.items) {
@@ -1095,7 +1125,14 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
     }
   }
 
-  const v011Items = getPatchNotesForRelease("srwf-f-20260814-v0-1-1").items;
+  const v011Notes = getPatchNotesForRelease("srwf-f-20260814-v0-1-1");
+  assert.equal(v011Notes.version, "v0.1.1");
+  assert.equal(
+    v011Notes.summary,
+    "v0.1에서 한국어 프롤로그가 출력되지 않던 문제를 수정한 핫픽스입니다.",
+  );
+  assert.equal(isSummaryOnlyPatchNotesRelease("srwf-f-20260814-v0-1-1"), true);
+  const v011Items = v011Notes.items;
   assert.deepEqual(
     v011Items.map((item) => item.id).sort(),
     [
@@ -1142,6 +1179,16 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
     "v0.1.1 must not repeat an AS-IS/TO-BE comparison pair",
   );
 
+  const v012Notes = getPatchNotesForRelease("srwf-f-20260815-v0-1-2");
+  assert.equal(v012Notes.version, "v0.1.2");
+  assert.equal(
+    v012Notes.summary,
+    "v0.1.1의 프롤로그 제목 화면에서 발생하던 그래픽 깨짐을 수정한 핫픽스입니다.",
+  );
+  assert.deepEqual(v012Notes.items, []);
+  assert.equal(isSummaryOnlyPatchNotesRelease("srwf-f-20260815-v0-1-2"), true);
+  assert.equal(isSummaryOnlyPatchNotesRelease("not-a-public-release"), false);
+
   assert.deepEqual(Object.keys(publicAssetAllowlist).sort(), [...referencedAssets.keys()].sort());
   for (const [assetPath, dimensions] of referencedAssets) {
     const bytes = await readFile(new URL(`../${assetPath}`, import.meta.url));
@@ -1171,51 +1218,47 @@ test("every accepted release has exact, safe, one-line patch-note comparison dat
   }
 });
 
-test("patch-note images are created lazily and an unknown release clears stale content", async () => {
+test("hotfix patch notes open as compact summaries without rendering preserved comparison images", async () => {
   const { getPatchNotesForRelease } = await import("../assets/release-notes.mjs");
-  const releaseId = "srwf-f-20260814-v0-1-1";
-  const notes = getPatchNotesForRelease(releaseId);
   const toggle = element("patchNotesToggle");
   const dialog = element("patchNotesDialog");
   const list = element("patchNotesList");
+  const kicker = element("patchNotesKicker");
+  const footer = element("patchNotesFooter");
 
-  __testHooks.clearPatchNotes();
-  __testHooks.renderPatchNotesForRelease(releaseId);
-  assert.equal(toggle.disabled, false);
-  assert.equal(dialog.open, false);
-  assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
-  assert.equal(element("patchNotesVersion").textContent, notes.version);
-  assert.match(element("patchNotesCount").textContent, new RegExp(String(notes.items.length)));
+  for (const releaseId of [
+    "srwf-f-20260814-v0-1-1",
+    "srwf-f-20260815-v0-1-2",
+  ]) {
+    const notes = getPatchNotesForRelease(releaseId);
+    __testHooks.clearPatchNotes();
+    __testHooks.renderPatchNotesForRelease(releaseId);
+    assert.equal(toggle.disabled, false);
+    assert.equal(dialog.open, false);
+    assert.equal(dialog.classList.contains("is-summary-only"), true);
+    assert.equal(element("patchNotesVersion").textContent, notes.version);
+    assert.equal(element("patchNotesCount").textContent, "요약 · 열기");
+    assert.equal(element("patchNotesSummary").textContent, notes.summary);
+    assert.equal(list.hidden, true);
+    assert.equal(kicker.hidden, true);
+    assert.equal(footer.hidden, true);
 
-  __testHooks.openPatchNotes();
-  assert.equal(dialog.open, true);
-  assert.equal(toggle.getAttribute("aria-expanded"), "true");
-  const images = findDescendants(list, (node) => node.tagName === "IMG");
-  assert.equal(images.length, notes.items.length * 2);
-  for (const image of images) {
-    assert.equal(image.loading ?? image.getAttribute("loading"), "lazy");
-    assert.equal(image.decoding ?? image.getAttribute("decoding"), "async");
-    assert.ok((image.alt ?? image.getAttribute("alt") ?? "").trim().length > 0);
-    assert.ok(Number(image.width ?? image.getAttribute("width")) > 0);
-    assert.ok(Number(image.height ?? image.getAttribute("height")) > 0);
+    __testHooks.openPatchNotes();
+    assert.equal(dialog.open, true);
+    assert.equal(toggle.getAttribute("aria-expanded"), "true");
+    assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
+    assert.equal(findDescendants(list, (node) => node.tagName === "ARTICLE").length, 0);
   }
-  assert.ok(descendantText(list).includes(notes.items[0].title));
-  assert.ok(descendantText(list).includes("공개 릴리스 반영"));
-  assert.ok(descendantText(list).includes("공개 릴리스 반영 · 기능 화면 참고"));
-  assert.equal(descendantText(list).includes("RAM 변조 참고 시안"), false);
-  const wideStripComparison = findDescendants(
-    list,
-    (node) => node.className === "patch-note-comparison"
-      && node.classList?.contains("is-wide-strip"),
-  );
-  assert.equal(wideStripComparison.length, 1);
-  assert.equal(wideStripComparison[0].parentNode.classList.contains("is-wide-strip-card"), true);
 
   __testHooks.renderPatchNotesForRelease("not-a-public-release");
   assert.equal(dialog.open, false);
   assert.equal(toggle.disabled, true);
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
+  assert.equal(dialog.classList.contains("is-summary-only"), false);
+  assert.equal(list.hidden, false);
+  assert.equal(kicker.hidden, false);
+  assert.equal(footer.hidden, false);
   assert.equal(element("patchNotesVersion").textContent, "—");
   assert.equal(element("patchNotesCount").textContent, "준비 중");
 });

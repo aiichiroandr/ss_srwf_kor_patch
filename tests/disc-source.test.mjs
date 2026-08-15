@@ -239,8 +239,10 @@ test("directory discovery ignores fixed and legacy generated patch BINs beside o
   for (const outputName of [
     "SRWF-KOR-20260814-v0.1.bin",
     "SRWF-KOR-20260814-v0.1.1.bin",
+    "SRWF-KOR-20260815-v0.1.2.bin",
     "SRWF-KOR-20260814-v0.1-0123456789abcdef01234567.bin",
     "SRWF-KOR-20260814-v0.1.1-0123456789abcdef01234567.bin",
+    "SRWF-KOR-20260815-v0.1.2-0123456789abcdef01234567.bin",
   ]) {
     const source = new File([new Uint8Array(32)], "stock.img");
     const priorOutput = new File([new Uint8Array(32)], outputName);
