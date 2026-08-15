@@ -28,22 +28,36 @@ RFC3339_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 )
 
-STOCK_PROFILE = {
-    "id": "saturn-jp-stock-track01-mode1-2352-c198a930",
-    "size": 578_512_032,
-    "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
-    "sectorCount": 245_966,
-    "sectorSize": 2_352,
-    "userDataOffset": 16,
-    "userDataSize": 2_048,
-    "track": "TRACK 01 MODE1/2352",
+STOCK_PROFILES_BY_GAME = {
+    "srwf-f": {
+        "id": "saturn-jp-stock-track01-mode1-2352-c198a930",
+        "size": 578_512_032,
+        "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+        "sectorCount": 245_966,
+        "sectorSize": 2_352,
+        "userDataOffset": 16,
+        "userDataSize": 2_048,
+        "track": "TRACK 01 MODE1/2352",
+    },
+    "srwf-final": {
+        "id": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+        "size": 520_408_224,
+        "sha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+        "sectorCount": 221_262,
+        "sectorSize": 2_352,
+        "userDataOffset": 16,
+        "userDataSize": 2_048,
+        "track": "TRACK 01 MODE1/2352",
+    },
 }
+STOCK_PROFILE = STOCK_PROFILES_BY_GAME["srwf-f"]
 GAME_DEFINITIONS = {
     "srwf-f": {"label": "슈퍼로봇대전 F"},
     "srwf-final": {"label": "슈퍼로봇대전 F 완결편"},
 }
 PINNED_STOCK_PROFILES = {
-    STOCK_PROFILE["id"]: {"gameId": "srwf-f", **STOCK_PROFILE},
+    profile["id"]: {"gameId": game_id, **profile}
+    for game_id, profile in STOCK_PROFILES_BY_GAME.items()
 }
 PATCH_MAX = 32 * 1024 * 1024
 BODY_MAX = 64 * 1024 * 1024
@@ -131,6 +145,12 @@ PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
     "assets/patch-notes/v0-1-split-before.png": "6708283242c2ce95b6b24776593698c4a702d9f15a7c6a305421d67d49b55045",
     "assets/patch-notes/v0-1-turn-end-after.png": "9fdd3dc824328746e42fbf164652569c44da752ce5376b8aa23f3e4f7fd988a8",
     "assets/patch-notes/v0-1-turn-end-before.png": "60722fb4a8a46377a992e129daa4df1adfffdfd3523a16b6fb038a8abc42c540",
+    "assets/patch-notes/srwf-final-v0-1-battle-dialogue-after.png": "3890e509bca5ab0e89c5b09973e753b3562584d232f900e023446519da25d397",
+    "assets/patch-notes/srwf-final-v0-1-battle-dialogue-before.png": "1ec3e4bfd4c72529de5ca8cac97c1e4cdd300935951cad6ae53f5d9f5f1afd21",
+    "assets/patch-notes/srwf-final-v0-1-battle-speaker-after.png": "811f06a0e0f9a0570c28cf65b32dd7b06f7eca2bf36c7e03bbf39539ff6a9e0e",
+    "assets/patch-notes/srwf-final-v0-1-battle-speaker-before.png": "4d2598abdae18fca2db23ca3cc69a22654f1725d53f329406c40eb12297bf8f0",
+    "assets/patch-notes/srwf-final-v0-1-karaoke-caption-after.png": "050abe1022b43aaeffdfdb56a2e8abaf1fdebebc7a3fb375eefb85593119d85f",
+    "assets/patch-notes/srwf-final-v0-1-karaoke-caption-before.png": "5b09e30ca6f897550cdc4dce41d881a4758b618b5abdf045b360f67a23d5d221",
 }
 # The withdrawn SRWF F v0.1 release contained the rejected final-003
 # KORPROL helper gate. Its three public artifacts remain byte-immutable
@@ -1107,22 +1127,28 @@ def validate_schema_documents() -> None:
         expect_schema_fragment(stock_profiles.get("uniqueItems"), True, "release-index stock_profiles uniqueness")
         profile_schema = stock_profiles.get("items")
     profile_keys = set(STOCK_PROFILE) | {"gameId", "label"}
-    profile_props = schema_object_properties(profile_schema, profile_keys, "release-index stock profile")
+    expected_profile_variants = [
+        {
+            "type": "object",
+            "additionalProperties": False,
+            "required": sorted(profile_keys),
+            "properties": {
+                "gameId": {"const": game_id},
+                **{key: {"const": value} for key, value in profile.items()},
+                "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160,
+                    "pattern": r"\S",
+                },
+            },
+        }
+        for game_id, profile in STOCK_PROFILES_BY_GAME.items()
+    ]
     expect_schema_fragment(
-        profile_props.get("gameId"),
-        {"const": "srwf-f"},
-        "release-index stock profile gameId",
-    )
-    for key, expected in STOCK_PROFILE.items():
-        expect_schema_fragment(
-            profile_props.get(key),
-            {"const": expected},
-            f"release-index stock profile {key}",
-        )
-    expect_schema_fragment(
-        profile_props.get("label"),
-        {"type": "string", "minLength": 1, "maxLength": 160, "pattern": r"\S"},
-        "release-index stock profile label",
+        profile_schema,
+        {"oneOf": expected_profile_variants},
+        "release-index stock profile variants",
     )
 
     releases_array = index_props.get("releases")
@@ -1198,15 +1224,24 @@ def validate_schema_documents() -> None:
     }.items():
         expect_schema_fragment(release_props.get(key), expected, f"public release {key}")
 
-    source_props = schema_object_properties(
-        release_props.get("source"), {"profileId", "size", "sha256"}, "public release source"
+    expected_source_variants = [
+        {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["profileId", "sha256", "size"],
+            "properties": {
+                "profileId": {"const": profile["id"]},
+                "size": {"const": profile["size"]},
+                "sha256": {"const": profile["sha256"]},
+            },
+        }
+        for profile in STOCK_PROFILES_BY_GAME.values()
+    ]
+    expect_schema_fragment(
+        release_props.get("source"),
+        {"oneOf": expected_source_variants},
+        "public release source variants",
     )
-    for key, expected in {
-        "profileId": {"const": STOCK_PROFILE["id"]},
-        "size": {"const": STOCK_PROFILE["size"]},
-        "sha256": {"const": STOCK_PROFILE["sha256"]},
-    }.items():
-        expect_schema_fragment(source_props.get(key), expected, f"public release source {key}")
 
     target_props = schema_object_properties(
         release_props.get("target"), {"filename", "cueFilename", "size", "sha256"}, "public release target"
@@ -1214,7 +1249,7 @@ def validate_schema_documents() -> None:
     for key, expected in {
         "filename": {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$"},
         "cueFilename": {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$"},
-        "size": {"const": STOCK_PROFILE["size"]},
+        "size": {"enum": [profile["size"] for profile in STOCK_PROFILES_BY_GAME.values()]},
         "sha256": {"type": "string", "pattern": HEX64_PATTERN},
     }.items():
         expect_schema_fragment(target_props.get(key), expected, f"public release target {key}")
@@ -1296,8 +1331,12 @@ def validate_schema_documents() -> None:
         "releaseId": {"type": "string", "pattern": ID_PATTERN},
         "state": {"const": "ACCEPTED"},
         "acceptedAt": {"type": "string", "format": "date-time"},
-        "stockProfileId": {"const": STOCK_PROFILE["id"]},
-        "sourceSha256": {"const": STOCK_PROFILE["sha256"]},
+        "stockProfileId": {
+            "enum": [profile["id"] for profile in STOCK_PROFILES_BY_GAME.values()]
+        },
+        "sourceSha256": {
+            "enum": [profile["sha256"] for profile in STOCK_PROFILES_BY_GAME.values()]
+        },
         "targetSha256": {"type": "string", "pattern": HEX64_PATTERN},
         "patchSha256": {"type": "string", "pattern": HEX64_PATTERN},
         "v5Commit": {"type": "string", "pattern": COMMIT_PATTERN},
@@ -1308,8 +1347,15 @@ def validate_schema_documents() -> None:
         expect_schema_fragment(receipt_props.get(key), expected, f"acceptance receipt {key}")
     gate_keys = {"staticStructure", "runtimeConsumption", "visualLayout", "longPlayProgression"}
     gate_props = schema_object_properties(receipt_props.get("gates"), gate_keys, "acceptance receipt gates")
-    for key in gate_keys:
-        expect_schema_fragment(gate_props.get(key), {"const": "PASS"}, f"acceptance receipt gate {key}")
+    for key in gate_keys - {"longPlayProgression"}:
+        expect_schema_fragment(
+            gate_props.get(key), {"const": "PASS"}, f"acceptance receipt gate {key}"
+        )
+    expect_schema_fragment(
+        gate_props.get("longPlayProgression"),
+        {"enum": ["PASS", "NOT_CLAIMED"]},
+        "acceptance receipt gate longPlayProgression",
+    )
 
     core_path = ROOT / "assets/patch-core.mjs"
     if core_path.is_file():
@@ -1357,14 +1403,22 @@ def validate_acceptance_receipt(
     if not is_bounded_string(receipt.get("decisionAuthority"), maximum=160):
         complain(f"{context}: decisionAuthority must be 1-160 non-blank characters")
 
-    expected_gates = {
+    gates = receipt.get("gates")
+    expected_required_gates = {
         "staticStructure": "PASS",
         "runtimeConsumption": "PASS",
         "visualLayout": "PASS",
-        "longPlayProgression": "PASS",
     }
-    if receipt.get("gates") != expected_gates:
-        complain(f"{context}: all four exact acceptance gates must PASS")
+    if (
+        not isinstance(gates, dict)
+        or set(gates) != {*expected_required_gates, "longPlayProgression"}
+        or any(gates.get(key) != value for key, value in expected_required_gates.items())
+        or gates.get("longPlayProgression") not in {"PASS", "NOT_CLAIMED"}
+    ):
+        complain(
+            f"{context}: static/runtime/visual gates must PASS and "
+            "longPlayProgression must be PASS or NOT_CLAIMED"
+        )
 
     source_hash = source.get("sha256") if isinstance(source, dict) else None
     target_hash = target.get("sha256") if isinstance(target, dict) else None

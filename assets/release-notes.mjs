@@ -189,6 +189,66 @@ export const PATCH_NOTES = Object.freeze({
     "v0.1.1의 프롤로그 제목 화면에서 발생하던 그래픽 깨짐을 수정한 핫픽스입니다.",
     [],
   ),
+  "srwf-final-20260814-v0-1": release(
+    "v0.1",
+    "F 완결편 첫 공개 시험판입니다. 시나리오 대사(SCEDATA)·전투 메시지(BMESS)·화자명 풀(TSR)·가라오케 자막(KARAOKE)의 내부 r013 작업본을 정품 Rev. A 전체 디스크 기반으로 조립했습니다. 콜드부트와 데모 전투 경로의 한글 표시를 확인했으며, 장시간 실플레이 검증은 진행 중입니다.",
+    [
+      item({
+        id: "fin-battle-speaker",
+        title: "전투 화자명·침묵 대사 한글화",
+        description: "전투 데모의 화자명(인공지능 등)과 말줄임 대사가 한국어 데이터로 표시됩니다.",
+        evidenceType: "included",
+        asIs: image(
+          "assets/patch-notes/srwf-final-v0-1-battle-speaker-before.png",
+          "AS-IS: 화자명이 일본어(人工知能)로 표시된 전투 화면",
+          330,
+          240,
+        ),
+        toBe: image(
+          "assets/patch-notes/srwf-final-v0-1-battle-speaker-after.png",
+          "TO-BE: 같은 장면에서 화자명이 한국어(인공지능)로 표시된 전투 화면",
+          330,
+          240,
+        ),
+      }),
+      item({
+        id: "fin-karaoke-caption",
+        title: "가라오케 자막 한글화",
+        description: "가라오케 모드 자막(겟타 드래곤 등)을 한국어로 표시합니다.",
+        evidenceType: "included",
+        asIs: image(
+          "assets/patch-notes/srwf-final-v0-1-karaoke-caption-before.png",
+          "AS-IS: 가라오케 자막이 일본어(ゲッタードラゴン)로 표시된 화면",
+          330,
+          240,
+        ),
+        toBe: image(
+          "assets/patch-notes/srwf-final-v0-1-karaoke-caption-after.png",
+          "TO-BE: 같은 자막이 한국어(겟타 드래곤)로 표시된 화면",
+          330,
+          240,
+        ),
+      }),
+      item({
+        id: "fin-battle-dialogue",
+        title: "전투 대사 한글화",
+        description: "전투 중 기합 대사와 외침이 한국어로 표시됩니다(료마의 샤인 스파크 등).",
+        evidenceType: "included",
+        asIs: image(
+          "assets/patch-notes/srwf-final-v0-1-battle-dialogue-before.png",
+          "AS-IS: 전투 대사가 일본어로 표시된 화면",
+          330,
+          240,
+        ),
+        toBe: image(
+          "assets/patch-notes/srwf-final-v0-1-battle-dialogue-after.png",
+          "TO-BE: 같은 대사가 한국어로 표시된 화면",
+          330,
+          240,
+        ),
+      }),
+    ],
+  ),
 });
 
 const SUMMARY_ONLY_RELEASE_IDS = new Set([

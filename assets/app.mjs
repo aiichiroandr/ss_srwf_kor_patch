@@ -1,12 +1,12 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260815-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260815-2";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260815-1";
+} from "./release-notes.mjs?v=20260815-2";
 
-const STATIC_ASSET_REVISION = "20260815-1";
+const STATIC_ASSET_REVISION = "20260815-2";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -40,8 +40,36 @@ const PINNED_STOCK_PROFILES = new Map([
     userDataSize: 2048,
     track: "TRACK 01 MODE1/2352",
   })],
+  ["saturn-jp-stock-track01-mode1-2352-ff7192ab", Object.freeze({
+    gameId: "srwf-final",
+    id: "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+    size: 520408224,
+    sha256: "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+    sectorCount: 221262,
+    sectorSize: 2352,
+    userDataOffset: 16,
+    userDataSize: 2048,
+    track: "TRACK 01 MODE1/2352",
+  })],
 ]);
 const PUBLIC_GAME_IDS = new Set(["srwf-f", "srwf-final"]);
+const SOURCE_SUPPORT_COPY = new Map([
+  ["srwf-f", Object.freeze({
+    gameLabel: "슈퍼로봇대전 F",
+    stockLabel: "세가 새턴 일본판 Rev. B",
+    imageSize: "579 MB",
+  })],
+  ["srwf-final", Object.freeze({
+    gameLabel: "슈퍼로봇대전 F 완결편",
+    stockLabel: "세가 새턴 일본판 Rev. A",
+    imageSize: "520 MB",
+  })],
+]);
+const GENERIC_SOURCE_SUPPORT_COPY = Object.freeze({
+  gameLabel: "선택한 게임",
+  stockLabel: "검증된 세가 새턴 일본판",
+  imageSize: "520~579 MB",
+});
 
 const elements = {
   compatibilityBadge: byId("compatibilityBadge"),
@@ -184,6 +212,10 @@ function detectFileSystemSupport() {
   );
 }
 
+function sourceSupportCopy(gameId = state.selectedGameId ?? state.release?.gameId) {
+  return SOURCE_SUPPORT_COPY.get(gameId) ?? GENERIC_SOURCE_SUPPORT_COPY;
+}
+
 function showBrowserCompatibility() {
   elements.compatibilityBadge.classList.remove("is-supported", "is-unsupported");
   if (state.fileSystemSupported) {
@@ -195,7 +227,8 @@ function showBrowserCompatibility() {
 
   elements.compatibilityBadge.classList.add("is-unsupported");
   elements.compatibilityBadge.lastChild.textContent = " 안전 저장 불가";
-  elements.sourceHelp.textContent = "이 브라우저에서는 원본 폴더에 약 579 MB의 새 BIN/CUE를 안전하게 만들 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.";
+  const { imageSize } = sourceSupportCopy();
+  elements.sourceHelp.textContent = `이 브라우저에서는 원본 폴더에 약 ${imageSize}의 새 BIN/CUE를 안전하게 만들 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.`;
 }
 
 async function loadReleaseIndex() {
@@ -991,7 +1024,7 @@ function createDownloadOutputPlan(desiredImageName, desiredCueName) {
   return plan;
 }
 
-function installDownloadArtifacts(result, expectedPlan, expectedSize) {
+function installDownloadArtifacts(result, expectedPlan, expectedSize, sourceProfileId) {
   if (
     !result
     || !(result.outputBlob instanceof Blob)
@@ -1022,7 +1055,7 @@ function installDownloadArtifacts(result, expectedPlan, expectedSize) {
   try {
     binUrl = globalThis.URL.createObjectURL(result.outputBlob);
     const cueBlob = new Blob(
-      [buildPatchedImageCue(result.imageName)],
+      [buildPatchedImageCue(result.imageName, sourceProfileId)],
       { type: "application/x-cue;charset=utf-8" },
     );
     cueUrl = globalThis.URL.createObjectURL(cueBlob);
@@ -1214,10 +1247,12 @@ async function getOrCreateOwnedOutputHandle(
 
 async function saveCueFile() {
   const cueFilename = state.release?.target.cueFilename;
+  const sourceProfileId = state.release?.source.profileId;
   const outputHandle = state.outputHandle;
   const outputDirectoryHandle = state.outputDirectoryHandle;
   if (
     !cueFilename
+    || !sourceProfileId
     || !state.patchCompleted
     || !outputHandle
     || !outputDirectoryHandle
@@ -1253,6 +1288,7 @@ async function saveCueFile() {
       outputDirectoryHandle,
       cueFilename,
       outputHandle.name,
+      sourceProfileId,
       cueHandle,
     );
     if (
@@ -1288,17 +1324,41 @@ async function saveCueFile() {
   }
 }
 
-function buildPatchedImageCue(imageName) {
+function buildPatchedImageCue(imageName, sourceProfileId) {
   requireSafeFilename(imageName, "CUE image filename");
   if (!BIN_FILENAME_PATTERN.test(imageName)) {
     throw new PatcherError("CUE_IMAGE_INVALID", "CUE image filename must be a safe BIN basename");
   }
-  return `FILE "${imageName}" BINARY\r\n`
-    + "  TRACK 01 MODE1/2352\r\n"
-    + "    INDEX 01 00:00:00\r\n";
+  if (!PINNED_STOCK_PROFILES.has(sourceProfileId)) {
+    throw new PatcherError("CUE_PROFILE_INVALID", "CUE layout requires a pinned stock profile");
+  }
+  const fileLine = `FILE "${imageName}" BINARY\r\n`;
+  if (sourceProfileId === "saturn-jp-stock-track01-mode1-2352-c198a930") {
+    return fileLine
+      + "  TRACK 01 MODE1/2352\r\n"
+      + "    INDEX 01 00:00:00\r\n";
+  }
+  if (sourceProfileId === "saturn-jp-stock-track01-mode1-2352-ff7192ab") {
+    return fileLine
+      + "  TRACK 01 MODE1/2352\r\n"
+      + "    INDEX 01 00:00:00\r\n"
+      + "  TRACK 02 MODE2/2352\r\n"
+      + "    INDEX 00 17:03:64\r\n"
+      + "    INDEX 01 17:06:64\r\n"
+      + "  TRACK 03 AUDIO\r\n"
+      + "    INDEX 00 48:48:12\r\n"
+      + "    INDEX 01 48:50:12\r\n";
+  }
+  throw new PatcherError("CUE_PROFILE_INVALID", "Pinned stock profile has no published CUE layout");
 }
 
-async function writeCueFile(directoryHandle, desiredName, imageName, ownedHandle = null) {
+async function writeCueFile(
+  directoryHandle,
+  desiredName,
+  imageName,
+  sourceProfileId,
+  ownedHandle = null,
+) {
   const cueHandle = await getOrCreateOwnedOutputHandle(
     directoryHandle,
     desiredName,
@@ -1308,7 +1368,7 @@ async function writeCueFile(directoryHandle, desiredName, imageName, ownedHandle
   let writable = null;
   try {
     writable = await cueHandle.createWritable({ keepExistingData: false });
-    await writable.write(buildPatchedImageCue(imageName));
+    await writable.write(buildPatchedImageCue(imageName, sourceProfileId));
     await writable.close();
     writable = null;
     return cueHandle;
@@ -1493,6 +1553,7 @@ function handleOperationComplete(message) {
           message.result,
           state.downloadPlan,
           state.release.target.size,
+          state.release.source.profileId,
         );
       } catch (error) {
         handleOperationFailure(
@@ -1525,7 +1586,7 @@ function handleOperationComplete(message) {
     elements.cueButton.hidden = true;
     elements.cueButton.disabled = true;
     elements.cueButton.textContent = "CUE 파일 다시 저장";
-    elements.cueStatus.textContent = "패치 BIN용 단일 데이터 트랙 CUE를 같은 폴더에 자동으로 저장합니다.";
+    elements.cueStatus.textContent = "패치 BIN용 CUE를 같은 폴더에 자동으로 저장합니다.";
     elements.successPanel.hidden = false;
     elements.applyHint.textContent = downloadOutput
       ? "검증된 BIN/CUE를 준비했습니다. 아래 두 다운로드를 각각 누른 뒤 같은 폴더에 두세요."
@@ -2031,7 +2092,8 @@ function canApplyPatch() {
 }
 
 function showUnsupportedBrowser() {
-  const message = "이 브라우저에는 원본 폴더에 약 579 MB의 새 BIN/CUE를 안전하게 만들 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.";
+  const { imageSize } = sourceSupportCopy();
+  const message = `이 브라우저에는 원본 폴더에 약 ${imageSize}의 새 BIN/CUE를 안전하게 만들 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.`;
   elements.sourceHelp.textContent = message;
   elements.sourceState.textContent = "환경 확인";
   elements.sourceState.className = "zone-state is-error";
@@ -2085,9 +2147,10 @@ function showError(title, message) {
   elements.successPanel.hidden = true;
 }
 
-function friendlyOutputCreationError(error) {
+function friendlyOutputCreationError(error, gameId) {
   const code = error?.code;
   const name = error?.name;
+  const { imageSize } = sourceSupportCopy(gameId);
   if (
     code === "OUTPUT_PERMISSION_DENIED"
     || name === "NotAllowedError"
@@ -2101,7 +2164,7 @@ function friendlyOutputCreationError(error) {
   if (name === "QuotaExceededError") {
     return Object.freeze({
       title: "새 패치 BIN을 만들 공간이 부족합니다",
-      message: "선택한 저장공간에 최소 579 MB보다 넉넉한 여유 공간을 확보한 뒤 다시 실행해 주세요.",
+      message: `선택한 저장공간에 최소 ${imageSize}보다 넉넉한 여유 공간을 확보한 뒤 다시 실행해 주세요.`,
     });
   }
   if (
@@ -2139,7 +2202,8 @@ function friendlyOutputCreationError(error) {
   });
 }
 
-function friendlyDiscSourceError(code) {
+function friendlyDiscSourceError(code, gameId) {
+  const { gameLabel, stockLabel, imageSize } = sourceSupportCopy(gameId);
   const errors = {
     SOURCE_DIRECTORY_INVALID: [
       "선택한 폴더를 열 수 없습니다",
@@ -2155,11 +2219,11 @@ function friendlyDiscSourceError(code) {
     ],
     SOURCE_SET_AMBIGUOUS: [
       "패치할 원본이 두 개 이상 발견됐습니다",
-      "579 MB 크기의 원본 IMG/BIN은 하나만 남긴 폴더를 선택해 주세요. 기존 패치 결과는 다른 폴더로 옮겨 주세요.",
+      `${imageSize} 크기의 원본 IMG/BIN은 하나만 남긴 폴더를 선택해 주세요. 기존 패치 결과는 다른 폴더로 옮겨 주세요.`,
     ],
     SOURCE_SET_NOT_FOUND: [
       "지원하는 원본을 폴더에서 찾지 못했습니다",
-      "세가 새턴 일본판 Rev. B의 합본 IMG/BIN 또는 원래 이름의 CUE와 Track 1·2·3 BIN이 바로 들어 있는 폴더를 선택해 주세요.",
+      `${stockLabel}의 합본 IMG/BIN 또는 원래 이름의 CUE와 Track 1·2·3 BIN이 바로 들어 있는 폴더를 선택해 주세요.`,
     ],
     SOURCE_FILE_COUNT_INVALID: [
       "원본 파일 수를 확인해 주세요",
@@ -2187,19 +2251,19 @@ function friendlyDiscSourceError(code) {
     ],
     SOURCE_SIZE_MISMATCH: [
       "원본 크기가 일치하지 않습니다",
-      "세가 새턴 일본판 Rev. B의 단일 raw IMG/BIN인지 확인해 주세요.",
+      `${stockLabel}의 단일 raw IMG/BIN인지 확인해 주세요.`,
     ],
     SOURCE_PROFILE_UNSUPPORTED: [
       "선택한 패치와 원본 구성이 다릅니다",
-      "슈퍼로봇대전 F 일본판 Rev. B용 CUE와 BIN 세 개가 든 폴더를 선택해 주세요.",
+      `${gameLabel}용 ${stockLabel} CUE와 BIN 세 개가 든 폴더를 선택해 주세요.`,
     ],
     SOURCE_SET_INVALID: [
       "원본 네 파일을 모두 선택해 주세요",
       "압축을 푼 CUE 한 개와 Track 1·2·3 BIN 세 개가 바로 들어 있는 폴더를 선택해 주세요.",
     ],
     CUE_NAME_MISMATCH: [
-      "지원하는 Rev. B CUE가 아닙니다",
-      "압축을 푼 파일 이름을 바꾸지 말고 Rev. B CUE와 BIN 세 개가 든 폴더를 선택해 주세요.",
+      "지원하는 원본 CUE가 아닙니다",
+      `압축을 푼 파일 이름을 바꾸지 말고 ${stockLabel} CUE와 BIN 세 개가 든 폴더를 선택해 주세요.`,
     ],
     CUE_SIZE_INVALID: [
       "CUE 파일을 읽을 수 없습니다",
@@ -2215,7 +2279,7 @@ function friendlyDiscSourceError(code) {
     ],
     TRACK_SIZE_MISMATCH: [
       "BIN 트랙 크기가 일치하지 않습니다",
-      "슈퍼로봇대전 F 일본판 Rev. B의 수정하지 않은 Track 1·2·3 BIN인지 확인해 주세요.",
+      `${gameLabel}용 ${stockLabel}의 수정하지 않은 Track 1·2·3 BIN인지 확인해 주세요.`,
     ],
   };
   const cueStructureCodes = new Set([
@@ -2232,7 +2296,7 @@ function friendlyDiscSourceError(code) {
     ?? (cueStructureCodes.has(code)
       ? [
         "CUE 트랙 구성이 지원 원본과 다릅니다",
-        "Rev. B 원본 CUE를 수정하지 말고 Track 1·2·3 BIN과 함께 둔 폴더를 다시 선택해 주세요.",
+        `${stockLabel} 원본 CUE를 수정하지 말고 Track 1·2·3 BIN과 함께 둔 폴더를 다시 선택해 주세요.`,
       ]
       : [
         "원본 파일 구성을 확인할 수 없습니다",
@@ -2241,7 +2305,8 @@ function friendlyDiscSourceError(code) {
   return Object.freeze({ title, message });
 }
 
-function friendlyWorkerError(code) {
+function friendlyWorkerError(code, gameId) {
+  const { imageSize } = sourceSupportCopy(gameId);
   const errors = {
     SOURCE_SIZE_MISMATCH: ["원본 크기가 일치하지 않습니다", "지원하는 정품 원본 IMG/BIN 또는 CUE+BIN 구성인지 확인해 주세요."],
     SOURCE_HASH_MISMATCH: ["지원하는 원본이 아닙니다", "전체 SHA-256이 공개 명세와 다릅니다. 원본을 수정하지 않은 정품 이미지인지 확인해 주세요."],
@@ -2264,7 +2329,7 @@ function friendlyWorkerError(code) {
     EXTERNAL_URL_REJECTED: ["외부 패치 주소를 차단했습니다", "패치 데이터는 이 사이트와 같은 출처에서만 읽을 수 있습니다."],
     OUTPUT_HANDLE_INVALID: ["출력 파일을 사용할 수 없습니다", "새 BIN 저장 위치를 다시 선택해 주세요."],
     OUTPUT_PERMISSION_DENIED: ["출력 파일을 열 수 없습니다", "선택한 위치의 쓰기 권한을 확인하거나 다른 위치를 선택해 주세요."],
-    OUTPUT_QUOTA_EXCEEDED: ["저장 공간이 부족합니다", "약 579 MB의 새 BIN을 만들 수 있도록 여유 공간을 확보한 뒤 다시 시도해 주세요."],
+    OUTPUT_QUOTA_EXCEEDED: ["저장 공간이 부족합니다", `약 ${imageSize}의 새 BIN을 만들 수 있도록 여유 공간을 확보한 뒤 다시 시도해 주세요.`],
     OUTPUT_PROVIDER_FAILED: ["브라우저가 출력 파일을 열지 못했습니다", "원본 문제는 아닙니다. 이 저장 위치의 안드로이드 파일 공급자가 새 파일 쓰기를 완료하지 못했습니다."],
     PREPARED_SOURCE_MISSING: ["원본 준비 상태가 만료되었습니다", "원본 폴더를 다시 선택해 패치 준비부터 진행해 주세요."],
     WORKER_BUSY: ["이전 파일 작업이 아직 끝나지 않았습니다", "잠시 기다린 뒤 다시 시도하거나 페이지를 새로 열어 주세요."],
