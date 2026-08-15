@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-final-20260814-v0-1",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-08-14T01:20:00Z",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+  "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+  "targetSha256": "922b1d15d54acfec5f3923ead2b969226305b35327c17bde9a39754b4ae15901",
+  "patchSha256": "5e26aaef8ed7b91701ac9ffc3f027af27285b56702f26949bce80f84edfd466d",
+  "v5Commit": "23447101a07181ecf3b416817b900ce7c9860de945f5012493da1647df264aff",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "NOT_CLAIMED"
+  },
+  "decisionAuthority": "저장소 소유자: FIN.r013+가라오케 r011c 고딕 구성을 공개 시험판으로 승인했고, 2026-08-15 원격·GitHub Pages 반영을 지시함"
+}
