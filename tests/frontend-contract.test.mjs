@@ -310,7 +310,7 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /<title>세가새턴 슈퍼로봇대전 F 한글패치<\/title>/);
   assert.match(
     html,
-    /<p class="station-intro" id="patcher-title">\s*지원원본<br>\s*F: Rev B \(21M\)<br>\s*F 완결편: Rev A \(10M, 11M 호환\)\s*<\/p>/,
+    /<p class="station-intro" id="patcher-title">[\s\S]*?<span class="station-intro-title">지원원본<\/span>[\s\S]*?<span class="source-support-game">F<\/span>[\s\S]*?Rev B \(21M\)[\s\S]*?<span class="source-support-game">F완결편<\/span>[\s\S]*?Rev A \(10M\/11M\)[\s\S]*?<\/p>/,
   );
   assert.doesNotMatch(html, /한국어 패치 만들기/);
   assert.doesNotMatch(html, /id="availability(?:Banner|Title|Description|Code)"/);
@@ -343,7 +343,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260815-4";
+  const revision = "20260815-5";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -1151,7 +1151,8 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.match(css, /\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(245px,[^}]*minmax\(300px,[^}]*minmax\(320px,/s);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*grid-template-rows:\s*minmax\(128px,/s);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.file-selection\s*\{[^}]*display:\s*none\s*!important/s);
-  assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.station-intro\s*\{[^}]*-webkit-line-clamp:\s*3/s);
+  assert.match(css, /\.source-support-row\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*4\.75em max-content minmax\(0, 1fr\)/s);
+  assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.station-intro\s*\{[^}]*overflow:\s*visible/s);
   assert.match(css, /@media \(max-width: 980px\) and \(min-width: 761px\)[\s\S]*?grid-template-columns:\s*minmax\(0,[^}]*minmax\(0,[^}]*minmax\(0,/s);
   assert.match(css, /\.workflow-zone\.is-active::after,[\s\S]*?animation:\s*workflow-border-flow/);
   assert.match(css, /\.workflow-zone\.is-complete\s*\{[^}]*linear-gradient/s);
@@ -1406,7 +1407,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260815-4$/);
+    assert.match(image.src, /\?v=20260815-5$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
