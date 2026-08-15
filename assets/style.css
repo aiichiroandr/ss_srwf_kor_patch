@@ -56,6 +56,21 @@ body {
   word-break: keep-all;
 }
 
+.station-intro-title {
+  display: block;
+}
+
+.source-support-row {
+  display: grid;
+  grid-template-columns: 4.75em max-content minmax(0, 1fr);
+  gap: 0 0.35em;
+  align-items: baseline;
+}
+
+.source-support-game {
+  min-width: 0;
+}
+
 button,
 select {
   font: inherit;
@@ -3221,10 +3236,7 @@ main {
   }
 
   .station-intro {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    overflow: visible;
   }
 }
 
