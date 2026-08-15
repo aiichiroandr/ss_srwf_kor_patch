@@ -11,13 +11,44 @@ function pinTrack(number, name, size, mode, indexes) {
   });
 }
 
+function pinCueRepresentation(baseName, track3Transform = null) {
+  return Object.freeze({
+    cueName: `${baseName}.cue`,
+    mergedName: `${baseName}.bin`,
+    trackNames: Object.freeze([1, 2, 3].map(
+      (number) => `${baseName} (Track ${number}).bin`,
+    )),
+    track3Transform,
+  });
+}
+
+function cueRepresentationsForDiscSet(discSet) {
+  return [
+    Object.freeze({
+      cueName: discSet.cueName,
+      mergedName: discSet.mergedName,
+      trackNames: Object.freeze(discSet.tracks.map((track) => track.name)),
+      track3Transform: null,
+    }),
+    ...(discSet.cueRepresentations ?? []),
+  ];
+}
+
+const F_REV_B_PROFILE_ID = "saturn-jp-stock-track01-mode1-2352-c198a930";
+const FINAL_REV_A_11M_PROFILE_ID = "saturn-jp-stock-track01-mode1-2352-ff7192ab";
+const FINAL_10M_TRACK3_TRANSFORM = Object.freeze({
+  leadingZeroBytes: 20,
+  trimEndBytes: 20,
+});
+
 /**
- * Every accepted CUE/BIN layout, keyed indirectly by its distinct merged
- * source size. Release manifests pin that size before source normalization.
+ * Every accepted canonical source profile. Alternate CUE/BIN representations
+ * may be normalized to that profile without adding another public release.
  */
 export const PINNED_DISC_SETS = Object.freeze([
   Object.freeze({
     gameId: "srwf-f",
+    profileId: F_REV_B_PROFILE_ID,
     cueName: "Super Robot Taisen F (Japan) (Rev B) (21M).cue",
     mergedName: "Super Robot Taisen F (Japan) (Rev B) (21M).bin",
     sourceLabel: "세가 새턴 일본판 Rev. B",
@@ -26,10 +57,12 @@ export const PINNED_DISC_SETS = Object.freeze([
       pinTrack(2, "Super Robot Taisen F (Japan) (Rev B) (21M) (Track 2).bin", 335_919_696, "MODE2/2352", [[0, "00:00:00"], [1, "00:03:00"]]),
       pinTrack(3, "Super Robot Taisen F (Japan) (Rev B) (21M) (Track 3).bin", 3_880_800, "AUDIO", [[0, "00:00:00"], [1, "00:02:00"]]),
     ]),
+    cueRepresentations: Object.freeze([]),
     mergedSize: 578_512_032,
   }),
   Object.freeze({
     gameId: "srwf-final",
+    profileId: FINAL_REV_A_11M_PROFILE_ID,
     cueName: "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M).cue",
     mergedName: "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M).bin",
     sourceLabel: "세가 새턴 일본판 Rev. A",
@@ -37,6 +70,16 @@ export const PINNED_DISC_SETS = Object.freeze([
       pinTrack(1, "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M) (Track 1).bin", 180_607_728, "MODE1/2352", [[1, "00:00:00"]]),
       pinTrack(2, "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M) (Track 2).bin", 335_919_696, "MODE2/2352", [[0, "00:00:00"], [1, "00:03:00"]]),
       pinTrack(3, "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M) (Track 3).bin", 3_880_800, "AUDIO", [[0, "00:00:00"], [1, "00:02:00"]]),
+    ]),
+    cueRepresentations: Object.freeze([
+      pinCueRepresentation(
+        "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (10M)",
+        FINAL_10M_TRACK3_TRANSFORM,
+      ),
+      pinCueRepresentation(
+        "Super Robot Taisen F Kanketsuhen (Japan) (Rev A) (10M)",
+        FINAL_10M_TRACK3_TRANSFORM,
+      ),
     ]),
     mergedSize: 520_408_224,
   }),
@@ -47,13 +90,36 @@ for (const discSet of PINNED_DISC_SETS) {
   if (trackTotal !== discSet.mergedSize) {
     throw new Error(`Pinned disc set ${discSet.gameId} track sizes do not sum to its merged size`);
   }
+  for (const representation of cueRepresentationsForDiscSet(discSet)) {
+    if (representation.trackNames.length !== discSet.tracks.length) {
+      throw new Error(`Pinned disc set ${discSet.gameId} CUE representation has the wrong track count`);
+    }
+    const transform = representation.track3Transform;
+    if (transform !== null && (
+      !Number.isSafeInteger(transform.leadingZeroBytes)
+      || transform.leadingZeroBytes <= 0
+      || transform.leadingZeroBytes !== transform.trimEndBytes
+      || transform.trimEndBytes >= discSet.tracks[2].size
+    )) {
+      throw new Error(`Pinned disc set ${discSet.gameId} has an invalid Track 3 transform`);
+    }
+  }
 }
-if (new Set(PINNED_DISC_SETS.map((discSet) => discSet.mergedSize)).size !== PINNED_DISC_SETS.length) {
-  throw new Error("Pinned disc sets must have distinct merged sizes");
+if (new Set(PINNED_DISC_SETS.map((discSet) => discSet.profileId)).size !== PINNED_DISC_SETS.length) {
+  throw new Error("Pinned disc sets must have distinct profile ids");
 }
 
-export function discSetForExpectedSize(expectedSize) {
-  return PINNED_DISC_SETS.find((discSet) => discSet.mergedSize === expectedSize) ?? null;
+export function discSetForExpectedSize(expectedSize, profileId) {
+  if (profileId !== undefined && (typeof profileId !== "string" || profileId.length === 0)) {
+    throw new TypeError("profileId must be a non-empty string when supplied");
+  }
+  const sizeMatches = PINNED_DISC_SETS.filter(
+    (discSet) => discSet.mergedSize === expectedSize,
+  );
+  if (profileId !== undefined) {
+    return sizeMatches.find((discSet) => discSet.profileId === profileId) ?? null;
+  }
+  return sizeMatches.length === 1 ? sizeMatches[0] : null;
 }
 
 // Backwards-compatible aliases for callers and tests written for the original
@@ -276,8 +342,8 @@ export function parsePinnedCue(text, discSet) {
       `a BINARY FILE line for track ${track.number}`,
     );
     const referencedName = fileMatch[1];
-    if (referencedName.includes("/") || referencedName.includes("\\") || referencedName !== track.name) {
-      fail("CUE_FILE_MISMATCH", `CUE track ${track.number} must reference the pinned Redump BIN basename`);
+    if (referencedName.includes("/") || referencedName.includes("\\")) {
+      fail("CUE_FILE_MISMATCH", `CUE track ${track.number} must reference a safe pinned BIN basename`);
     }
     referencedNames.push(referencedName);
 
@@ -307,9 +373,20 @@ export function parsePinnedCue(text, discSet) {
   if (position !== lines.length) {
     fail("CUE_LAYOUT_INVALID", "CUE contains unsupported trailing commands or tracks");
   }
+  const representation = cueRepresentationsForDiscSet(discSet).find(
+    (candidate) => candidate.trackNames.every(
+      (name, index) => name === referencedNames[index],
+    ),
+  );
+  if (!representation) {
+    fail("CUE_FILE_MISMATCH", "CUE must reference one complete pinned BIN basename set");
+  }
   return Object.freeze({
     format: "cue-bin",
+    cueName: representation.cueName,
+    mergedName: representation.mergedName,
     referencedNames: Object.freeze(referencedNames),
+    track3Transform: representation.track3Transform,
   });
 }
 
@@ -318,7 +395,7 @@ export function parseSrwfRevBCue(text) {
   return parsePinnedCue(text, PINNED_DISC_SETS[0]);
 }
 
-async function normalizeRaw(handles, files, expectedSize) {
+async function normalizeRaw(handles, files, expectedSize, profileId) {
   const [handle] = handles;
   const [file] = files;
   if (!RAW_EXTENSION_PATTERN.test(file.name)) {
@@ -326,6 +403,20 @@ async function normalizeRaw(handles, files, expectedSize) {
   }
   if (file.size !== expectedSize) {
     fail("SOURCE_SIZE_MISMATCH", "Raw image size does not match the selected release");
+  }
+  const discSet = discSetForExpectedSize(expectedSize, profileId);
+  const knownShiftedRawName = discSet && cueRepresentationsForDiscSet(discSet).some(
+    (representation) => representation.track3Transform !== null
+      && representation.mergedName === file.name,
+  );
+  // A same-size renamed raw file cannot be distinguished without hashing it;
+  // leave that path as identity so the downstream canonical source hash still
+  // rejects raw 10M bytes. Never apply the filename-selected shift to raw data.
+  if (knownShiftedRawName) {
+    fail(
+      "SOURCE_PROFILE_UNSUPPORTED",
+      "The Final 10M pressing is supported only as its CUE and three BIN tracks",
+    );
   }
   return Object.freeze({
     blob: file,
@@ -337,8 +428,47 @@ async function normalizeRaw(handles, files, expectedSize) {
   });
 }
 
-async function normalizeCueBin(handles, files, expectedSize) {
-  const discSet = discSetForExpectedSize(expectedSize);
+function mergedCueBinParts(trackFiles, track3Transform) {
+  if (track3Transform === null) {
+    return trackFiles;
+  }
+  const track3 = trackFiles[2];
+  return [
+    trackFiles[0],
+    trackFiles[1],
+    new Uint8Array(track3Transform.leadingZeroBytes),
+    track3.slice(0, track3.size - track3Transform.trimEndBytes),
+  ];
+}
+
+async function verifyTrack3TransformPreimage(track3, track3Transform) {
+  if (track3Transform === null) {
+    return;
+  }
+  // The patch worker authenticates every retained byte through the canonical
+  // ff7192 source hash. Check the only discarded bytes here so the transform
+  // cannot hide a modified 10M tail behind that downstream hash.
+  let trimmedTail;
+  try {
+    trimmedTail = new Uint8Array(
+      await track3.slice(track3.size - track3Transform.trimEndBytes).arrayBuffer(),
+    );
+  } catch (error) {
+    fail("SOURCE_FILE_READ_FAILED", "The Final 10M Track 3 tail could not be read", { cause: error });
+  }
+  if (
+    trimmedTail.byteLength !== track3Transform.trimEndBytes
+    || trimmedTail.some((byte) => byte !== 0)
+  ) {
+    fail(
+      "SOURCE_PROFILE_UNSUPPORTED",
+      "The Final 10M Track 3 does not have the exact reversible zero tail",
+    );
+  }
+}
+
+async function normalizeCueBin(handles, files, expectedSize, profileId) {
+  const discSet = discSetForExpectedSize(expectedSize, profileId);
   if (!discSet) {
     fail("SOURCE_PROFILE_UNSUPPORTED", "This CUE/BIN layout does not match the selected release profile");
   }
@@ -350,9 +480,6 @@ async function normalizeCueBin(handles, files, expectedSize) {
     fail("SOURCE_SET_INVALID", "Select exactly one CUE and three BIN files");
   }
   const cueEntry = cueEntries[0];
-  if (cueEntry.file.name !== discSet.cueName) {
-    fail("CUE_NAME_MISMATCH", "CUE basename is not the pinned Redump name for this release");
-  }
   if (cueEntry.file.size <= 0 || cueEntry.file.size > MAX_CUE_BYTES) {
     fail("CUE_SIZE_INVALID", "CUE text is empty or exceeds the safety limit");
   }
@@ -371,6 +498,9 @@ async function normalizeCueBin(handles, files, expectedSize) {
     fail("CUE_ENCODING_INVALID", "CUE is not valid UTF-8 text", { cause: error });
   }
   const parsedCue = parsePinnedCue(cueText, discSet);
+  if (cueEntry.file.name !== parsedCue.cueName) {
+    fail("CUE_NAME_MISMATCH", "CUE basename does not match its pinned BIN basename set");
+  }
 
   const entriesByName = new Map(binEntries.map((entry) => [entry.file.name, entry]));
   const orderedEntries = parsedCue.referencedNames.map((name) => entriesByName.get(name));
@@ -384,13 +514,15 @@ async function normalizeCueBin(handles, files, expectedSize) {
   }
 
   const trackFiles = orderedEntries.map((entry) => entry.file);
-  // A Blob built from Blob/File parts is the browser-native, immutable virtual
-  // concatenation. Construction does not call arrayBuffer()/stream() on the
-  // 520-579 MB inputs; the existing patch worker consumes this Blob once and
-  // writes the patched result directly to its output handle.
+  await verifyTrack3TransformPreimage(trackFiles[2], parsedCue.track3Transform);
+  // Blob parts provide an immutable virtual concatenation without calling
+  // arrayBuffer()/stream() on the 520-579 MB track inputs. The Final 10M audio
+  // track differs from the accepted 11M source only by a reversible 20-byte
+  // shift, so normalize it with one bounded zero part and one Blob slice.
+  const mergedParts = mergedCueBinParts(trackFiles, parsedCue.track3Transform);
   const mergedBlob = typeof File === "function"
-    ? new File(trackFiles, discSet.mergedName, { type: "application/octet-stream" })
-    : new Blob(trackFiles, { type: "application/octet-stream" });
+    ? new File(mergedParts, discSet.mergedName, { type: "application/octet-stream" })
+    : new Blob(mergedParts, { type: "application/octet-stream" });
   if (mergedBlob.size !== expectedSize) {
     fail("SOURCE_SIZE_MISMATCH", "Merged CUE/BIN source size does not match the selected release");
   }
@@ -408,13 +540,16 @@ async function normalizeCueBin(handles, files, expectedSize) {
 }
 
 /** Normalize a raw image or an exact pinned Redump CUE + three BIN files. */
-export async function normalizeSelectedSource(handles, expectedSize) {
+export async function normalizeSelectedSource(handles, expectedSize, profileId) {
   requireExpectedSize(expectedSize);
+  if (profileId !== undefined && !discSetForExpectedSize(expectedSize, profileId)) {
+    fail("SOURCE_PROFILE_UNSUPPORTED", "Source profile id and size do not match a pinned disc set");
+  }
   validateHandles(handles);
   const files = await readFiles(handles);
   return handles.length === 1
-    ? normalizeRaw(handles, files, expectedSize)
-    : normalizeCueBin(handles, files, expectedSize);
+    ? normalizeRaw(handles, files, expectedSize, profileId)
+    : normalizeCueBin(handles, files, expectedSize, profileId);
 }
 
 /**
@@ -422,17 +557,30 @@ export async function normalizeSelectedSource(handles, expectedSize) {
  * user-selected folder. This never descends into subdirectories and never
  * reads an entire disc image while deciding which handles to normalize.
  */
-export async function normalizeSourceDirectory(directoryHandle, expectedSize) {
+export async function normalizeSourceDirectory(directoryHandle, expectedSize, profileId) {
   requireExpectedSize(expectedSize);
+  if (profileId !== undefined && !discSetForExpectedSize(expectedSize, profileId)) {
+    fail("SOURCE_PROFILE_UNSUPPORTED", "Source profile id and size do not match a pinned disc set");
+  }
   const handles = await readDirectFileHandles(directoryHandle);
   const handlesByName = new Map(handles.map((handle) => [handle.name, handle]));
-  const discSet = discSetForExpectedSize(expectedSize);
-  const pinnedNames = discSet
-    ? [discSet.cueName, ...discSet.tracks.map((track) => track.name)]
+  const discSet = discSetForExpectedSize(expectedSize, profileId);
+  const completeCueBinSets = discSet
+    ? cueRepresentationsForDiscSet(discSet)
+      .map((representation) => [
+        representation.cueName,
+        ...representation.trackNames,
+      ].map((name) => handlesByName.get(name)))
+      .filter((candidate) => candidate.every((handle) => handle !== undefined))
     : [];
-  const cueBinHandles = pinnedNames.map((name) => handlesByName.get(name));
-  const hasCompleteCueBinSet = pinnedNames.length > 0
-    && cueBinHandles.every((handle) => handle !== undefined);
+  if (completeCueBinSets.length > 1) {
+    fail(
+      "SOURCE_SET_AMBIGUOUS",
+      "Source directory contains more than one supported CUE/BIN representation",
+    );
+  }
+  const cueBinHandles = completeCueBinSets[0] ?? [];
+  const hasCompleteCueBinSet = cueBinHandles.length > 0;
 
   // A completed run intentionally leaves its fixed-name BIN beside the user's
   // source. Legacy random-suffix outputs are ignored too. Do not turn either
@@ -457,9 +605,9 @@ export async function normalizeSourceDirectory(directoryHandle, expectedSize) {
 
   let normalized;
   if (hasCompleteCueBinSet) {
-    normalized = await normalizeSelectedSource(cueBinHandles, expectedSize);
+    normalized = await normalizeSelectedSource(cueBinHandles, expectedSize, profileId);
   } else if (matchingRawHandles.length === 1) {
-    normalized = await normalizeSelectedSource(matchingRawHandles, expectedSize);
+    normalized = await normalizeSelectedSource(matchingRawHandles, expectedSize, profileId);
   } else {
     const hasUnsupportedDisc = handles.some((handle) => DIRECTORY_UNSUPPORTED_DISC_PATTERN.test(handle.name));
     if (hasUnsupportedDisc && possibleRawHandles.length === 0) {
