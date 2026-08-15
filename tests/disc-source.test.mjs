@@ -19,6 +19,9 @@ import {
 } from "../assets/disc-source.mjs";
 
 const FINAL_DISC_SET = PINNED_DISC_SETS[1];
+const FINAL_10M_CANONICAL = FINAL_DISC_SET.cueRepresentations[0];
+const FINAL_10M_CUE_ALIAS = FINAL_DISC_SET.cueRepresentations[1];
+const FINAL_10M_TRANSFORM = Object.freeze({ leadingZeroBytes: 20, trimEndBytes: 20 });
 
 function cueText({ trailing = "\r\n", track2Mode = "MODE2/2352", track3Index = "00:02:00" } = {}) {
   return [
@@ -37,10 +40,19 @@ function cueText({ trailing = "\r\n", track2Mode = "MODE2/2352", track3Index = "
   ].join("\r\n") + trailing;
 }
 
-function pinnedCueText(discSet, { track2Mode = null, track3Index = null } = {}) {
+function pinnedCueText(
+  discSet,
+  {
+    track2Mode = null,
+    track3Index = null,
+    representation = null,
+  } = {},
+) {
+  const trackNames = representation?.trackNames ?? discSet.tracks.map((track) => track.name);
   const lines = ["CATALOG 0000000000000"];
-  for (const track of discSet.tracks) {
-    lines.push(`FILE "${track.name}" BINARY`);
+  for (let trackIndex = 0; trackIndex < discSet.tracks.length; trackIndex += 1) {
+    const track = discSet.tracks[trackIndex];
+    lines.push(`FILE "${trackNames[trackIndex]}" BINARY`);
     const mode = track.number === 2 && track2Mode !== null ? track2Mode : track.mode;
     lines.push(`  TRACK ${String(track.number).padStart(2, "0")} ${mode}`);
     for (const [indexNumber, timestamp] of track.indexes) {
@@ -53,13 +65,16 @@ function pinnedCueText(discSet, { track2Mode = null, track3Index = null } = {}) 
   return lines.join("\r\n") + "\r\n";
 }
 
-async function sparseFile(directory, name, size, fill = 0) {
+async function sparseFile(directory, name, size, fill = 0, writes = []) {
   const path = join(directory, name);
   const descriptor = await open(path, "w");
   try {
     await descriptor.truncate(size);
     if (size > 0) {
       await descriptor.write(Uint8Array.of(fill), 0, 1, 0);
+    }
+    for (const [offset, bytes] of writes) {
+      await descriptor.write(Uint8Array.from(bytes), 0, bytes.length, offset);
     }
   } finally {
     await descriptor.close();
@@ -126,12 +141,22 @@ test("strict Rev B CUE parser rejects changed modes, timings, paths, and extra c
   );
 });
 
-test("pinned disc sets resolve by merged size and pin the Final Rev A geometry", () => {
+test("pinned disc sets keep one Final profile with exact 11M and 10M representations", () => {
   assert.equal(discSetForExpectedSize(SRWF_REV_B_MERGED_SIZE), PINNED_DISC_SETS[0]);
   assert.equal(discSetForExpectedSize(520_408_224), FINAL_DISC_SET);
+  assert.equal(
+    discSetForExpectedSize(520_408_224, FINAL_DISC_SET.profileId),
+    FINAL_DISC_SET,
+  );
+  assert.equal(PINNED_DISC_SETS.length, 2);
+  assert.equal(discSetForExpectedSize(520_408_224, "unknown-profile"), null);
   assert.equal(discSetForExpectedSize(520_408_223), null);
 
   assert.equal(FINAL_DISC_SET.gameId, "srwf-final");
+  assert.equal(
+    FINAL_DISC_SET.profileId,
+    "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+  );
   assert.equal(
     FINAL_DISC_SET.cueName,
     "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M).cue",
@@ -148,12 +173,58 @@ test("pinned disc sets resolve by merged size and pin the Final Rev A geometry",
   assert.deepEqual(FINAL_DISC_SET.tracks[0].indexes, [[1, "00:00:00"]]);
   assert.deepEqual(FINAL_DISC_SET.tracks[1].indexes, [[0, "00:00:00"], [1, "00:03:00"]]);
   assert.deepEqual(FINAL_DISC_SET.tracks[2].indexes, [[0, "00:00:00"], [1, "00:02:00"]]);
+  assert.deepEqual(FINAL_10M_CANONICAL, {
+    cueName: "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (10M).cue",
+    mergedName: "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (10M).bin",
+    trackNames: [
+      "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (10M) (Track 1).bin",
+      "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (10M) (Track 2).bin",
+      "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (10M) (Track 3).bin",
+    ],
+    track3Transform: FINAL_10M_TRANSFORM,
+  });
+  assert.deepEqual(FINAL_10M_CUE_ALIAS, {
+    cueName: "Super Robot Taisen F Kanketsuhen (Japan) (Rev A) (10M).cue",
+    mergedName: "Super Robot Taisen F Kanketsuhen (Japan) (Rev A) (10M).bin",
+    trackNames: [
+      "Super Robot Taisen F Kanketsuhen (Japan) (Rev A) (10M) (Track 1).bin",
+      "Super Robot Taisen F Kanketsuhen (Japan) (Rev A) (10M) (Track 2).bin",
+      "Super Robot Taisen F Kanketsuhen (Japan) (Rev A) (10M) (Track 3).bin",
+    ],
+    track3Transform: FINAL_10M_TRANSFORM,
+  });
 });
 
 test("strict pinned CUE parser accepts the exact Final Rev A layout", () => {
   const parsed = parsePinnedCue(pinnedCueText(FINAL_DISC_SET), FINAL_DISC_SET);
   assert.equal(parsed.format, "cue-bin");
+  assert.equal(parsed.track3Transform, null);
   assert.deepEqual(parsed.referencedNames, FINAL_DISC_SET.tracks.map((track) => track.name));
+});
+
+test("strict pinned CUE parser accepts canonical and 454-byte Android Final 10M names", () => {
+  const canonicalCue = pinnedCueText(
+    FINAL_DISC_SET,
+    { representation: FINAL_10M_CANONICAL },
+  );
+  assert.equal(new TextEncoder().encode(canonicalCue).byteLength, 463);
+  const canonical = parsePinnedCue(canonicalCue, FINAL_DISC_SET);
+  assert.equal(canonical.cueName, FINAL_10M_CANONICAL.cueName);
+  assert.equal(canonical.mergedName, FINAL_10M_CANONICAL.mergedName);
+  assert.deepEqual(canonical.referencedNames, FINAL_10M_CANONICAL.trackNames);
+  assert.deepEqual(canonical.track3Transform, FINAL_10M_TRANSFORM);
+
+  const cue = pinnedCueText(
+    FINAL_DISC_SET,
+    { representation: FINAL_10M_CUE_ALIAS },
+  );
+  assert.equal(new TextEncoder().encode(cue).byteLength, 454);
+  const parsed = parsePinnedCue(cue, FINAL_DISC_SET);
+  assert.equal(parsed.format, "cue-bin");
+  assert.equal(parsed.cueName, FINAL_10M_CUE_ALIAS.cueName);
+  assert.equal(parsed.mergedName, FINAL_10M_CUE_ALIAS.mergedName);
+  assert.deepEqual(parsed.referencedNames, FINAL_10M_CUE_ALIAS.trackNames);
+  assert.deepEqual(parsed.track3Transform, FINAL_10M_TRANSFORM);
 });
 
 test("strict pinned CUE parser rejects F Rev B content and altered Final commands", () => {
@@ -171,6 +242,17 @@ test("strict pinned CUE parser rejects F Rev B content and altered Final command
   );
 });
 
+test("strict pinned CUE parser rejects mixed Final 10M basename sets", () => {
+  const mixedBasenames = pinnedCueText(
+    FINAL_DISC_SET,
+    { representation: FINAL_10M_CUE_ALIAS },
+  ).replace(FINAL_10M_CUE_ALIAS.trackNames[2], FINAL_10M_CANONICAL.trackNames[2]);
+  assert.throws(
+    () => parsePinnedCue(mixedBasenames, FINAL_DISC_SET),
+    (error) => error.code === "CUE_FILE_MISMATCH",
+  );
+});
+
 test("directory discovery merges the Final Rev A CUE/BIN set into the pinned image", async () => {
   const directory = await mkdtemp(join(tmpdir(), "srwfin-disc-directory-cue-"));
   try {
@@ -185,7 +267,11 @@ test("directory discovery merges the Final Rev A CUE/BIN set into the pinned ima
       fileHandle(tracks[0]),
     ]);
 
-    const normalized = await normalizeSourceDirectory(selectedDirectory, FINAL_DISC_SET.mergedSize);
+    const normalized = await normalizeSourceDirectory(
+      selectedDirectory,
+      FINAL_DISC_SET.mergedSize,
+      FINAL_DISC_SET.profileId,
+    );
     assert.equal(normalized.format, "cue-bin");
     assert.equal(normalized.directoryHandle, selectedDirectory);
     assert.equal(normalized.displayName, FINAL_DISC_SET.cueName);
@@ -207,6 +293,185 @@ test("directory discovery merges the Final Rev A CUE/BIN set into the pinned ima
       );
       assert.equal(byte[0], index + 1, `Final track ${index + 1} begins at its canonical merged offset`);
     }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("directory discovery converts the 454-byte Android Final 10M set to canonical 11M bytes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "srwfin-disc-directory-10m-cue-"));
+  try {
+    const cue = new File(
+      [pinnedCueText(FINAL_DISC_SET, { representation: FINAL_10M_CUE_ALIAS })],
+      FINAL_10M_CUE_ALIAS.cueName,
+    );
+    const tracks = await Promise.all(FINAL_DISC_SET.tracks.map(
+      (track, index) => sparseFile(
+        directory,
+        FINAL_10M_CUE_ALIAS.trackNames[index],
+        track.size,
+        index + 1,
+        index === 2
+          ? [[track.size - 21, [0x44]]]
+          : [],
+      ),
+    ));
+    let fullTrackReadCalls = 0;
+    for (const track of tracks) {
+      Object.defineProperties(track, {
+        arrayBuffer: {
+          value() {
+            fullTrackReadCalls += 1;
+            throw new Error("normalization must not materialize a full track");
+          },
+        },
+        stream: {
+          value() {
+            fullTrackReadCalls += 1;
+            throw new Error("normalization must not open a full track stream");
+          },
+        },
+      });
+    }
+    const selectedDirectory = directoryHandle([
+      fileHandle(tracks[1]),
+      fileHandle(cue),
+      fileHandle(tracks[2]),
+      fileHandle(tracks[0]),
+    ]);
+
+    const normalized = await normalizeSourceDirectory(
+      selectedDirectory,
+      FINAL_DISC_SET.mergedSize,
+      FINAL_DISC_SET.profileId,
+    );
+    assert.equal(normalized.format, "cue-bin");
+    assert.equal(normalized.displayName, FINAL_10M_CUE_ALIAS.cueName);
+    assert.equal(normalized.blob.size, FINAL_DISC_SET.mergedSize);
+    assert.equal(normalized.blob.name, FINAL_DISC_SET.mergedName);
+    assert.deepEqual(
+      normalized.trackFiles.map((file) => file.name),
+      FINAL_10M_CUE_ALIAS.trackNames,
+    );
+    assert.equal(fullTrackReadCalls, 0);
+
+    const track3Boundary = FINAL_DISC_SET.tracks[0].size + FINAL_DISC_SET.tracks[1].size;
+    const sampleOffsets = [
+      [track3Boundary, 0],
+      [track3Boundary + 19, 0],
+      [track3Boundary + 20, 3],
+      [FINAL_DISC_SET.mergedSize - 1, 0x44],
+    ];
+    for (const [offset, expectedByte] of sampleOffsets) {
+      const byte = new Uint8Array(
+        await normalized.blob.slice(offset, offset + 1).arrayBuffer(),
+      );
+      assert.equal(byte[0], expectedByte, `normalized byte at ${offset}`);
+    }
+    assert.equal(fullTrackReadCalls, 0);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("Final 10M conversion rejects a nonzero discarded Track 3 tail", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "srwfin-disc-directory-10m-tail-"));
+  try {
+    const cue = new File(
+      [pinnedCueText(FINAL_DISC_SET, { representation: FINAL_10M_CUE_ALIAS })],
+      FINAL_10M_CUE_ALIAS.cueName,
+    );
+    const tracks = await Promise.all(FINAL_DISC_SET.tracks.map(
+      (track, index) => sparseFile(
+        directory,
+        FINAL_10M_CUE_ALIAS.trackNames[index],
+        track.size,
+        index + 1,
+        index === 2 ? [[track.size - 1, [0x01]]] : [],
+      ),
+    ));
+    await expectDiscError(
+      normalizeSelectedSource(
+        [fileHandle(cue), ...tracks.map(fileHandle)],
+        FINAL_DISC_SET.mergedSize,
+        FINAL_DISC_SET.profileId,
+      ),
+      "SOURCE_PROFILE_UNSUPPORTED",
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("directory discovery accepts canonical Final 10M names under the ff7192 profile only", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "srwfin-disc-directory-10m-canonical-"));
+  try {
+    const cue = new File(
+      [pinnedCueText(FINAL_DISC_SET, { representation: FINAL_10M_CANONICAL })],
+      FINAL_10M_CANONICAL.cueName,
+    );
+    const tracks = await Promise.all(FINAL_DISC_SET.tracks.map(
+      (track, index) => sparseFile(
+        directory,
+        FINAL_10M_CANONICAL.trackNames[index],
+        track.size,
+        index + 1,
+      ),
+    ));
+    const selectedDirectory = directoryHandle([
+      fileHandle(cue),
+      fileHandle(tracks[2]),
+      fileHandle(tracks[0]),
+      fileHandle(tracks[1]),
+    ]);
+
+    const normalized = await normalizeSourceDirectory(
+      selectedDirectory,
+      FINAL_DISC_SET.mergedSize,
+      FINAL_DISC_SET.profileId,
+    );
+    assert.equal(normalized.displayName, FINAL_10M_CANONICAL.cueName);
+    assert.equal(normalized.blob.name, FINAL_DISC_SET.mergedName);
+    assert.deepEqual(
+      normalized.trackFiles.map((file) => file.name),
+      FINAL_10M_CANONICAL.trackNames,
+    );
+
+    await expectDiscError(
+      normalizeSourceDirectory(
+        selectedDirectory,
+        FINAL_DISC_SET.mergedSize,
+        "saturn-jp-stock-track01-mode1-2352-b94fec3e",
+      ),
+      "SOURCE_PROFILE_UNSUPPORTED",
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("directory discovery rejects a mixed canonical and Android Final 10M set", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "srwfin-disc-directory-10m-mixed-"));
+  try {
+    const canonicalCue = new File(
+      [pinnedCueText(FINAL_DISC_SET, { representation: FINAL_10M_CANONICAL })],
+      FINAL_10M_CANONICAL.cueName,
+    );
+    const aliasTracks = await Promise.all(FINAL_DISC_SET.tracks.map(
+      (track, index) => sparseFile(
+        directory,
+        FINAL_10M_CUE_ALIAS.trackNames[index],
+        track.size,
+      ),
+    ));
+    await expectDiscError(
+      normalizeSourceDirectory(
+        directoryHandle([fileHandle(canonicalCue), ...aliasTracks.map(fileHandle)]),
+        FINAL_DISC_SET.mergedSize,
+        FINAL_DISC_SET.profileId,
+      ),
+      "SOURCE_SET_NOT_FOUND",
+    );
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -289,6 +554,43 @@ test("single raw BIN/IMG/ISO path remains supported and size gated", async () =>
   }
   const file = new File([new Uint8Array(31)], "stock.img");
   await expectDiscError(normalizeSelectedSource([fileHandle(file)], 32), "SOURCE_SIZE_MISMATCH");
+});
+
+test("single Final raw input stays identity-only and known 10M merged names fail closed", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "srwfin-disc-raw-profile-"));
+  try {
+    const canonical11M = await sparseFile(
+      directory,
+      FINAL_DISC_SET.mergedName,
+      FINAL_DISC_SET.mergedSize,
+      0x11,
+    );
+    const normalized = await normalizeSelectedSource(
+      [fileHandle(canonical11M)],
+      FINAL_DISC_SET.mergedSize,
+      FINAL_DISC_SET.profileId,
+    );
+    assert.equal(normalized.format, "raw");
+    assert.equal(normalized.blob, canonical11M);
+
+    for (const representation of [FINAL_10M_CANONICAL, FINAL_10M_CUE_ALIAS]) {
+      const raw10M = await sparseFile(
+        directory,
+        representation.mergedName,
+        FINAL_DISC_SET.mergedSize,
+      );
+      await expectDiscError(
+        normalizeSelectedSource(
+          [fileHandle(raw10M)],
+          FINAL_DISC_SET.mergedSize,
+          FINAL_DISC_SET.profileId,
+        ),
+        "SOURCE_PROFILE_UNSUPPORTED",
+      );
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("directory discovery accepts an unordered pinned CUE/BIN set without descending", async () => {

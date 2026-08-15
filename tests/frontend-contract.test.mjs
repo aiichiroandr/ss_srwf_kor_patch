@@ -341,7 +341,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260815-2";
+  const revision = "20260815-3";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -476,7 +476,10 @@ test("one folder picker discovers raw or CUE/BIN and is never reopened by patch 
   assert.equal((appSource.match(/showDirectoryPicker\(/g) ?? []).length, 1);
   assert.doesNotMatch(appSource, /showOpenFilePicker\(/);
   assert.match(appSource, /showDirectoryPicker\(sourceDirectoryPickerOptions\(\)\)/);
-  assert.match(appSource, /normalizeSourceDirectory\(directoryHandle, state\.release\.source\.size\)/);
+  assert.match(
+    appSource,
+    /normalizeSourceDirectory\([\s\S]*directoryHandle,[\s\S]*state\.release\.source\.size,[\s\S]*state\.release\.source\.profileId,[\s\S]*\)/,
+  );
   assert.match(appSource, /state\.sourceHandles = \[\.\.\.selection\.handles\]/);
   assert.match(appSource, /state\.outputDirectoryHandle = directoryHandle/);
   assert.match(appSource, /sourceFile: selection\.blob/);
@@ -1400,7 +1403,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260815-2$/);
+    assert.match(image.src, /\?v=20260815-3$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
