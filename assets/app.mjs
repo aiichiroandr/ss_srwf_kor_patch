@@ -1,12 +1,12 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260815-2";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260815-3";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260815-2";
+} from "./release-notes.mjs?v=20260815-3";
 
-const STATIC_ASSET_REVISION = "20260815-2";
+const STATIC_ASSET_REVISION = "20260815-3";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -828,7 +828,11 @@ async function chooseSource() {
 
   let selection;
   try {
-    selection = await normalizeSourceDirectory(directoryHandle, state.release.source.size);
+    selection = await normalizeSourceDirectory(
+      directoryHandle,
+      state.release.source.size,
+      state.release.source.profileId,
+    );
   } catch (error) {
     const friendly = friendlyDiscSourceError(error?.code);
     if (state.sourcePrepared) {
