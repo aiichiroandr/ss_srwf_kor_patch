@@ -7,13 +7,18 @@ import test from "node:test";
 
 import {
   DiscSourceError,
+  PINNED_DISC_SETS,
   SRWF_REV_B_CUE_NAME,
   SRWF_REV_B_MERGED_SIZE,
   SRWF_REV_B_TRACKS,
+  discSetForExpectedSize,
   normalizeSelectedSource,
   normalizeSourceDirectory,
+  parsePinnedCue,
   parseSrwfRevBCue,
 } from "../assets/disc-source.mjs";
+
+const FINAL_DISC_SET = PINNED_DISC_SETS[1];
 
 function cueText({ trailing = "\r\n", track2Mode = "MODE2/2352", track3Index = "00:02:00" } = {}) {
   return [
@@ -30,6 +35,22 @@ function cueText({ trailing = "\r\n", track2Mode = "MODE2/2352", track3Index = "
     "    INDEX 00 00:00:00",
     `    INDEX 01 ${track3Index}`,
   ].join("\r\n") + trailing;
+}
+
+function pinnedCueText(discSet, { track2Mode = null, track3Index = null } = {}) {
+  const lines = ["CATALOG 0000000000000"];
+  for (const track of discSet.tracks) {
+    lines.push(`FILE "${track.name}" BINARY`);
+    const mode = track.number === 2 && track2Mode !== null ? track2Mode : track.mode;
+    lines.push(`  TRACK ${String(track.number).padStart(2, "0")} ${mode}`);
+    for (const [indexNumber, timestamp] of track.indexes) {
+      const stamp = track.number === 3 && indexNumber === 1 && track3Index !== null
+        ? track3Index
+        : timestamp;
+      lines.push(`    INDEX ${String(indexNumber).padStart(2, "0")} ${stamp}`);
+    }
+  }
+  return lines.join("\r\n") + "\r\n";
 }
 
 async function sparseFile(directory, name, size, fill = 0) {
@@ -103,6 +124,92 @@ test("strict Rev B CUE parser rejects changed modes, timings, paths, and extra c
     () => parseSrwfRevBCue(`${cueText()}REM unsupported\r\n`),
     (error) => error.code === "CUE_LAYOUT_INVALID",
   );
+});
+
+test("pinned disc sets resolve by merged size and pin the Final Rev A geometry", () => {
+  assert.equal(discSetForExpectedSize(SRWF_REV_B_MERGED_SIZE), PINNED_DISC_SETS[0]);
+  assert.equal(discSetForExpectedSize(520_408_224), FINAL_DISC_SET);
+  assert.equal(discSetForExpectedSize(520_408_223), null);
+
+  assert.equal(FINAL_DISC_SET.gameId, "srwf-final");
+  assert.equal(
+    FINAL_DISC_SET.cueName,
+    "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M).cue",
+  );
+  assert.equal(FINAL_DISC_SET.mergedSize, 520_408_224);
+  assert.deepEqual(
+    FINAL_DISC_SET.tracks.map((track) => [track.number, track.mode, track.size]),
+    [
+      [1, "MODE1/2352", 180_607_728],
+      [2, "MODE2/2352", 335_919_696],
+      [3, "AUDIO", 3_880_800],
+    ],
+  );
+  assert.deepEqual(FINAL_DISC_SET.tracks[0].indexes, [[1, "00:00:00"]]);
+  assert.deepEqual(FINAL_DISC_SET.tracks[1].indexes, [[0, "00:00:00"], [1, "00:03:00"]]);
+  assert.deepEqual(FINAL_DISC_SET.tracks[2].indexes, [[0, "00:00:00"], [1, "00:02:00"]]);
+});
+
+test("strict pinned CUE parser accepts the exact Final Rev A layout", () => {
+  const parsed = parsePinnedCue(pinnedCueText(FINAL_DISC_SET), FINAL_DISC_SET);
+  assert.equal(parsed.format, "cue-bin");
+  assert.deepEqual(parsed.referencedNames, FINAL_DISC_SET.tracks.map((track) => track.name));
+});
+
+test("strict pinned CUE parser rejects F Rev B content and altered Final commands", () => {
+  assert.throws(
+    () => parsePinnedCue(cueText(), FINAL_DISC_SET),
+    (error) => error.code === "CUE_FILE_MISMATCH",
+  );
+  assert.throws(
+    () => parsePinnedCue(pinnedCueText(FINAL_DISC_SET, { track2Mode: "MODE1/2352" }), FINAL_DISC_SET),
+    (error) => error.code === "CUE_TRACK_MISMATCH",
+  );
+  assert.throws(
+    () => parsePinnedCue(pinnedCueText(FINAL_DISC_SET, { track3Index: "00:03:00" }), FINAL_DISC_SET),
+    (error) => error.code === "CUE_INDEX_MISMATCH",
+  );
+});
+
+test("directory discovery merges the Final Rev A CUE/BIN set into the pinned image", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "srwfin-disc-directory-cue-"));
+  try {
+    const cue = new File([pinnedCueText(FINAL_DISC_SET)], FINAL_DISC_SET.cueName);
+    const tracks = await Promise.all(FINAL_DISC_SET.tracks.map(
+      (track, index) => sparseFile(directory, track.name, track.size, index + 1),
+    ));
+    const selectedDirectory = directoryHandle([
+      fileHandle(tracks[1]),
+      fileHandle(cue),
+      fileHandle(tracks[2]),
+      fileHandle(tracks[0]),
+    ]);
+
+    const normalized = await normalizeSourceDirectory(selectedDirectory, FINAL_DISC_SET.mergedSize);
+    assert.equal(normalized.format, "cue-bin");
+    assert.equal(normalized.directoryHandle, selectedDirectory);
+    assert.equal(normalized.displayName, FINAL_DISC_SET.cueName);
+    assert.equal(normalized.blob.size, FINAL_DISC_SET.mergedSize);
+    assert.equal(normalized.blob.name, FINAL_DISC_SET.mergedName);
+    assert.deepEqual(
+      normalized.trackFiles.map((file) => file.name),
+      FINAL_DISC_SET.tracks.map((track) => track.name),
+    );
+
+    const boundaries = [
+      0,
+      FINAL_DISC_SET.tracks[0].size,
+      FINAL_DISC_SET.tracks[0].size + FINAL_DISC_SET.tracks[1].size,
+    ];
+    for (let index = 0; index < boundaries.length; index += 1) {
+      const byte = new Uint8Array(
+        await normalized.blob.slice(boundaries[index], boundaries[index] + 1).arrayBuffer(),
+      );
+      assert.equal(byte[0], index + 1, `Final track ${index + 1} begins at its canonical merged offset`);
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("normalizer orders selected tracks by CUE without reading 579 MB into JavaScript memory", async () => {
@@ -240,9 +347,13 @@ test("directory discovery ignores fixed and legacy generated patch BINs beside o
     "SRWF-KOR-20260814-v0.1.bin",
     "SRWF-KOR-20260814-v0.1.1.bin",
     "SRWF-KOR-20260815-v0.1.2.bin",
+    "SRWFIN-KOR-20260814-v0.1.bin",
+    "SRWFIN-KOR-20260815-v0.1.2.bin",
     "SRWF-KOR-20260814-v0.1-0123456789abcdef01234567.bin",
     "SRWF-KOR-20260814-v0.1.1-0123456789abcdef01234567.bin",
     "SRWF-KOR-20260815-v0.1.2-0123456789abcdef01234567.bin",
+    "SRWFIN-KOR-20260814-v0.1-0123456789abcdef01234567.bin",
+    "SRWFIN-KOR-20260815-v0.1.2-0123456789abcdef01234567.bin",
   ]) {
     const source = new File([new Uint8Array(32)], "stock.img");
     const priorOutput = new File([new Uint8Array(32)], outputName);

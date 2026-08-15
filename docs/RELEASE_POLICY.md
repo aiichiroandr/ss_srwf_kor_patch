@@ -5,16 +5,17 @@
 이 저장소는 현재 `HAS_ACCEPTED_RELEASE`이며,
 [`manifest/releases.json`](../manifest/releases.json)에
 기본 릴리스 `srwf-f-20260815-v0-1-2`와 이전 핫픽스
-`srwf-f-20260814-v0-1-1`이 등록되어 있습니다. 각 payload는 독립된
+`srwf-f-20260814-v0-1-1`, 그리고 F 완결편 기본 릴리스
+`srwf-final-20260814-v0-1` 시험판이 등록되어 있습니다. 각 payload는 독립된
 영수증·릴리스 명세와 해시가 일치하는 희소 `.srwfp`입니다. v0.1.2는 v0.1.1에서
 발생한 프롤로그 제목 화면의 그래픽 깨짐을 수정하며, v0.1.1은 재현과 비교를 위한
 이전 공개판으로 남습니다. 철회된
 `srwf-f-20260814-v0-1`의 manifest, acceptance receipt, payload는 공개 인덱스에서
 제외되며 검증기에 고정된 SHA-256의 바이트 불변 역사 자료로만 남습니다.
 
-게임 카탈로그에는 `srwf-f`와 `srwf-final`이 함께 등록되어 있습니다. F는
-`HAS_ACCEPTED_RELEASE`, F 완결편은 `NO_ACCEPTED_RELEASE`이며, 완결편에는
-공개 릴리스 행·기본 릴리스·원본 프로필을 아직 연결하지 않습니다.
+게임 카탈로그의 `srwf-f`와 `srwf-final`은 모두 `HAS_ACCEPTED_RELEASE`입니다.
+F 완결편 v0.1은 제한된 콜드부트·데모 경로만 확인한 공개 시험판이며, 장시간
+실플레이·전 경로·정식 사용자 R7 완료를 주장하지 않습니다.
 
 후속 `latest`, 새 빌드, 실행 가능 후보, 정적 검증 통과, identity rebuild 또는
 일부 화면의 runtime 확인만으로 새 항목을 추가할 수 없습니다.
@@ -35,7 +36,7 @@
 
 ## source authority
 
-현재 공개된 F용 patch는 아래 stock profile 하나에만 적용됩니다.
+공개 patch는 게임별로 아래 stock profile 하나에만 적용됩니다.
 
 | field | exact value |
 |---|---|
@@ -45,6 +46,14 @@
 | track | `TRACK 01 MODE1/2352` |
 | geometry | `245966 × 2352`, user data `16 + 2048` |
 
+| field | F 완결편 exact value |
+|---|---|
+| profile id | `saturn-jp-stock-track01-mode1-2352-ff7192ab` |
+| size | `520408224` bytes |
+| SHA-256 | `ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb` |
+| track | `TRACK 01 MODE1/2352` |
+| geometry | `221262 × 2352`, user data `16 + 2048` |
+
 이전 작업 자료는 의미·번역 이관 근거일 수 있지만 binary donor나 암묵적인 build
 base가 될 수 없습니다. 공개 artifact는 별도 빌드 저장소에서 stock-derived build와
 각 owner의 검증을 마친 뒤에만 이 저장소로 옮깁니다.
@@ -52,23 +61,28 @@ base가 될 수 없습니다. 공개 artifact는 별도 빌드 저장소에서 s
 ## ACCEPTED 영수증 gate
 
 승격에는 `receipts/<release-id>.acceptance.json` 형식의 명시적 영수증이
-필요합니다. 영수증의 `state`는 정확히 `ACCEPTED`여야 하고 다음 네 gate가
-각각 `PASS`여야 합니다.
+필요합니다. 영수증의 `state`는 정확히 `ACCEPTED`여야 합니다. 다음 세 gate는
+반드시 `PASS`여야 합니다.
 
 - static structure
 - runtime consumption
 - visual layout
-- long-play progression
+
+`longPlayProgression`은 장시간 진행 검증을 실제 완료했을 때만 `PASS`입니다.
+공개 시험판이 제한된 런타임 범위와 미검증 범위를 사용자에게 명시하고, 소유자가 그
+경계로 공개를 승인한 경우에는 `NOT_CLAIMED`를 기록할 수 있습니다. 이를 장시간 검증
+통과나 정식 검수 완료로 해석하면 안 됩니다.
 
 영수증은 release id, stock profile/source hash, target hash, patch hash, 빌드
-commit, 결정 시각과 decision authority를 고정합니다. build receipt hash만
+provenance identity, 결정 시각과 decision authority를 고정합니다. build receipt hash만
 있는 경우에는 승격할 수 없습니다. 구조는
 [`schemas/acceptance-receipt.schema.json`](../schemas/acceptance-receipt.schema.json)에
 정의되어 있습니다.
 
-`v5Commit`은 저장소 object format에 맞는 완전한 lowercase commit id만
-허용합니다. SHA-1 저장소는 40자리, SHA-256 저장소는 64자리이며 그 사이
-길이의 축약·가공 값은 허용하지 않습니다.
+`v5Commit`은 provenance object format에 맞는 완전한 lowercase identity만
+허용합니다. Git 기반 빌드는 40자리 또는 64자리 commit id를 쓰고, 비-Git 기반
+F 완결편 빌드는 hash-pinned 원장 파일의 64자리 SHA-256을 씁니다. 공개 문서에서
+후자를 Git commit이라고 부르면 안 됩니다. 축약·가공 값은 허용하지 않습니다.
 
 ## 원자적 승격 순서
 
@@ -141,7 +155,7 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
     "bodyUncompressedSize": 0
   },
   "provenance": {
-    "v5Commit": "<full build commit id>",
+    "v5Commit": "<full build commit id or pinned non-Git ledger SHA-256>",
     "buildReceiptSha256": "<build receipt SHA-256>",
     "acceptanceReceiptSha256": "<ACCEPTED receipt SHA-256>"
   }

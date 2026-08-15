@@ -42,24 +42,48 @@
       "format": "date-time"
     },
     "source": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "profileId",
-        "size",
-        "sha256"
-      ],
-      "properties": {
-        "profileId": {
-          "const": "saturn-jp-stock-track01-mode1-2352-c198a930"
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profileId",
+            "sha256",
+            "size"
+          ],
+          "properties": {
+            "profileId": {
+              "const": "saturn-jp-stock-track01-mode1-2352-c198a930"
+            },
+            "size": {
+              "const": 578512032
+            },
+            "sha256": {
+              "const": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+            }
+          }
         },
-        "size": {
-          "const": 578512032
-        },
-        "sha256": {
-          "const": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profileId",
+            "sha256",
+            "size"
+          ],
+          "properties": {
+            "profileId": {
+              "const": "saturn-jp-stock-track01-mode1-2352-ff7192ab"
+            },
+            "size": {
+              "const": 520408224
+            },
+            "sha256": {
+              "const": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb"
+            }
+          }
         }
-      }
+      ]
     },
     "target": {
       "type": "object",
@@ -80,7 +104,10 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.cue$"
         },
         "size": {
-          "const": 578512032
+          "enum": [
+            578512032,
+            520408224
+          ]
         },
         "sha256": {
           "type": "string",

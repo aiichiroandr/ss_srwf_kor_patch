@@ -9,7 +9,10 @@ it is not a candidate-testing area.
 The current repository state is `HAS_ACCEPTED_RELEASE`. The default indexed
 release is `srwf-f-20260815-v0-1-2`, and the superseded
 `srwf-f-20260814-v0-1-1` hotfix remains indexed as historical evidence. Each is
-backed by its own explicit, hash-pinned `ACCEPTED` receipt. The broken
+backed by its own explicit, hash-pinned `ACCEPTED` receipt. The F Final public
+trial `srwf-final-20260814-v0-1` is also indexed and is limited to its documented
+cold-boot and demo-route evidence; it does not claim long-play or full-route
+completion. The broken
 `srwf-f-20260814-v0-1` artifact triplet is withdrawn, non-indexed, and retained
 only as byte-immutable historical evidence. Do not reintroduce withdrawn
 release rows or publish a new row without another complete acceptance chain.
@@ -36,7 +39,8 @@ release rows or publish a new row without another complete acceptance chain.
   files, CUE sheets, full target images, save data, save states, emulator
   caches, generated discs, or build directories.
 - Users must provide their own exact stock image. The only supported stock
-  profile is the size and SHA-256 pinned in `manifest/releases.json`.
+  profiles are the game-specific sizes and SHA-256 values pinned in
+  `manifest/releases.json`.
 - Patch payloads must contain changed bytes plus bounded verification metadata,
   not a complete game image.
 - Keep notices and user-facing copy clear that this is an unofficial fan

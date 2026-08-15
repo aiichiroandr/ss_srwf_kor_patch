@@ -1,43 +1,72 @@
 const MAX_CUE_BYTES = 16 * 1024;
 const MAX_DIRECTORY_ENTRIES = 64;
 
-export const SRWF_REV_B_TRACKS = Object.freeze([
+function pinTrack(number, name, size, mode, indexes) {
+  return Object.freeze({
+    number,
+    name,
+    size,
+    mode,
+    indexes: Object.freeze(indexes.map((entry) => Object.freeze(entry))),
+  });
+}
+
+/**
+ * Every accepted CUE/BIN layout, keyed indirectly by its distinct merged
+ * source size. Release manifests pin that size before source normalization.
+ */
+export const PINNED_DISC_SETS = Object.freeze([
   Object.freeze({
-    number: 1,
-    name: "Super Robot Taisen F (Japan) (Rev B) (21M) (Track 1).bin",
-    size: 238_711_536,
-    mode: "MODE1/2352",
-    indexes: Object.freeze([[1, "00:00:00"]]),
+    gameId: "srwf-f",
+    cueName: "Super Robot Taisen F (Japan) (Rev B) (21M).cue",
+    mergedName: "Super Robot Taisen F (Japan) (Rev B) (21M).bin",
+    sourceLabel: "세가 새턴 일본판 Rev. B",
+    tracks: Object.freeze([
+      pinTrack(1, "Super Robot Taisen F (Japan) (Rev B) (21M) (Track 1).bin", 238_711_536, "MODE1/2352", [[1, "00:00:00"]]),
+      pinTrack(2, "Super Robot Taisen F (Japan) (Rev B) (21M) (Track 2).bin", 335_919_696, "MODE2/2352", [[0, "00:00:00"], [1, "00:03:00"]]),
+      pinTrack(3, "Super Robot Taisen F (Japan) (Rev B) (21M) (Track 3).bin", 3_880_800, "AUDIO", [[0, "00:00:00"], [1, "00:02:00"]]),
+    ]),
+    mergedSize: 578_512_032,
   }),
   Object.freeze({
-    number: 2,
-    name: "Super Robot Taisen F (Japan) (Rev B) (21M) (Track 2).bin",
-    size: 335_919_696,
-    mode: "MODE2/2352",
-    indexes: Object.freeze([[0, "00:00:00"], [1, "00:03:00"]]),
-  }),
-  Object.freeze({
-    number: 3,
-    name: "Super Robot Taisen F (Japan) (Rev B) (21M) (Track 3).bin",
-    size: 3_880_800,
-    mode: "AUDIO",
-    indexes: Object.freeze([[0, "00:00:00"], [1, "00:02:00"]]),
+    gameId: "srwf-final",
+    cueName: "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M).cue",
+    mergedName: "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M).bin",
+    sourceLabel: "세가 새턴 일본판 Rev. A",
+    tracks: Object.freeze([
+      pinTrack(1, "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M) (Track 1).bin", 180_607_728, "MODE1/2352", [[1, "00:00:00"]]),
+      pinTrack(2, "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M) (Track 2).bin", 335_919_696, "MODE2/2352", [[0, "00:00:00"], [1, "00:03:00"]]),
+      pinTrack(3, "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (11M) (Track 3).bin", 3_880_800, "AUDIO", [[0, "00:00:00"], [1, "00:02:00"]]),
+    ]),
+    mergedSize: 520_408_224,
   }),
 ]);
 
-export const SRWF_REV_B_CUE_NAME =
-  "Super Robot Taisen F (Japan) (Rev B) (21M).cue";
+for (const discSet of PINNED_DISC_SETS) {
+  const trackTotal = discSet.tracks.reduce((total, track) => total + track.size, 0);
+  if (trackTotal !== discSet.mergedSize) {
+    throw new Error(`Pinned disc set ${discSet.gameId} track sizes do not sum to its merged size`);
+  }
+}
+if (new Set(PINNED_DISC_SETS.map((discSet) => discSet.mergedSize)).size !== PINNED_DISC_SETS.length) {
+  throw new Error("Pinned disc sets must have distinct merged sizes");
+}
 
-export const SRWF_REV_B_MERGED_SIZE = SRWF_REV_B_TRACKS.reduce(
-  (total, track) => total + track.size,
-  0,
-);
+export function discSetForExpectedSize(expectedSize) {
+  return PINNED_DISC_SETS.find((discSet) => discSet.mergedSize === expectedSize) ?? null;
+}
+
+// Backwards-compatible aliases for callers and tests written for the original
+// single-game F Rev. B release.
+export const SRWF_REV_B_TRACKS = PINNED_DISC_SETS[0].tracks;
+export const SRWF_REV_B_CUE_NAME = PINNED_DISC_SETS[0].cueName;
+export const SRWF_REV_B_MERGED_SIZE = PINNED_DISC_SETS[0].mergedSize;
 
 const RAW_EXTENSION_PATTERN = /\.(?:bin|img|iso)$/i;
 const DIRECTORY_RAW_EXTENSION_PATTERN = /\.(?:bin|img)$/i;
 const DIRECTORY_UNSUPPORTED_DISC_PATTERN = /\.(?:iso|chd)$/i;
 const GENERATED_PATCH_OUTPUT_PATTERN =
-  /^SRWF-KOR-\d{8}-v\d+(?:\.\d+)+(?:-[a-f0-9]{24})?\.bin$/i;
+  /^SRWF(?:IN)?-KOR-\d{8}-v\d+(?:\.\d+)+(?:-[a-f0-9]{24})?\.bin$/i;
 
 export class DiscSourceError extends Error {
   constructor(code, message, options) {
@@ -207,13 +236,16 @@ function parseLine(line, pattern, code, description) {
 }
 
 /**
- * Parse the exact three-track Redump layout supported by the accepted patch.
+ * Parse the exact three-track Redump layout of one pinned disc set.
  * Whitespace indentation and LF/CRLF are presentation details; every command,
  * track mode, index, timestamp, and referenced basename is otherwise pinned.
  */
-export function parseSrwfRevBCue(text) {
+export function parsePinnedCue(text, discSet) {
   if (typeof text !== "string") {
     throw new TypeError("CUE text must be a string");
+  }
+  if (!discSet || !Array.isArray(discSet.tracks)) {
+    throw new TypeError("discSet must be a pinned disc set");
   }
   if (text.startsWith("\ufeff") || text.includes("\0") || /\r(?!\n)/.test(text)) {
     fail("CUE_ENCODING_INVALID", "CUE must be plain UTF-8 text with LF or CRLF line endings");
@@ -236,7 +268,7 @@ export function parseSrwfRevBCue(text) {
   );
 
   const referencedNames = [];
-  for (const track of SRWF_REV_B_TRACKS) {
+  for (const track of discSet.tracks) {
     const fileMatch = parseLine(
       lines[position++] ?? "",
       /^\s*FILE\s+"([^"\r\n]+)"\s+BINARY\s*$/,
@@ -281,6 +313,11 @@ export function parseSrwfRevBCue(text) {
   });
 }
 
+/** Backwards-compatible parser pinned to the original F Rev. B layout. */
+export function parseSrwfRevBCue(text) {
+  return parsePinnedCue(text, PINNED_DISC_SETS[0]);
+}
+
 async function normalizeRaw(handles, files, expectedSize) {
   const [handle] = handles;
   const [file] = files;
@@ -301,7 +338,8 @@ async function normalizeRaw(handles, files, expectedSize) {
 }
 
 async function normalizeCueBin(handles, files, expectedSize) {
-  if (expectedSize !== SRWF_REV_B_MERGED_SIZE) {
+  const discSet = discSetForExpectedSize(expectedSize);
+  if (!discSet) {
     fail("SOURCE_PROFILE_UNSUPPORTED", "This CUE/BIN layout does not match the selected release profile");
   }
 
@@ -312,8 +350,8 @@ async function normalizeCueBin(handles, files, expectedSize) {
     fail("SOURCE_SET_INVALID", "Select exactly one CUE and three BIN files");
   }
   const cueEntry = cueEntries[0];
-  if (cueEntry.file.name !== SRWF_REV_B_CUE_NAME) {
-    fail("CUE_NAME_MISMATCH", "CUE basename is not the pinned Rev B Redump name");
+  if (cueEntry.file.name !== discSet.cueName) {
+    fail("CUE_NAME_MISMATCH", "CUE basename is not the pinned Redump name for this release");
   }
   if (cueEntry.file.size <= 0 || cueEntry.file.size > MAX_CUE_BYTES) {
     fail("CUE_SIZE_INVALID", "CUE text is empty or exceeds the safety limit");
@@ -332,27 +370,26 @@ async function normalizeCueBin(handles, files, expectedSize) {
     }
     fail("CUE_ENCODING_INVALID", "CUE is not valid UTF-8 text", { cause: error });
   }
-  const parsedCue = parseSrwfRevBCue(cueText);
+  const parsedCue = parsePinnedCue(cueText, discSet);
 
   const entriesByName = new Map(binEntries.map((entry) => [entry.file.name, entry]));
   const orderedEntries = parsedCue.referencedNames.map((name) => entriesByName.get(name));
   if (orderedEntries.some((entry) => entry === undefined)) {
     fail("CUE_REFERENCE_MISSING", "A BIN referenced by the CUE was not selected");
   }
-  for (let index = 0; index < SRWF_REV_B_TRACKS.length; index += 1) {
-    if (orderedEntries[index].file.size !== SRWF_REV_B_TRACKS[index].size) {
-      fail("TRACK_SIZE_MISMATCH", `BIN track ${index + 1} size does not match the pinned Rev B dump`);
+  for (let index = 0; index < discSet.tracks.length; index += 1) {
+    if (orderedEntries[index].file.size !== discSet.tracks[index].size) {
+      fail("TRACK_SIZE_MISMATCH", `BIN track ${index + 1} size does not match the pinned Redump dump`);
     }
   }
 
   const trackFiles = orderedEntries.map((entry) => entry.file);
   // A Blob built from Blob/File parts is the browser-native, immutable virtual
   // concatenation. Construction does not call arrayBuffer()/stream() on the
-  // 579 MB inputs; the existing patch worker consumes this Blob once and writes
-  // the patched result directly to its output handle.
-  const mergedName = "Super Robot Taisen F (Japan) (Rev B) (21M).bin";
+  // 520-579 MB inputs; the existing patch worker consumes this Blob once and
+  // writes the patched result directly to its output handle.
   const mergedBlob = typeof File === "function"
-    ? new File(trackFiles, mergedName, { type: "application/octet-stream" })
+    ? new File(trackFiles, discSet.mergedName, { type: "application/octet-stream" })
     : new Blob(trackFiles, { type: "application/octet-stream" });
   if (mergedBlob.size !== expectedSize) {
     fail("SOURCE_SIZE_MISMATCH", "Merged CUE/BIN source size does not match the selected release");
@@ -370,7 +407,7 @@ async function normalizeCueBin(handles, files, expectedSize) {
   });
 }
 
-/** Normalize a raw image or the exact Rev B Redump CUE + three BIN files. */
+/** Normalize a raw image or an exact pinned Redump CUE + three BIN files. */
 export async function normalizeSelectedSource(handles, expectedSize) {
   requireExpectedSize(expectedSize);
   validateHandles(handles);
@@ -389,13 +426,17 @@ export async function normalizeSourceDirectory(directoryHandle, expectedSize) {
   requireExpectedSize(expectedSize);
   const handles = await readDirectFileHandles(directoryHandle);
   const handlesByName = new Map(handles.map((handle) => [handle.name, handle]));
-  const pinnedNames = [SRWF_REV_B_CUE_NAME, ...SRWF_REV_B_TRACKS.map((track) => track.name)];
+  const discSet = discSetForExpectedSize(expectedSize);
+  const pinnedNames = discSet
+    ? [discSet.cueName, ...discSet.tracks.map((track) => track.name)]
+    : [];
   const cueBinHandles = pinnedNames.map((name) => handlesByName.get(name));
-  const hasCompleteCueBinSet = cueBinHandles.every((handle) => handle !== undefined);
+  const hasCompleteCueBinSet = pinnedNames.length > 0
+    && cueBinHandles.every((handle) => handle !== undefined);
 
-  // A completed run intentionally leaves its fresh BIN beside the user's
-  // source. Do not turn that known generated naming form into a second source
-  // candidate on the next visit to the same folder.
+  // A completed run intentionally leaves its fixed-name BIN beside the user's
+  // source. Legacy random-suffix outputs are ignored too. Do not turn either
+  // generated naming form into a second source candidate on the next visit.
   const possibleRawHandles = handles.filter((handle) => (
     DIRECTORY_RAW_EXTENSION_PATTERN.test(handle.name)
     && !GENERATED_PATCH_OUTPUT_PATTERN.test(handle.name)

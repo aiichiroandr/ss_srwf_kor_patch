@@ -314,6 +314,34 @@ class AcceptanceReceiptTests(unittest.TestCase):
         self.validate(self.receipt)
         self.assertEqual(verifier.errors, [])
 
+    def test_trial_receipt_may_explicitly_not_claim_long_play(self) -> None:
+        trial = dict(self.receipt)
+        trial["gates"] = {
+            **self.receipt["gates"],
+            "longPlayProgression": "NOT_CLAIMED",
+        }
+        self.validate(trial)
+        self.assertEqual(verifier.errors, [])
+
+    def test_final_stock_profile_receipt_passes(self) -> None:
+        final_profile = verifier.STOCK_PROFILES_BY_GAME["srwf-final"]
+        self.source = {
+            "profileId": final_profile["id"],
+            "size": final_profile["size"],
+            "sha256": final_profile["sha256"],
+        }
+        final_receipt = {
+            **self.receipt,
+            "stockProfileId": final_profile["id"],
+            "sourceSha256": final_profile["sha256"],
+            "gates": {
+                **self.receipt["gates"],
+                "longPlayProgression": "NOT_CLAIMED",
+            },
+        }
+        self.validate(final_receipt)
+        self.assertEqual(verifier.errors, [])
+
     def test_missing_schema_field_and_failed_gate_are_rejected(self) -> None:
         missing = dict(self.receipt)
         missing.pop("acceptedAt")
@@ -324,7 +352,16 @@ class AcceptanceReceiptTests(unittest.TestCase):
         failed = dict(self.receipt)
         failed["gates"] = {**self.receipt["gates"], "visualLayout": "FAIL"}
         self.validate(failed)
-        self.assertTrue(any("four exact acceptance gates" in error for error in verifier.errors))
+        self.assertTrue(any("static/runtime/visual gates must PASS" in error for error in verifier.errors))
+
+        verifier.errors.clear()
+        false_long_play = dict(self.receipt)
+        false_long_play["gates"] = {
+            **self.receipt["gates"],
+            "longPlayProgression": "FAIL",
+        }
+        self.validate(false_long_play)
+        self.assertTrue(any("longPlayProgression must be PASS or NOT_CLAIMED" in error for error in verifier.errors))
 
     def test_commit_id_must_be_full_sha1_or_sha256(self) -> None:
         for length in (40, 64):
@@ -733,6 +770,10 @@ class RepositoryPolicyTests(unittest.TestCase):
             final_game = next(game for game in index["games"] if game["id"] == "srwf-final")
             final_game["status"] = "HAS_ACCEPTED_RELEASE"
             final_game["defaultReleaseId"] = index["releases"][0]["id"]
+            index["releases"] = [
+                row for row in index["releases"]
+                if row["gameId"] != "srwf-final"
+            ]
             write_json(index_path, index)
 
             with verifier_root(root):
