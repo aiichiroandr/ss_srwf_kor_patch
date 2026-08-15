@@ -41,6 +41,11 @@ release rows or publish a new row without another complete acceptance chain.
 - Users must provide their own exact stock image. The only supported stock
   profiles are the game-specific sizes and SHA-256 values pinned in
   `manifest/releases.json`.
+- An alternate input representation is not a stock profile or release. It may
+  be accepted only when its identity and a deterministic, length-preserving
+  transform are pinned in the browser source normalizer, every discarded byte
+  is verified, and the transform yields a manifest-pinned canonical stock
+  profile whose whole-image SHA-256 is verified before patching.
 - Patch payloads must contain changed bytes plus bounded verification metadata,
   not a complete game image.
 - Keep notices and user-facing copy clear that this is an unofficial fan

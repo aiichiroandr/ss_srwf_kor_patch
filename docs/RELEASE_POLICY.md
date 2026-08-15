@@ -54,6 +54,17 @@ F 완결편 v0.1은 제한된 콜드부트·데모 경로만 확인한 공개 �
 | track | `TRACK 01 MODE1/2352` |
 | geometry | `221262 × 2352`, user data `16 + 2048` |
 
+Rev. A `10M` CUE+BIN 세트는 별도의 stock profile이나 release가 아니라 위 F 완결편
+canonical source의 고정 입력 표현입니다. 정규화 전 합본 SHA-256은
+`b94fec3e4ddcbac5849a94b3bae17c4d38efe74c583714417deefffa7b57c976`,
+Track 3 SHA-256은
+`66f03f518c58106976cab1f83c19190103f10f66ccc40ce049c7e08cce58691b`입니다.
+Track 1·2는 동일하고 Track 3은
+`20 × 00 + 10M Track3[0:-20]`으로 길이 보존 정규화합니다. normalizer는 잘려 나가는
+마지막 20바이트가 모두 `00`인지 확인하고, patch worker가 정규화된 전체 이미지의
+SHA-256이 `ff7192…`와 같은지 다시 검증합니다. 어느 조건이든 맞지 않으면 fail closed
+하며, 이 입력 표현은 새 ACCEPTED 릴리스나 별도 target을 만들지 않습니다.
+
 이전 작업 자료는 의미·번역 이관 근거일 수 있지만 binary donor나 암묵적인 build
 base가 될 수 없습니다. 공개 artifact는 별도 빌드 저장소에서 stock-derived build와
 각 owner의 검증을 마친 뒤에만 이 저장소로 옮깁니다.
