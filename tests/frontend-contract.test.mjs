@@ -308,8 +308,8 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /비공식 · 원본 미포함/);
   assert.match(html, /권리자·플랫폼과 무관/);
   assert.match(html, /<title>세가새턴 슈퍼로봇대전 F 한글패치<\/title>/);
-  assert.match(html, /게임별 지원 일본판/);
-  assert.match(html, /디스크 이미지를 한글로 패치합니다/);
+  assert.match(html, /지원 원본 · F Rev\. B: IMG\/BIN·CUE\+BIN 3개/);
+  assert.match(html, /F 완결편 Rev\. A:\s+11M IMG\/BIN·10M\/11M CUE\+BIN 3개/);
   assert.doesNotMatch(html, /한국어 패치 만들기/);
   assert.doesNotMatch(html, /id="availability(?:Banner|Title|Description|Code)"/);
   assert.doesNotMatch(html, /검증된 공개 릴리스/);
