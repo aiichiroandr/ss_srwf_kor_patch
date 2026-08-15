@@ -1,0 +1,32 @@
+{
+  "schema": "srwf-kor.public-release.v1",
+  "id": "srwf-final-20260814-v0-1",
+  "state": "ACCEPTED",
+  "version": "v0.1",
+  "title": "세가 새턴 슈퍼로봇대전 F 완결편 한글 패치 — 2026.08.14 v0.1 시험판",
+  "publishedAt": "2026-08-14T01:20:00Z",
+  "source": {
+    "profileId": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+    "size": 520408224,
+    "sha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb"
+  },
+  "target": {
+    "filename": "SRWFIN-KOR-20260814-v0.1.bin",
+    "cueFilename": "SRWFIN-KOR-20260814-v0.1.cue",
+    "size": 520408224,
+    "sha256": "922b1d15d54acfec5f3923ead2b969226305b35327c17bde9a39754b4ae15901"
+  },
+  "patch": {
+    "format": "srwf.sparse-byte-delta.v1",
+    "url": "patches/srwf-final-20260814-v0-1.srwfp",
+    "size": 3655641,
+    "sha256": "5e26aaef8ed7b91701ac9ffc3f027af27285b56702f26949bce80f84edfd466d",
+    "recordCount": 56913,
+    "bodyUncompressedSize": 5123970
+  },
+  "provenance": {
+    "v5Commit": "23447101a07181ecf3b416817b900ce7c9860de945f5012493da1647df264aff",
+    "buildReceiptSha256": "a4b1d744461d8522aa5779e6b48bed20bfc416ccf108c89c6f846ea26fbf0156",
+    "acceptanceReceiptSha256": "45c7eae686321898fd0dbb9760bb163fb30e9ddd183780f3bdd40efcfa291b79"
+  }
+}

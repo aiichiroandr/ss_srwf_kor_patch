@@ -168,6 +168,19 @@ const STOCK_PROFILE = Object.freeze({
   userDataSize: 2048,
   track: "TRACK 01 MODE1/2352",
 });
+const FINAL_STOCK_PROFILE = Object.freeze({
+  gameId: "srwf-final",
+  id: "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+  label: "검증된 세가 새턴 일본어판 Rev. A 전체 디스크",
+  size: 520408224,
+  sha256: "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+  sectorCount: 221262,
+  sectorSize: 2352,
+  userDataOffset: 16,
+  userDataSize: 2048,
+  track: "TRACK 01 MODE1/2352",
+});
+const FINAL_RELEASE_ID = "srwf-final-20260814-v0-1";
 
 function makeReleaseRow(overrides = {}) {
   return {
@@ -217,12 +230,70 @@ function makeReleaseManifest(overrides = {}) {
   return { ...manifest, ...overrides };
 }
 
-const stockProfiles = __testHooks.validateStockProfiles([{ ...STOCK_PROFILE }]);
+function makeFinalReleaseRow(overrides = {}) {
+  return {
+    gameId: "srwf-final",
+    id: FINAL_RELEASE_ID,
+    state: "ACCEPTED",
+    label: "2026.08.14 · v0.1 시험판",
+    manifest: `releases/${FINAL_RELEASE_ID}.json`,
+    manifestSha256: "86c7843f7984e79f75836e641184a1735d4591ef57ebcec27996ce9954e95c09",
+    ...overrides,
+  };
+}
+
+function makeFinalReleaseManifest(overrides = {}) {
+  const manifest = {
+    schema: "srwf-kor.public-release.v1",
+    id: FINAL_RELEASE_ID,
+    state: "ACCEPTED",
+    version: "v0.1",
+    title: "세가 새턴 슈퍼로봇대전 F 완결편 한글 패치 — 2026.08.14 v0.1 시험판",
+    publishedAt: "2026-08-14T01:20:00Z",
+    source: {
+      profileId: FINAL_STOCK_PROFILE.id,
+      size: FINAL_STOCK_PROFILE.size,
+      sha256: FINAL_STOCK_PROFILE.sha256,
+    },
+    target: {
+      filename: "SRWFIN-KOR-20260814-v0.1.bin",
+      cueFilename: "SRWFIN-KOR-20260814-v0.1.cue",
+      size: FINAL_STOCK_PROFILE.size,
+      sha256: "922b1d15d54acfec5f3923ead2b969226305b35327c17bde9a39754b4ae15901",
+    },
+    patch: {
+      format: "srwf.sparse-byte-delta.v1",
+      url: `patches/${FINAL_RELEASE_ID}.srwfp`,
+      size: 3655641,
+      sha256: "5e26aaef8ed7b91701ac9ffc3f027af27285b56702f26949bce80f84edfd466d",
+      recordCount: 56913,
+      bodyUncompressedSize: 5123970,
+    },
+    provenance: {
+      v5Commit: "23447101a07181ecf3b416817b900ce7c9860de945f5012493da1647df264aff",
+      buildReceiptSha256: "a4b1d744461d8522aa5779e6b48bed20bfc416ccf108c89c6f846ea26fbf0156",
+      acceptanceReceiptSha256: "45c7eae686321898fd0dbb9760bb163fb30e9ddd183780f3bdd40efcfa291b79",
+    },
+  };
+  return { ...manifest, ...overrides };
+}
+
+const stockProfiles = __testHooks.validateStockProfiles([
+  { ...STOCK_PROFILE },
+  { ...FINAL_STOCK_PROFILE },
+]);
 const manifestUrl = new URL("../releases/v5-r001.json", import.meta.url);
 const normalizeManifest = (manifest) => __testHooks.normalizeReleaseManifest(
   manifest,
   makeReleaseRow(),
   manifestUrl,
+  stockProfiles,
+);
+const finalManifestUrl = new URL(`../releases/${FINAL_RELEASE_ID}.json`, import.meta.url);
+const normalizeFinalManifest = (manifest) => __testHooks.normalizeReleaseManifest(
+  manifest,
+  makeFinalReleaseRow(),
+  finalManifestUrl,
   stockProfiles,
 );
 
@@ -237,7 +308,7 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /비공식 · 원본 미포함/);
   assert.match(html, /권리자·플랫폼과 무관/);
   assert.match(html, /<title>세가새턴 슈퍼로봇대전 F 한글패치<\/title>/);
-  assert.match(html, /지원 원본: 일본판 Rev\. B/);
+  assert.match(html, /게임별 지원 일본판/);
   assert.match(html, /디스크 이미지를 한글로 패치합니다/);
   assert.doesNotMatch(html, /한국어 패치 만들기/);
   assert.doesNotMatch(html, /id="availability(?:Banner|Title|Description|Code)"/);
@@ -270,7 +341,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260815-1";
+  const revision = "20260815-2";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -464,8 +535,20 @@ test("folder discovery errors explain how to recover on mobile", () => {
     /Track 1·2·3 BIN이 모두 바로 들어 있는 원본 폴더/,
   );
   assert.match(
-    __testHooks.friendlyDiscSourceError("TRACK_SIZE_MISMATCH").message,
+    __testHooks.friendlyDiscSourceError("TRACK_SIZE_MISMATCH", "srwf-f").message,
     /Rev\. B/,
+  );
+  assert.match(
+    __testHooks.friendlyDiscSourceError("SOURCE_SET_NOT_FOUND", "srwf-final").message,
+    /Rev\. A/,
+  );
+  assert.match(
+    __testHooks.friendlyDiscSourceError("SOURCE_PROFILE_UNSUPPORTED", "srwf-final").message,
+    /슈퍼로봇대전 F 완결편.*Rev\. A/,
+  );
+  assert.match(
+    __testHooks.friendlyDiscSourceError("SOURCE_SET_AMBIGUOUS", "srwf-final").message,
+    /520 MB/,
   );
   assert.match(
     __testHooks.friendlyDiscSourceError("UNKNOWN_DISC_SOURCE_ERROR").message,
@@ -631,8 +714,12 @@ test("output creation failures distinguish permission, space, and Android provid
     /편집 권한/,
   );
   assert.match(
-    __testHooks.friendlyOutputCreationError({ name: "QuotaExceededError" }).message,
+    __testHooks.friendlyOutputCreationError({ name: "QuotaExceededError" }, "srwf-f").message,
     /579 MB/,
+  );
+  assert.match(
+    __testHooks.friendlyOutputCreationError({ name: "QuotaExceededError" }, "srwf-final").message,
+    /520 MB/,
   );
   assert.match(
     __testHooks.friendlyOutputCreationError({ name: "InvalidStateError" }).message,
@@ -701,7 +788,7 @@ test("Android output failure automatically prepares fixed-name verified BIN and 
       outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
       imageName: plan.imageName,
       cueName: plan.cueName,
-    }, plan, 3);
+    }, plan, 3, STOCK_PROFILE.id);
     assert.equal(element("downloadBinLink").getAttribute("href"), "blob:test-1");
     assert.equal(element("downloadBinLink").getAttribute("download"), plan.imageName);
     assert.equal(element("downloadCueLink").getAttribute("href"), "blob:test-2");
@@ -724,6 +811,7 @@ test("accepted release manifests expose clean version-only BIN and CUE names", a
   for (const [manifestName, imageName, cueName] of [
     ["srwf-f-20260814-v0-1-1.json", "SRWF-KOR-20260814-v0.1.1.bin", "SRWF-KOR-20260814-v0.1.1.cue"],
     ["srwf-f-20260815-v0-1-2.json", "SRWF-KOR-20260815-v0.1.2.bin", "SRWF-KOR-20260815-v0.1.2.cue"],
+    ["srwf-final-20260814-v0-1.json", "SRWFIN-KOR-20260814-v0.1.bin", "SRWFIN-KOR-20260814-v0.1.cue"],
   ]) {
     const release = JSON.parse(await readFile(
       new URL(`../releases/${manifestName}`, import.meta.url),
@@ -740,13 +828,15 @@ test("accepted release manifests expose clean version-only BIN and CUE names", a
   }
 });
 
-test("v0.1.2 is the default release while v0.1.1 remains selectable as history", async () => {
+test("each game points at its accepted default while F v0.1.1 remains selectable as history", async () => {
   const index = JSON.parse(await readFile(
     new URL("../manifest/releases.json", import.meta.url),
     "utf8",
   ));
   const game = index.games.find((entry) => entry.id === "srwf-f");
+  const finalGame = index.games.find((entry) => entry.id === "srwf-final");
   const fReleases = index.releases.filter((entry) => entry.gameId === "srwf-f");
+  const finalReleases = index.releases.filter((entry) => entry.gameId === "srwf-final");
 
   assert.equal(game.defaultReleaseId, "srwf-f-20260815-v0-1-2");
   assert.deepEqual(
@@ -758,14 +848,18 @@ test("v0.1.2 is the default release while v0.1.1 remains selectable as history",
     ["2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
+  assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");
+  assert.equal(finalGame.defaultReleaseId, FINAL_RELEASE_ID);
+  assert.deepEqual(finalReleases, [makeFinalReleaseRow()]);
 });
 
-test("patched-image CUE exposes the accepted flat image as one continuous data track", () => {
+test("F patched-image CUE retains its accepted single-data-track geometry", () => {
   // The accepted public target relocates live data through sector 244948.  It
   // must therefore retain the accepted single-track runtime geometry rather than
   // reusing the stock Redump disc's original three-track boundaries.
   const cue = __testHooks.buildPatchedImageCue(
     "srwf-kor-v5-r001.bin",
+    STOCK_PROFILE.id,
   );
   assert.equal(
     cue,
@@ -775,8 +869,37 @@ test("patched-image CUE exposes the accepted flat image as one continuous data t
   );
   assert.doesNotMatch(cue, /TRACK 02|TRACK 03|AUDIO|CATALOG/);
   assert.throws(
-    () => __testHooks.buildPatchedImageCue("patched.bin\"\r\nFILE \"other.bin"),
+    () => __testHooks.buildPatchedImageCue(
+      "patched.bin\"\r\nFILE \"other.bin",
+      STOCK_PROFILE.id,
+    ),
     (error) => error?.code === "MANIFEST_INVALID",
+  );
+});
+
+test("Final patched-image CUE preserves the accepted three-track geometry", () => {
+  const cue = __testHooks.buildPatchedImageCue(
+    "SRWFIN-KOR-20260814-v0.1.bin",
+    FINAL_STOCK_PROFILE.id,
+  );
+  assert.equal(
+    cue,
+    "FILE \"SRWFIN-KOR-20260814-v0.1.bin\" BINARY\r\n"
+      + "  TRACK 01 MODE1/2352\r\n"
+      + "    INDEX 01 00:00:00\r\n"
+      + "  TRACK 02 MODE2/2352\r\n"
+      + "    INDEX 00 17:03:64\r\n"
+      + "    INDEX 01 17:06:64\r\n"
+      + "  TRACK 03 AUDIO\r\n"
+      + "    INDEX 00 48:48:12\r\n"
+      + "    INDEX 01 48:50:12\r\n",
+  );
+  assert.throws(
+    () => __testHooks.buildPatchedImageCue(
+      "SRWFIN-KOR-20260814-v0.1.bin",
+      "unknown-stock-profile",
+    ),
+    (error) => error?.code === "CUE_PROFILE_INVALID",
   );
 });
 
@@ -815,6 +938,7 @@ test("CUE writer creates the exact fixed sibling file and commits its complete c
     directoryHandle,
     "srwf-kor-v5-r001.cue",
     "srwf-kor-v5-r001.bin",
+    STOCK_PROFILE.id,
   );
 
   assert.equal(cueHandle.name, "srwf-kor-v5-r001.cue");
@@ -866,6 +990,7 @@ test("CUE writer aborts write and close failures without masking the original er
           directoryHandle,
           "srwf-kor-v5-r001.cue",
           "srwf-kor-v5-r001.bin",
+          STOCK_PROFILE.id,
         ),
         (error) => error === operationFailure,
       );
@@ -909,6 +1034,7 @@ test("CUE retry reuses the exact handle created by this page after a write failu
       directoryHandle,
       ownedCueHandle.name,
       "srwf-kor-v5-r001.bin",
+      STOCK_PROFILE.id,
       ownedCueHandle,
     ),
     (error) => error === operationFailure,
@@ -917,6 +1043,7 @@ test("CUE retry reuses the exact handle created by this page after a write failu
     directoryHandle,
     ownedCueHandle.name,
     "srwf-kor-v5-r001.bin",
+    STOCK_PROFILE.id,
     ownedCueHandle,
   );
   assert.equal(result, ownedCueHandle);
@@ -952,6 +1079,11 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
   );
   assert.equal([...completionSource.matchAll(/void saveCueFile\(\);/g)].length, 1);
   assert.match(completionSource, /if \(!downloadOutput\) \{\s*void saveCueFile\(\);\s*\}/);
+  assert.match(
+    completionSource,
+    /installDownloadArtifacts\([\s\S]*?state\.release\.source\.profileId,[\s\S]*?\);/,
+    "mobile CUE download creation must use the selected release stock profile",
+  );
   assert.match(appSource, /elements\.cueButton\.addEventListener\("click", saveCueFile\);/);
 
   const retryVisibilityAssignments = [
@@ -982,6 +1114,12 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
   const cueSaveStart = appSource.indexOf("async function saveCueFile(");
   const cueSaveEnd = appSource.indexOf("\nfunction buildPatchedImageCue(", cueSaveStart);
   const cueSaveSource = appSource.slice(cueSaveStart, cueSaveEnd);
+  assert.match(cueSaveSource, /const sourceProfileId = state\.release\?\.source\.profileId;/);
+  assert.match(
+    cueSaveSource,
+    /writeCueFile\([\s\S]*?outputHandle\.name,\s*sourceProfileId,\s*cueHandle,/,
+    "desktop CUE writing must use the selected release stock profile",
+  );
   assert.match(cueSaveSource, /state\.cueSaving = true;[\s\S]*?updateControls\(\);/);
   assert.match(cueSaveSource, /elements\.errorPanel\.hidden = true;/);
   assert.match(cueSaveSource, /finally \{[\s\S]*?state\.cueSaving = false;[\s\S]*?updateControls\(\);/);
@@ -1187,6 +1325,20 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
   );
   assert.deepEqual(v012Notes.items, []);
   assert.equal(isSummaryOnlyPatchNotesRelease("srwf-f-20260815-v0-1-2"), true);
+
+  const finalNotes = getPatchNotesForRelease(FINAL_RELEASE_ID);
+  assert.equal(finalNotes.version, "v0.1");
+  assert.match(finalNotes.summary, /F 완결편 첫 공개 시험판/);
+  assert.deepEqual(
+    finalNotes.items.map((item) => item.id),
+    ["fin-battle-speaker", "fin-karaoke-caption", "fin-battle-dialogue"],
+  );
+  assert.equal(finalNotes.items.every((item) => item.evidenceType === "included"), true);
+  assert.equal(
+    finalNotes.items.flatMap((item) => [item.asIs.src, item.toBe.src]).length,
+    6,
+  );
+  assert.equal(isSummaryOnlyPatchNotesRelease(FINAL_RELEASE_ID), false);
   assert.equal(isSummaryOnlyPatchNotesRelease("not-a-public-release"), false);
 
   assert.deepEqual(Object.keys(publicAssetAllowlist).sort(), [...referencedAssets.keys()].sort());
@@ -1216,6 +1368,46 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
   ]) {
     assert.equal(isSafePatchNoteAssetPath(unsafe), false, `${unsafe} must be rejected`);
   }
+});
+
+test("Final patch-note comparisons create six lazy images only when opened", async () => {
+  const toggle = element("patchNotesToggle");
+  const dialog = element("patchNotesDialog");
+  const list = element("patchNotesList");
+  const kicker = element("patchNotesKicker");
+  const footer = element("patchNotesFooter");
+
+  __testHooks.clearPatchNotes();
+  __testHooks.renderPatchNotesForRelease(FINAL_RELEASE_ID);
+  assert.equal(toggle.disabled, false);
+  assert.equal(dialog.open, false);
+  assert.equal(dialog.classList.contains("is-summary-only"), false);
+  assert.equal(element("patchNotesVersion").textContent, "v0.1");
+  assert.equal(element("patchNotesCount").textContent, "3건 · 열기");
+  assert.equal(list.hidden, false);
+  assert.equal(kicker.hidden, false);
+  assert.equal(footer.hidden, false);
+  assert.equal(findDescendants(list, (node) => node.tagName === "ARTICLE").length, 0);
+  assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
+
+  __testHooks.openPatchNotes();
+  const cards = findDescendants(list, (node) => node.tagName === "ARTICLE");
+  const images = findDescendants(list, (node) => node.tagName === "IMG");
+  assert.equal(dialog.open, true);
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  assert.equal(cards.length, 3);
+  assert.equal(images.length, 6);
+  for (const image of images) {
+    assert.equal(image.loading, "lazy");
+    assert.equal(image.decoding, "async");
+    assert.match(image.src, /\?v=20260815-2$/);
+  }
+
+  __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
+  assert.equal(dialog.open, false);
+  assert.equal(dialog.classList.contains("is-summary-only"), true);
+  assert.equal(findDescendants(list, (node) => node.tagName === "ARTICLE").length, 0);
+  assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
 });
 
 test("hotfix patch notes open as compact summaries without rendering preserved comparison images", async () => {
@@ -1293,26 +1485,40 @@ test("release and patch references are pinned to their release id", () => {
   );
 });
 
-test("runtime accepts an exact public index and accepted release contract", () => {
-  const index = {
-    $schema: "../schemas/releases.schema.json",
-    schema: "srwf-kor.public-release-index.v2",
-    project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" },
-    games: [
-      { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: "v5-r001" },
-      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
-    ],
-    stock_profiles: [{ ...STOCK_PROFILE }],
-    releases: [makeReleaseRow()],
-  };
-
+test("runtime accepts the exact public index and Final accepted manifest contract", async () => {
+  const [index, finalManifest] = await Promise.all([
+    readFile(new URL("../manifest/releases.json", import.meta.url), "utf8").then(JSON.parse),
+    readFile(new URL(`../releases/${FINAL_RELEASE_ID}.json`, import.meta.url), "utf8").then(JSON.parse),
+  ]);
+  assert.deepEqual(finalManifest, makeFinalReleaseManifest());
+  assert.deepEqual(
+    index.stock_profiles.find((profile) => profile.gameId === "srwf-final"),
+    FINAL_STOCK_PROFILE,
+  );
+  assert.deepEqual(
+    index.releases.find((release) => release.id === FINAL_RELEASE_ID),
+    makeFinalReleaseRow(),
+  );
   assert.doesNotThrow(() => __testHooks.validateReleaseIndex(index));
   assert.doesNotThrow(() => __testHooks.validateGames(index.games));
   assert.doesNotThrow(() => __testHooks.validateStockProfiles(index.stock_profiles));
-  assert.doesNotThrow(() => __testHooks.validateReleaseRow(index.releases[0]));
+  for (const row of index.releases) {
+    assert.doesNotThrow(() => __testHooks.validateReleaseRow(row));
+  }
   const normalized = normalizeManifest(makeReleaseManifest());
   assert.equal(normalized.patch.recordCount, 1);
   assert.equal(normalized.target.size, STOCK_PROFILE.size);
+  const normalizedFinal = normalizeFinalManifest(finalManifest);
+  assert.equal(normalizedFinal.gameId, "srwf-final");
+  assert.equal(normalizedFinal.source.profileId, FINAL_STOCK_PROFILE.id);
+  assert.equal(normalizedFinal.source.sha256, FINAL_STOCK_PROFILE.sha256);
+  assert.equal(normalizedFinal.target.filename, "SRWFIN-KOR-20260814-v0.1.bin");
+  assert.equal(normalizedFinal.target.cueFilename, "SRWFIN-KOR-20260814-v0.1.cue");
+  assert.equal(normalizedFinal.target.sha256, "922b1d15d54acfec5f3923ead2b969226305b35327c17bde9a39754b4ae15901");
+  assert.equal(normalizedFinal.patch.size, 3655641);
+  assert.equal(normalizedFinal.patch.sha256, "5e26aaef8ed7b91701ac9ffc3f027af27285b56702f26949bce80f84edfd466d");
+  assert.equal(normalizedFinal.patch.recordCount, 56913);
+  assert.equal(normalizedFinal.patch.bodyUncompressedSize, 5123970);
 
   const longCommit = makeReleaseManifest({
     provenance: {
@@ -1330,10 +1536,10 @@ test("runtime rejects unknown or missing keys at every public object layer", () 
     project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" },
     games: [
       { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: "v5-r001" },
-      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
+      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: FINAL_RELEASE_ID },
     ],
-    stock_profiles: [{ ...STOCK_PROFILE }],
-    releases: [makeReleaseRow()],
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }],
+    releases: [makeReleaseRow(), makeFinalReleaseRow()],
   };
   const { releases: _removedReleases, ...indexMissingKey } = exactIndex;
   const manifest = makeReleaseManifest();
@@ -1346,7 +1552,10 @@ test("runtime rejects unknown or missing keys at every public object layer", () 
       ...exactIndex,
       project: { ...exactIndex.project, unexpected: true },
     }),
-    () => __testHooks.validateStockProfiles([{ ...STOCK_PROFILE, unexpected: true }]),
+    () => __testHooks.validateStockProfiles([
+      { ...STOCK_PROFILE, unexpected: true },
+      { ...FINAL_STOCK_PROFILE },
+    ]),
     () => __testHooks.validateReleaseRow({ ...makeReleaseRow(), unexpected: true }),
     () => normalizeManifest({ ...manifest, unexpected: true }),
     () => normalizeManifest(manifestMissingKey),
@@ -1382,17 +1591,20 @@ test("runtime enforces local schemas, bounded strings, RFC 3339, and lowercase i
       { id: "srwf-f", label: "슈퍼로봇대전 F", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
       { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
     ],
-    stock_profiles: [{ ...STOCK_PROFILE }],
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }],
     releases: [],
   };
   assert.throws(() => __testHooks.validateReleaseIndex({
     ...exactIndex,
     $schema: "https://example.test/releases.schema.json",
   }));
-  assert.throws(() => __testHooks.validateStockProfiles([{
-    ...STOCK_PROFILE,
-    label: " ",
-  }]));
+  assert.throws(() => __testHooks.validateStockProfiles([
+    {
+      ...STOCK_PROFILE,
+      label: " ",
+    },
+    { ...FINAL_STOCK_PROFILE },
+  ]));
   assert.throws(() => __testHooks.validateReleaseRow(makeReleaseRow({
     label: "가".repeat(161),
   })));
@@ -1470,6 +1682,7 @@ test("worker errors distinguish output, storage, and malformed patch failures", 
   assert.match(__testHooks.friendlyWorkerError("OUTPUT_HANDLE_INVALID").title, /출력 파일/);
   assert.match(__testHooks.friendlyWorkerError("OUTPUT_PERMISSION_DENIED").message, /쓰기 권한|다른 위치/);
   assert.match(__testHooks.friendlyWorkerError("OUTPUT_QUOTA_EXCEEDED").title, /저장 공간/);
+  assert.match(__testHooks.friendlyWorkerError("OUTPUT_QUOTA_EXCEEDED", "srwf-final").message, /520 MB/);
   assert.match(__testHooks.friendlyWorkerError("BAD_MAGIC").title, /패치 데이터 형식/);
   assert.match(__testHooks.friendlyWorkerError("BODY_TOO_LARGE").title, /패치 데이터 형식/);
   assert.match(__testHooks.friendlyWorkerError("TRUNCATED_RECORD").title, /패치 데이터 형식/);
@@ -1593,7 +1806,7 @@ test("an index failure clears facts from the previously selected release", () =>
   assert.equal(element("releaseState").textContent, "차단됨");
 });
 
-test("a delayed F manifest cannot revive controls after switching to the unavailable game", async () => {
+test("a delayed F manifest cannot overwrite an accepted Final game switch", async () => {
   const originalFetch = globalThis.fetch;
   const originalConsoleError = console.error;
   const encoder = new TextEncoder();
@@ -1601,20 +1814,26 @@ test("a delayed F manifest cannot revive controls after switching to the unavail
   const manifest = makeReleaseManifest({ id: releaseId });
   const manifestBytes = encoder.encode(JSON.stringify(manifest));
   const manifestSha256 = createHash("sha256").update(manifestBytes).digest("hex");
+  const finalManifest = makeFinalReleaseManifest();
+  const finalManifestBytes = encoder.encode(JSON.stringify(finalManifest));
+  const finalManifestSha256 = createHash("sha256").update(finalManifestBytes).digest("hex");
   const index = {
     $schema: "../schemas/releases.schema.json",
     schema: "srwf-kor.public-release-index.v2",
     project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" },
     games: [
       { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: releaseId },
-      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "NO_ACCEPTED_RELEASE", defaultReleaseId: null },
+      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: FINAL_RELEASE_ID },
     ],
-    stock_profiles: [{ ...STOCK_PROFILE }],
-    releases: [makeReleaseRow({
-      id: releaseId,
-      manifest: `releases/${releaseId}.json`,
-      manifestSha256,
-    })],
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }],
+    releases: [
+      makeReleaseRow({
+        id: releaseId,
+        manifest: `releases/${releaseId}.json`,
+        manifestSha256,
+      }),
+      makeFinalReleaseRow({ manifestSha256: finalManifestSha256 }),
+    ],
   };
   const indexBytes = encoder.encode(JSON.stringify(index));
   let resolveManifestResponse;
@@ -1639,6 +1858,9 @@ test("a delayed F manifest cannot revive controls after switching to the unavail
       markManifestRequested();
       return delayedManifestResponse;
     }
+    if (path.endsWith(`releases/${FINAL_RELEASE_ID}.json`)) {
+      return responseFor(finalManifestBytes);
+    }
     throw new Error(`unexpected synthetic URL: ${path}`);
   };
   console.error = () => {};
@@ -1651,10 +1873,12 @@ test("a delayed F manifest cannot revive controls after switching to the unavail
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     assert.equal(element("gameSelect").value, "srwf-final");
-    assert.equal(element("releaseState").textContent, "준비 중");
-    assert.equal(element("patchNotesToggle").disabled, true);
-    assert.equal(element("sourceButton").disabled, true);
-    assert.equal(element("sourceProfile").textContent, "—");
+    assert.equal(element("releaseSelect").value, FINAL_RELEASE_ID);
+    assert.equal(element("releaseState").textContent, "ACCEPTED");
+    assert.equal(element("patchNotesToggle").disabled, false);
+    assert.equal(element("sourceButton").disabled, false);
+    assert.equal(element("sourceProfile").textContent, FINAL_STOCK_PROFILE.label);
+    assert.equal(element("targetName").textContent, "SRWFIN-KOR-20260814-v0.1.bin");
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalConsoleError;
