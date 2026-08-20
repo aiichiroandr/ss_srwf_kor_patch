@@ -343,7 +343,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260815-5";
+  const revision = "20260821-1";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -816,6 +816,7 @@ test("accepted release manifests expose clean version-only BIN and CUE names", a
   for (const [manifestName, imageName, cueName] of [
     ["srwf-f-20260814-v0-1-1.json", "SRWF-KOR-20260814-v0.1.1.bin", "SRWF-KOR-20260814-v0.1.1.cue"],
     ["srwf-f-20260815-v0-1-2.json", "SRWF-KOR-20260815-v0.1.2.bin", "SRWF-KOR-20260815-v0.1.2.cue"],
+    ["srwf-f-20260821-v0-2.json", "SRWF-KOR-20260821-v0.2.bin", "SRWF-KOR-20260821-v0.2.cue"],
     ["srwf-final-20260814-v0-1.json", "SRWFIN-KOR-20260814-v0.1.bin", "SRWFIN-KOR-20260814-v0.1.cue"],
   ]) {
     const release = JSON.parse(await readFile(
@@ -843,14 +844,14 @@ test("each game points at its accepted default while F v0.1.1 remains selectable
   const fReleases = index.releases.filter((entry) => entry.gameId === "srwf-f");
   const finalReleases = index.releases.filter((entry) => entry.gameId === "srwf-final");
 
-  assert.equal(game.defaultReleaseId, "srwf-f-20260815-v0-1-2");
+  assert.equal(game.defaultReleaseId, "srwf-f-20260821-v0-2");
   assert.deepEqual(
     fReleases.map((entry) => entry.id),
-    ["srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
+    ["srwf-f-20260821-v0-2", "srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
   );
   assert.deepEqual(
     fReleases.map((entry) => entry.label),
-    ["2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
+    ["2026.08.21 · v0.2", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
   assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");
@@ -1407,7 +1408,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260815-5$/);
+    assert.match(image.src, /\?v=20260821-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
