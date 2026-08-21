@@ -6,7 +6,10 @@ export const PATCH_HEADER_SIZE = 100;
 const RECORD_HEADER_SIZE = 44;
 const MAX_BODY_UNCOMPRESSED_BYTES = 64 * 1024 * 1024;
 const DOWNLOAD_CAPTURE_CHUNK_BYTES = 1024 * 1024;
-const MAX_DOWNLOAD_CAPTURE_BYTES = 32 * 1024 * 1024;
+// v0.2: 엔딩 크레딧 영상(신규 ~30MB)이 32MiB 캡처 예산을 넘어 64MiB로 상향.
+// 압축 패치(32MiB)·비압축 바디(64MiB) 캡은 그대로다. 저사양 기기는 기존
+// 검증된 다운로드 폴백 경로를 그대로 쓴다.
+const MAX_DOWNLOAD_CAPTURE_BYTES = 64 * 1024 * 1024;
 export const PATCH_LIMITS = Object.freeze({
   maxPatchBytes: 32 * 1024 * 1024,
   maxBodyUncompressedBytes: MAX_BODY_UNCOMPRESSED_BYTES,

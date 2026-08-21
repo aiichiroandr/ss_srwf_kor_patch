@@ -1,0 +1,18 @@
+{
+ "schema": "srwf-kor.acceptance-receipt.v1",
+ "releaseId": "srwf-f-20260821-v0-2",
+ "state": "ACCEPTED",
+ "acceptedAt": "2026-08-21T08:16:36+09:00",
+ "stockProfileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
+ "sourceSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+ "targetSha256": "9f9f3ecd1069d8748060e615952b4710eed24f68f549ac74f69d42f572924eba",
+ "patchSha256": "123f204e29625bf4fd2a360a192a6b2eae12bb7ff88633031a8cc17b88984580",
+ "v5Commit": "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
+ "gates": {
+  "staticStructure": "PASS",
+  "runtimeConsumption": "PASS",
+  "visualLayout": "PASS",
+  "longPlayProgression": "NOT_CLAIMED"
+ },
+ "decisionAuthority": "저장소 소유자 승격 지시(2026-08-21 '모두승격'). 전수 정적 검증 오염 0·왕복 해시 일치, 변경 전건 wrap-only, 승격 디스크 부팅·프로필 화면 한글 렌더 및 소유자 표면 확인 계승. 장기 실플레이는 주장하지 않음."
+}

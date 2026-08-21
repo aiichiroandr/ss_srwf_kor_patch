@@ -206,7 +206,7 @@ test('public parser safety caps are fixed', () => {
   assert.equal(PATCH_LIMITS.maxBodyUncompressedBytes, 64 * 1024 * 1024);
   assert.equal(PATCH_LIMITS.maxRecordCount, 1_000_000);
   assert.equal(PATCH_LIMITS.downloadCaptureChunkBytes, 1024 * 1024);
-  assert.equal(PATCH_LIMITS.maxDownloadCaptureBytes, 32 * 1024 * 1024);
+  assert.equal(PATCH_LIMITS.maxDownloadCaptureBytes, 64 * 1024 * 1024);
 });
 
 test('verified download Blob captures only bounded changed windows and reuses source gaps', async () => {
