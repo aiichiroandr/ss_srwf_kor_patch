@@ -189,6 +189,11 @@ export const PATCH_NOTES = Object.freeze({
     "v0.1.1의 프롤로그 제목 화면에서 발생하던 그래픽 깨짐을 수정한 핫픽스입니다.",
     [],
   ),
+  "srwf-f-20260821-v0-2": release(
+    "v0.2",
+    "시나리오 대사 전수 기계 검수로 픽셀 폭 초과 172곳의 줄바꿈을 재배치하고(글자 무변경), 대기 중이던 대사 교정·정신기 팝업 설명 등 텍스트 개선을 반영한 업데이트입니다. 엔딩 크레딧 한글 영상을 포함합니다.",
+    [],
+  ),
   "srwf-final-20260814-v0-1": release(
     "v0.1",
     "F 완결편 첫 공개 시험판입니다. 시나리오 대사(SCEDATA)·전투 메시지(BMESS)·화자명 풀(TSR)·가라오케 자막(KARAOKE)의 내부 r013 작업본을 정품 Rev. A 전체 디스크 기반으로 조립했습니다. 콜드부트와 데모 전투 경로의 한글 표시를 확인했으며, 장시간 실플레이 검증은 진행 중입니다.",
@@ -254,6 +259,7 @@ export const PATCH_NOTES = Object.freeze({
 const SUMMARY_ONLY_RELEASE_IDS = new Set([
   "srwf-f-20260814-v0-1-1",
   "srwf-f-20260815-v0-1-2",
+  "srwf-f-20260821-v0-2",
 ]);
 
 export function getPatchNotesForRelease(releaseId) {
