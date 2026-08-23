@@ -52,7 +52,7 @@
    "state": "ACCEPTED",
    "label": "2026.08.23 · v0.3",
    "manifest": "releases/srwf-f-20260823-v0-3.json",
-   "manifestSha256": "4d0d72912426e4222bb3a12ad728291d805897c132aa1400c1f9cdfc28691a5a"
+   "manifestSha256": "e188d09d873fa80e01168b39ccc403253632e87d3d72f9458876f2516efa7ede"
   },
   {
    "gameId": "srwf-f",

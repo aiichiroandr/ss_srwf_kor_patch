@@ -5,8 +5,8 @@
  "acceptedAt": "2026-08-23T22:05:12+09:00",
  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
  "sourceSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
- "targetSha256": "1cd17fa60a66e69267c69fb308d75940080ae34c360f84628a024c4d0b85bdb8",
- "patchSha256": "8fa872c73f2394bbec6b072f6d013532568612165b95aaa5f17b83b4f8e252be",
+ "targetSha256": "6464be8cd7d855fcca7b6fb4710c0baabefb376826ca3d200170075e321dabe8",
+ "patchSha256": "0fc4b35434f16def28fecd7837859497b4f93a65d9eea6bd966879fbb732119f",
  "v5Commit": "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
  "gates": {
   "staticStructure": "PASS",
@@ -14,5 +14,5 @@
   "visualLayout": "PASS",
   "longPlayProgression": "NOT_CLAIMED"
  },
- "decisionAuthority": "저장소 소유자 배포 지시(2026-08-23). g43n 을 web-mednafen 에서 콜드부트로 플레이 중임을 소유자가 보고. 전수 폭 검사 초과 0. 장기 실플레이는 주장하지 않음."
+ "decisionAuthority": "저장소 소유자 배포 지시(2026-08-23). 규격 준수 패치로 재작성. 브라우저 patch-core 로 검증·적용 왕복 확인. 장기 실플레이는 주장하지 않음."
 }
