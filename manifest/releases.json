@@ -66,7 +66,7 @@
    "gameId": "srwf-final",
    "id": "srwf-final-20260814-v0-1",
    "state": "ACCEPTED",
-   "label": "2026.08.14 · v0.1 시험판",
+   "label": "2026.08.14 · v0.1 시험판 (설치 비권장)",
    "manifest": "releases/srwf-final-20260814-v0-1.json",
    "manifestSha256": "86c7843f7984e79f75836e641184a1735d4591ef57ebcec27996ce9954e95c09"
   },

@@ -235,7 +235,7 @@ function makeFinalReleaseRow(overrides = {}) {
     gameId: "srwf-final",
     id: FINAL_RELEASE_ID,
     state: "ACCEPTED",
-    label: "2026.08.14 · v0.1 시험판",
+    label: "2026.08.14 · v0.1 시험판 (설치 비권장)",
     manifest: `releases/${FINAL_RELEASE_ID}.json`,
     manifestSha256: "86c7843f7984e79f75836e641184a1735d4591ef57ebcec27996ce9954e95c09",
     ...overrides,
@@ -1338,7 +1338,9 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
 
   const finalNotes = getPatchNotesForRelease(FINAL_RELEASE_ID);
   assert.equal(finalNotes.version, "v0.1");
-  assert.match(finalNotes.summary, /F 완결편 첫 공개 시험판/);
+  // 완결편은 F 보다 검수가 덜 됐다.  목록에 남겨는 두되, 노트 첫 문장이
+  // 설치를 말리지 않으면 안 된다 — 이 문장이 사라지면 시험판이 정식판처럼 읽힌다.
+  assert.match(finalNotes.summary, /설치를 권하지 않습니다/);
   assert.deepEqual(
     finalNotes.items.map((item) => item.id),
     ["fin-battle-speaker", "fin-karaoke-caption", "fin-battle-dialogue"],
@@ -1816,6 +1818,69 @@ test("an index failure clears facts from the previously selected release", () =>
   assert.equal(element("releaseState").textContent, "차단됨");
 });
 
+test("완결편은 목록에 뜨지 않고 골라도 열리지 않는다", async () => {
+  const originalFetch = globalThis.fetch;
+  const encoder = new TextEncoder();
+  const releaseId = "v5-hidden";
+  const manifest = makeReleaseManifest({ id: releaseId });
+  const manifestBytes = encoder.encode(JSON.stringify(manifest));
+  const manifestSha256 = createHash("sha256").update(manifestBytes).digest("hex");
+  const finalManifest = makeFinalReleaseManifest();
+  const finalManifestBytes = encoder.encode(JSON.stringify(finalManifest));
+  const finalManifestSha256 = createHash("sha256").update(finalManifestBytes).digest("hex");
+  const index = {
+    $schema: "../schemas/releases.schema.json",
+    schema: "srwf-kor.public-release-index.v2",
+    project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" },
+    games: [
+      { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: releaseId },
+      { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: FINAL_RELEASE_ID },
+    ],
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }],
+    releases: [
+      makeReleaseRow({ id: releaseId, manifest: `releases/${releaseId}.json`, manifestSha256 }),
+      makeFinalReleaseRow({ manifestSha256: finalManifestSha256 }),
+    ],
+  };
+  const indexBytes = encoder.encode(JSON.stringify(index));
+  const responseFor = (bytes) => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => String(bytes.byteLength) },
+    arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+  });
+  let markManifestRequested;
+  const manifestRequested = new Promise((resolve) => {
+    markManifestRequested = resolve;
+  });
+  // 이 시험의 주제는 목록과 전환 거부다.  F 매니페스트 본문은 필요 없으므로
+  // 요청이 왔다는 것만 확인하고 영원히 매달아 둔다(경합 시험과 같은 수법).
+  globalThis.fetch = async (url) => {
+    const path = String(url);
+    if (path.endsWith("manifest/releases.json")) return responseFor(indexBytes);
+    if (path.endsWith(`releases/${releaseId}.json`)) {
+      markManifestRequested();
+      return new Promise(() => {});
+    }
+    if (path.endsWith(`releases/${FINAL_RELEASE_ID}.json`)) return responseFor(finalManifestBytes);
+    throw new Error(`unexpected synthetic URL: ${path}`);
+  };
+  try {
+    const fresh = await import(`../assets/app.mjs?hidden-game=${Date.now()}`);
+    await manifestRequested;
+    // 인덱스는 두 게임을 그대로 싣는다 — 철회가 아니라 숨김이다.
+    assert.equal(index.games.length, 2);
+    const offered = element("gameSelect").children.map((option) => option.value);
+    assert.deepEqual(offered, ["srwf-f"]);
+    await assert.rejects(
+      () => fresh.__testHooks.activateGame("srwf-final"),
+      (error) => error.code === "GAME_CATALOG_INVALID",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("a delayed F manifest cannot overwrite an accepted Final game switch", async () => {
   const originalFetch = globalThis.fetch;
   const originalConsoleError = console.error;
@@ -1877,6 +1942,10 @@ test("a delayed F manifest cannot overwrite an accepted Final game switch", asyn
 
   try {
     const fresh = await import(`../assets/app.mjs?stale-release-race=${Date.now()}`);
+    // 완결편은 지금 화면에서 숨겨져 있다.  숨김은 표시 정책이고 이 시험의 주제는
+    // 늦게 도착한 매니페스트가 뒤에 일어난 전환을 덮어쓰지 못한다는 것이므로,
+    // 경합 자체를 계속 재현하려고 이 시험 안에서만 잠시 연다.
+    fresh.__testHooks.HIDDEN_GAME_IDS.delete("srwf-final");
     await manifestRequested;
     await fresh.__testHooks.activateGame("srwf-final");
     resolveManifestResponse(responseFor(manifestBytes));
