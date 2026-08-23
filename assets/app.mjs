@@ -439,6 +439,27 @@ function replaceGameOptions(games) {
   elements.gameSelect.replaceChildren(...options);
 }
 
+/* 목록은 언제나 최신이 위다. 인덱스에 새 행을 어디에 넣든 화면 순서가
+   흔들리지 않도록, 표시 순서는 여기서 정한다. 날짜는 릴리스 id 에 박혀
+   있다(`srwf-f-20260823-v0-3`). 날짜가 같으면 id 로 내림차순 정렬한다. */
+const RELEASE_DATE_PATTERN = /-(\d{8})-/;
+
+function releaseSortKey(row) {
+  const matched = RELEASE_DATE_PATTERN.exec(row.id);
+  return matched ? matched[1] : "";
+}
+
+function sortReleasesNewestFirst(rows) {
+  return [...rows].sort((left, right) => {
+    const leftDate = releaseSortKey(left);
+    const rightDate = releaseSortKey(right);
+    if (leftDate !== rightDate) {
+      return rightDate.localeCompare(leftDate);
+    }
+    return right.id.localeCompare(left.id);
+  });
+}
+
 function replaceReleaseOptions(rows) {
   const options = rows.map((row) => {
     const option = document.createElement("option");
@@ -477,7 +498,9 @@ async function activateGame(gameId) {
   invalidateReleaseLoad();
   state.selectedGameId = game.id;
   elements.gameSelect.value = game.id;
-  state.visibleReleaseRows = state.releaseRows.filter((row) => row.gameId === game.id);
+  state.visibleReleaseRows = sortReleasesNewestFirst(
+    state.releaseRows.filter((row) => row.gameId === game.id),
+  );
   resetFileWorkflow();
   if (game.status === NO_ACCEPTED_RELEASE) {
     showPreparingState();
