@@ -1,0 +1,34 @@
+{
+ "schema": "srwf-kor.public-release.v1",
+ "id": "srwf-f-20260823-v0-3",
+ "state": "ACCEPTED",
+ "version": "v0.3",
+ "title": "세가 새턴 슈퍼로봇대전 F 한글 패치 — 2026.08.23 v0.3",
+ "publishedAt": "2026-08-23T22:05:12+09:00",
+ "source": {
+  "profileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
+  "size": 578512032,
+  "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+ },
+ "target": {
+  "filename": "SRWF-KOR-20260823-v0.3.bin",
+  "cueFilename": "SRWF-KOR-20260823-v0.3.cue",
+  "size": 578512032,
+  "sha256": "1cd17fa60a66e69267c69fb308d75940080ae34c360f84628a024c4d0b85bdb8"
+ },
+ "patch": {
+  "format": "srwf.sparse-byte-delta.v1",
+  "url": "patches/srwf-f-20260823-v0-3.srwfp",
+  "size": 17906623,
+  "sha256": "8fa872c73f2394bbec6b072f6d013532568612165b95aaa5f17b83b4f8e252be"
+ },
+ "provenance": {
+  "v5Commit": "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
+  "revision": "V5.r001-fable-hub-g43n",
+  "buildReceiptSha256": "",
+  "acceptanceReceiptSha256": "46ad9fdb336a53f95793deb75ab13223c10de2954f35838a751a0f23aae01637"
+ },
+ "knownFollowUps": [
+  "전투 화면 파일럿 이름표가 아직 Ｄｒ헬 이다. 시나리오 대사 8행은 Ｄｒ．헬 로 통일됐으나 이름표는 TSR.BIN 에 있어 이번 리비전에 들어가지 않았다. 다음 리비전에서 처리한다."
+ ]
+}
