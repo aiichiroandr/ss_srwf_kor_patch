@@ -1,10 +1,10 @@
 {
  "schema": "srwf-kor.public-release.v1",
  "id": "srwf-f-20260823-v0-3",
- "state": "PENDING_ACCEPTANCE",
+ "state": "ACCEPTED",
  "version": "v0.3",
  "title": "세가 새턴 슈퍼로봇대전 F 한글 패치 — 2026.08.23 v0.3",
- "publishedAt": null,
+ "publishedAt": "2026-08-23T22:05:12+09:00",
  "source": {
   "profileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
   "size": 578512032,
@@ -26,7 +26,9 @@
   "v5Commit": "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
   "revision": "V5.r001-fable-hub-g43n",
   "buildReceiptSha256": "",
-  "acceptanceReceiptSha256": null
+  "acceptanceReceiptSha256": "46ad9fdb336a53f95793deb75ab13223c10de2954f35838a751a0f23aae01637"
  },
- "acceptance_gate": "사용자 콜드부트·플레이 확인 전까지 ACCEPTED 로 올리지 않는다. manifest/releases.json 에도 넣지 않았다."
+ "knownFollowUps": [
+  "전투 화면 파일럿 이름표가 아직 Ｄｒ헬 이다. 시나리오 대사 8행은 Ｄｒ．헬 로 통일됐으나 이름표는 TSR.BIN 에 있어 이번 리비전에 들어가지 않았다. 다음 리비전에서 처리한다."
+ ]
 }
