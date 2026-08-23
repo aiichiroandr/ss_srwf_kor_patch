@@ -7,8 +7,13 @@ SRWF Korean patch. It is not a continuation of an internal binary lineage and
 it is not a candidate-testing area.
 
 The current repository state is `HAS_ACCEPTED_RELEASE`. The default indexed
-release is `srwf-f-20260815-v0-1-2`, and the superseded
-`srwf-f-20260814-v0-1-1` hotfix remains indexed as historical evidence. Each is
+release is `srwf-f-20260823-v0-3`, and the superseded
+`srwf-f-20260814-v0-1-1` hotfix remains indexed as historical evidence.
+`srwf-f-20260821-v0-2` was withdrawn on 2026-08-23: its payload violated the
+public v1 canonical form by carrying 1,873,210 bytes inside records that match
+the source, so the browser rejects it with `NON_DIFFERING_BYTE`. Its three
+artifacts stay byte-immutable in the withdrawal allowlist and must never be
+re-indexed. Each is
 backed by its own explicit, hash-pinned `ACCEPTED` receipt. The F Final public
 trial `srwf-final-20260814-v0-1` is also indexed and is limited to its documented
 cold-boot and demo-route evidence; it does not claim long-play or full-route
