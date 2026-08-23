@@ -817,6 +817,7 @@ test("accepted release manifests expose clean version-only BIN and CUE names", a
     ["srwf-f-20260814-v0-1-1.json", "SRWF-KOR-20260814-v0.1.1.bin", "SRWF-KOR-20260814-v0.1.1.cue"],
     ["srwf-f-20260815-v0-1-2.json", "SRWF-KOR-20260815-v0.1.2.bin", "SRWF-KOR-20260815-v0.1.2.cue"],
     ["srwf-f-20260821-v0-2.json", "SRWF-KOR-20260821-v0.2.bin", "SRWF-KOR-20260821-v0.2.cue"],
+    ["srwf-f-20260823-v0-3.json", "SRWF-KOR-20260823-v0.3.bin", "SRWF-KOR-20260823-v0.3.cue"],
     ["srwf-final-20260814-v0-1.json", "SRWFIN-KOR-20260814-v0.1.bin", "SRWFIN-KOR-20260814-v0.1.cue"],
   ]) {
     const release = JSON.parse(await readFile(
@@ -844,14 +845,20 @@ test("each game points at its accepted default while F v0.1.1 remains selectable
   const fReleases = index.releases.filter((entry) => entry.gameId === "srwf-f");
   const finalReleases = index.releases.filter((entry) => entry.gameId === "srwf-final");
 
-  assert.equal(game.defaultReleaseId, "srwf-f-20260821-v0-2");
+  // 목록은 최신이 맨 위다. 새 릴리스가 들어오면 기본 선택도 그 최신본으로 옮긴다.
+  assert.equal(game.defaultReleaseId, "srwf-f-20260823-v0-3");
   assert.deepEqual(
     fReleases.map((entry) => entry.id),
-    ["srwf-f-20260821-v0-2", "srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
+    [
+      "srwf-f-20260823-v0-3",
+      "srwf-f-20260821-v0-2",
+      "srwf-f-20260815-v0-1-2",
+      "srwf-f-20260814-v0-1-1",
+    ],
   );
   assert.deepEqual(
     fReleases.map((entry) => entry.label),
-    ["2026.08.21 · v0.2", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
+    ["2026.08.23 · v0.3", "2026.08.21 · v0.2", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
   assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");

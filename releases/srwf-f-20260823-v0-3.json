@@ -20,15 +20,13 @@
   "format": "srwf.sparse-byte-delta.v1",
   "url": "patches/srwf-f-20260823-v0-3.srwfp",
   "size": 17906623,
-  "sha256": "8fa872c73f2394bbec6b072f6d013532568612165b95aaa5f17b83b4f8e252be"
+  "sha256": "8fa872c73f2394bbec6b072f6d013532568612165b95aaa5f17b83b4f8e252be",
+  "recordCount": 650,
+  "bodyUncompressedSize": 38505195
  },
  "provenance": {
   "v5Commit": "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
-  "revision": "V5.r001-fable-hub-g43n",
-  "buildReceiptSha256": "",
-  "acceptanceReceiptSha256": "46ad9fdb336a53f95793deb75ab13223c10de2954f35838a751a0f23aae01637"
- },
- "knownFollowUps": [
-  "전투 화면 파일럿 이름표가 아직 Ｄｒ헬 이다. 시나리오 대사 8행은 Ｄｒ．헬 로 통일됐으나 이름표는 TSR.BIN 에 있어 이번 리비전에 들어가지 않았다. 다음 리비전에서 처리한다."
- ]
+  "buildReceiptSha256": "b64ba88b6e9a67c4badb0c3bd32a3ff21eba4bc03f633823b8b8892b9f5e0913",
+  "acceptanceReceiptSha256": "4f7d3c938b7ac543d51345d65ec5da955526c1425674ef2710fb3319ce1f0b7b"
+ }
 }
