@@ -1,82 +1,90 @@
 {
-  "$schema": "../schemas/releases.schema.json",
-  "schema": "srwf-kor.public-release-index.v2",
-  "project": {
-    "id": "srwf-kor-v5",
-    "status": "HAS_ACCEPTED_RELEASE"
+ "$schema": "../schemas/releases.schema.json",
+ "schema": "srwf-kor.public-release-index.v2",
+ "project": {
+  "id": "srwf-kor-v5",
+  "status": "HAS_ACCEPTED_RELEASE"
+ },
+ "games": [
+  {
+   "id": "srwf-f",
+   "label": "슈퍼로봇대전 F",
+   "status": "HAS_ACCEPTED_RELEASE",
+   "defaultReleaseId": "srwf-f-20260821-v0-2"
   },
-  "games": [
-    {
-      "id": "srwf-f",
-      "label": "슈퍼로봇대전 F",
-      "status": "HAS_ACCEPTED_RELEASE",
-      "defaultReleaseId": "srwf-f-20260821-v0-2"
-    },
-    {
-      "id": "srwf-final",
-      "label": "슈퍼로봇대전 F 완결편",
-      "status": "HAS_ACCEPTED_RELEASE",
-      "defaultReleaseId": "srwf-final-20260814-v0-1"
-    }
-  ],
-  "stock_profiles": [
-    {
-      "gameId": "srwf-f",
-      "id": "saturn-jp-stock-track01-mode1-2352-c198a930",
-      "label": "검증된 세가 새턴 일본어판 Rev. B 전체 디스크",
-      "size": 578512032,
-      "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
-      "sectorCount": 245966,
-      "sectorSize": 2352,
-      "userDataOffset": 16,
-      "userDataSize": 2048,
-      "track": "TRACK 01 MODE1/2352"
-    },
-    {
-      "gameId": "srwf-final",
-      "id": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
-      "label": "검증된 세가 새턴 일본어판 Rev. A 전체 디스크",
-      "size": 520408224,
-      "sha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
-      "sectorCount": 221262,
-      "sectorSize": 2352,
-      "userDataOffset": 16,
-      "userDataSize": 2048,
-      "track": "TRACK 01 MODE1/2352"
-    }
-  ],
-  "releases": [
-    {
-      "gameId": "srwf-f",
-      "id": "srwf-f-20260821-v0-2",
-      "state": "ACCEPTED",
-      "label": "2026.08.21 · v0.2",
-      "manifest": "releases/srwf-f-20260821-v0-2.json",
-      "manifestSha256": "5896633c982e32c54dc0c439b720c12f64a4ca6ab324384bac24b9926533af9d"
-    },
-    {
-      "gameId": "srwf-f",
-      "id": "srwf-f-20260815-v0-1-2",
-      "state": "ACCEPTED",
-      "label": "2026.08.15 · v0.1.2",
-      "manifest": "releases/srwf-f-20260815-v0-1-2.json",
-      "manifestSha256": "1e5db3441d633e56a6d143ad62915ae0c13628f752a9b7bd75a2b8975de65ce6"
-    },
-    {
-      "gameId": "srwf-f",
-      "id": "srwf-f-20260814-v0-1-1",
-      "state": "ACCEPTED",
-      "label": "2026.08.14 · v0.1.1",
-      "manifest": "releases/srwf-f-20260814-v0-1-1.json",
-      "manifestSha256": "46a454df5cdf6f4a97c9d3ef569b8d1a5112d9f5a54e632040e1b95c2a7f00fe"
-    },
-    {
-      "gameId": "srwf-final",
-      "id": "srwf-final-20260814-v0-1",
-      "state": "ACCEPTED",
-      "label": "2026.08.14 · v0.1 시험판",
-      "manifest": "releases/srwf-final-20260814-v0-1.json",
-      "manifestSha256": "86c7843f7984e79f75836e641184a1735d4591ef57ebcec27996ce9954e95c09"
-    }
-  ]
+  {
+   "id": "srwf-final",
+   "label": "슈퍼로봇대전 F 완결편",
+   "status": "HAS_ACCEPTED_RELEASE",
+   "defaultReleaseId": "srwf-final-20260814-v0-1"
+  }
+ ],
+ "stock_profiles": [
+  {
+   "gameId": "srwf-f",
+   "id": "saturn-jp-stock-track01-mode1-2352-c198a930",
+   "label": "검증된 세가 새턴 일본어판 Rev. B 전체 디스크",
+   "size": 578512032,
+   "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+   "sectorCount": 245966,
+   "sectorSize": 2352,
+   "userDataOffset": 16,
+   "userDataSize": 2048,
+   "track": "TRACK 01 MODE1/2352"
+  },
+  {
+   "gameId": "srwf-final",
+   "id": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+   "label": "검증된 세가 새턴 일본어판 Rev. A 전체 디스크",
+   "size": 520408224,
+   "sha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+   "sectorCount": 221262,
+   "sectorSize": 2352,
+   "userDataOffset": 16,
+   "userDataSize": 2048,
+   "track": "TRACK 01 MODE1/2352"
+  }
+ ],
+ "releases": [
+  {
+   "gameId": "srwf-f",
+   "id": "srwf-f-20260821-v0-2",
+   "state": "ACCEPTED",
+   "label": "2026.08.21 · v0.2",
+   "manifest": "releases/srwf-f-20260821-v0-2.json",
+   "manifestSha256": "5896633c982e32c54dc0c439b720c12f64a4ca6ab324384bac24b9926533af9d"
+  },
+  {
+   "gameId": "srwf-f",
+   "id": "srwf-f-20260815-v0-1-2",
+   "state": "ACCEPTED",
+   "label": "2026.08.15 · v0.1.2",
+   "manifest": "releases/srwf-f-20260815-v0-1-2.json",
+   "manifestSha256": "1e5db3441d633e56a6d143ad62915ae0c13628f752a9b7bd75a2b8975de65ce6"
+  },
+  {
+   "gameId": "srwf-f",
+   "id": "srwf-f-20260814-v0-1-1",
+   "state": "ACCEPTED",
+   "label": "2026.08.14 · v0.1.1",
+   "manifest": "releases/srwf-f-20260814-v0-1-1.json",
+   "manifestSha256": "46a454df5cdf6f4a97c9d3ef569b8d1a5112d9f5a54e632040e1b95c2a7f00fe"
+  },
+  {
+   "gameId": "srwf-final",
+   "id": "srwf-final-20260814-v0-1",
+   "state": "ACCEPTED",
+   "label": "2026.08.14 · v0.1 시험판",
+   "manifest": "releases/srwf-final-20260814-v0-1.json",
+   "manifestSha256": "86c7843f7984e79f75836e641184a1735d4591ef57ebcec27996ce9954e95c09"
+  },
+  {
+   "gameId": "srwf-f",
+   "id": "srwf-f-20260823-v0-3",
+   "state": "ACCEPTED",
+   "label": "2026.08.23 · v0.3",
+   "manifest": "releases/srwf-f-20260823-v0-3.json",
+   "manifestSha256": "b2623982b1b02e62044e41bb9f1fa63fd1da05e58e52b3f1858a640807124a8f"
+  }
+ ]
 }
