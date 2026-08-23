@@ -156,6 +156,19 @@ PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
 # KORPROL helper gate. Its three public artifacts remain byte-immutable
 # historical evidence, but they must never re-enter the accepted index.
 WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST: dict[str, str] = {
+    # v0.2 는 공개 v1 정규형을 어긴 페이로드였다. record 안에 source 와 같은
+    # byte 가 1,873,210 개 들어 있어 브라우저가 NON_DIFFERING_BYTE 로 거부한다.
+    # 생성기의 --coalesce-gap 이 동일 byte 를 끼워 넣은 결과다. 증거로만 남기고
+    # 다시 인덱싱하지 않는다.
+    "patches/srwf-f-20260821-v0-2.srwfp": (
+        "123f204e29625bf4fd2a360a192a6b2eae12bb7ff88633031a8cc17b88984580"
+    ),
+    "receipts/srwf-f-20260821-v0-2.acceptance.json": (
+        "26e218a22c6c675badc295e73abebf0902091abfc325b6d91e813aa3e007ca95"
+    ),
+    "releases/srwf-f-20260821-v0-2.json": (
+        "5896633c982e32c54dc0c439b720c12f64a4ca6ab324384bac24b9926533af9d"
+    ),
     "patches/srwf-f-20260814-v0-1.srwfp": (
         "84f9e0bfb15789464dda0afe7254489e9ab5f37f0fc2d3af9df27b204c411f68"
     ),

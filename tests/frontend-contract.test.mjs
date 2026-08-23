@@ -816,7 +816,6 @@ test("accepted release manifests expose clean version-only BIN and CUE names", a
   for (const [manifestName, imageName, cueName] of [
     ["srwf-f-20260814-v0-1-1.json", "SRWF-KOR-20260814-v0.1.1.bin", "SRWF-KOR-20260814-v0.1.1.cue"],
     ["srwf-f-20260815-v0-1-2.json", "SRWF-KOR-20260815-v0.1.2.bin", "SRWF-KOR-20260815-v0.1.2.cue"],
-    ["srwf-f-20260821-v0-2.json", "SRWF-KOR-20260821-v0.2.bin", "SRWF-KOR-20260821-v0.2.cue"],
     ["srwf-f-20260823-v0-3.json", "SRWF-KOR-20260823-v0.3.bin", "SRWF-KOR-20260823-v0.3.cue"],
     ["srwf-final-20260814-v0-1.json", "SRWFIN-KOR-20260814-v0.1.bin", "SRWFIN-KOR-20260814-v0.1.cue"],
   ]) {
@@ -849,16 +848,12 @@ test("each game points at its accepted default while F v0.1.1 remains selectable
   assert.equal(game.defaultReleaseId, "srwf-f-20260823-v0-3");
   assert.deepEqual(
     fReleases.map((entry) => entry.id),
-    [
-      "srwf-f-20260823-v0-3",
-      "srwf-f-20260821-v0-2",
-      "srwf-f-20260815-v0-1-2",
-      "srwf-f-20260814-v0-1-1",
-    ],
+    // v0.2 는 정규형 위반(record 안 동일 byte)으로 철회되어 인덱스에 없다.
+    ["srwf-f-20260823-v0-3", "srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
   );
   assert.deepEqual(
     fReleases.map((entry) => entry.label),
-    ["2026.08.23 · v0.3", "2026.08.21 · v0.2", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
+    ["2026.08.23 · v0.3", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
   assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");
