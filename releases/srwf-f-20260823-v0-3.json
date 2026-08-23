@@ -14,17 +14,17 @@
   "filename": "SRWF-KOR-20260823-v0.3.bin",
   "cueFilename": "SRWF-KOR-20260823-v0.3.cue",
   "size": 578512032,
-  "sha256": "22ea929baa05f0aea7eb4151e076b52a87bcb0c2824c2aee5f7c63a89a7f38e0"
+  "sha256": "1cd17fa60a66e69267c69fb308d75940080ae34c360f84628a024c4d0b85bdb8"
  },
  "patch": {
   "format": "srwf.sparse-byte-delta.v1",
   "url": "patches/srwf-f-20260823-v0-3.srwfp",
-  "size": 17906197,
-  "sha256": "511c7bee213d1b04d38a0ba15c3464deaad67894047412c7221043933dc704fb"
+  "size": 17906623,
+  "sha256": "8fa872c73f2394bbec6b072f6d013532568612165b95aaa5f17b83b4f8e252be"
  },
  "provenance": {
   "v5Commit": "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
-  "revision": "V5.r001-fable-hub-g43d",
+  "revision": "V5.r001-fable-hub-g43n",
   "buildReceiptSha256": "",
   "acceptanceReceiptSha256": null
  },
