@@ -53,6 +53,11 @@ const PINNED_STOCK_PROFILES = new Map([
   })],
 ]);
 const PUBLIC_GAME_IDS = new Set(["srwf-f", "srwf-final"]);
+/* 인덱스 계약은 두 게임 그대로다 — 완결편 릴리스는 철회하지 않았고 매니페스트에도
+   남아 있다.  다만 완결편은 F 보다 검수가 한참 덜 돼서 지금 상태로 설치를 권할 수
+   없으므로, 고를 수 없게 화면에서만 뺀다.  다시 열 때는 이 집합에서 지우면 된다. */
+const HIDDEN_GAME_IDS = new Set(["srwf-final"]);
+const isSelectableGame = (game) => !HIDDEN_GAME_IDS.has(game.id);
 const SOURCE_SUPPORT_COPY = new Map([
   ["srwf-f", Object.freeze({
     gameLabel: "슈퍼로봇대전 F",
@@ -241,9 +246,10 @@ async function loadReleaseIndex() {
     throw new PatcherError("INDEX_DUPLICATE_RELEASE", "Release ids must be unique");
   }
   validateGameBindings(index.project.status);
-  replaceGameOptions([...state.games.values()]);
-  const initialGame = [...state.games.values()].find((game) => game.status === HAS_ACCEPTED_RELEASE)
-    ?? [...state.games.values()][0];
+  const selectable = [...state.games.values()].filter(isSelectableGame);
+  replaceGameOptions(selectable);
+  const initialGame = selectable.find((game) => game.status === HAS_ACCEPTED_RELEASE)
+    ?? selectable[0];
   if (!initialGame) {
     throw new PatcherError("INDEX_STATE_CONFLICT", "At least one public game entry is required");
   }
@@ -494,6 +500,9 @@ async function activateGame(gameId) {
   const game = state.games.get(gameId);
   if (!game) {
     throw new PatcherError("GAME_CATALOG_INVALID", "Selected game is not in the public catalog");
+  }
+  if (!isSelectableGame(game)) {
+    throw new PatcherError("GAME_CATALOG_INVALID", "Selected game is not offered right now");
   }
   invalidateReleaseLoad();
   state.selectedGameId = game.id;
@@ -2600,6 +2609,7 @@ class PatcherError extends Error {
 }
 
 export const __testHooks = Object.freeze({
+  HIDDEN_GAME_IDS,
   activateGame,
   beginWorkerOperation,
   buildPatchedImageCue,
