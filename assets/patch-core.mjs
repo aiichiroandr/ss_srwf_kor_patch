@@ -904,12 +904,39 @@ export async function applyPatchToWritable(blob, writable, parsedPatch, options 
   let skipUntil = 0;
   let closed = false;
 
+  // 레코드 하나가 평균 66바이트라, 레코드와 그 사이 간격을 나오는 대로 write()
+  // 하면 578MB 한 장에 331,678번의 쓰기가 걸린다(v0.3 실측, 가장 작은 것은 1바이트).
+  // 그 한 번 한 번이 브라우저 파일 백엔드로 가는 왕복이라 실제 디스크 시간을 호출
+  // 비용이 압도한다 — 크로미움에서 왕복당 238µs 를 재었으니 79초, 왕복이 더 비싼
+  // 윈도우에서는 분 단위다.  버퍼가 찰 때까지 모아 두면 같은 바이트가 552번의
+  // 쓰기로 나가고, 덤으로 매 쓰기가 1MB 경계에 맞아 다운로드 경로의 캡처 창과도
+  // 정렬된다.
+  let writeBuffer = new Uint8Array(WRITE_CHUNK_SIZE);
+  let writeBufferLength = 0;
+
+  const flushWrites = async () => {
+    if (writeBufferLength === 0) {
+      return;
+    }
+    const chunk = writeBuffer.subarray(0, writeBufferLength);
+    outputHasher.update(chunk);
+    await writeWithAbort(writer, chunk, signal);
+    // write() 는 넘겨받은 버퍼를 detach 할 수 있으므로 다시 쓰지 않는다.
+    writeBuffer = new Uint8Array(WRITE_CHUNK_SIZE);
+    writeBufferLength = 0;
+  };
+
   const emit = async (bytes) => {
-    for (let offset = 0; offset < bytes.byteLength; offset += WRITE_CHUNK_SIZE) {
-      const chunk = bytes.subarray(offset, Math.min(offset + WRITE_CHUNK_SIZE, bytes.byteLength));
-      outputHasher.update(chunk);
-      await writeWithAbort(writer, chunk, signal);
-      outputPosition += chunk.byteLength;
+    let offset = 0;
+    while (offset < bytes.byteLength) {
+      const taken = Math.min(WRITE_CHUNK_SIZE - writeBufferLength, bytes.byteLength - offset);
+      writeBuffer.set(bytes.subarray(offset, offset + taken), writeBufferLength);
+      writeBufferLength += taken;
+      offset += taken;
+      outputPosition += taken;
+      if (writeBufferLength === WRITE_CHUNK_SIZE) {
+        await flushWrites();
+      }
     }
   };
 
@@ -958,6 +985,8 @@ export async function applyPatchToWritable(blob, writable, parsedPatch, options 
         { writtenBytes: outputPosition },
       );
     }
+
+    await flushWrites();
 
     if (inputPosition !== parsedPatch.sourceSize) {
       fail('SOURCE_SIZE_MISMATCH', `Source stream produced ${inputPosition} bytes, expected ${parsedPatch.sourceSize}`);
