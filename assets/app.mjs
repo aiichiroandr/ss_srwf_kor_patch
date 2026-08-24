@@ -1,12 +1,12 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260821-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260824-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260821-1";
+} from "./release-notes.mjs?v=20260824-1";
 
-const STATIC_ASSET_REVISION = "20260821-1";
+const STATIC_ASSET_REVISION = "20260824-1";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -233,7 +233,10 @@ function showBrowserCompatibility() {
   elements.compatibilityBadge.classList.add("is-unsupported");
   elements.compatibilityBadge.lastChild.textContent = " 안전 저장 불가";
   const { imageSize } = sourceSupportCopy();
-  elements.sourceHelp.textContent = `이 브라우저에서는 원본 폴더에 약 ${imageSize}의 새 BIN/CUE를 안전하게 만들 수 없습니다. 버튼을 눌러 지원 환경을 확인하세요.`;
+  // 이 경로는 브라우저가 파일을 통째로 받아 쓰므로 크롬 계열보다 훨씬 느리다.
+  elements.sourceHelp.textContent = `이 브라우저에서는 원본 폴더에 약 ${imageSize}의 새 BIN/CUE를 안전하게 만들 수 없습니다.`
+    + " 다운로드 방식으로 진행되어 저장이 크게 느려집니다 — PC라면 크롬이나 엣지를 권합니다."
+    + " 버튼을 눌러 지원 환경을 확인하세요.";
 }
 
 async function loadReleaseIndex() {
@@ -1742,12 +1745,17 @@ function showInitialProgress(operation) {
   }
 }
 
+// 막바지에 진행률이 멈춘 듯 보이는 구간의 설명.  이 지점부터는 패처가 아니라
+// 브라우저가 약 578MB 를 실제 파일로 확정하는 중이라 진행률을 받아올 수 없다.
+const SAVING_DETAIL = "브라우저가 새 BIN 을 디스크에 확정하는 중입니다. "
+  + "백신 실시간 검사가 켜져 있거나 외장·네트워크 드라이브에 저장하면 조금 더 걸립니다.";
+
 function showProgressPhase(phase) {
   const copy = {
     "patch-download": ["PATCH DATA", "검증된 패치 데이터를 준비하고 있습니다", "같은 저장소의 패치 데이터만 읽습니다."],
     "patch-parse": ["PATCH VERIFY", "패치 데이터의 무결성을 확인하고 있습니다", "명세에 고정된 크기와 SHA-256을 비교합니다."],
     "source-apply": ["VERIFY & BUILD", "원본을 검증하며 새 BIN을 만들고 있습니다", "전체 SHA-256과 변경 구간을 한 번의 읽기로 확인하며 별도 결과를 구성합니다."],
-    "output-verify": ["OUTPUT VERIFY", "출력 검증을 마무리하고 있습니다", "새 BIN으로 구성한 전체 바이트를 목표 크기와 SHA-256으로 확인했습니다."],
+    "output-verify": ["OUTPUT VERIFY", "출력 검증을 마무리하고 있습니다", SAVING_DETAIL],
   }[phase] ?? ["WORKING", "안전하게 처리하고 있습니다", "이 탭을 닫지 마세요."];
 
   const phaseChanged = elements.progressPanel.dataset.phase !== phase;
@@ -1779,6 +1787,11 @@ function updateProgress(phase, processed, total) {
   const percent = Math.max(0, Math.min(100, (processed / total) * 100));
   elements.progressBar.value = percent;
   elements.progressPercent.textContent = `${Math.floor(percent)}%`;
+  // 막바지에서 진행률이 멈춘 듯 보이는 이유를 그 자리에서 알려 준다.
+  // 여기서부터는 브라우저의 파일 쓰기라 패처가 진행률을 받아올 수 없다.
+  if (percent >= 98 && elements.progressDetail.textContent !== SAVING_DETAIL) {
+    elements.progressDetail.textContent = SAVING_DETAIL;
+  }
 }
 
 function finishBusyState() {
