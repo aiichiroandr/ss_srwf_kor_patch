@@ -1,12 +1,12 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260824-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260825-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260824-1";
+} from "./release-notes.mjs?v=20260825-1";
 
-const STATIC_ASSET_REVISION = "20260824-1";
+const STATIC_ASSET_REVISION = "20260825-1";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -14,6 +14,9 @@ const RELEASE_SCHEMA = "srwf-kor.public-release.v1";
 const PATCH_FORMAT = "srwf.sparse-byte-delta.v1";
 const PROJECT_ID = "srwf-kor-v5";
 const ACCEPTED = "ACCEPTED";
+const TEMPORARY_HARDWARE_CUE_RELEASE_ID = "srwf-f-20260823-v0-3";
+const TEMPORARY_HARDWARE_CUE_IMAGE_NAME = "SRWF-KOR-20260823-v0.3.bin";
+const TEMPORARY_HARDWARE_CUE_NAME = "SRWF-KOR-20260823-v0.3.cue";
 const NO_ACCEPTED_RELEASE = "NO_ACCEPTED_RELEASE";
 const HAS_ACCEPTED_RELEASE = "HAS_ACCEPTED_RELEASE";
 const INDEX_SCHEMA_REFERENCE = "../schemas/releases.schema.json";
@@ -125,9 +128,13 @@ const elements = {
   cueAction: byId("cueAction"),
   cueButton: byId("cueButton"),
   cueStatus: byId("cueStatus"),
+  hardwareCueAction: byId("hardwareCueAction"),
+  hardwareCueButton: byId("hardwareCueButton"),
+  hardwareCueStatus: byId("hardwareCueStatus"),
   downloadActions: byId("downloadActions"),
   downloadBinLink: byId("downloadBinLink"),
   downloadCueLink: byId("downloadCueLink"),
+  downloadHardwareCueLink: byId("downloadHardwareCueLink"),
   downloadHelp: byId("downloadHelp"),
   liveRegion: byId("liveRegion"),
 };
@@ -165,6 +172,7 @@ const state = {
   preparationToken: null,
   outputHandle: null,
   cueHandle: null,
+  hardwareCueHandle: null,
   outputDirectoryHandle: null,
   outputMode: null,
   downloadFallbackReady: false,
@@ -188,6 +196,7 @@ elements.sourceButton.addEventListener("click", chooseSource);
 elements.patchButton.addEventListener("click", applyPatch);
 elements.cancelButton.addEventListener("click", cancelCurrentOperation);
 elements.cueButton.addEventListener("click", saveCueFile);
+elements.hardwareCueButton.addEventListener("click", saveTemporaryHardwareCue);
 window.addEventListener("beforeunload", warnWhileBusy);
 window.addEventListener("pagehide", handlePageHide);
 
@@ -995,6 +1004,8 @@ async function applyPatch() {
   if (outputHandle !== state.outputHandle) {
     state.cueHandle = null;
   }
+  state.hardwareCueHandle = null;
+  elements.hardwareCueAction.hidden = true;
   state.outputHandle = outputHandle;
   state.outputMode = "directory";
   state.downloadPlan = null;
@@ -1021,6 +1032,8 @@ function startPatchDownloadFallback({ reason = "retry" } = {}) {
   state.downloadFallbackReady = true;
   state.outputHandle = null;
   state.cueHandle = null;
+  state.hardwareCueHandle = null;
+  elements.hardwareCueAction.hidden = true;
   state.outputMode = "download";
   state.downloadPlan = plan;
   state.patchCompleted = false;
@@ -1063,7 +1076,7 @@ function createDownloadOutputPlan(desiredImageName, desiredCueName) {
   return plan;
 }
 
-function installDownloadArtifacts(result, expectedPlan, expectedSize, sourceProfileId) {
+function installDownloadArtifacts(result, expectedPlan, expectedSize, sourceProfileId, releaseId = null) {
   if (
     !result
     || !(result.outputBlob instanceof Blob)
@@ -1091,6 +1104,7 @@ function installDownloadArtifacts(result, expectedPlan, expectedSize, sourceProf
   clearDownloadArtifacts();
   let binUrl = null;
   let cueUrl = null;
+  let hardwareCueUrl = null;
   try {
     binUrl = globalThis.URL.createObjectURL(result.outputBlob);
     const cueBlob = new Blob(
@@ -1098,15 +1112,24 @@ function installDownloadArtifacts(result, expectedPlan, expectedSize, sourceProf
       { type: "application/x-cue;charset=utf-8" },
     );
     cueUrl = globalThis.URL.createObjectURL(cueBlob);
+    if (releaseId === TEMPORARY_HARDWARE_CUE_RELEASE_ID) {
+      const hardwareCueBlob = new Blob(
+        [buildTemporaryHardwareCue(result.imageName, releaseId)],
+        { type: "application/x-cue;charset=utf-8" },
+      );
+      hardwareCueUrl = globalThis.URL.createObjectURL(hardwareCueBlob);
+    }
   } catch (error) {
     if (binUrl) globalThis.URL.revokeObjectURL(binUrl);
     if (cueUrl) globalThis.URL.revokeObjectURL(cueUrl);
+    if (hardwareCueUrl) globalThis.URL.revokeObjectURL(hardwareCueUrl);
     throw new PatcherError("DOWNLOAD_LINK_FAILED", error?.message ?? "Blob download URLs could not be created");
   }
 
   state.downloadArtifacts = Object.freeze({
     binUrl,
     cueUrl,
+    hardwareCueUrl,
     imageName: result.imageName,
     cueName: result.cueName,
   });
@@ -1114,7 +1137,15 @@ function installDownloadArtifacts(result, expectedPlan, expectedSize, sourceProf
   elements.downloadBinLink.setAttribute("download", result.imageName);
   elements.downloadCueLink.setAttribute("href", cueUrl);
   elements.downloadCueLink.setAttribute("download", result.cueName);
-  elements.downloadHelp.textContent = "두 파일을 각각 내려받아 같은 폴더에 두세요. 같은 이름의 이전 다운로드가 있으면 먼저 삭제해 이름 뒤에 (1)이 붙지 않게 해 주세요.";
+  if (hardwareCueUrl) {
+    elements.downloadHardwareCueLink.setAttribute("href", hardwareCueUrl);
+    elements.downloadHardwareCueLink.setAttribute("download", result.cueName);
+    elements.downloadHardwareCueLink.hidden = false;
+    elements.downloadHelp.textContent = "실기 CD-R 시험은 일반 CUE를 받지 말고 실기용 CUE(임시) 하나만 받으세요. 이미 같은 이름 CUE가 있으면 삭제하거나 이 파일로 대치하세요. 에뮬·SAROO는 일반 CUE를 사용합니다.";
+  } else {
+    elements.downloadHardwareCueLink.hidden = true;
+    elements.downloadHelp.textContent = "두 파일을 각각 내려받아 같은 폴더에 두세요. 같은 이름의 이전 다운로드가 있으면 먼저 삭제해 이름 뒤에 (1)이 붙지 않게 해 주세요.";
+  }
   elements.downloadActions.hidden = false;
 }
 
@@ -1122,7 +1153,7 @@ function clearDownloadArtifacts() {
   const artifacts = state.downloadArtifacts;
   state.downloadArtifacts = null;
   if (artifacts && typeof globalThis.URL?.revokeObjectURL === "function") {
-    for (const url of [artifacts.binUrl, artifacts.cueUrl]) {
+    for (const url of [artifacts.binUrl, artifacts.cueUrl, artifacts.hardwareCueUrl]) {
       if (typeof url === "string") {
         try {
           globalThis.URL.revokeObjectURL(url);
@@ -1136,6 +1167,9 @@ function clearDownloadArtifacts() {
   elements.downloadBinLink.removeAttribute("download");
   elements.downloadCueLink.removeAttribute("href");
   elements.downloadCueLink.removeAttribute("download");
+  elements.downloadHardwareCueLink.removeAttribute("href");
+  elements.downloadHardwareCueLink.removeAttribute("download");
+  elements.downloadHardwareCueLink.hidden = true;
   elements.downloadActions.hidden = true;
 }
 
@@ -1335,9 +1369,12 @@ async function saveCueFile() {
       && state.patchCompleted
       && state.outputHandle === outputHandle
     ) {
-      // The CUE is committed. Revoke this page's retry privilege so any later
-      // call sees the existing fixed-name file and fails closed instead of
-      // reopening it for overwrite.
+      state.hardwareCueHandle = state.release?.id === TEMPORARY_HARDWARE_CUE_RELEASE_ID
+        ? savedCueHandle
+        : null;
+      // The normal CUE is committed. Revoke ordinary retry privilege. v0.3 may
+      // retain this exact page-created handle only for the one-shot hardware
+      // CUE replacement offered below; it is never reacquired by filename.
       state.cueHandle = null;
       elements.errorPanel.hidden = true;
       elements.successPanel.hidden = false;
@@ -1345,6 +1382,10 @@ async function saveCueFile() {
       elements.cueButton.disabled = true;
       elements.cueButton.hidden = true;
       elements.cueStatus.textContent = `${savedCueHandle.name}도 자동으로 저장했습니다.`;
+      elements.hardwareCueAction.hidden = !state.hardwareCueHandle;
+      elements.hardwareCueButton.hidden = !state.hardwareCueHandle;
+      elements.hardwareCueButton.disabled = false;
+      elements.hardwareCueStatus.textContent = "실기 CD-R 시험용 CUE로 같은 이름의 CUE를 교체합니다.";
       announce(`${savedCueHandle.name}도 패치 BIN과 같은 폴더에 자동으로 저장했습니다.`);
     }
   } catch (error) {
@@ -1354,6 +1395,63 @@ async function saveCueFile() {
       && state.outputHandle === outputHandle
     ) {
       showCueFailure("CUE 파일을 자동으로 저장하지 못했습니다. 이미 검증된 BIN은 그대로 유지됩니다.");
+    }
+  } finally {
+    if (state.cueSaveSequence === cueSaveSequence) {
+      state.cueSaving = false;
+      updateControls();
+    }
+  }
+}
+
+async function saveTemporaryHardwareCue() {
+  const releaseId = state.release?.id;
+  const cueFilename = state.release?.target.cueFilename;
+  const outputHandle = state.outputHandle;
+  const hardwareCueHandle = state.hardwareCueHandle;
+  if (
+    releaseId !== TEMPORARY_HARDWARE_CUE_RELEASE_ID
+    || !cueFilename
+    || !state.patchCompleted
+    || !outputHandle
+    || !hardwareCueHandle
+    || state.outputMode !== "directory"
+    || state.cueSaving
+  ) {
+    return;
+  }
+
+  const cueSaveSequence = ++state.cueSaveSequence;
+  state.cueSaving = true;
+  elements.hardwareCueButton.disabled = true;
+  elements.hardwareCueStatus.textContent = "같은 이름의 CUE를 실기용 임시 구성으로 교체하고 있습니다.";
+  updateControls();
+  try {
+    await writeTemporaryHardwareCue(
+      hardwareCueHandle,
+      cueFilename,
+      outputHandle.name,
+      releaseId,
+    );
+    if (
+      state.cueSaveSequence === cueSaveSequence
+      && state.patchCompleted
+      && state.outputHandle === outputHandle
+      && state.hardwareCueHandle === hardwareCueHandle
+    ) {
+      state.hardwareCueHandle = null;
+      elements.hardwareCueButton.disabled = true;
+      elements.hardwareCueStatus.textContent = `${cueFilename}을 실기용 임시 CUE로 교체했습니다. BIN은 바뀌지 않았습니다.`;
+      announce(`${cueFilename}을 실기용 임시 CUE로 교체했습니다.`);
+    }
+  } catch {
+    if (
+      state.cueSaveSequence === cueSaveSequence
+      && state.patchCompleted
+      && state.outputHandle === outputHandle
+    ) {
+      elements.hardwareCueButton.disabled = false;
+      elements.hardwareCueStatus.textContent = "실기용 CUE로 교체하지 못했습니다. BIN과 기존 CUE는 그대로입니다. 다시 시도할 수 있습니다.";
     }
   } finally {
     if (state.cueSaveSequence === cueSaveSequence) {
@@ -1391,6 +1489,29 @@ function buildPatchedImageCue(imageName, sourceProfileId) {
   throw new PatcherError("CUE_PROFILE_INVALID", "Pinned stock profile has no published CUE layout");
 }
 
+function buildTemporaryHardwareCue(imageName, releaseId) {
+  requireSafeFilename(imageName, "hardware CUE image filename");
+  if (!BIN_FILENAME_PATTERN.test(imageName)) {
+    throw new PatcherError("CUE_IMAGE_INVALID", "Hardware CUE image filename must be a safe BIN basename");
+  }
+  if (releaseId !== TEMPORARY_HARDWARE_CUE_RELEASE_ID) {
+    throw new PatcherError("CUE_RELEASE_INVALID", "Temporary hardware CUE is not available for this release");
+  }
+  if (imageName !== TEMPORARY_HARDWARE_CUE_IMAGE_NAME) {
+    throw new PatcherError("CUE_IMAGE_INVALID", "Temporary hardware CUE requires the exact v0.3 BIN filename");
+  }
+  return `FILE "${imageName}" BINARY\r\n`
+    + "  TRACK 01 MODE1/2352\r\n"
+    + "    INDEX 01 00:00:00\r\n"
+    + "  TRACK 02 MODE2/2352\r\n"
+    + "    INDEX 00 22:34:18\r\n"
+    + "    INDEX 01 22:36:18\r\n"
+    + "  TRACK 03 MODE1/2352\r\n"
+    + "    INDEX 01 54:15:41\r\n"
+    + "  TRACK 04 AUDIO\r\n"
+    + "    INDEX 01 54:26:37\r\n";
+}
+
 async function writeCueFile(
   directoryHandle,
   desiredName,
@@ -1411,6 +1532,47 @@ async function writeCueFile(
     await writable.close();
     writable = null;
     return cueHandle;
+  } catch (error) {
+    if (writable) {
+      try {
+        await writable.abort(error);
+      } catch {
+        // Preserve the original CUE write or close failure.
+      }
+    }
+    throw error;
+  }
+}
+
+async function writeTemporaryHardwareCue(
+  ownedHandle,
+  desiredName,
+  imageName,
+  releaseId,
+) {
+  requireSafeFilename(desiredName, "hardware CUE filename");
+  if (!CUE_FILENAME_PATTERN.test(desiredName)) {
+    throw new PatcherError("OUTPUT_NAME_INVALID", "Hardware CUE filename must be canonical");
+  }
+  requireSafeFilename(imageName, "hardware CUE image filename");
+  if (
+    !ownedHandle
+    || ownedHandle.name !== desiredName
+    || typeof ownedHandle.createWritable !== "function"
+    || desiredName !== TEMPORARY_HARDWARE_CUE_NAME
+    || desiredName.slice(0, -4) !== imageName.slice(0, -4)
+  ) {
+    throw new PatcherError("OUTPUT_HANDLE_INVALID", "The session-owned CUE handle is invalid");
+  }
+  const cueText = buildTemporaryHardwareCue(imageName, releaseId);
+
+  let writable = null;
+  try {
+    writable = await ownedHandle.createWritable({ keepExistingData: false });
+    await writable.write(cueText);
+    await writable.close();
+    writable = null;
+    return ownedHandle;
   } catch (error) {
     if (writable) {
       try {
@@ -1593,6 +1755,7 @@ function handleOperationComplete(message) {
           state.downloadPlan,
           state.release.target.size,
           state.release.source.profileId,
+          state.release.id,
         );
       } catch (error) {
         handleOperationFailure(
@@ -1618,17 +1781,22 @@ function handleOperationComplete(message) {
       ? "검증 완료 · BIN/CUE 다운로드 준비"
       : "한국어 패치 BIN/CUE를 만들었습니다";
     elements.successMessage.textContent = downloadOutput
-      ? `${outputLabel}의 전체 바이트 크기와 SHA-256이 목표값과 일치합니다. 아래 BIN과 CUE를 모두 받아 같은 폴더에 두세요.`
+      ? (state.release.id === TEMPORARY_HARDWARE_CUE_RELEASE_ID
+        ? `${outputLabel}의 전체 바이트 크기와 SHA-256이 목표값과 일치합니다. BIN과 사용할 CUE 하나를 받아 같은 폴더에 두세요.`
+        : `${outputLabel}의 전체 바이트 크기와 SHA-256이 목표값과 일치합니다. 아래 BIN과 CUE를 모두 받아 같은 폴더에 두세요.`)
       : `${outputLabel}에 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`;
     elements.downloadActions.hidden = !downloadOutput;
     elements.cueAction.hidden = downloadOutput || !state.release.target.cueFilename;
+    elements.hardwareCueAction.hidden = true;
     elements.cueButton.hidden = true;
     elements.cueButton.disabled = true;
     elements.cueButton.textContent = "CUE 파일 다시 저장";
     elements.cueStatus.textContent = "패치 BIN용 CUE를 같은 폴더에 자동으로 저장합니다.";
     elements.successPanel.hidden = false;
     elements.applyHint.textContent = downloadOutput
-      ? "검증된 BIN/CUE를 준비했습니다. 아래 두 다운로드를 각각 누른 뒤 같은 폴더에 두세요."
+      ? (state.release.id === TEMPORARY_HARDWARE_CUE_RELEASE_ID
+        ? "검증된 BIN과 CUE를 준비했습니다. BIN과 사용할 CUE 하나를 받아 같은 폴더에 두세요."
+        : "검증된 BIN/CUE를 준비했습니다. 아래 두 다운로드를 각각 누른 뒤 같은 폴더에 두세요.")
       : "BIN/CUE 생성을 완료했습니다. 다시 만들려면 같은 이름의 기존 결과를 먼저 옮기거나 삭제해 주세요.";
     setWorkflowPhase("complete");
     updateControls();
@@ -1665,6 +1833,8 @@ function handleOperationFailure(error, operation = state.operation) {
     state.sourcePrepared = false;
     state.preparationToken = null;
     state.outputHandle = null;
+    state.hardwareCueHandle = null;
+    elements.hardwareCueAction.hidden = true;
     state.downloadFallbackReady = false;
     state.downloadPlan = null;
     clearDownloadArtifacts();
@@ -1967,6 +2137,7 @@ async function discardUncommittedOutput() {
   }
   state.outputHandle = null;
   state.cueHandle = null;
+  state.hardwareCueHandle = null;
   state.outputMode = null;
   state.downloadPlan = null;
 }
@@ -1985,6 +2156,7 @@ function resetFileWorkflow() {
   state.preparationToken = null;
   state.outputHandle = null;
   state.cueHandle = null;
+  state.hardwareCueHandle = null;
   state.outputDirectoryHandle = null;
   state.outputMode = null;
   state.downloadFallbackReady = false;
@@ -2006,6 +2178,10 @@ function resetFileWorkflow() {
   elements.successPanel.hidden = true;
   elements.downloadActions.hidden = true;
   elements.cueAction.hidden = true;
+  elements.hardwareCueAction.hidden = true;
+  elements.hardwareCueButton.hidden = false;
+  elements.hardwareCueButton.disabled = false;
+  elements.hardwareCueStatus.textContent = "실기 CD-R 시험용 CUE로 같은 이름의 CUE를 교체합니다.";
   elements.cueButton.hidden = true;
   elements.cueButton.disabled = false;
   elements.cueButton.textContent = "CUE 파일 다시 저장";
@@ -2032,6 +2208,7 @@ function resetPreparedSource() {
   state.preparationToken = null;
   state.outputHandle = null;
   state.cueHandle = null;
+  state.hardwareCueHandle = null;
   state.outputDirectoryHandle = null;
   state.outputMode = null;
   state.downloadFallbackReady = false;
@@ -2044,6 +2221,9 @@ function resetPreparedSource() {
   elements.successPanel.hidden = true;
   elements.downloadActions.hidden = true;
   elements.cueAction.hidden = true;
+  elements.hardwareCueAction.hidden = true;
+  elements.hardwareCueButton.hidden = false;
+  elements.hardwareCueButton.disabled = false;
   elements.cueButton.hidden = true;
   elements.sourceState.textContent = "원본 선택";
   elements.sourceState.className = "zone-state";
@@ -2626,6 +2806,7 @@ export const __testHooks = Object.freeze({
   activateGame,
   beginWorkerOperation,
   buildPatchedImageCue,
+  buildTemporaryHardwareCue,
   canOfferDownloadFallback,
   clearDownloadArtifacts,
   createDownloadOutputPlan,
@@ -2660,4 +2841,5 @@ export const __testHooks = Object.freeze({
   validateReleaseRow,
   validateStockProfiles,
   writeCueFile,
+  writeTemporaryHardwareCue,
 });
