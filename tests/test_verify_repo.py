@@ -820,6 +820,37 @@ class RepositoryPolicyTests(unittest.TestCase):
                 self.assertIn("duplicate game id", joined)
                 self.assertIn("sha256 is not exact", joined)
 
+    def test_font_release_groups_fail_closed_before_publication(self) -> None:
+        def row(release_id: str, label: str = "2026.09.09 · v0.4", game_id: str = "srwf-f") -> dict[str, str]:
+            return {"gameId": game_id, "id": release_id, "label": label}
+
+        cases = {
+            "mixes a legacy id": [row("srwf-f-20260909-v0-4"), row("srwf-f-20260909-v0-4-a")],
+            "must share one label": [
+                row("srwf-f-20260909-v0-4-a"),
+                row("srwf-f-20260909-v0-4-b", "2026.09.09 · v0.4 (설치 비권장)"),
+            ],
+        }
+        for message, rows in cases.items():
+            with self.subTest(message=message):
+                verifier.errors.clear()
+                verifier.validate_font_release_groups(rows)
+                self.assertIn(message, "\n".join(verifier.errors))
+
+        verifier.errors.clear()
+        verifier.validate_font_release_groups([
+            row("srwf-f-20260909-v0-4-a"),
+            row("srwf-f-20260909-v0-4-b"),
+            row("srwf-f-20260909-v0-4-1-a", "2026.09.09 · v0.4.1"),
+            row("srwf-final-20260909-v0-4-a", game_id="srwf-f"),
+            row("srwf-final-20260909-v0-1-a", "2026.09.09 · v0.1", "srwf-final"),
+        ])
+        verifier.validate_font_release_groups(
+            json.loads((PROJECT_ROOT / "manifest/releases.json").read_text(encoding="utf-8"))["releases"]
+        )
+        self.assertEqual(verifier.errors, [])
+        verifier.errors.clear()
+
 
 if __name__ == "__main__":
     unittest.main()

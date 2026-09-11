@@ -1584,6 +1584,33 @@ def validate_release_manifest(
     return manifest_ref, patch_ref, receipt_ref
 
 
+FONT_RELEASE_ID_PATTERN = re.compile(r"(srwf-(?:f|final)-\d{8}-v\d+(?:-\d+)+)-([abc])")
+
+
+def font_release_identity(row: dict[str, Any]) -> tuple[str, str | None]:
+    """Mirror assets/font-revisions.mjs: a -a/-b/-c suffix only counts for its own game."""
+    release_id = row["id"]
+    match = FONT_RELEASE_ID_PATTERN.fullmatch(release_id)
+    if not match or not match.group(1).startswith(f"{row.get('gameId')}-"):
+        return release_id, None
+    return match.group(1), match.group(2)
+
+
+def validate_font_release_groups(releases: list[Any]) -> None:
+    """The browser blocks the whole patcher on an ambiguous font group; catch it before publishing."""
+    groups: dict[tuple[Any, str], list[dict[str, Any]]] = {}
+    for row in releases:
+        if isinstance(row, dict) and isinstance(row.get("id"), str):
+            group_id, _ = font_release_identity(row)
+            groups.setdefault((row.get("gameId"), group_id), []).append(row)
+    for (_, group_id), rows in groups.items():
+        revisions = [font_release_identity(row)[1] for row in rows]
+        if len(set(revisions)) != len(revisions) or (None in revisions and len(revisions) > 1):
+            complain(f"manifest/releases.json: font release group {group_id} mixes a legacy id or repeats a font")
+        if len({row.get("label") for row in rows}) > 1:
+            complain(f"manifest/releases.json: font release group {group_id} must share one label")
+
+
 def validate_index(files: list[Path]) -> None:
     index = load_json(INDEX_PATH)
     required = {"$schema", "schema", "project", "games", "stock_profiles", "releases"}
@@ -1725,6 +1752,8 @@ def validate_index(files: list[Path]) -> None:
             referenced_patches.add(patch_ref)
         if receipt_ref:
             referenced_receipts.add(receipt_ref)
+
+    validate_font_release_groups(releases)
 
     for game_id, game in games_by_id.items():
         game_release_ids = release_ids_by_game.get(game_id, set())
