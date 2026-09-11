@@ -181,7 +181,18 @@ const FINAL_STOCK_PROFILE = Object.freeze({
   track: "TRACK 01 MODE1/2352",
 });
 const FINAL_RELEASE_ID = "srwf-final-20260814-v0-1";
-const V0_3_RELEASE_ID = "srwf-f-20260823-v0-3";
+const V0_3_TARGET_SHA256 = "6464be8cd7d855fcca7b6fb4710c0baabefb376826ca3d200170075e321dabe8";
+const V0_1_1_TARGET_SHA256 = "b6364d14688f6dc68dfc4199f144c102de2061eea49f81e482276a620eff1e1c";
+const FINAL_TARGET_SHA256 = "922b1d15d54acfec5f3923ead2b969226305b35327c17bde9a39754b4ae15901";
+const V0_3_FOUR_TRACK_CUE_BODY = "  TRACK 01 MODE1/2352\r\n"
+  + "    INDEX 01 00:00:00\r\n"
+  + "  TRACK 02 MODE2/2352\r\n"
+  + "    INDEX 00 22:34:18\r\n"
+  + "    INDEX 01 22:36:18\r\n"
+  + "  TRACK 03 MODE1/2352\r\n"
+  + "    INDEX 01 54:15:41\r\n"
+  + "  TRACK 04 AUDIO\r\n"
+  + "    INDEX 01 54:26:37\r\n";
 
 function makeReleaseRow(overrides = {}) {
   return {
@@ -344,7 +355,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260911-1";
+  const revision = "20260911-2";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -772,7 +783,7 @@ test("Android output failure automatically prepares fixed-name verified BIN and 
   assert.match(html, /id="downloadActions" hidden/);
   assert.match(html, /<a class="download-link is-bin" id="downloadBinLink">패치 BIN 다운로드<\/a>/);
   assert.match(html, /<a class="download-link is-cue" id="downloadCueLink">CUE 다운로드<\/a>/);
-  assert.match(html, /<a class="download-link is-hardware-cue" id="downloadHardwareCueLink" hidden>실기용 CUE 다운로드 \(임시\)<\/a>/);
+  assert.doesNotMatch(html, /downloadHardwareCueLink|실기용 CUE|\(임시\)/);
   assert.match(
     await readFile(new URL("../assets/style.css", import.meta.url), "utf8"),
     /@media \(max-height: 620px\) and \(max-width: 760px\)[\s\S]*?\.apply-card\.is-complete \.apply-main\s*\{\s*display:\s*none;/,
@@ -796,20 +807,19 @@ test("Android output failure automatically prepares fixed-name verified BIN and 
       outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
       imageName: plan.imageName,
       cueName: plan.cueName,
-    }, plan, 3, STOCK_PROFILE.id);
+    }, plan, 3, V0_1_1_TARGET_SHA256);
     assert.equal(element("downloadBinLink").getAttribute("href"), "blob:test-1");
     assert.equal(element("downloadBinLink").getAttribute("download"), plan.imageName);
     assert.equal(element("downloadCueLink").getAttribute("href"), "blob:test-2");
     assert.equal(element("downloadCueLink").getAttribute("download"), plan.cueName);
-    assert.equal(element("downloadHardwareCueLink").hidden, true);
     assert.equal(element("downloadActions").hidden, false);
+    assert.match(element("downloadHelp").textContent, /두 파일을 각각 내려받아 같은 폴더에 두세요/);
     assert.deepEqual(revoked, [], "links must remain valid after being exposed");
 
     __testHooks.clearDownloadArtifacts();
     assert.deepEqual(revoked, ["blob:test-1", "blob:test-2"]);
     assert.equal(element("downloadBinLink").hasAttribute("href"), false);
     assert.equal(element("downloadCueLink").hasAttribute("href"), false);
-    assert.equal(element("downloadHardwareCueLink").hasAttribute("href"), false);
     assert.equal(element("downloadActions").hidden, true);
   } finally {
     URL.createObjectURL = originalCreateObjectUrl;
@@ -817,7 +827,7 @@ test("Android output failure automatically prepares fixed-name verified BIN and 
   }
 });
 
-test("v0.3 mobile completion exposes an equal-width temporary hardware CUE download", async () => {
+test("v0.3 mobile download CUE is the four-track layout that boots from a burned CD-R", async () => {
   const plan = __testHooks.createDownloadOutputPlan(
     "SRWF-KOR-20260823-v0.3.bin",
     "SRWF-KOR-20260823-v0.3.cue",
@@ -828,7 +838,7 @@ test("v0.3 mobile completion exposes an equal-width temporary hardware CUE downl
   const originalRevokeObjectUrl = URL.revokeObjectURL;
   URL.createObjectURL = (blob) => {
     createdBlobs.push(blob);
-    return `blob:hardware-${createdBlobs.length}`;
+    return `blob:cue-${createdBlobs.length}`;
   };
   URL.revokeObjectURL = (url) => revoked.push(url);
   try {
@@ -836,21 +846,19 @@ test("v0.3 mobile completion exposes an equal-width temporary hardware CUE downl
       outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
       imageName: plan.imageName,
       cueName: plan.cueName,
-    }, plan, 3, STOCK_PROFILE.id, V0_3_RELEASE_ID);
+    }, plan, 3, V0_3_TARGET_SHA256);
 
-    assert.equal(createdBlobs.length, 3);
-    assert.equal(element("downloadHardwareCueLink").hidden, false);
-    assert.equal(element("downloadHardwareCueLink").getAttribute("href"), "blob:hardware-3");
-    assert.equal(element("downloadHardwareCueLink").getAttribute("download"), plan.cueName);
-    assert.match(element("downloadHelp").textContent, /실기용 CUE\(임시\) 하나만/);
+    // BIN 과 CUE 두 개뿐이다. 실기용 CUE 를 따로 두지 않고 기본 CUE 가 곧 실기용이다.
+    assert.equal(createdBlobs.length, 2);
+    assert.equal(element("downloadCueLink").getAttribute("download"), plan.cueName);
     assert.equal(
-      await createdBlobs[2].text(),
-      __testHooks.buildTemporaryHardwareCue(plan.imageName, V0_3_RELEASE_ID),
+      await createdBlobs[1].text(),
+      `FILE "${plan.imageName}" BINARY\r\n${V0_3_FOUR_TRACK_CUE_BODY}`,
     );
+    assert.doesNotMatch(element("downloadHelp").textContent, /임시|실기용|SAROO/);
 
     __testHooks.clearDownloadArtifacts();
-    assert.deepEqual(revoked, ["blob:hardware-1", "blob:hardware-2", "blob:hardware-3"]);
-    assert.equal(element("downloadHardwareCueLink").hidden, true);
+    assert.deepEqual(revoked, ["blob:cue-1", "blob:cue-2"]);
   } finally {
     URL.createObjectURL = originalCreateObjectUrl;
     URL.revokeObjectURL = originalRevokeObjectUrl;
@@ -906,66 +914,33 @@ test("each game points at its accepted default while F v0.1.1 remains selectable
   assert.deepEqual(finalReleases, [makeFinalReleaseRow()]);
 });
 
-test("F patched-image CUE retains its accepted single-data-track geometry", () => {
-  // The accepted public target relocates live data through sector 244948.  It
-  // must therefore retain the accepted single-track runtime geometry rather than
-  // reusing the stock Redump disc's original three-track boundaries.
-  const cue = __testHooks.buildPatchedImageCue(
-    "srwf-kor-v5-r001.bin",
-    STOCK_PROFILE.id,
-  );
-  assert.equal(
-    cue,
-    "FILE \"srwf-kor-v5-r001.bin\" BINARY\r\n"
-      + "  TRACK 01 MODE1/2352\r\n"
-      + "    INDEX 01 00:00:00\r\n",
-  );
-  assert.doesNotMatch(cue, /TRACK 02|TRACK 03|AUDIO|CATALOG/);
-  assert.throws(
-    () => __testHooks.buildPatchedImageCue(
-      "patched.bin\"\r\nFILE \"other.bin",
-      STOCK_PROFILE.id,
-    ),
-    (error) => error?.code === "MANIFEST_INVALID",
-  );
-});
-
-test("v0.3 temporary hardware CUE exposes the verified four-track TOC only for v0.3", () => {
+test("v0.3 patched-image CUE is the four-track layout reported working on a burned CD-R", () => {
   const imageName = "SRWF-KOR-20260823-v0.3.bin";
   assert.equal(
-    __testHooks.buildTemporaryHardwareCue(imageName, V0_3_RELEASE_ID),
-    `FILE "${imageName}" BINARY\r\n`
-      + "  TRACK 01 MODE1/2352\r\n"
-      + "    INDEX 01 00:00:00\r\n"
-      + "  TRACK 02 MODE2/2352\r\n"
-      + "    INDEX 00 22:34:18\r\n"
-      + "    INDEX 01 22:36:18\r\n"
-      + "  TRACK 03 MODE1/2352\r\n"
-      + "    INDEX 01 54:15:41\r\n"
-      + "  TRACK 04 AUDIO\r\n"
-      + "    INDEX 01 54:26:37\r\n",
+    __testHooks.buildPatchedImageCue(imageName, V0_3_TARGET_SHA256),
+    `FILE "${imageName}" BINARY\r\n${V0_3_FOUR_TRACK_CUE_BODY}`,
   );
   assert.throws(
-    () => __testHooks.buildTemporaryHardwareCue(imageName, "srwf-f-20260815-v0-1-2"),
-    (error) => error?.code === "CUE_RELEASE_INVALID",
-  );
-  assert.throws(
-    () => __testHooks.buildTemporaryHardwareCue("other-v0.3.bin", V0_3_RELEASE_ID),
-    (error) => error?.code === "CUE_IMAGE_INVALID",
-  );
-  assert.throws(
-    () => __testHooks.buildTemporaryHardwareCue("unsafe.bin\"\r\nFILE \"other.bin", V0_3_RELEASE_ID),
+    () => __testHooks.buildPatchedImageCue("unsafe.bin\"\r\nFILE \"other.bin", V0_3_TARGET_SHA256),
     (error) => error?.code === "MANIFEST_INVALID",
   );
 });
 
-test("Final patched-image CUE preserves the accepted three-track geometry", () => {
-  const cue = __testHooks.buildPatchedImageCue(
-    "SRWFIN-KOR-20260814-v0.1.bin",
-    FINAL_STOCK_PROFILE.id,
-  );
+test("historical F and Final CUEs keep their accepted geometry and unpinned targets fail closed", () => {
+  // v0.1.1·v0.1.2 는 다트랙 구성을 따로 확인한 적이 없어 승인 당시의 단일 데이터 트랙이다.
+  for (const targetSha256 of [
+    V0_1_1_TARGET_SHA256,
+    "12a9614e16ffc9b0020bb2536ccc2f4b8dddcd9619ff6a24823d86cfc87ea27e",
+  ]) {
+    assert.equal(
+      __testHooks.buildPatchedImageCue("SRWF-KOR-old.bin", targetSha256),
+      "FILE \"SRWF-KOR-old.bin\" BINARY\r\n"
+        + "  TRACK 01 MODE1/2352\r\n"
+        + "    INDEX 01 00:00:00\r\n",
+    );
+  }
   assert.equal(
-    cue,
+    __testHooks.buildPatchedImageCue("SRWFIN-KOR-20260814-v0.1.bin", FINAL_TARGET_SHA256),
     "FILE \"SRWFIN-KOR-20260814-v0.1.bin\" BINARY\r\n"
       + "  TRACK 01 MODE1/2352\r\n"
       + "    INDEX 01 00:00:00\r\n"
@@ -976,13 +951,26 @@ test("Final patched-image CUE preserves the accepted three-track geometry", () =
       + "    INDEX 00 48:48:12\r\n"
       + "    INDEX 01 48:50:12\r\n",
   );
-  assert.throws(
-    () => __testHooks.buildPatchedImageCue(
-      "SRWFIN-KOR-20260814-v0.1.bin",
-      "unknown-stock-profile",
-    ),
-    (error) => error?.code === "CUE_PROFILE_INVALID",
-  );
+  // 새 결과 이미지는 트랙 구성을 등록하기 전까지 다른 릴리스 구성을 빌려 쓰지 않는다.
+  for (const unpinned of ["b".repeat(64), STOCK_PROFILE.sha256, STOCK_PROFILE.id]) {
+    assert.throws(
+      () => __testHooks.buildPatchedImageCue("srwf-kor-v5-r001.bin", unpinned),
+      (error) => error?.code === "CUE_LAYOUT_MISSING",
+    );
+  }
+});
+
+test("every indexed release pins the CUE track layout of its accepted target image", async () => {
+  const index = JSON.parse(await readFile(new URL("../manifest/releases.json", import.meta.url), "utf8"));
+  const pinned = new Set(__testHooks.PATCHED_IMAGE_CUE_TRACKS.keys());
+  const indexedTargets = [];
+  for (const row of index.releases) {
+    const manifest = JSON.parse(await readFile(new URL(`../${row.manifest}`, import.meta.url), "utf8"));
+    indexedTargets.push(manifest.target.sha256);
+    assert.ok(pinned.has(manifest.target.sha256), `${row.id} has no pinned CUE layout`);
+  }
+  // 표에는 인덱스에 있는 결과 이미지만 둔다. 철회본이나 오타 해시가 남지 않게 한다.
+  assert.deepEqual([...pinned].sort(), [...new Set(indexedTargets)].sort());
 });
 
 test("CUE writer creates the exact fixed sibling file and commits its complete contents", async () => {
@@ -1020,7 +1008,7 @@ test("CUE writer creates the exact fixed sibling file and commits its complete c
     directoryHandle,
     "srwf-kor-v5-r001.cue",
     "srwf-kor-v5-r001.bin",
-    STOCK_PROFILE.id,
+    V0_1_1_TARGET_SHA256,
   );
 
   assert.equal(cueHandle.name, "srwf-kor-v5-r001.cue");
@@ -1031,105 +1019,16 @@ test("CUE writer creates the exact fixed sibling file and commits its complete c
   ]);
   assert.equal(closeCount, 1);
   assert.equal(abortCount, 0);
-});
-
-test("desktop temporary hardware CUE overwrites only the exact session-owned same-name CUE", async () => {
-  const writes = [];
-  let closeCount = 0;
-  const ownedHandle = {
-    name: "SRWF-KOR-20260823-v0.3.cue",
-    async createWritable(options) {
-      assert.deepEqual(options, { keepExistingData: false });
-      return {
-        async write(value) {
-          writes.push(value);
-        },
-        async close() {
-          closeCount += 1;
-        },
-        async abort() {},
-      };
-    },
-  };
-
-  const result = await __testHooks.writeTemporaryHardwareCue(
-    ownedHandle,
-    ownedHandle.name,
-    "SRWF-KOR-20260823-v0.3.bin",
-    V0_3_RELEASE_ID,
-  );
-  assert.equal(result, ownedHandle);
-  assert.deepEqual(writes, [
-    __testHooks.buildTemporaryHardwareCue("SRWF-KOR-20260823-v0.3.bin", V0_3_RELEASE_ID),
-  ]);
-  assert.equal(closeCount, 1);
 
   await assert.rejects(
-    () => __testHooks.writeTemporaryHardwareCue(
-      { ...ownedHandle, name: "unrelated.cue" },
-      ownedHandle.name,
-      "SRWF-KOR-20260823-v0.3.bin",
-      V0_3_RELEASE_ID,
+    () => __testHooks.writeCueFile(
+      { async getFileHandle() { throw new Error("an unpinned layout must not create a CUE file"); } },
+      "srwf-kor-v5-r001.cue",
+      "srwf-kor-v5-r001.bin",
+      "b".repeat(64),
     ),
-    (error) => error?.code === "OUTPUT_HANDLE_INVALID",
+    (error) => error?.code === "CUE_LAYOUT_MISSING",
   );
-  await assert.rejects(
-    () => __testHooks.writeTemporaryHardwareCue(
-      ownedHandle,
-      ownedHandle.name,
-      "different.bin",
-      V0_3_RELEASE_ID,
-    ),
-    (error) => error?.code === "OUTPUT_HANDLE_INVALID",
-  );
-
-  let invalidReleaseOpened = false;
-  await assert.rejects(
-    () => __testHooks.writeTemporaryHardwareCue(
-      {
-        name: ownedHandle.name,
-        async createWritable() {
-          invalidReleaseOpened = true;
-          throw new Error("must not open for an unsupported release");
-        },
-      },
-      ownedHandle.name,
-      "SRWF-KOR-20260823-v0.3.bin",
-      "srwf-f-20260815-v0-1-2",
-    ),
-    (error) => error?.code === "CUE_RELEASE_INVALID",
-  );
-  assert.equal(invalidReleaseOpened, false);
-});
-
-test("temporary hardware CUE writer aborts without masking the write failure", async () => {
-  const operationFailure = new Error("synthetic hardware CUE write failure");
-  let abortReason = null;
-  const ownedHandle = {
-    name: "SRWF-KOR-20260823-v0.3.cue",
-    async createWritable() {
-      return {
-        async write() {
-          throw operationFailure;
-        },
-        async close() {},
-        async abort(reason) {
-          abortReason = reason;
-          throw new Error("synthetic abort failure");
-        },
-      };
-    },
-  };
-  await assert.rejects(
-    () => __testHooks.writeTemporaryHardwareCue(
-      ownedHandle,
-      ownedHandle.name,
-      "SRWF-KOR-20260823-v0.3.bin",
-      V0_3_RELEASE_ID,
-    ),
-    (error) => error === operationFailure,
-  );
-  assert.equal(abortReason, operationFailure);
 });
 
 test("CUE writer aborts write and close failures without masking the original error", async (t) => {
@@ -1171,7 +1070,7 @@ test("CUE writer aborts write and close failures without masking the original er
           directoryHandle,
           "srwf-kor-v5-r001.cue",
           "srwf-kor-v5-r001.bin",
-          STOCK_PROFILE.id,
+          V0_1_1_TARGET_SHA256,
         ),
         (error) => error === operationFailure,
       );
@@ -1215,7 +1114,7 @@ test("CUE retry reuses the exact handle created by this page after a write failu
       directoryHandle,
       ownedCueHandle.name,
       "srwf-kor-v5-r001.bin",
-      STOCK_PROFILE.id,
+      V0_1_1_TARGET_SHA256,
       ownedCueHandle,
     ),
     (error) => error === operationFailure,
@@ -1224,7 +1123,7 @@ test("CUE retry reuses the exact handle created by this page after a write failu
     directoryHandle,
     ownedCueHandle.name,
     "srwf-kor-v5-r001.bin",
-    STOCK_PROFILE.id,
+    V0_1_1_TARGET_SHA256,
     ownedCueHandle,
   );
   assert.equal(result, ownedCueHandle);
@@ -1245,10 +1144,7 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
   assert.ok(cueButtonMarkup, "the CUE retry button must remain in the document");
   assert.match(cueButtonMarkup, /\bhidden(?:\s|>|=)/);
   assert.match(cueButtonMarkup, /CUE 파일 다시 저장/);
-  assert.match(
-    html,
-    /<div class="hardware-cue-action" id="hardwareCueAction" hidden>[\s\S]*?<button class="download-link is-hardware-cue" type="button" id="hardwareCueButton">실기용 CUE 다운로드 \(임시\)<\/button>/,
-  );
+  assert.doesNotMatch(html, /hardwareCue|실기용 CUE|\(임시\)/);
   assert.match(css, /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/s);
 
   const completionStart = appSource.indexOf("function handleOperationComplete(");
@@ -1266,15 +1162,11 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
   assert.match(completionSource, /if \(!downloadOutput\) \{\s*void saveCueFile\(\);\s*\}/);
   assert.match(
     completionSource,
-    /installDownloadArtifacts\([\s\S]*?state\.release\.source\.profileId,[\s\S]*?\);/,
-    "mobile CUE download creation must use the selected release stock profile",
+    /installDownloadArtifacts\([\s\S]*?state\.release\.target\.sha256,[\s\S]*?\);/,
+    "mobile CUE download creation must use the accepted target image layout",
   );
   assert.match(appSource, /elements\.cueButton\.addEventListener\("click", saveCueFile\);/);
-  assert.match(appSource, /elements\.hardwareCueButton\.addEventListener\("click", saveTemporaryHardwareCue\);/);
-  assert.match(
-    appSource,
-    /state\.hardwareCueHandle = state\.release\?\.id === TEMPORARY_HARDWARE_CUE_RELEASE_ID[\s\S]*?elements\.hardwareCueAction\.hidden = !state\.hardwareCueHandle;/,
-  );
+  assert.doesNotMatch(appSource, /hardwareCue|TEMPORARY_HARDWARE|saveTemporaryHardwareCue/);
 
   const retryVisibilityAssignments = [
     ...appSource.matchAll(/elements\.cueButton\.hidden\s*=\s*([^;]+);/g),
@@ -1304,11 +1196,11 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
   const cueSaveStart = appSource.indexOf("async function saveCueFile(");
   const cueSaveEnd = appSource.indexOf("\nfunction buildPatchedImageCue(", cueSaveStart);
   const cueSaveSource = appSource.slice(cueSaveStart, cueSaveEnd);
-  assert.match(cueSaveSource, /const sourceProfileId = state\.release\?\.source\.profileId;/);
+  assert.match(cueSaveSource, /const targetSha256 = state\.release\?\.target\.sha256;/);
   assert.match(
     cueSaveSource,
-    /writeCueFile\([\s\S]*?outputHandle\.name,\s*sourceProfileId,\s*cueHandle,/,
-    "desktop CUE writing must use the selected release stock profile",
+    /writeCueFile\([\s\S]*?outputHandle\.name,\s*targetSha256,\s*cueHandle,/,
+    "desktop CUE writing must use the accepted target image layout",
   );
   assert.match(cueSaveSource, /state\.cueSaving = true;[\s\S]*?updateControls\(\);/);
   assert.match(cueSaveSource, /elements\.errorPanel\.hidden = true;/);
@@ -1594,7 +1486,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260911-1$/);
+    assert.match(image.src, /\?v=20260911-2$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
