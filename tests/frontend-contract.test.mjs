@@ -344,12 +344,13 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260825-1";
+  const revision = "20260911-1";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`release-notes\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`disc-source\\.mjs\\?v=${revision}`));
+  assert.match(appSource, new RegExp(`font-revisions\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`STATIC_ASSET_REVISION = "${revision}"`));
   assert.match(appSource, /patch-worker\.mjs\?v=\$\{STATIC_ASSET_REVISION\}/);
   assert.match(appSource, /imageUrl\.searchParams\.set\("v", STATIC_ASSET_REVISION\)/);
@@ -1593,7 +1594,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260825-1$/);
+    assert.match(image.src, /\?v=20260911-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1999,6 +2000,207 @@ test("an index failure clears facts from the previously selected release", () =>
   assert.equal(element("releaseState").textContent, "차단됨");
 });
 
+test("font selector loads the exact revision for both games and blocks an absent font", async () => {
+  const originalFetch = globalThis.fetch;
+  const encoder = new TextEncoder();
+  const documents = new Map();
+  const rows = [];
+  const games = [];
+  for (const gameId of ["srwf-f", "srwf-final"]) {
+    const version = gameId === "srwf-f" ? "0-4" : "0-1";
+    const base = `${gameId}-20260909-v${version}`;
+    games.push({ id: gameId, label: gameId, status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: `${base}-a` });
+    for (const revision of ["a", "b", "c"]) {
+      if (gameId === "srwf-final" && revision === "c") continue;
+      const id = `${base}-${revision}`;
+      const manifest = gameId === "srwf-f" ? makeReleaseManifest() : makeFinalReleaseManifest();
+      manifest.id = id;
+      manifest.version = `v${version.replaceAll("-", ".")}-${revision}`;
+      manifest.patch.url = `patches/${id}.srwfp`;
+      manifest.target.filename = `${id}.bin`;
+      manifest.target.cueFilename = `${id}.cue`;
+      const bytes = encoder.encode(JSON.stringify(manifest));
+      documents.set(`releases/${id}.json`, bytes);
+      rows.push(makeReleaseRow({ gameId, id, manifest: `releases/${id}.json`,
+        manifestSha256: createHash("sha256").update(bytes).digest("hex") }));
+    }
+  }
+  documents.set("manifest/releases.json", encoder.encode(JSON.stringify({
+    $schema: "../schemas/releases.schema.json", schema: "srwf-kor.public-release-index.v2",
+    project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" }, games,
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }], releases: rows,
+  })));
+  const requests = [];
+  globalThis.fetch = async (url) => {
+    const path = [...documents.keys()].find((key) => String(url).endsWith(key));
+    assert.ok(path, `unexpected request: ${url}`);
+    requests.push(path);
+    const bytes = documents.get(path);
+    return { ok: true, status: 200, headers: { get: () => String(bytes.byteLength) },
+      arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+  };
+  try {
+    const fresh = await import(`../assets/app.mjs?font-selection=${Date.now()}`);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(element("fontSelector").hidden, false);
+    assert.equal(element("fontSelect").value, "a");
+    assert.equal(element("releaseSelect").children.length, 1);
+    for (const revision of ["b", "c", "a"]) {
+      element("fontSelect").value = revision;
+      const loading = fresh.__testHooks.handleFontChange();
+      assert.equal(element("fontSelect").disabled, true);
+      assert.equal(element("sourceButton").disabled, true);
+      await loading;
+      assert.equal(element("targetName").textContent, `srwf-f-20260909-v0-4-${revision}.bin`);
+      assert.equal(requests.at(-1), `releases/srwf-f-20260909-v0-4-${revision}.json`);
+      assert.equal(element("patchButton").disabled, true);
+    }
+    // 완결편은 지금 화면에서 숨겨져 있다.  이 시험의 주제는 두 게임이 각자의
+    // 폰트 리비전으로만 연결된다는 것이므로, 이 시험 안에서만 잠시 연다.
+    fresh.__testHooks.HIDDEN_GAME_IDS.delete("srwf-final");
+    await fresh.__testHooks.activateGame("srwf-final");
+    assert.equal(element("fontSelect").value, "a");
+    assert.equal(element("fontSelect").children.find((option) => option.value === "c").disabled, true);
+    element("fontSelect").value = "b";
+    await fresh.__testHooks.handleFontChange();
+    assert.equal(element("targetName").textContent, "srwf-final-20260909-v0-1-b.bin");
+    const requestCount = requests.length;
+    element("fontSelect").value = "c";
+    await fresh.__testHooks.handleFontChange();
+    assert.equal(requests.length, requestCount);
+    assert.equal(element("fontSelect").value, "b");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+function installSyntheticFontSite(specs, defaults) {
+  const encoder = new TextEncoder();
+  const documents = new Map();
+  const rows = specs.map(({ gameId, id, label }) => {
+    const manifest = gameId === "srwf-f" ? makeReleaseManifest() : makeFinalReleaseManifest();
+    manifest.id = id;
+    manifest.patch.url = `patches/${id}.srwfp`;
+    manifest.target.filename = `${id}.bin`;
+    manifest.target.cueFilename = `${id}.cue`;
+    const bytes = encoder.encode(JSON.stringify(manifest));
+    documents.set(`releases/${id}.json`, bytes);
+    return makeReleaseRow({ gameId, id, label, manifest: `releases/${id}.json`,
+      manifestSha256: createHash("sha256").update(bytes).digest("hex") });
+  });
+  const games = [["srwf-f", "슈퍼로봇대전 F"], ["srwf-final", "슈퍼로봇대전 F 완결편"]].map(([id, label]) => ({
+    id, label, status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: defaults[id],
+  }));
+  documents.set("manifest/releases.json", encoder.encode(JSON.stringify({
+    $schema: "../schemas/releases.schema.json", schema: "srwf-kor.public-release-index.v2",
+    project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" }, games,
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }], releases: rows,
+  })));
+  const requests = [];
+  globalThis.fetch = async (url) => {
+    const path = [...documents.keys()].find((key) => String(url).endsWith(key));
+    assert.ok(path, `unexpected request: ${url}`);
+    requests.push(path);
+    const bytes = documents.get(path);
+    return { ok: true, status: 200, headers: { get: () => String(bytes.byteLength) },
+      arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+  };
+  return requests;
+}
+
+const FINAL_LEGACY_SPEC = Object.freeze({
+  gameId: "srwf-final", id: FINAL_RELEASE_ID, label: "2026.08.14 · v0.1 시험판 (설치 비권장)",
+});
+
+test("font versions stay newest first and a missing font falls back to the game default", async () => {
+  const originalFetch = globalThis.fetch;
+  const specs = [
+    ["srwf-f-20260912-v0-5-a", "2026.09.12 · v0.5"],
+    ["srwf-f-20260912-v0-5-c", "2026.09.12 · v0.5"],
+    ["srwf-f-20260909-v0-4-b", "2026.09.09 · v0.4"],
+    ["srwf-f-20260909-v0-4-c", "2026.09.09 · v0.4"],
+    ["srwf-f-20260909-v0-4-1-a", "2026.09.09 · v0.4.1 (설치 비권장)"],
+    ["srwf-f-20260822-v0-3", "2026.08.22 · v0.3"],
+  ].map(([id, label]) => ({ gameId: "srwf-f", id, label }));
+  installSyntheticFontSite([...specs, FINAL_LEGACY_SPEC],
+    { "srwf-f": "srwf-f-20260909-v0-4-b", "srwf-final": FINAL_RELEASE_ID });
+  try {
+    const fresh = await import(`../assets/app.mjs?font-order=${Date.now()}`);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const pickVersion = async (groupId) => {
+      element("releaseSelect").value = groupId;
+      await fresh.__testHooks.handleReleaseChange();
+    };
+    const pickFont = async (revision) => {
+      element("fontSelect").value = revision;
+      await fresh.__testHooks.handleFontChange();
+    };
+
+    // 같은 날 핫픽스가 위, 같은 버전 안의 폰트는 한 칸으로 묶이고 인덱스 label 을 그대로 보여 준다.
+    const versions = element("releaseSelect").children;
+    assert.deepEqual(versions.map((option) => option.value), [
+      "srwf-f-20260912-v0-5", "srwf-f-20260909-v0-4-1", "srwf-f-20260909-v0-4", "srwf-f-20260822-v0-3",
+    ]);
+    assert.equal(versions[1].textContent, "2026.09.09 · v0.4.1 (설치 비권장)");
+    assert.equal(element("fontSelector").hidden, false);
+    assert.equal(element("targetName").textContent, "srwf-f-20260909-v0-4-b.bin");
+
+    await pickFont("c");
+    await pickVersion("srwf-f-20260912-v0-5");
+    assert.equal(element("targetName").textContent, "srwf-f-20260912-v0-5-c.bin");
+
+    await pickFont("a");
+    await pickVersion("srwf-f-20260909-v0-4");
+    assert.equal(element("targetName").textContent, "srwf-f-20260909-v0-4-b.bin");
+    assert.match(element("liveRegion").textContent, /고른 폰트가 이 버전에는 없어 b · 갈무리11/);
+
+    await pickVersion("srwf-f-20260822-v0-3");
+    assert.equal(element("targetName").textContent, "srwf-f-20260822-v0-3.bin");
+    assert.equal(element("fontSelect").value, "");
+    assert.equal(element("fontSelect").disabled, true);
+    assert.equal(element("fontSelector").hidden, false);
+
+    await pickVersion("srwf-f-20260909-v0-4-1");
+    assert.equal(element("targetName").textContent, "srwf-f-20260909-v0-4-1-a.bin");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an ambiguous font group blocks the patcher at boot, including a hidden game", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalConsoleError = console.error;
+  const cases = [
+    [
+      { gameId: "srwf-f", id: "srwf-f-20260909-v0-4", label: "2026.09.09 · v0.4" },
+      { gameId: "srwf-f", id: "srwf-f-20260909-v0-4-a", label: "2026.09.09 · v0.4" },
+      FINAL_LEGACY_SPEC,
+    ],
+    [
+      { gameId: "srwf-f", id: "srwf-f-20260909-v0-4-a", label: "2026.09.09 · v0.4" },
+      { gameId: "srwf-final", id: "srwf-final-20260909-v0-1-a", label: "2026.09.09 · v0.1" },
+      { gameId: "srwf-final", id: "srwf-final-20260909-v0-1-b", label: "2026.09.09 · v0.1 (설치 비권장)" },
+    ],
+  ];
+  console.error = () => {};
+  try {
+    for (const [index, specs] of cases.entries()) {
+      installSyntheticFontSite(specs, {
+        "srwf-f": specs.find((spec) => spec.gameId === "srwf-f").id,
+        "srwf-final": specs.find((spec) => spec.gameId === "srwf-final").id,
+      });
+      await import(`../assets/app.mjs?font-ambiguous-${index}=${Date.now()}`);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.equal(element("releaseState").textContent, "차단됨");
+      assert.equal(element("sourceButton").disabled, true);
+      assert.equal(element("fontSelector").hidden, true);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalConsoleError;
+  }
+});
+
 test("완결편은 목록에 뜨지 않고 골라도 열리지 않는다", async () => {
   const originalFetch = globalThis.fetch;
   const encoder = new TextEncoder();
@@ -2139,6 +2341,8 @@ test("a delayed F manifest cannot overwrite an accepted Final game switch", asyn
     assert.equal(element("sourceButton").disabled, false);
     assert.equal(element("sourceProfile").textContent, FINAL_STOCK_PROFILE.label);
     assert.equal(element("targetName").textContent, "SRWFIN-KOR-20260814-v0.1.bin");
+    // 폰트별 릴리스가 없는 게임은 폰트 칸을 아예 보이지 않는다.
+    assert.equal(element("fontSelector").hidden, true);
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalConsoleError;

@@ -1,12 +1,18 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260825-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260911-1";
+import {
+  FONT_REVISIONS,
+  fontReleaseIdentity,
+  groupFontReleases,
+  selectFontRelease,
+} from "./font-revisions.mjs?v=20260911-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260825-1";
+} from "./release-notes.mjs?v=20260911-1";
 
-const STATIC_ASSET_REVISION = "20260825-1";
+const STATIC_ASSET_REVISION = "20260911-1";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -83,6 +89,8 @@ const elements = {
   compatibilityBadge: byId("compatibilityBadge"),
   gameSelect: byId("gameSelect"),
   releaseSelect: byId("releaseSelect"),
+  fontSelector: byId("fontSelector"),
+  fontSelect: byId("fontSelect"),
   releaseRegion: byId("releaseRegion"),
   releaseState: byId("releaseState"),
   patchNotesToggle: byId("patchNotesToggle"),
@@ -189,6 +197,7 @@ const state = {
 
 elements.gameSelect.addEventListener("change", handleGameChange);
 elements.releaseSelect.addEventListener("change", handleReleaseChange);
+elements.fontSelect.addEventListener("change", handleFontChange);
 elements.patchNotesToggle.addEventListener("click", openPatchNotes);
 elements.patchNotesClose.addEventListener("click", () => closePatchNotes({ restoreFocus: true }));
 elements.patchNotesDialog.addEventListener("close", handlePatchNotesDialogClosed);
@@ -258,6 +267,7 @@ async function loadReleaseIndex() {
     throw new PatcherError("INDEX_DUPLICATE_RELEASE", "Release ids must be unique");
   }
   validateGameBindings(index.project.status);
+  validateFontReleaseGroups();
   const selectable = [...state.games.values()].filter(isSelectableGame);
   replaceGameOptions(selectable);
   const initialGame = selectable.find((game) => game.status === HAS_ACCEPTED_RELEASE)
@@ -445,6 +455,19 @@ function validateGameBindings(projectStatus) {
   }
 }
 
+/* 폰트 묶음이 모호한 인덱스(같은 버전의 기존 id 와 -a/-b/-c 공존, 같은 폰트
+   중복, 묶음 안 label 불일치)는 게임을 고를 때가 아니라 부팅 때 막는다.
+   숨긴 게임도 검사해야 숨김을 풀었을 때 사이트 전체가 갑자기 차단되지 않는다. */
+function validateFontReleaseGroups() {
+  for (const gameId of state.games.keys()) {
+    try {
+      groupFontReleases(state.releaseRows.filter((row) => row.gameId === gameId));
+    } catch {
+      throw new PatcherError("INDEX_STATE_CONFLICT", "Font release groups are ambiguous");
+    }
+  }
+}
+
 function replaceGameOptions(games) {
   const options = games.map((game) => {
     const option = document.createElement("option");
@@ -459,7 +482,9 @@ function replaceGameOptions(games) {
 
 /* 목록은 언제나 최신이 위다. 인덱스에 새 행을 어디에 넣든 화면 순서가
    흔들리지 않도록, 표시 순서는 여기서 정한다. 날짜는 릴리스 id 에 박혀
-   있다(`srwf-f-20260823-v0-3`). 날짜가 같으면 id 로 내림차순 정렬한다. */
+   있다(`srwf-f-20260823-v0-3`). 날짜가 같으면 폰트 접미사(-a/-b/-c)를 뗀
+   버전 id 로 내림차순, 같은 버전 안에서는 폰트 a·b·c 순으로 둔다.
+   접미사째로 비교하면 같은 날 핫픽스(`-v0-4-1-a`)가 `-v0-4-a` 아래로 간다. */
 const RELEASE_DATE_PATTERN = /-(\d{8})-/;
 
 function releaseSortKey(row) {
@@ -474,23 +499,83 @@ function sortReleasesNewestFirst(rows) {
     if (leftDate !== rightDate) {
       return rightDate.localeCompare(leftDate);
     }
-    return right.id.localeCompare(left.id);
+    const leftIdentity = fontReleaseIdentity(left);
+    const rightIdentity = fontReleaseIdentity(right);
+    if (leftIdentity.groupId !== rightIdentity.groupId) {
+      return rightIdentity.groupId.localeCompare(leftIdentity.groupId);
+    }
+    return (leftIdentity.revision ?? "").localeCompare(rightIdentity.revision ?? "");
   });
 }
 
 function replaceReleaseOptions(rows) {
-  const options = rows.map((row) => {
+  const options = groupFontReleases(rows).map((group) => {
     const option = document.createElement("option");
-    option.value = row.id;
-    option.textContent = row.label;
+    option.value = group.id;
+    option.textContent = group.rows[0].label;
     return option;
   });
   elements.releaseSelect.replaceChildren(...options);
 }
 
+function selectedFontGroup() {
+  return groupFontReleases(state.visibleReleaseRows)
+    .find((group) => group.id === elements.releaseSelect.value);
+}
+
+function replaceFontOptions(row = null) {
+  const identity = row ? fontReleaseIdentity(row) : null;
+  const group = row ? groupFontReleases(state.visibleReleaseRows)
+    .find((candidate) => candidate.id === identity.groupId) : null;
+  const options = FONT_REVISIONS.map((font) => {
+    const option = document.createElement("option");
+    option.value = font.id;
+    option.disabled = !selectFontRelease(group, font.id);
+    option.textContent = `${font.label}${option.disabled ? " · 미등록" : ""}`;
+    return option;
+  });
+  if (!identity?.revision) {
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = row ? "이 버전은 폰트 선택을 지원하지 않습니다" : "폰트 릴리스 확인 대기";
+    options.unshift(placeholder);
+  }
+  elements.fontSelect.replaceChildren(...options);
+  elements.fontSelect.value = identity?.revision ?? "";
+  // 폰트별 릴리스가 없는 게임에서는 칸 자체를 뺀다. 한 화면 레이아웃이라
+  // 쓸 수 없는 선택 칸이 카드 높이를 먹으면 패치 노트 버튼이 밀려 잘린다.
+  elements.fontSelector.hidden = !groupFontReleases(state.visibleReleaseRows)
+    .some((candidate) => candidate.revisioned);
+}
+
 async function handleReleaseChange() {
-  const row = state.visibleReleaseRows.find((candidate) => candidate.id === elements.releaseSelect.value);
+  if (state.busy || state.cueSaving || state.availability === "loading") return;
+  const group = selectedFontGroup();
+  const chosenFont = elements.fontSelect.value;
+  const defaultReleaseId = state.games.get(state.selectedGameId)?.defaultReleaseId;
+  // 고른 폰트가 새 버전에 없으면 게임 기본값, 그다음 a·b·c 순으로 대신한다.
+  const row = selectFontRelease(group, chosenFont)
+    ?? group?.rows.find((candidate) => candidate.id === defaultReleaseId)
+    ?? FONT_REVISIONS.map((font) => selectFontRelease(group, font.id)).find(Boolean)
+    ?? group?.rows[0];
+  if (!row) return;
+  try {
+    const loaded = await loadSelectedRelease(row);
+    const loadedFont = fontReleaseIdentity(row).revision;
+    if (loaded && chosenFont && loadedFont && loadedFont !== chosenFont) {
+      const label = FONT_REVISIONS.find((font) => font.id === loadedFont)?.label ?? loadedFont;
+      announce(`고른 폰트가 이 버전에는 없어 ${label}(으)로 불러왔습니다.`);
+    }
+  } catch (error) {
+    handleIndexFailure(error);
+  }
+}
+
+async function handleFontChange() {
+  if (state.busy || state.cueSaving || state.availability !== "ready") return;
+  const row = selectFontRelease(selectedFontGroup(), elements.fontSelect.value);
   if (!row) {
+    replaceFontOptions(state.release);
     return;
   }
   try {
@@ -535,7 +620,7 @@ async function activateGame(gameId) {
   replaceReleaseOptions(state.visibleReleaseRows);
   const loaded = await loadSelectedRelease(defaultRow);
   if (loaded && state.selectedGameId === game.id) {
-    announce(`${game.label}, 공개 버전 ${state.visibleReleaseRows.length}개를 불러왔습니다.`);
+    announce(`${game.label}, 공개 버전 ${groupFontReleases(state.visibleReleaseRows).length}개를 불러왔습니다.`);
   }
 }
 
@@ -546,8 +631,10 @@ async function loadSelectedRelease(row) {
   setWorkflowPhase("release");
   setZoneState("release", "busy", { busy: true });
   elements.releaseSelect.disabled = true;
+  elements.fontSelect.disabled = true;
   elements.releaseState.textContent = "검증 중";
   elements.releaseState.classList.remove("is-ready");
+  updateControls();
 
   let release;
   try {
@@ -567,7 +654,8 @@ async function loadSelectedRelease(row) {
 
   state.release = release;
   state.availability = "ready";
-  elements.releaseSelect.value = row.id;
+  elements.releaseSelect.value = fontReleaseIdentity(row).groupId;
+  replaceFontOptions(row);
   elements.releaseState.textContent = "ACCEPTED";
   elements.releaseState.classList.add("is-ready");
   elements.sourceProfile.textContent = state.stockProfiles.get(release.source.profileId)?.label ?? "검증된 정품 원본";
@@ -785,6 +873,7 @@ function showPreparingState() {
   const option = document.createElement("option");
   option.textContent = "공개 패치 준비 중";
   elements.releaseSelect.replaceChildren(option);
+  replaceFontOptions();
   elements.releaseState.textContent = "준비 중";
   elements.releaseState.classList.remove("is-ready");
   elements.sourceProfile.textContent = "—";
@@ -811,6 +900,7 @@ function handleIndexFailure(error) {
   const option = document.createElement("option");
   option.textContent = "릴리스 정보를 사용할 수 없음";
   elements.releaseSelect.replaceChildren(option);
+  replaceFontOptions();
   const gameOption = document.createElement("option");
   gameOption.textContent = "게임 정보를 사용할 수 없음";
   elements.gameSelect.replaceChildren(gameOption);
@@ -2271,9 +2361,12 @@ function updateControls() {
   });
   elements.gameSelect.disabled = interactionBusy || state.games.size <= 1 || state.availability === "loading";
   elements.releaseSelect.disabled = interactionBusy
-    || state.visibleReleaseRows.length <= 1
+    || groupFontReleases(state.visibleReleaseRows).length <= 1
     || state.availability === "loading"
     || state.availability === "preparing";
+  elements.fontSelect.disabled = interactionBusy || !releaseReady
+    || !selectedFontGroup()?.revisioned
+    || selectedFontGroup().rows.length <= 1;
   elements.patchNotesToggle.disabled = interactionBusy || !state.patchNotesReleaseId;
   elements.sourceButton.disabled = fileControls.sourceDisabled;
   elements.patchButton.disabled = fileControls.patchDisabled;
@@ -2804,6 +2897,8 @@ class PatcherError extends Error {
 export const __testHooks = Object.freeze({
   HIDDEN_GAME_IDS,
   activateGame,
+  handleFontChange,
+  handleReleaseChange,
   beginWorkerOperation,
   buildPatchedImageCue,
   buildTemporaryHardwareCue,

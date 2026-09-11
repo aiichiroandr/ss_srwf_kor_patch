@@ -3340,3 +3340,33 @@ main {
     display: none;
   }
 }
+
+.font-selector { grid-column: 1 / -1; }
+
+#fontHelp {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 폰트 칸이 보이면 릴리스 카드가 한 줄 늘어난다. 좁거나 낮은 화면에서는
+   선택지 이름과 겹치는 도움말을 빼고, 모바일은 여유가 많은 원본 영역에서
+   카드 높이를 가져와 패치 노트 버튼이 잘리지 않게 한다. */
+@media (max-width: 760px), (max-height: 720px) and (min-width: 761px) {
+  #fontHelp {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .patch-workspace:has(.font-selector:not([hidden])) {
+    grid-template-rows: minmax(200px, 1.12fr) minmax(88px, 0.54fr) minmax(148px, 1.3fr);
+  }
+}
+
+@media (max-height: 620px) and (max-width: 760px) {
+  .patch-workspace:has(.font-selector:not([hidden])) {
+    grid-template-rows: minmax(200px, 1.12fr) minmax(84px, 0.5fr) minmax(140px, 1.3fr);
+  }
+}
