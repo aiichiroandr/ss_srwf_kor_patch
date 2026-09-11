@@ -103,7 +103,9 @@ F 완결편 빌드는 hash-pinned 원장 파일의 64자리 SHA-256을 씁니다
 2. `patches/<id>.srwfp` — 32 MiB 이하의 정규형 sparse patch
 3. `releases/<id>.json` — source, target, patch, provenance 명세
 4. `manifest/releases.json`의 `ACCEPTED` index row
-5. 최초 릴리스라면 project status를 `HAS_ACCEPTED_RELEASE`로 변경
+5. `assets/app.mjs`의 `PATCHED_IMAGE_CUE_TRACKS` — target SHA-256에 결과 이미지에서
+   확인한 트랙 구성(모드와 INDEX)을 등록. 이전 릴리스의 구성을 빌려 쓰지 않습니다.
+6. 최초 릴리스라면 project status를 `HAS_ACCEPTED_RELEASE`로 변경
 
 index의 `manifestSha256`은 release manifest 파일 bytes의 SHA-256입니다.
 release manifest의 `patch.size`/`patch.sha256`은 payload와 같아야 하며
@@ -112,8 +114,10 @@ release manifest와 receipt가 가리키는 source, target, patch, build commit�
 서로 같아야 합니다.
 
 완성 disc image와 CUE는 이 단계에서 추가하지 않습니다. CUE는 승인된
-명세의 안전한 파일명으로 브라우저가 로컬 생성하며, target image는 사용자의
-원본에서 로컬 생성됩니다.
+명세의 안전한 파일명과 5번에 등록한 트랙 구성으로 브라우저가 로컬 생성하며, target
+image는 사용자의 원본에서 로컬 생성됩니다. CUE는 에뮬레이터용과 CD-R 굽기용을 나누지
+않고 결과 이미지의 실제 트랙 구성 한 가지만 만듭니다. 트랙 구성이 등록되지 않은
+target은 CUE를 만들지 않으며, 계약 테스트가 index의 모든 target 등록을 확인합니다.
 
 ## 공개 index row 계약
 
