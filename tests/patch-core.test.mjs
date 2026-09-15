@@ -202,9 +202,9 @@ test('SHA-256 matches Node crypto at padding boundaries and across long arbitrar
 });
 
 test('public parser safety caps are fixed', () => {
-  assert.equal(PATCH_LIMITS.maxPatchBytes, 32 * 1024 * 1024);
-  assert.equal(PATCH_LIMITS.maxBodyUncompressedBytes, 64 * 1024 * 1024);
-  assert.equal(PATCH_LIMITS.maxRecordCount, 1_000_000);
+  assert.equal(PATCH_LIMITS.maxPatchBytes, 64 * 1024 * 1024);
+  assert.equal(PATCH_LIMITS.maxBodyUncompressedBytes, 128 * 1024 * 1024);
+  assert.equal(PATCH_LIMITS.maxRecordCount, 2_000_000);
   assert.equal(PATCH_LIMITS.downloadCaptureChunkBytes, 1024 * 1024);
   assert.equal(PATCH_LIMITS.maxDownloadCaptureBytes, 64 * 1024 * 1024);
 });
@@ -335,6 +335,9 @@ test('Blob source is authenticated and patched to a streaming writable', async (
   assert.equal(parsed.records.length, fixture.records.length);
   assert.equal('targetBytes' in parsed.records[0], false, 'payload bytes stay private');
   assert.ok(Object.isFrozen(parsed));
+  assert.ok(Object.isFrozen(parsed.records));
+  assert.ok(Object.isFrozen(parsed.records[0]));
+  assert.strictEqual(parsed.records, parsed.records, 'diagnostic records are cached');
 
   const verifyProgress = [];
   const verified = await verifySourceBlob(new Blob([fixture.source]), parsed, {

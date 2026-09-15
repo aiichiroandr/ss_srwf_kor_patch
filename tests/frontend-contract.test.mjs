@@ -351,11 +351,12 @@ test("public page exposes the legal and accessibility contracts", async () => {
 });
 
 test("static entry assets share an explicit cache revision", async () => {
-  const [html, appSource] = await Promise.all([
+  const [html, appSource, workerSource] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260911-2";
+  const revision = "20260915-1";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -364,6 +365,8 @@ test("static entry assets share an explicit cache revision", async () => {
   assert.match(appSource, new RegExp(`font-revisions\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`STATIC_ASSET_REVISION = "${revision}"`));
   assert.match(appSource, /patch-worker\.mjs\?v=\$\{STATIC_ASSET_REVISION\}/);
+  assert.match(workerSource, new RegExp(`patch-core\\.mjs\\?v=${revision}`));
+  assert.match(workerSource, new RegExp(`sha256\\.mjs\\?v=${revision}`));
   assert.match(appSource, /imageUrl\.searchParams\.set\("v", STATIC_ASSET_REVISION\)/);
 });
 
@@ -870,6 +873,11 @@ test("accepted release manifests expose clean version-only BIN and CUE names", a
     ["srwf-f-20260814-v0-1-1.json", "SRWF-KOR-20260814-v0.1.1.bin", "SRWF-KOR-20260814-v0.1.1.cue"],
     ["srwf-f-20260815-v0-1-2.json", "SRWF-KOR-20260815-v0.1.2.bin", "SRWF-KOR-20260815-v0.1.2.cue"],
     ["srwf-f-20260823-v0-3.json", "SRWF-KOR-20260823-v0.3.bin", "SRWF-KOR-20260823-v0.3.cue"],
+    ...["a", "b", "c"].map((font) => [
+      `srwf-f-20260915-v0-4-${font}.json`,
+      `SRWF-KOR-20260915-v0.4-${font}.bin`,
+      `SRWF-KOR-20260915-v0.4-${font}.cue`,
+    ]),
     ["srwf-final-20260814-v0-1.json", "SRWFIN-KOR-20260814-v0.1.bin", "SRWFIN-KOR-20260814-v0.1.cue"],
   ]) {
     const release = JSON.parse(await readFile(
@@ -898,15 +906,15 @@ test("each game points at its accepted default while F v0.1.1 remains selectable
   const finalReleases = index.releases.filter((entry) => entry.gameId === "srwf-final");
 
   // 목록은 최신이 맨 위다. 새 릴리스가 들어오면 기본 선택도 그 최신본으로 옮긴다.
-  assert.equal(game.defaultReleaseId, "srwf-f-20260823-v0-3");
+  assert.equal(game.defaultReleaseId, "srwf-f-20260915-v0-4-a");
   assert.deepEqual(
     fReleases.map((entry) => entry.id),
     // v0.2 는 정규형 위반(record 안 동일 byte)으로 철회되어 인덱스에 없다.
-    ["srwf-f-20260823-v0-3", "srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
+    ["srwf-f-20260915-v0-4-a", "srwf-f-20260915-v0-4-b", "srwf-f-20260915-v0-4-c", "srwf-f-20260823-v0-3", "srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
   );
   assert.deepEqual(
     fReleases.map((entry) => entry.label),
-    ["2026.08.23 · v0.3", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
+    ["2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.08.23 · v0.3", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
   assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");
@@ -1486,7 +1494,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260911-2$/);
+    assert.match(image.src, /\?v=20260915-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1741,11 +1749,11 @@ test("runtime enforces stock-sized targets and all public patch hard limits", ()
 
   const invalidPatches = [
     { size: 100 },
-    { size: 32 * 1024 * 1024 + 1 },
+    { size: 64 * 1024 * 1024 + 1 },
     { recordCount: 0 },
-    { recordCount: 1_000_001 },
+    { recordCount: 2_000_001 },
     { bodyUncompressedSize: 44 },
-    { bodyUncompressedSize: 64 * 1024 * 1024 + 1 },
+    { bodyUncompressedSize: 128 * 1024 * 1024 + 1 },
     { recordCount: 2, bodyUncompressedSize: 89 },
   ];
   for (const patchOverrides of invalidPatches) {

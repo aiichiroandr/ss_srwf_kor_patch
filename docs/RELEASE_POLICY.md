@@ -4,7 +4,7 @@
 
 이 저장소는 현재 `HAS_ACCEPTED_RELEASE`이며,
 [`manifest/releases.json`](../manifest/releases.json)에
-기본 릴리스 `srwf-f-20260815-v0-1-2`와 이전 핫픽스
+기본 릴리스 `srwf-f-20260915-v0-4-a`와 b/c 글꼴 변형, 이전 v0.3·v0.1.2 및 핫픽스
 `srwf-f-20260814-v0-1-1`, 그리고 F 완결편 기본 릴리스
 `srwf-final-20260814-v0-1` 시험판이 등록되어 있습니다. 각 payload는 독립된
 영수증·릴리스 명세와 해시가 일치하는 희소 `.srwfp`입니다. v0.1.2는 v0.1.1에서
@@ -71,6 +71,10 @@ base가 될 수 없습니다. 공개 artifact는 별도 빌드 저장소에서 s
 
 ## ACCEPTED 영수증 gate
 
+v0.4의 실제 검수 범위와 대표 레인 실행 근거 재사용 판단은
+[`F_V04_VALIDATION.md`](F_V04_VALIDATION.md)에 기록한다. a의 직접 콜드부트
+확인을 b/c 개별 디스크 콜드부트나 저장·로드·장기진행 PASS로 확대하지 않는다.
+
 승격에는 `receipts/<release-id>.acceptance.json` 형식의 명시적 영수증이
 필요합니다. 영수증의 `state`는 정확히 `ACCEPTED`여야 합니다. 다음 세 gate는
 반드시 `PASS`여야 합니다.
@@ -100,7 +104,7 @@ F 완결편 빌드는 hash-pinned 원장 파일의 64자리 SHA-256을 씁니다
 모든 입력이 준비된 뒤 하나의 검토 가능한 변경으로 다음을 추가합니다.
 
 1. `receipts/<id>.acceptance.json` — explicit `ACCEPTED` receipt
-2. `patches/<id>.srwfp` — 32 MiB 이하의 정규형 sparse patch
+2. `patches/<id>.srwfp` — 64 MiB 이하의 정규형 sparse patch
 3. `releases/<id>.json` — source, target, patch, provenance 명세
 4. `manifest/releases.json`의 `ACCEPTED` index row
 5. `assets/app.mjs`의 `PATCHED_IMAGE_CUE_TRACKS` — target SHA-256에 결과 이미지에서

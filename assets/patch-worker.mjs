@@ -3,8 +3,8 @@ import {
   applyPatchToWritable,
   buildVerifiedPatchedBlob,
   parsePatch,
-} from "./patch-core.mjs?v=20260824-1";
-import { sha256Hex } from "./sha256.mjs?v=20260824-1";
+} from "./patch-core.mjs?v=20260915-1";
+import { sha256Hex } from "./sha256.mjs?v=20260915-1";
 
 let activeJob = null;
 let preparedSource = null;
@@ -585,7 +585,7 @@ function validateDescriptor(descriptor) {
   if (descriptor.bodyUncompressedSize > PATCH_LIMITS.maxBodyUncompressedBytes) {
     throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "bodyUncompressedSize exceeds the safety cap");
   }
-  if (descriptor.recordCount > Math.min(PATCH_LIMITS.maxRecordCount, 1_000_000)) {
+  if (descriptor.recordCount > PATCH_LIMITS.maxRecordCount) {
     throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "recordCount exceeds the worker safety cap");
   }
   for (const key of ["patchSha256", "sourceSha256", "targetSha256"]) {

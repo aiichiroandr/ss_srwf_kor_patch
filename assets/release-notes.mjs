@@ -15,7 +15,27 @@ const release = (version, summary, items) => Object.freeze({
   items: Object.freeze(items),
 });
 
+export const F_V04_NOTES = release(
+  "v0.4",
+  [
+    "슈발츠의 기술 사용 중 멈춤 수정\n‘슈투름 운트 드랑’ 사용 시 화면이 암전되거나 게임이 멈추던 문제를 수정했습니다.",
+    "글꼴 3종 선택 지원\nDOS thin 커스텀(기존 폰트), 갈무리11, Mona12 중 선택할 수 있습니다.",
+    "전투 대사 일부 번역 개선\n일부 오역과 어색한 표현을 다듬고 줄바꿈을 정리했습니다.",
+    "남아 있던 일본어 번역 보완\n일부 기체명, 분기 선택지, 확인 메시지와 이벤트 대사의 미번역 부분을 보완했습니다.",
+    "이름·용어 표기 일부 정리",
+    "기타 메뉴 명칭 소폭 개선",
+    "타이틀 로고, 시나리오 화수별 제목 이미지 개선",
+    "출격 화면 표시 위치 수정\n출격 유닛 수가 한 자리일 때 ‘기력’ 글자가 옆으로 밀리던 문제를 수정했습니다.",
+    "검수 범위\na의 부팅과 1·9·10기 출격 화면을 확인했습니다. b/c 개별 부팅, 이번 버전의 저장·로드 및 장시간 플레이는 미검수입니다.",
+  ].join("\n\n"),
+  [],
+);
+
 export const PATCH_NOTES = Object.freeze({
+  "srwf-f-20260915-v0-4-a": F_V04_NOTES,
+  "srwf-f-20260915-v0-4-b": F_V04_NOTES,
+  "srwf-f-20260915-v0-4-c": F_V04_NOTES,
+
   "srwf-f-20260814-v0-1-1": release(
     "v0.1.1",
     "v0.1에서 한국어 프롤로그가 출력되지 않던 문제를 수정한 핫픽스입니다.",
@@ -257,6 +277,10 @@ export const PATCH_NOTES = Object.freeze({
 });
 
 const SUMMARY_ONLY_RELEASE_IDS = new Set([
+  "srwf-f-20260915-v0-4-a",
+  "srwf-f-20260915-v0-4-b",
+  "srwf-f-20260915-v0-4-c",
+
   "srwf-f-20260814-v0-1-1",
   "srwf-f-20260815-v0-1-2",
   "srwf-f-20260823-v0-3",

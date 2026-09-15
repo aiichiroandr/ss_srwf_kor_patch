@@ -10,7 +10,7 @@
    "id": "srwf-f",
    "label": "슈퍼로봇대전 F",
    "status": "HAS_ACCEPTED_RELEASE",
-   "defaultReleaseId": "srwf-f-20260823-v0-3"
+   "defaultReleaseId": "srwf-f-20260915-v0-4-a"
   },
   {
    "id": "srwf-final",
@@ -46,6 +46,30 @@
   }
  ],
  "releases": [
+  {
+   "gameId": "srwf-f",
+   "id": "srwf-f-20260915-v0-4-a",
+   "state": "ACCEPTED",
+   "label": "2026.09.15 · v0.4",
+   "manifest": "releases/srwf-f-20260915-v0-4-a.json",
+   "manifestSha256": "b4db01d8bb70c4910293e124a89f6645a1ce408020d9b4474eb3f533ec1bfd5e"
+  },
+  {
+   "gameId": "srwf-f",
+   "id": "srwf-f-20260915-v0-4-b",
+   "state": "ACCEPTED",
+   "label": "2026.09.15 · v0.4",
+   "manifest": "releases/srwf-f-20260915-v0-4-b.json",
+   "manifestSha256": "a3317c1c0cdf23d57f5422aca9c16506a42904f78a399f1374be6b7dcefc840d"
+  },
+  {
+   "gameId": "srwf-f",
+   "id": "srwf-f-20260915-v0-4-c",
+   "state": "ACCEPTED",
+   "label": "2026.09.15 · v0.4",
+   "manifest": "releases/srwf-f-20260915-v0-4-c.json",
+   "manifestSha256": "be3c993c889c3af22d6e7265d56b8eba19497842f0308d6186b1e1b95db79f5e"
+  },
   {
    "gameId": "srwf-f",
    "id": "srwf-f-20260823-v0-3",

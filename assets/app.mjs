@@ -1,18 +1,18 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260911-2";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260915-1";
 import {
   FONT_REVISIONS,
   fontReleaseIdentity,
   groupFontReleases,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260911-2";
+} from "./font-revisions.mjs?v=20260915-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260911-2";
+} from "./release-notes.mjs?v=20260915-1";
 
-const STATIC_ASSET_REVISION = "20260911-2";
+const STATIC_ASSET_REVISION = "20260915-1";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -26,10 +26,10 @@ const INDEX_SCHEMA_REFERENCE = "../schemas/releases.schema.json";
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MANIFEST_FETCH_TIMEOUT_MS = 10_000;
 const MIN_PATCH_BYTES = 101;
-const MAX_PATCH_BYTES = 32 * 1024 * 1024;
+const MAX_PATCH_BYTES = 64 * 1024 * 1024;
 const MIN_PATCH_BODY_BYTES = 45;
-const MAX_PATCH_BODY_BYTES = 64 * 1024 * 1024;
-const MAX_PATCH_RECORDS = 1_000_000;
+const MAX_PATCH_BODY_BYTES = 128 * 1024 * 1024;
+const MAX_PATCH_RECORDS = 2_000_000;
 const MIN_RECORD_BODY_BYTES = 45;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const BIN_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
@@ -1462,7 +1462,22 @@ const CUE_SINGLE_DATA_TRACK = Object.freeze([
   "TRACK 01 MODE1/2352",
   "INDEX 01 00:00:00",
 ]);
+// g93a/b/c 전체 이미지에서 확인한 섹터 경계. CD-R 실기 검수와는 별개다.
+const F_V04_CUE_TRACKS = Object.freeze([
+  "TRACK 01 MODE1/2352",
+  "INDEX 01 00:00:00",
+  "TRACK 02 MODE2/2352",
+  "INDEX 00 22:34:18",
+  "INDEX 01 22:36:18",
+  "TRACK 03 MODE1/2352",
+  "INDEX 01 54:15:41",
+  "TRACK 04 AUDIO",
+  "INDEX 01 54:26:37",
+]);
 const PATCHED_IMAGE_CUE_TRACKS = new Map([
+  ["f3292551e827ac66d4406a2994350342d9084a5d24a121a70185029fba574a3e", F_V04_CUE_TRACKS],
+  ["fe713fcab98279f8f6ffe6da45c145bcf75ab70ebe7361e733b71559b94f8589", F_V04_CUE_TRACKS],
+  ["5489ed4e2d980a0010ecffba3801621b88cf20d7aa317811eddcd37eff13fe5f", F_V04_CUE_TRACKS],
   // F 2026.08.23 v0.3. 옮겨 넣은 한글 데이터가 MODE1 트랙 3, 원래 오디오의 나머지가
   // 트랙 4다. 이 구성으로 CD-R 을 구워 실기에서 돌렸다는 사용자 보고가 있다.
   ["6464be8cd7d855fcca7b6fb4710c0baabefb376826ca3d200170075e321dabe8", Object.freeze([

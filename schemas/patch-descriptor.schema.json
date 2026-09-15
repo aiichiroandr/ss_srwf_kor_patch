@@ -18,7 +18,7 @@
     "patchSize": {
       "type": "integer",
       "minimum": 101,
-      "maximum": 33554432
+      "maximum": 67108864
     },
     "patchSha256": {
       "type": "string",
@@ -45,12 +45,12 @@
     "recordCount": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 1000000
+      "maximum": 2000000
     },
     "bodyUncompressedSize": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 67108864
+      "maximum": 134217728
     }
   }
 }

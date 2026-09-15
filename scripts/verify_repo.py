@@ -59,9 +59,9 @@ PINNED_STOCK_PROFILES = {
     profile["id"]: {"gameId": game_id, **profile}
     for game_id, profile in STOCK_PROFILES_BY_GAME.items()
 }
-PATCH_MAX = 32 * 1024 * 1024
-BODY_MAX = 64 * 1024 * 1024
-RECORD_MAX = 1_000_000
+PATCH_MAX = 64 * 1024 * 1024
+BODY_MAX = 128 * 1024 * 1024
+RECORD_MAX = 2_000_000
 DOWNLOAD_CAPTURE_CHUNK_BYTES = 1024 * 1024
 MAX_DOWNLOAD_CAPTURE_BYTES = 64 * 1024 * 1024  # v0.2: 크레딧 영상 델타로 상향(엔진과 동기)
 JS_SAFE_INTEGER_MAX = 9_007_199_254_740_991
@@ -316,14 +316,16 @@ class DeflateBitReader:
         self.data = data
         self.bit_offset = 0
 
-    def read(self, count: int) -> int:
+    def peek(self, count: int) -> int:
         if self.bit_offset + count > len(self.data) * 8:
             raise SrwfpFormatError("DEFLATE payload is truncated")
-        value = 0
-        for index in range(count):
-            absolute_bit = self.bit_offset + index
-            bit = (self.data[absolute_bit >> 3] >> (absolute_bit & 7)) & 1
-            value |= bit << index
+        start = self.bit_offset >> 3
+        shift = self.bit_offset & 7
+        end = start + (shift + count + 7) // 8
+        return (int.from_bytes(self.data[start:end], "little") >> shift) & ((1 << count) - 1)
+
+    def read(self, count: int) -> int:
+        value = self.peek(count)
         self.bit_offset += count
         return value
 
@@ -346,7 +348,11 @@ def reverse_bits(value: int, length: int) -> int:
     return reversed_value
 
 
-def build_huffman(lengths: list[int], label: str) -> tuple[str, int, list[dict[int, int]]]:
+FAST_HUFFMAN_BITS = 9
+HuffmanTable = tuple[str, int, list[dict[int, int]], int, list[tuple[int, int] | None]]
+
+
+def build_huffman(lengths: list[int], label: str) -> HuffmanTable:
     if any(not isinstance(length, int) or length < 0 or length > 15 for length in lengths):
         raise SrwfpFormatError(f"{label} contains an invalid code length")
     maximum_length = max(lengths, default=0)
@@ -373,14 +379,27 @@ def build_huffman(lengths: list[int], label: str) -> tuple[str, int, list[dict[i
             transmitted_code = reverse_bits(next_code[length], length)
             tables[length][transmitted_code] = symbol
             next_code[length] += 1
-    return label, maximum_length, tables
+    fast_width = min(maximum_length, FAST_HUFFMAN_BITS)
+    fast: list[tuple[int, int] | None] = [None] * (1 << fast_width) if fast_width else []
+    for length in range(1, fast_width + 1):
+        for code, symbol in tables[length].items():
+            for prefix in range(code, len(fast), 1 << length):
+                fast[prefix] = (length, symbol)
+    return label, maximum_length, tables, fast_width, fast
 
 
 def decode_huffman(
     reader: DeflateBitReader,
-    huffman: tuple[str, int, list[dict[int, int]]],
+    huffman: HuffmanTable,
 ) -> int:
-    label, maximum_length, tables = huffman
+    label, maximum_length, tables, fast_width, fast = huffman
+    if fast and reader.bit_offset + fast_width <= len(reader.data) * 8:
+        entry = fast[reader.peek(fast_width)]
+        if entry is not None:
+            length, symbol = entry
+            reader.bit_offset += length
+            return symbol
+    # Longer/incomplete codes and the final few bits use the original decoder.
     code = 0
     for length in range(1, maximum_length + 1):
         code |= reader.read(1) << (length - 1)
@@ -390,10 +409,7 @@ def decode_huffman(
     raise SrwfpFormatError(f"{label} contains an invalid code")
 
 
-def fixed_huffman_tables() -> tuple[
-    tuple[str, int, list[dict[int, int]]],
-    tuple[str, int, list[dict[int, int]]],
-]:
+def fixed_huffman_tables() -> tuple[HuffmanTable, HuffmanTable]:
     literal_lengths = [8] * 144 + [9] * 112 + [7] * 24 + [8] * 8
     return (
         build_huffman(literal_lengths, "fixed literal/length alphabet"),
@@ -401,10 +417,7 @@ def fixed_huffman_tables() -> tuple[
     )
 
 
-def dynamic_huffman_tables(reader: DeflateBitReader) -> tuple[
-    tuple[str, int, list[dict[int, int]]],
-    tuple[str, int, list[dict[int, int]]],
-]:
+def dynamic_huffman_tables(reader: DeflateBitReader) -> tuple[HuffmanTable, HuffmanTable]:
     literal_count = reader.read(5) + 257
     distance_count = reader.read(5) + 1
     code_length_count = reader.read(4) + 4
@@ -468,10 +481,7 @@ DISTANCE_EXTRA_BITS = [
 
 def scan_compressed_block(
     reader: DeflateBitReader,
-    huffman: tuple[
-        tuple[str, int, list[dict[int, int]]],
-        tuple[str, int, list[dict[int, int]]],
-    ],
+    huffman: tuple[HuffmanTable, HuffmanTable],
     produced_bytes: int,
     advertised_window: int,
 ) -> int:
@@ -676,6 +686,22 @@ def inspect_srwfp(data: bytes) -> dict[str, int | str]:
     }
 
 
+# Retain only small descriptors, never the large patch bytes. Repeated manifest
+# checks in one verifier process still hash fresh bytes and compare fresh fields.
+_PATCH_DESCRIPTOR_CACHE: dict[tuple, dict[str, int | str]] = {}
+
+
+def inspect_srwfp_cached(data: bytes) -> dict[str, int | str]:
+    key = (hashlib.sha256(data).digest(), PATCH_MAX, BODY_MAX, RECORD_MAX,
+           MAX_DOWNLOAD_CAPTURE_BYTES, DOWNLOAD_CAPTURE_CHUNK_BYTES)
+    if key not in _PATCH_DESCRIPTOR_CACHE:
+        actual = inspect_srwfp(data)
+        if len(_PATCH_DESCRIPTOR_CACHE) >= 16:
+            _PATCH_DESCRIPTOR_CACHE.pop(next(iter(_PATCH_DESCRIPTOR_CACHE)))
+        _PATCH_DESCRIPTOR_CACHE[key] = actual
+    return dict(_PATCH_DESCRIPTOR_CACHE[key])
+
+
 def require_srwfp_descriptor(
     path: Path,
     *,
@@ -697,7 +723,7 @@ def require_srwfp_descriptor(
     try:
         with path.open("rb") as handle:
             data = handle.read(PATCH_MAX + 1)
-        actual = inspect_srwfp(data)
+        actual = inspect_srwfp_cached(data)
     except (OSError, SrwfpFormatError) as exc:
         complain(f"{context}: malformed .srwfp payload: {exc}")
         return
@@ -1373,8 +1399,8 @@ def validate_schema_documents() -> None:
     core_path = ROOT / "assets/patch-core.mjs"
     if core_path.is_file():
         core_text = core_path.read_text(encoding="utf-8")
-        if re.search(r"maxRecordCount:\s*1_?000_?000\b", core_text) is None:
-            complain("assets/patch-core.mjs: maxRecordCount must match the 1,000,000 public hard cap")
+        if re.search(r"maxRecordCount:\s*2_?000_?000\b", core_text) is None:
+            complain("assets/patch-core.mjs: maxRecordCount must match the 2,000,000 public hard cap")
 
 
 def validate_acceptance_receipt(
