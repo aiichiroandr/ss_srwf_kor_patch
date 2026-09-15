@@ -1,18 +1,18 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260915-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260915-2";
 import {
   FONT_REVISIONS,
   fontReleaseIdentity,
   groupFontReleases,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260915-1";
+} from "./font-revisions.mjs?v=20260915-2";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260915-1";
+} from "./release-notes.mjs?v=20260915-2";
 
-const STATIC_ASSET_REVISION = "20260915-1";
+const STATIC_ASSET_REVISION = "20260915-2";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -1953,7 +1953,15 @@ function renderPatchNotesForRelease(releaseId) {
   elements.patchNotesVersion.textContent = notes.version;
   elements.patchNotesCount.textContent = summaryOnly ? "요약 · 열기" : `${notes.items.length}건 · 열기`;
   elements.patchNotesHeading.textContent = `${notes.version} 패치노트`;
-  elements.patchNotesSummary.textContent = notes.summary;
+  if (/^\d+\. /m.test(notes.summary)) {
+    elements.patchNotesSummary.replaceChildren(...notes.summary.split("\n").map((line, index) => {
+      const node = document.createElement(/^\d+\. /.test(line) ? "strong" : "span");
+      node.textContent = `${index ? "\n" : ""}${line}`;
+      return node;
+    }));
+  } else {
+    elements.patchNotesSummary.textContent = notes.summary;
+  }
   elements.patchNotesToggle.disabled = false;
 }
 

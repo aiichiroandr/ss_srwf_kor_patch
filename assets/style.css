@@ -3315,6 +3315,14 @@ main {
   overflow-wrap: anywhere;
 }
 
+.patch-note-summary > strong {
+  font-weight: 700;
+}
+
+.patch-note-summary > span {
+  font-weight: 400;
+}
+
 .patch-note-dialog.is-summary-only .patch-note-summary {
   padding: 16px 19px;
   font-size: 13px;
