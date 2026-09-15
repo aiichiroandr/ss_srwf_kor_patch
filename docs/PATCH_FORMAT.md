@@ -10,8 +10,8 @@
 
 ## 상한과 바이트 순서
 
-- 패치 파일 전체: 최대 `33,554,432` bytes (32 MiB)
-- 압축 해제한 body: 최대 `67,108,864` bytes (64 MiB)
+- 패치 파일 전체: 최대 `67,108,864` bytes (64 MiB)
+- 압축 해제한 body: 최대 `134,217,728` bytes (128 MiB)
 - 모든 정수: unsigned, big-endian
 - 모든 SHA-256 필드: 32-byte raw digest
 - v1 source와 target: 같은 크기
@@ -48,8 +48,8 @@ body는 다음 record를 `recordCount`번 이어 붙인 것입니다.
 | `44` | `length` | `targetBytes` | 같은 위치에 놓을 결과 bytes |
 
 가장 작은 record도 45 bytes이므로 body 상한에서 가능한 `recordCount`의
-이론상 절대 상한은 `1,491,308`입니다. 적용기는 그보다 낮은 hard cap
-`1,000,000` records를 강제합니다.
+이론상 절대 상한은 `2,982,616`입니다. 적용기는 그보다 낮은 hard cap
+`2,000,000` records를 강제합니다.
 
 ### 정규형
 

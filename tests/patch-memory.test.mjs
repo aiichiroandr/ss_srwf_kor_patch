@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import test from 'node:test';
+
+test('over one million canonical records parse within a 96 MiB JavaScript heap', async () => {
+  const coreUrl = new URL('../assets/patch-core.mjs', import.meta.url).href;
+  const source = `
+    import assert from 'node:assert/strict';
+    import { deflateSync } from 'node:zlib';
+    import { parsePatch } from ${JSON.stringify(coreUrl)};
+    const count = 1_000_001;
+    let body = Buffer.alloc(count * 45);
+    for (let index = 0; index < count; index += 1) {
+      const start = index * 45;
+      body.writeBigUInt64BE(BigInt(index * 2), start);
+      body.writeUInt32BE(1, start + 8);
+      body[start + 44] = 1;
+    }
+    const header = Buffer.alloc(100);
+    header.write('SRWFKP1');
+    header.writeUInt32BE(count, 8);
+    header.writeBigUInt64BE(BigInt(count * 2), 12);
+    header.writeBigUInt64BE(BigInt(count * 2), 20);
+    header.writeBigUInt64BE(BigInt(body.length), 28);
+    const patch = Buffer.concat([header, deflateSync(body)]);
+    body = null;
+    const parsed = await parsePatch(patch);
+    assert.equal(parsed.recordCount, count);
+    assert.ok(Object.isFrozen(parsed));
+  `;
+  await promisify(execFile)(process.execPath, [
+    '--max-old-space-size=96', '--input-type=module', '-e', source,
+  ], { timeout: 60_000, maxBuffer: 1024 * 1024 });
+});

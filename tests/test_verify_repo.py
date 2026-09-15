@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import random
 from pathlib import Path
 import shutil
 import struct
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch as mock_patch
 import zlib
 from contextlib import contextmanager
 
@@ -161,6 +163,50 @@ class SrwfpInspectionTests(unittest.TestCase):
     def tearDown(self) -> None:
         verifier.errors.clear()
 
+    def test_bit_reader_matches_individual_bits_and_bounds(self) -> None:
+        data = bytes(range(256))
+        rng = random.Random(93)
+        reader = verifier.DeflateBitReader(data)
+        for _ in range(150):
+            count = min(rng.choice([0, 1, 2, 3, 7, 8, 9, 13, 16]), len(data) * 8 - reader.bit_offset)
+            start = reader.bit_offset
+            expected = sum(((data[(start + i) >> 3] >> ((start + i) & 7)) & 1) << i for i in range(count))
+            self.assertEqual(reader.peek(count), expected)
+            self.assertEqual(reader.bit_offset, start)
+            self.assertEqual(reader.read(count), expected)
+        reader.bit_offset = len(data) * 8 - 1
+        self.assertEqual(reader.read(1), 1)
+        self.assertEqual(reader.read(0), 0)
+        with self.assertRaises(verifier.SrwfpFormatError):
+            reader.read(1)
+
+    def test_fast_huffman_matches_bitwise_decoder_on_valid_and_damaged_streams(self) -> None:
+        rng = random.Random(93)
+        def outcome(stream, size, window):
+            try:
+                verifier.inspect_deflate_payload(stream, size, window)
+                return True
+            except verifier.SrwfpFormatError:
+                return False
+        for index in range(32):
+            raw = bytes(rng.randrange(256) for _ in range(rng.randrange(1, 2048)))
+            if index % 2:
+                raw = raw[:32] * 64 + raw
+            strategy = [zlib.Z_DEFAULT_STRATEGY, zlib.Z_FIXED, zlib.Z_HUFFMAN_ONLY, zlib.Z_RLE][index % 4]
+            compressor = zlib.compressobj(index % 10, zlib.DEFLATED, zlib.MAX_WBITS, 8, strategy)
+            stream = compressor.compress(raw) + compressor.flush()
+            variants = [stream, stream[:-1], stream + b"\x00", stream[:max(6, len(stream) // 2)]]
+            for _ in range(4):
+                damaged = bytearray(stream)
+                damaged[rng.randrange(2, len(stream) - 4)] ^= 1 << rng.randrange(8)
+                variants.append(bytes(damaged))
+            for variant in variants:
+                for window in [256, 32768]:
+                    fast = outcome(variant, len(raw), window)
+                    with mock_patch.object(verifier, "FAST_HUFFMAN_BITS", 0):
+                        slow = outcome(variant, len(raw), window)
+                    self.assertEqual(fast, slow, (index, window, len(variant)))
+
     def test_valid_patch_descriptor_is_exact(self) -> None:
         descriptor = verifier.inspect_srwfp(self.patch)
         self.assertEqual(descriptor["patchSize"], len(self.patch))
@@ -171,6 +217,24 @@ class SrwfpInspectionTests(unittest.TestCase):
         self.assertEqual(descriptor["targetSha256"], hashlib.sha256(self.target).hexdigest())
         self.assertEqual(descriptor["recordCount"], 2)
         self.assertEqual(descriptor["bodyUncompressedSize"], self.body_size)
+
+    def test_descriptor_cache_rechecks_changed_bytes_limits_and_return_values(self) -> None:
+        verifier._PATCH_DESCRIPTOR_CACHE.clear()
+        with mock_patch.object(verifier, "inspect_srwfp", wraps=verifier.inspect_srwfp) as inspect:
+            first = verifier.inspect_srwfp_cached(self.patch)
+            first["targetSha256"] = "00" * 32
+            second = verifier.inspect_srwfp_cached(bytes(self.patch))
+            self.assertEqual(second["targetSha256"], hashlib.sha256(self.target).hexdigest())
+            self.assertEqual(inspect.call_count, 1)
+            changed = bytearray(self.patch)
+            changed[0] ^= 1
+            with self.assertRaises(verifier.SrwfpFormatError):
+                verifier.inspect_srwfp_cached(bytes(changed))
+            with mock_patch.object(verifier, "PATCH_MAX", len(self.patch) - 1):
+                with self.assertRaises(verifier.SrwfpFormatError):
+                    verifier.inspect_srwfp_cached(self.patch)
+            self.assertEqual(inspect.call_count, 3)
+        verifier._PATCH_DESCRIPTOR_CACHE.clear()
 
     def test_malformed_wire_shapes_fail_closed(self) -> None:
         bad_magic = bytearray(self.patch)

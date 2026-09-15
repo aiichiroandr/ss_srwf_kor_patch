@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-f-20260915-v0-4-b",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-09-15T13:27:46+09:00",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
+  "sourceSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+  "targetSha256": "fe713fcab98279f8f6ffe6da45c145bcf75ab70ebe7361e733b71559b94f8589",
+  "patchSha256": "d6fcea57763bad838b1cfc73fedec75e485ffd541fb9783de7e37a0186f6c920",
+  "v5Commit": "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "NOT_CLAIMED"
+  },
+  "decisionAuthority": "사용자 G93 a/b/c v0.4 공개 지시. a 콜드부트·1/9/10기 실측, b/c 공통 수정 동일성으로 근거 재사용. b/c 개별 부팅·저장/로드·장기진행 미검수. docs/F_V04_VALIDATION.md."
+}

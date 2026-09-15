@@ -1,0 +1,32 @@
+{
+  "schema": "srwf-kor.public-release.v1",
+  "id": "srwf-f-20260915-v0-4-c",
+  "state": "ACCEPTED",
+  "version": "v0.4",
+  "title": "세가 새턴 슈퍼로봇대전 F 한글 패치 — 2026.09.15 v0.4 (c)",
+  "publishedAt": "2026-09-15T13:27:46+09:00",
+  "source": {
+    "profileId": "saturn-jp-stock-track01-mode1-2352-c198a930",
+    "size": 578512032,
+    "sha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8"
+  },
+  "target": {
+    "filename": "SRWF-KOR-20260915-v0.4-c.bin",
+    "cueFilename": "SRWF-KOR-20260915-v0.4-c.cue",
+    "size": 578512032,
+    "sha256": "5489ed4e2d980a0010ecffba3801621b88cf20d7aa317811eddcd37eff13fe5f"
+  },
+  "patch": {
+    "format": "srwf.sparse-byte-delta.v1",
+    "url": "patches/srwf-f-20260915-v0-4-c.srwfp",
+    "size": 63994763,
+    "sha256": "71bac68e81558b2d4ef24f16408e11a058c23140d1cfb57b77a05fa6be1db94a",
+    "recordCount": 1257088,
+    "bodyUncompressedSize": 91868285
+  },
+  "provenance": {
+    "v5Commit": "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
+    "buildReceiptSha256": "928a61cd795f6de08b31ffa0ba3945bc6f32090f5a02784f87ff503085b6e1fa",
+    "acceptanceReceiptSha256": "5f2a993d021751ea93fce4e0b8811b1f7892fc4fb6d84571a5469064a159635a"
+  }
+}

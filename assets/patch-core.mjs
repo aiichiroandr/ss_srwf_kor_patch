@@ -4,16 +4,15 @@ export { Sha256, sha256Hex };
 
 export const PATCH_HEADER_SIZE = 100;
 const RECORD_HEADER_SIZE = 44;
-const MAX_BODY_UNCOMPRESSED_BYTES = 64 * 1024 * 1024;
+const MAX_BODY_UNCOMPRESSED_BYTES = 128 * 1024 * 1024;
 const DOWNLOAD_CAPTURE_CHUNK_BYTES = 1024 * 1024;
-// v0.2: 엔딩 크레딧 영상(신규 ~30MB)이 32MiB 캡처 예산을 넘어 64MiB로 상향.
-// 압축 패치(32MiB)·비압축 바디(64MiB) 캡은 그대로다. 저사양 기기는 기존
-// 검증된 다운로드 폴백 경로를 그대로 쓴다.
+// g92의 영상 변경을 포함한 정규형 패치: 약 61MiB 압축 / 88MiB body.
+// 실제 변경 데이터의 다운로드 캡처 예산은 64MiB를 유지한다.
 const MAX_DOWNLOAD_CAPTURE_BYTES = 64 * 1024 * 1024;
 export const PATCH_LIMITS = Object.freeze({
-  maxPatchBytes: 32 * 1024 * 1024,
+  maxPatchBytes: 64 * 1024 * 1024,
   maxBodyUncompressedBytes: MAX_BODY_UNCOMPRESSED_BYTES,
-  maxRecordCount: 1_000_000,
+  maxRecordCount: 2_000_000,
   downloadCaptureChunkBytes: DOWNLOAD_CAPTURE_CHUNK_BYTES,
   maxDownloadCaptureBytes: MAX_DOWNLOAD_CAPTURE_BYTES,
 });
@@ -524,7 +523,9 @@ function parseRecords(body, header) {
   }
 
   const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
-  const records = [];
+  // Store one 4-byte body position per record instead of retaining millions of
+  // objects, digest strings and byte views on mobile devices.
+  const positions = new Uint32Array(header.recordCount);
   let position = 0;
   let previousOffset = -1;
   let previousEnd = 0;
@@ -536,7 +537,7 @@ function parseRecords(body, header) {
 
     const offset = readSafeU64(view, position, `Record ${index} offset`);
     const length = view.getUint32(position + 8, false);
-    const preimageSha256 = hexFromBytes(body.subarray(position + 12, position + 44));
+    positions[index] = position;
     position += RECORD_HEADER_SIZE;
 
     if (length === 0) {
@@ -561,9 +562,7 @@ function parseRecords(body, header) {
       fail('RECORD_OUT_OF_RANGE', `Record ${index} exceeds the source or target bounds`);
     }
 
-    const targetBytes = body.subarray(position, position + length);
     position += length;
-    records.push({ offset, length, preimageSha256, targetBytes });
     previousOffset = offset;
     previousEnd = offset + length;
   }
@@ -571,7 +570,23 @@ function parseRecords(body, header) {
   if (position !== body.byteLength) {
     fail('TRAILING_BODY_DATA', `Patch body has ${body.byteLength - position} trailing bytes`);
   }
-  return records;
+  return {
+    length: positions.length,
+    at(index) {
+      if (index < 0 || index >= positions.length) return undefined;
+      const start = positions[index];
+      const length = view.getUint32(start + 8, false);
+      return {
+        offset: readSafeU64(view, start, 'Record offset'),
+        length,
+        preimageSha256: hexFromBytes(body.subarray(start + 12, start + 44)),
+        targetBytes: body.subarray(start + RECORD_HEADER_SIZE, start + RECORD_HEADER_SIZE + length),
+      };
+    },
+    *[Symbol.iterator]() {
+      for (let index = 0; index < positions.length; index += 1) yield this.at(index);
+    },
+  };
 }
 
 /**
@@ -632,18 +647,23 @@ export async function parsePatch(value, descriptor) {
   }
   const body = await inflateZlib(compressed, header.bodyUncompressedSize);
   const internalRecords = parseRecords(body, header);
-  const records = Object.freeze(internalRecords.map((record) => Object.freeze({
-    offset: record.offset,
-    length: record.length,
-    preimageSha256: record.preimageSha256,
-  })));
+  let records;
 
   const parsedPatch = Object.freeze({
     format: 'SRWFKP1',
     patchSize: bytes.byteLength,
     patchSha256,
     ...header,
-    records,
+    // The diagnostic list remains immutable, but normal patch application never
+    // allocates this duplicate list of public record objects.
+    get records() {
+      records ??= Object.freeze(Array.from(internalRecords, (record) => Object.freeze({
+        offset: record.offset,
+        length: record.length,
+        preimageSha256: record.preimageSha256,
+      })));
+      return records;
+    },
   });
   INTERNALS.set(parsedPatch, {
     records: internalRecords,
@@ -770,7 +790,7 @@ function createSourceAuthenticator(parsedPatch, internals) {
       const chunkEnd = position + chunk.byteLength;
 
       while (recordIndex < internals.records.length) {
-        const record = internals.records[recordIndex];
+        const record = internals.records.at(recordIndex);
         const recordEnd = record.offset + record.length;
         if (record.offset >= chunkEnd) {
           break;
@@ -958,7 +978,7 @@ export async function applyPatchToWritable(blob, writable, parsedPatch, options 
           continue;
         }
 
-        const record = internals.records[recordIndex];
+        const record = internals.records.at(recordIndex);
         if (record !== undefined && absoluteOffset === record.offset) {
           await emit(record.targetBytes);
           skipUntil = record.offset + record.length;

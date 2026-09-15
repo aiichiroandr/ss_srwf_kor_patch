@@ -7,7 +7,10 @@ SRWF Korean patch. It is not a continuation of an internal binary lineage and
 it is not a candidate-testing area.
 
 The current repository state is `HAS_ACCEPTED_RELEASE`. The default indexed
-release is `srwf-f-20260823-v0-3`, and the superseded
+release is `srwf-f-20260915-v0-4-a`, with b/c font variants. Its acceptance evidence
+ceiling is documented in `docs/F_V04_VALIDATION.md`; b/c individual coldboots,
+save/load, long-play and CD-R tests are not claimed. The prior v0.3 remains
+indexed, and the superseded
 `srwf-f-20260814-v0-1-1` hotfix remains indexed as historical evidence.
 `srwf-f-20260821-v0-2` was withdrawn on 2026-08-23: its payload violated the
 public v1 canonical form by carrying 1,873,210 bytes inside records that match
