@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { FONT_REVISIONS, fontReleaseIdentity, groupFontReleases, selectFontRelease } from "../assets/font-revisions.mjs";
+import {
+  FONT_PREVIEW_SAMPLES,
+  FONT_REVISIONS,
+  fontPreviewSrc,
+  fontReleaseIdentity,
+  groupFontReleases,
+  pickFontPreviewSample,
+  selectFontRelease,
+} from "../assets/font-revisions.mjs";
 
 const row = (gameId, version, revision) => ({
   gameId, state: "ACCEPTED", id: `${gameId}-20260909-v${version}${revision ? `-${revision}` : ""}`,
@@ -21,10 +29,26 @@ test("font selection routes both games to their own revision-specific patch iden
   assert.deepEqual(FONT_REVISIONS.map((font) => font.label), [
     "a · DOS thin 커스텀 (기존 폰트)", "b · 갈무리11", "c · Mona12",
   ]);
-  assert.deepEqual(FONT_REVISIONS.map((font) => font.preview.src), [
-    "assets/font-previews/a-dos-thin.png",
-    "assets/font-previews/b-galmuri11.png",
-    "assets/font-previews/c-mona12.png",
+  assert.deepEqual(FONT_PREVIEW_SAMPLES.map((sample) => [sample.id, sample.text, sample.width, sample.height]), [
+    ["beamrifle", "빔라이플", 204, 60],
+    ["pinpanel", "핀판넬", 152, 60],
+    ["vesba", "베스바", 156, 60],
+    ["orabegi", "오라베기", 200, 60],
+    ["photonbeam", "광자력빔", 200, 60],
+    ["getterbeam", "겟타빔", 152, 60],
+    ["melee", "격투", 108, 60],
+    ["gundammk2", "건담mk2", 208, 60],
+    ["mazingerz", "마징가Z", 200, 60],
+  ]);
+  assert.deepEqual(FONT_REVISIONS.map((font) => font.preview.stem), [
+    "a-dos-thin", "b-galmuri11", "c-mona12",
+  ]);
+  const sample = pickFontPreviewSample(() => 0);
+  assert.equal(sample.id, "beamrifle");
+  assert.deepEqual(FONT_REVISIONS.map((font) => fontPreviewSrc(font, sample.id)), [
+    "assets/font-previews/a-dos-thin-beamrifle.png",
+    "assets/font-previews/b-galmuri11-beamrifle.png",
+    "assets/font-previews/c-mona12-beamrifle.png",
   ]);
 });
 

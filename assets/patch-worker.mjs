@@ -3,8 +3,8 @@ import {
   applyPatchToWritable,
   buildVerifiedPatchedBlob,
   parsePatch,
-} from "./patch-core.mjs?v=20260916-1";
-import { sha256Hex } from "./sha256.mjs?v=20260916-1";
+} from "./patch-core.mjs?v=20260916-13";
+import { sha256Hex } from "./sha256.mjs?v=20260916-13";
 
 let activeJob = null;
 let preparedSource = null;
