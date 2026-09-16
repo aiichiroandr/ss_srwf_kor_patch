@@ -1,7 +1,34 @@
 export const FONT_REVISIONS = Object.freeze([
-  Object.freeze({ id: "a", label: "a · DOS thin 커스텀 (기존 폰트)" }),
-  Object.freeze({ id: "b", label: "b · 갈무리11" }),
-  Object.freeze({ id: "c", label: "c · Mona12" }),
+  Object.freeze({
+    id: "a",
+    label: "a · DOS thin 커스텀 (기존 폰트)",
+    shortLabel: "a · DOS thin",
+    preview: Object.freeze({
+      src: "assets/font-previews/a-dos-thin.png",
+      width: 174,
+      height: 60,
+    }),
+  }),
+  Object.freeze({
+    id: "b",
+    label: "b · 갈무리11",
+    shortLabel: "b · 갈무리11",
+    preview: Object.freeze({
+      src: "assets/font-previews/b-galmuri11.png",
+      width: 174,
+      height: 60,
+    }),
+  }),
+  Object.freeze({
+    id: "c",
+    label: "c · Mona12",
+    shortLabel: "c · Mona12",
+    preview: Object.freeze({
+      src: "assets/font-previews/c-mona12.png",
+      width: 174,
+      height: 60,
+    }),
+  }),
 ]);
 
 // Only explicitly revisioned release identities participate; legacy releases

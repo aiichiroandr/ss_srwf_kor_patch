@@ -328,6 +328,8 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.doesNotMatch(html, /id="availability(?:Banner|Title|Description|Code)"/);
   assert.doesNotMatch(html, /검증된 공개 릴리스/);
   assert.match(html, /id="gameSelect"/);
+  assert.match(html, /id="fontPreview"/);
+  assert.match(html, /id="fontHelp"/);
   assert.doesNotMatch(html, /FABLE G25K/);
   assert.doesNotMatch(html, /\bSTEP(?:\s*[123])?\b/i);
   assert.doesNotMatch(html, /PATCH FLOW/);
@@ -356,7 +358,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260915-2";
+  const revision = "20260916-1";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -1494,7 +1496,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260915-2$/);
+    assert.match(image.src, /\?v=20260916-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1944,7 +1946,18 @@ test("font selector loads the exact revision for both games and blocks an absent
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(element("fontSelector").hidden, false);
     assert.equal(element("fontSelect").value, "a");
+    assert.equal(element("fontPreview").hidden, false);
     assert.equal(element("releaseSelect").children.length, 1);
+    const previewButtons = () => element("fontPreview").querySelectorAll("button");
+    const previewImages = () => findDescendants(element("fontPreview"), (node) => node.tagName === "IMG");
+    assert.equal(previewButtons().length, 3);
+    assert.equal(previewImages().length, 3);
+    for (const image of previewImages()) {
+      assert.match(image.src, /assets\/font-previews\/[abc]-[a-z0-9-]+\.png\?v=20260916-1$/);
+    }
+    assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
+      "true", "false", "false",
+    ]);
     for (const revision of ["b", "c", "a"]) {
       element("fontSelect").value = revision;
       const loading = fresh.__testHooks.handleFontChange();
@@ -1954,6 +1967,11 @@ test("font selector loads the exact revision for both games and blocks an absent
       assert.equal(element("targetName").textContent, `srwf-f-20260909-v0-4-${revision}.bin`);
       assert.equal(requests.at(-1), `releases/srwf-f-20260909-v0-4-${revision}.json`);
       assert.equal(element("patchButton").disabled, true);
+      assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
+        revision === "a" ? "true" : "false",
+        revision === "b" ? "true" : "false",
+        revision === "c" ? "true" : "false",
+      ]);
     }
     // 완결편은 지금 화면에서 숨겨져 있다.  이 시험의 주제는 두 게임이 각자의
     // 폰트 리비전으로만 연결된다는 것이므로, 이 시험 안에서만 잠시 연다.
@@ -1964,6 +1982,9 @@ test("font selector loads the exact revision for both games and blocks an absent
     element("fontSelect").value = "b";
     await fresh.__testHooks.handleFontChange();
     assert.equal(element("targetName").textContent, "srwf-final-20260909-v0-1-b.bin");
+    assert.equal(previewButtons().find((button) => button.dataset.font === "c").disabled, true);
+    assert.equal(previewButtons().find((button) => button.dataset.font === "c").dataset.available, "false");
+    assert.equal(previewButtons().find((button) => button.dataset.font === "b").getAttribute("aria-pressed"), "true");
     const requestCount = requests.length;
     element("fontSelect").value = "c";
     await fresh.__testHooks.handleFontChange();
@@ -2059,6 +2080,7 @@ test("font versions stay newest first and a missing font falls back to the game 
     assert.equal(element("fontSelect").value, "");
     assert.equal(element("fontSelect").disabled, true);
     assert.equal(element("fontSelector").hidden, false);
+    assert.equal(element("fontPreview").hidden, true);
 
     await pickVersion("srwf-f-20260909-v0-4-1");
     assert.equal(element("targetName").textContent, "srwf-f-20260909-v0-4-1-a.bin");

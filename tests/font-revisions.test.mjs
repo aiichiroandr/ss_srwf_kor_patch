@@ -21,6 +21,11 @@ test("font selection routes both games to their own revision-specific patch iden
   assert.deepEqual(FONT_REVISIONS.map((font) => font.label), [
     "a · DOS thin 커스텀 (기존 폰트)", "b · 갈무리11", "c · Mona12",
   ]);
+  assert.deepEqual(FONT_REVISIONS.map((font) => font.preview.src), [
+    "assets/font-previews/a-dos-thin.png",
+    "assets/font-previews/b-galmuri11.png",
+    "assets/font-previews/c-mona12.png",
+  ]);
 });
 
 test("missing revisions never fall back to another font or legacy patch", () => {
