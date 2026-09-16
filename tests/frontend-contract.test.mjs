@@ -316,14 +316,15 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.doesNotMatch(html, /href="NOTICE\.md"/);
   assert.doesNotMatch(html, /class="info-drawer"/);
   assert.doesNotMatch(html, />릴리스 · 안전 안내</);
-  assert.match(html, /비공식 팬 프로젝트, 게임 원본 미포함, 권리자 및 플랫폼과 무관/);
+  assert.match(html, /비공식 팬 프로젝트, 게임 원본 미포함, 패치 가능 대상 F는 Rev B 21M, F 완결편은 Rev A 10M과 11M, 권리자 및 플랫폼과 무관/);
   assert.match(html, /비공식 · 원본 미포함/);
+  assert.match(html, /패치 가능 대상 : F - Rev B 21M \/ F 완결편 - Rev A 10M, 11M/);
+  assert.doesNotMatch(html, /원본 미포함 \(/);
   assert.match(html, /권리자·플랫폼과 무관/);
   assert.match(html, /<title>세가새턴 슈퍼로봇대전 F 한글패치<\/title>/);
-  assert.match(
-    html,
-    /<p class="station-intro" id="patcher-title">[\s\S]*?<span class="station-intro-title">지원원본<\/span>[\s\S]*?<span class="source-support-game">F<\/span>[\s\S]*?Rev B \(21M\)[\s\S]*?<span class="source-support-game">F완결편<\/span>[\s\S]*?Rev A \(10M\/11M\)[\s\S]*?<\/p>/,
-  );
+  assert.match(html, /aria-label="패처"/);
+  assert.doesNotMatch(html, /station-intro/);
+  assert.doesNotMatch(html, /지원원본/);
   assert.doesNotMatch(html, /한국어 패치 만들기/);
   assert.doesNotMatch(html, /id="availability(?:Banner|Title|Description|Code)"/);
   assert.doesNotMatch(html, /검증된 공개 릴리스/);
@@ -358,7 +359,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260916-1";
+  const revision = "20260916-13";
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -1234,12 +1235,12 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.doesNotMatch(html, /id="output(?:Button|ButtonText|State|Selection|Name)"/);
   assert.doesNotMatch(html, /data-workflow-zone="(?:release|source|patch)"[^>]*hidden/);
   assert.match(css, /html,\s*\nbody\s*\{[^}]*height:\s*100%[^}]*overflow:\s*hidden/s);
-  assert.match(css, /\.patch-section\s*\{[^}]*height:\s*100%[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)/s);
+  assert.match(css, /\.patch-section\s*\{[^}]*height:\s*100%[^}]*grid-template-rows:\s*minmax\(0, 1fr\)/s);
   assert.match(css, /\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(245px,[^}]*minmax\(300px,[^}]*minmax\(320px,/s);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*grid-template-rows:\s*minmax\(128px,/s);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.file-selection\s*\{[^}]*display:\s*none\s*!important/s);
-  assert.match(css, /\.source-support-row\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*4\.75em max-content minmax\(0, 1fr\)/s);
-  assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.station-intro\s*\{[^}]*overflow:\s*visible/s);
+  assert.doesNotMatch(css, /\.source-support-row\s*\{/);
+  assert.doesNotMatch(css, /\.station-intro\s*\{/);
   assert.match(css, /@media \(max-width: 980px\) and \(min-width: 761px\)[\s\S]*?grid-template-columns:\s*minmax\(0,[^}]*minmax\(0,[^}]*minmax\(0,/s);
   assert.match(css, /\.workflow-zone\.is-active::after,[\s\S]*?animation:\s*workflow-border-flow/);
   assert.match(css, /\.workflow-zone\.is-complete\s*\{[^}]*linear-gradient/s);
@@ -1496,7 +1497,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260916-1$/);
+    assert.match(image.src, /\?v=20260916-13$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1947,13 +1948,26 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(element("fontSelector").hidden, false);
     assert.equal(element("fontSelect").value, "a");
     assert.equal(element("fontPreview").hidden, false);
+    assert.equal(element("fontHelp").hidden, true);
+    assert.equal(element("fontSelector").classList.contains("is-visual"), true);
+    assert.equal(element("fontSelect").tabIndex, -1);
+    assert.equal(element("fontSelect").getAttribute("aria-hidden"), "true");
     assert.equal(element("releaseSelect").children.length, 1);
     const previewButtons = () => element("fontPreview").querySelectorAll("button");
     const previewImages = () => findDescendants(element("fontPreview"), (node) => node.tagName === "IMG");
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
-    for (const image of previewImages()) {
-      assert.match(image.src, /assets\/font-previews\/[abc]-[a-z0-9-]+\.png\?v=20260916-1$/);
+    const previewSample = previewImages()[0].src.match(
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260916-13$/,
+    );
+    assert.ok(previewSample);
+    assert.ok([
+      "beamrifle", "pinpanel", "vesba", "orabegi", "photonbeam",
+      "getterbeam", "melee", "gundammk2", "mazingerz",
+    ].includes(previewSample[1]));
+    for (const [index, image] of previewImages().entries()) {
+      const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260916-13$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",
@@ -2081,6 +2095,10 @@ test("font versions stay newest first and a missing font falls back to the game 
     assert.equal(element("fontSelect").disabled, true);
     assert.equal(element("fontSelector").hidden, false);
     assert.equal(element("fontPreview").hidden, true);
+    assert.equal(element("fontHelp").hidden, false);
+    assert.equal(element("fontSelector").classList.contains("is-visual"), false);
+    assert.equal(element("fontSelect").tabIndex, 0);
+    assert.equal(element("fontSelect").hasAttribute("aria-hidden"), false);
 
     await pickVersion("srwf-f-20260909-v0-4-1");
     assert.equal(element("targetName").textContent, "srwf-f-20260909-v0-4-1-a.bin");

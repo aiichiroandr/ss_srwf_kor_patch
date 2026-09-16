@@ -1,18 +1,21 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260916-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260916-13";
 import {
   FONT_REVISIONS,
+  fontPreviewSrc,
   fontReleaseIdentity,
   groupFontReleases,
+  pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260916-1";
+} from "./font-revisions.mjs?v=20260916-13";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260916-1";
+} from "./release-notes.mjs?v=20260916-13";
 
-const STATIC_ASSET_REVISION = "20260916-1";
+const STATIC_ASSET_REVISION = "20260916-13";
+const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -89,6 +92,7 @@ const elements = {
   fontSelector: byId("fontSelector"),
   fontSelect: byId("fontSelect"),
   fontPreview: byId("fontPreview"),
+  fontHelp: byId("fontHelp"),
   releaseRegion: byId("releaseRegion"),
   releaseState: byId("releaseState"),
   patchNotesToggle: byId("patchNotesToggle"),
@@ -547,6 +551,14 @@ function replaceFontPreviews(row = null) {
     .find((candidate) => candidate.id === identity.groupId) : null;
   const show = Boolean(group?.revisioned);
   elements.fontPreview.hidden = !show;
+  elements.fontHelp.hidden = show;
+  elements.fontSelector.classList.toggle("is-visual", show);
+  elements.fontSelect.tabIndex = show ? -1 : 0;
+  if (show) {
+    elements.fontSelect.setAttribute("aria-hidden", "true");
+  } else {
+    elements.fontSelect.removeAttribute("aria-hidden");
+  }
   if (!show) {
     elements.fontPreview.replaceChildren();
     return;
@@ -562,14 +574,14 @@ function replaceFontPreviews(row = null) {
     button.dataset.available = available ? "true" : "false";
     button.disabled = !available || previewsDisabled;
     button.setAttribute("aria-pressed", selected ? "true" : "false");
-    button.setAttribute("aria-label", `${font.label} 미리보기`);
+    button.setAttribute("aria-label", `${font.shortLabel} · ${FONT_PREVIEW_SAMPLE.text}`);
     const image = document.createElement("img");
-    const imageUrl = new URL(font.preview.src, SITE_ROOT_URL);
+    const imageUrl = new URL(fontPreviewSrc(font, FONT_PREVIEW_SAMPLE.id), SITE_ROOT_URL);
     imageUrl.searchParams.set("v", STATIC_ASSET_REVISION);
     image.src = imageUrl.href;
     image.alt = "";
-    image.width = font.preview.width;
-    image.height = font.preview.height;
+    image.width = FONT_PREVIEW_SAMPLE.width;
+    image.height = FONT_PREVIEW_SAMPLE.height;
     image.decoding = "async";
     const caption = document.createElement("span");
     caption.textContent = available ? font.shortLabel : `${font.shortLabel} · 미등록`;
