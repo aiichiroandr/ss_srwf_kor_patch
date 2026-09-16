@@ -1,18 +1,18 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260915-2";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260916-1";
 import {
   FONT_REVISIONS,
   fontReleaseIdentity,
   groupFontReleases,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260915-2";
+} from "./font-revisions.mjs?v=20260916-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260915-2";
+} from "./release-notes.mjs?v=20260916-1";
 
-const STATIC_ASSET_REVISION = "20260915-2";
+const STATIC_ASSET_REVISION = "20260916-1";
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
@@ -88,6 +88,7 @@ const elements = {
   releaseSelect: byId("releaseSelect"),
   fontSelector: byId("fontSelector"),
   fontSelect: byId("fontSelect"),
+  fontPreview: byId("fontPreview"),
   releaseRegion: byId("releaseRegion"),
   releaseState: byId("releaseState"),
   patchNotesToggle: byId("patchNotesToggle"),
@@ -533,10 +534,54 @@ function replaceFontOptions(row = null) {
   }
   elements.fontSelect.replaceChildren(...options);
   elements.fontSelect.value = identity?.revision ?? "";
+  replaceFontPreviews(row);
   // 폰트별 릴리스가 없는 게임에서는 칸 자체를 뺀다. 한 화면 레이아웃이라
   // 쓸 수 없는 선택 칸이 카드 높이를 먹으면 패치 노트 버튼이 밀려 잘린다.
   elements.fontSelector.hidden = !groupFontReleases(state.visibleReleaseRows)
     .some((candidate) => candidate.revisioned);
+}
+
+function replaceFontPreviews(row = null) {
+  const identity = row ? fontReleaseIdentity(row) : null;
+  const group = row ? groupFontReleases(state.visibleReleaseRows)
+    .find((candidate) => candidate.id === identity.groupId) : null;
+  const show = Boolean(group?.revisioned);
+  elements.fontPreview.hidden = !show;
+  if (!show) {
+    elements.fontPreview.replaceChildren();
+    return;
+  }
+  const previewsDisabled = elements.fontSelect.disabled;
+  elements.fontPreview.replaceChildren(...FONT_REVISIONS.map((font) => {
+    const available = Boolean(selectFontRelease(group, font.id));
+    const selected = identity?.revision === font.id;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "font-preview";
+    button.dataset.font = font.id;
+    button.dataset.available = available ? "true" : "false";
+    button.disabled = !available || previewsDisabled;
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+    button.setAttribute("aria-label", `${font.label} 미리보기`);
+    const image = document.createElement("img");
+    const imageUrl = new URL(font.preview.src, SITE_ROOT_URL);
+    imageUrl.searchParams.set("v", STATIC_ASSET_REVISION);
+    image.src = imageUrl.href;
+    image.alt = "";
+    image.width = font.preview.width;
+    image.height = font.preview.height;
+    image.decoding = "async";
+    const caption = document.createElement("span");
+    caption.textContent = available ? font.shortLabel : `${font.shortLabel} · 미등록`;
+    button.append(image, caption);
+    button.addEventListener("click", () => {
+      if (button.disabled || elements.fontSelect.disabled) return;
+      if (elements.fontSelect.value === font.id) return;
+      elements.fontSelect.value = font.id;
+      handleFontChange();
+    });
+    return button;
+  }));
 }
 
 async function handleReleaseChange() {
@@ -2237,6 +2282,9 @@ function updateControls() {
   elements.fontSelect.disabled = interactionBusy || !releaseReady
     || !selectedFontGroup()?.revisioned
     || selectedFontGroup().rows.length <= 1;
+  for (const button of elements.fontPreview.querySelectorAll("button")) {
+    button.disabled = button.dataset.available !== "true" || elements.fontSelect.disabled;
+  }
   elements.patchNotesToggle.disabled = interactionBusy || !state.patchNotesReleaseId;
   elements.sourceButton.disabled = fileControls.sourceDisabled;
   elements.patchButton.disabled = fileControls.patchDisabled;

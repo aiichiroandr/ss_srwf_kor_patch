@@ -151,6 +151,9 @@ PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
     "assets/patch-notes/srwf-final-v0-1-battle-speaker-before.png": "4d2598abdae18fca2db23ca3cc69a22654f1725d53f329406c40eb12297bf8f0",
     "assets/patch-notes/srwf-final-v0-1-karaoke-caption-after.png": "050abe1022b43aaeffdfdb56a2e8abaf1fdebebc7a3fb375eefb85593119d85f",
     "assets/patch-notes/srwf-final-v0-1-karaoke-caption-before.png": "5b09e30ca6f897550cdc4dce41d881a4758b618b5abdf045b360f67a23d5d221",
+    "assets/font-previews/a-dos-thin.png": "a91db653aabd62fc28b267b9e8f84b7d6ed09055a04b29f0644ea0b4b2c3848a",
+    "assets/font-previews/b-galmuri11.png": "662d4c6b5ce7011192233708ca4decfb07cc4ab990de43df1a69d37bf469edfd",
+    "assets/font-previews/c-mona12.png": "b7c6d2fb8a19b4cce240c71698147f2ef39d535a92d65d3f070d8189ddf3a33e",
 }
 # The withdrawn SRWF F v0.1 release contained the rejected final-003
 # KORPROL helper gate. Its three public artifacts remain byte-immutable
