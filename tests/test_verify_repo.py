@@ -11,6 +11,7 @@ import shutil
 import struct
 import sys
 import tempfile
+from typing import Any
 import unittest
 from unittest.mock import patch as mock_patch
 import zlib
@@ -914,6 +915,421 @@ class RepositoryPolicyTests(unittest.TestCase):
         )
         self.assertEqual(verifier.errors, [])
         verifier.errors.clear()
+
+
+def v2_replace(offset: int, replacement: bytes, preimage: bytes = bytes(32)) -> bytes:
+    return b"\x01" + struct.pack(">QI", offset, len(replacement)) + preimage + replacement
+
+
+def v2_copy(offset: int, length: int, source_offset: int, digest: bytes = bytes(32)) -> bytes:
+    return b"\x02" + struct.pack(">QIQ", offset, length, source_offset) + digest
+
+
+def v2_literal(offset: int, data: bytes) -> bytes:
+    return b"\x03" + struct.pack(">QI", offset, len(data)) + data
+
+
+def make_v2_patch(
+    source_size: int,
+    target_size: int,
+    records: list[bytes],
+    *,
+    counts: list[int] | None = None,
+    sums: list[int] | None = None,
+    body_size: int | None = None,
+    magic: bytes = verifier.PATCH_V2_MAGIC,
+    body_extra: bytes = b"",
+    compressed: bytes | None = None,
+    source_sha256: bytes = b"\x11" * 32,
+    target_sha256: bytes = b"\x22" * 32,
+) -> bytes:
+    """Build a wire-level SRWFKP2 payload without any source-sized fixture."""
+    body = b"".join(records) + body_extra
+    if counts is None:
+        counts = [sum(1 for record in records if record[0] == kind) for kind in (1, 2, 3)]
+    if sums is None:
+        sums = [
+            sum(struct.unpack_from(">I", record, 9)[0] for record in records if record[0] == kind)
+            for kind in (2, 3)
+        ]
+    header = bytearray(verifier.PATCH_V2_HEADER_SIZE)
+    header[:8] = magic
+    struct.pack_into(
+        ">IQQQ",
+        header,
+        8,
+        sum(counts),
+        source_size,
+        target_size,
+        len(body) if body_size is None else body_size,
+    )
+    header[36:68] = source_sha256
+    header[68:100] = target_sha256
+    struct.pack_into(">IIIQQ", header, 100, *counts, *sums)
+    return bytes(header) + (zlib.compress(body, 9) if compressed is None else compressed)
+
+
+class SrwfpV2InspectionTests(unittest.TestCase):
+    """Structural v2 rules; the same shapes as scratchpad v2neg.py and the JS tests."""
+
+    SOURCE = 8192
+    TARGET = 9192
+
+    def setUp(self) -> None:
+        verifier.errors.clear()
+        self.good = [
+            v2_replace(100, b"\xaa" * 64),
+            v2_replace(6144, b"\xbb" * 1000),
+            v2_copy(7144, 2048, 6144),
+        ]
+        self.good_literal = [
+            v2_replace(100, b"\xaa" * 64),
+            v2_replace(6144, b"\xbb" * 1000),
+            v2_copy(7144, 1856, 6144),
+            v2_literal(9000, bytes(range(192))),
+        ]
+
+    def tearDown(self) -> None:
+        verifier.errors.clear()
+
+    def patch(self, records: list[bytes] | None = None, **options: Any) -> bytes:
+        source_size = options.pop("source_size", self.SOURCE)
+        target_size = options.pop("target_size", self.TARGET)
+        return make_v2_patch(
+            source_size, target_size, self.good if records is None else records, **options
+        )
+
+    def test_valid_v2_descriptors_are_exact(self) -> None:
+        for records, copy_bytes, literal_bytes in (
+            (self.good, 2048, 0),
+            (self.good_literal, 1856, 192),
+        ):
+            payload = self.patch(records)
+            descriptor = verifier.inspect_srwfp_v2(payload)
+            self.assertEqual(descriptor["patchSize"], len(payload))
+            self.assertEqual(descriptor["patchSha256"], hashlib.sha256(payload).hexdigest())
+            self.assertEqual(descriptor["sourceSize"], self.SOURCE)
+            self.assertEqual(descriptor["targetSize"], self.TARGET)
+            self.assertEqual(descriptor["sourceSha256"], "11" * 32)
+            self.assertEqual(descriptor["targetSha256"], "22" * 32)
+            self.assertEqual(descriptor["recordCount"], len(records))
+            self.assertEqual(descriptor["bodyUncompressedSize"], len(b"".join(records)))
+            self.assertEqual(descriptor["format"], verifier.PATCH_FORMAT_V2)
+            self.assertEqual(descriptor["copyBytes"], copy_bytes)
+            self.assertEqual(descriptor["literalBytes"], literal_bytes)
+            self.assertEqual(verifier.inspect_srwfp_v2_cached(payload), descriptor)
+
+    def test_v1_and_v2_inspectors_never_cross(self) -> None:
+        with self.assertRaisesRegex(verifier.SrwfpFormatError, "magic is not SRWFKP1"):
+            verifier.inspect_srwfp(self.patch())
+        v1_payload, _, _ = make_patch(bytes(range(64)), [(2, b"\xf0\xf1")])
+        with self.assertRaisesRegex(verifier.SrwfpFormatError, "magic is not SRWFKP2"):
+            verifier.inspect_srwfp_v2(v1_payload + bytes(40))
+
+    def test_structural_negative_cases_fail_closed(self) -> None:
+        good = self.good
+        body = b"".join(good)
+        unknown = b"\x04" + good[0][1:]
+        empty = b"\x01" + struct.pack(">QI", 50, 0) + bytes(32)
+        unsafe = bytearray(self.patch())
+        struct.pack_into(">Q", unsafe, 112, 2**60)
+        unsummed = bytearray(self.patch())
+        struct.pack_into(">I", unsummed, 8, len(good) + 1)
+        cases = {
+            "magic is not SRWFKP2": self.patch(magic=verifier.PATCH_MAGIC),
+            "shorter than its v2 header": self.patch()[:120],
+            "safe integer": bytes(unsafe),
+            "non-empty source": self.patch(source_size=0),
+            "larger than the source": self.patch(target_size=self.SOURCE),
+            "growth exceeds": self.patch(target_size=self.SOURCE + verifier.V2_GROWTH_MAX + 1),
+            "body exceeds": self.patch(body_size=verifier.BODY_MAX + 1),
+            "COPY record count exceeds": self.patch(counts=[2, 65_537, 0]),
+            "do not sum": bytes(unsummed),
+            "LITERAL bytes exceed": self.patch(sums=[2048, 1001]),
+            "too small for its declared records": self.patch(body_size=46 * 2 + 53 - 1),
+            "record kinds do not match": self.patch(counts=[1, 1, 1], sums=[2048, 0]),
+            "byte totals": self.patch(sums=[2047, 0]),
+            "decompressed body": self.patch(body_size=len(body) - 1),
+            "trailing bytes": self.patch(body_extra=b"\x00"),
+            "unknown kind": self.patch([unknown, *good[1:]]),
+            "zero length": self.patch([empty, *good]),
+            "duplicates": self.patch([good[0], v2_replace(100, b"\xaa" * 10), *good[1:]]),
+            "not sorted": self.patch([good[1], good[0], good[2]]),
+            "overlaps": self.patch([good[0], v2_replace(120, b"\xaa" * 10), *good[1:]]),
+            "exceeds the target bounds": self.patch([*good[:2], v2_copy(7144, 2049, 6143)]),
+            "REPLACE extends beyond the source": self.patch(
+                [*good[:2], v2_replace(8100, b"\xcc" * 100)]
+            ),
+            "LITERAL bytes inside the source": self.patch(
+                [good[0], v2_literal(6144, b"\xbb" * 1000), good[2]]
+            ),
+            "COPY source range is outside": self.patch([*good[:2], v2_copy(7144, 2048, 6145)]),
+            "identity COPY": self.patch(
+                [good[0], v2_copy(6144, 64, 6144), v2_replace(6208, b"\xbb" * 936), good[2]]
+            ),
+            "shorter than 64": self.patch(
+                [*good[:2], v2_copy(7144, 63, 6144), v2_copy(7207, 1985, 6207)]
+            ),
+            "extension gap": self.patch([*good[:2], v2_copy(7144, 2000, 6144)]),
+        }
+        for message, payload in cases.items():
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(verifier.SrwfpFormatError, message):
+                    verifier.inspect_srwfp_v2(payload)
+
+        with self.assertRaises(verifier.SrwfpFormatError):
+            verifier.inspect_srwfp_v2(self.patch(compressed=b"\x78\x9c" + bytes(10)))
+        with self.assertRaisesRegex(verifier.SrwfpFormatError, "extension gap"):
+            verifier.inspect_srwfp_v2(self.patch([
+                *self.good_literal[:3], v2_literal(9001, bytes(191)),
+            ]))
+
+    def test_merge_rules_follow_record_kinds(self) -> None:
+        merged_messages = {
+            "replace": [v2_replace(100, b"\xaa" * 32), v2_replace(132, b"\xaa" * 32), *self.good[1:]],
+            "literal": [
+                *self.good_literal[:3],
+                v2_literal(9000, bytes(100)),
+                v2_literal(9100, bytes(92)),
+            ],
+            "copy": [*self.good[:2], v2_copy(7144, 1024, 6144), v2_copy(8168, 1024, 7168)],
+        }
+        for kind, records in merged_messages.items():
+            with self.subTest(kind=kind):
+                with self.assertRaisesRegex(verifier.SrwfpFormatError, "must be merged"):
+                    verifier.inspect_srwfp_v2(self.patch(records))
+        # Target-adjacent COPY records whose sources are not contiguous are canonical.
+        split = [*self.good[:2], v2_copy(7144, 1024, 6144), v2_copy(8168, 1024, 0)]
+        self.assertEqual(verifier.inspect_srwfp_v2(self.patch(split))["copyCount"], 2)
+
+    def test_capture_budget_counts_only_carried_bytes(self) -> None:
+        chunk = verifier.DOWNLOAD_CAPTURE_CHUNK_BYTES
+        maximum_windows = verifier.MAX_DOWNLOAD_CAPTURE_BYTES // chunk
+
+        def budget_patch(windows: int) -> bytes:
+            source_size = windows * 2 * chunk
+            records = [v2_replace(index * 2 * chunk, b"\xff") for index in range(windows)]
+            # A multi-MiB COPY is never captured.
+            records.append(v2_copy(source_size, 8 * chunk, 1))
+            return make_v2_patch(source_size, source_size + 8 * chunk, records)
+
+        descriptor = verifier.inspect_srwfp_v2(budget_patch(maximum_windows))
+        self.assertEqual(descriptor["capturedBytes"], verifier.MAX_DOWNLOAD_CAPTURE_BYTES)
+        with self.assertRaisesRegex(
+            verifier.SrwfpFormatError,
+            rf"sparse download requires more than {verifier.MAX_DOWNLOAD_CAPTURE_BYTES}",
+        ):
+            verifier.inspect_srwfp_v2(budget_patch(maximum_windows + 1))
+
+    def test_frozen_final_g541_geometry_is_a_valid_v2_shape(self) -> None:
+        stock = verifier.STOCK_PROFILES_BY_GAME["srwf-final"]
+        target_size = 521_680_656
+        copy_target, copy_length, copy_source = 517_799_856, 3_880_800, 516_527_424
+        self.assertEqual(target_size % verifier.CD_SECTOR_BYTES, 0)
+        self.assertEqual(copy_source + copy_length, stock["size"])
+        self.assertEqual(copy_target + copy_length, target_size)
+        self.assertEqual(((48 * 60 + 55) * 75 + 28) * verifier.CD_SECTOR_BYTES, copy_target)
+        self.assertTrue(verifier.is_v2_growth_target_size(target_size, stock))
+        payload = make_v2_patch(
+            stock["size"],
+            target_size,
+            [v2_replace(16 * 2352 + 16 + 80, b"\xff"), v2_copy(copy_target, copy_length, copy_source)],
+            source_sha256=bytes.fromhex(stock["sha256"]),
+        )
+        descriptor = verifier.inspect_srwfp_v2(payload)
+        self.assertEqual((descriptor["copyCount"], descriptor["literalCount"]), (1, 0))
+        self.assertEqual(descriptor["sourceSha256"], stock["sha256"])
+
+    def test_growth_target_size_rule(self) -> None:
+        stock = verifier.STOCK_PROFILES_BY_GAME["srwf-final"]
+        size = stock["size"]
+        self.assertTrue(verifier.is_v2_growth_target_size(size + 2352, stock))
+        self.assertTrue(verifier.is_v2_growth_target_size(size + 28_532 * 2352, stock))
+        for invalid in (
+            size,
+            size - 2352,
+            size + 1,
+            size + 28_534 * 2352,
+            verifier.V2_TARGET_SIZE_MAX + 2352,
+            True,
+            None,
+            float(size + 2352),
+        ):
+            with self.subTest(size=invalid):
+                self.assertFalse(verifier.is_v2_growth_target_size(invalid, stock))
+        self.assertFalse(verifier.is_v2_growth_target_size(size + 2352, None))
+
+
+class SyntheticV2ReleaseTests(unittest.TestCase):
+    release_id = "v5-r998"
+
+    def build_tree(
+        self,
+        root: Path,
+        payload: bytes,
+        *,
+        target_size: int,
+        patch_format: str = "srwf.sparse-byte-delta.v2",
+        manifest_patch: dict[str, Any] | None = None,
+    ) -> None:
+        release_id = self.release_id
+        target_hash = "11" * 32
+        commit = "33" * 20
+        shutil.copytree(PROJECT_ROOT / "schemas", root / "schemas")
+        patch_path = root / f"patches/{release_id}.srwfp"
+        patch_path.parent.mkdir()
+        patch_path.write_bytes(payload)
+        patch_hash = hashlib.sha256(payload).hexdigest()
+        receipt = {
+            "schema": "srwf-kor.acceptance-receipt.v1",
+            "releaseId": release_id,
+            "state": "ACCEPTED",
+            "acceptedAt": "2026-09-21T12:34:56Z",
+            "stockProfileId": verifier.STOCK_PROFILE["id"],
+            "sourceSha256": verifier.STOCK_PROFILE["sha256"],
+            "targetSha256": target_hash,
+            "patchSha256": patch_hash,
+            "v5Commit": commit,
+            "gates": {
+                "staticStructure": "PASS",
+                "runtimeConsumption": "PASS",
+                "visualLayout": "PASS",
+                "longPlayProgression": "NOT_CLAIMED",
+            },
+            "decisionAuthority": "synthetic test authority",
+        }
+        receipt_path = root / f"receipts/{release_id}.acceptance.json"
+        write_json(receipt_path, receipt)
+        release = {
+            "schema": "srwf-kor.public-release.v1",
+            "id": release_id,
+            "state": "ACCEPTED",
+            "version": "v0.1",
+            "title": "Synthetic accepted growth release",
+            "publishedAt": "2026-09-21T12:35:00Z",
+            "source": {
+                "profileId": verifier.STOCK_PROFILE["id"],
+                "size": verifier.STOCK_PROFILE["size"],
+                "sha256": verifier.STOCK_PROFILE["sha256"],
+            },
+            "target": {
+                "filename": "SRWF-KOR-r998.bin",
+                "cueFilename": "SRWF-KOR-r998.cue",
+                "size": target_size,
+                "sha256": target_hash,
+            },
+            "patch": {
+                "format": patch_format,
+                "url": f"patches/{release_id}.srwfp",
+                "size": len(payload),
+                "sha256": patch_hash,
+                "recordCount": verifier.inspect_srwfp_v2(payload)["recordCount"]
+                if payload[:8] == verifier.PATCH_V2_MAGIC
+                else 1,
+                "bodyUncompressedSize": verifier.inspect_srwfp_v2(payload)["bodyUncompressedSize"]
+                if payload[:8] == verifier.PATCH_V2_MAGIC
+                else 45,
+                **(manifest_patch or {}),
+            },
+            "provenance": {
+                "v5Commit": commit,
+                "buildReceiptSha256": "44" * 32,
+                "acceptanceReceiptSha256": hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+            },
+        }
+        release_path = root / f"releases/{release_id}.json"
+        write_json(release_path, release)
+        write_json(root / "manifest/releases.json", {
+            "$schema": "../schemas/releases.schema.json",
+            "schema": "srwf-kor.public-release-index.v2",
+            "project": {"id": "srwf-kor-v5", "status": "HAS_ACCEPTED_RELEASE"},
+            "games": [
+                {
+                    "id": "srwf-f",
+                    "label": "슈퍼로봇대전 F",
+                    "status": "HAS_ACCEPTED_RELEASE",
+                    "defaultReleaseId": release_id,
+                },
+                {
+                    "id": "srwf-final",
+                    "label": "슈퍼로봇대전 F 완결편",
+                    "status": "NO_ACCEPTED_RELEASE",
+                    "defaultReleaseId": None,
+                },
+            ],
+            "stock_profiles": [{
+                "gameId": "srwf-f",
+                **verifier.STOCK_PROFILE,
+                "label": "Synthetic stock",
+            }],
+            "releases": [{
+                "gameId": "srwf-f",
+                "id": release_id,
+                "state": "ACCEPTED",
+                "label": "Synthetic accepted growth release",
+                "manifest": f"releases/{release_id}.json",
+                "manifestSha256": hashlib.sha256(release_path.read_bytes()).hexdigest(),
+            }],
+        })
+
+    def validate(self, payload: bytes, **options: Any) -> list[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self.build_tree(root, payload, **options)
+            with verifier_root(root):
+                files = [path for path in root.rglob("*") if path.is_file()]
+                verifier.validate_index(files)
+                return list(verifier.errors)
+
+    def growth_payload(self, target_size: int) -> bytes:
+        stock_size = verifier.STOCK_PROFILE["size"]
+        return make_v2_patch(
+            stock_size,
+            target_size,
+            [v2_copy(stock_size, target_size - stock_size, 0)],
+            source_sha256=bytes.fromhex(verifier.STOCK_PROFILE["sha256"]),
+            target_sha256=bytes.fromhex("11" * 32),
+        )
+
+    def test_complete_synthetic_v2_release_is_cross_checked(self) -> None:
+        target_size = verifier.STOCK_PROFILE["size"] + 2352
+        self.assertEqual(self.validate(self.growth_payload(target_size), target_size=target_size), [])
+
+    def test_v2_manifest_rules_fail_closed(self) -> None:
+        stock_size = verifier.STOCK_PROFILE["size"]
+        good_size = stock_size + 2352
+        payload = self.growth_payload(good_size)
+        cases = {
+            "v2 target size/hash is invalid": self.validate(
+                self.growth_payload(stock_size + 2353), target_size=stock_size + 2353
+            ),
+            "patch size is outside": self.validate(
+                payload, target_size=good_size, manifest_patch={"size": 128}
+            ),
+            "v2 patch body is too small": self.validate(
+                payload,
+                target_size=good_size,
+                manifest_patch={"recordCount": 2, "bodyUncompressedSize": 27},
+            ),
+            "unsupported patch format": self.validate(
+                payload, target_size=good_size, patch_format="srwf.sparse-byte-delta.v3"
+            ),
+        }
+        for message, errors in cases.items():
+            with self.subTest(message=message):
+                self.assertTrue(any(message in error for error in errors), errors)
+
+        # A v1 manifest keeps its stock-size rule and cannot authenticate a v2 payload.
+        v1_errors = self.validate(
+            payload, target_size=good_size, patch_format="srwf.sparse-byte-delta.v1"
+        )
+        self.assertTrue(any("target size/hash is invalid" in error for error in v1_errors), v1_errors)
+        self.assertTrue(any("magic is not SRWFKP1" in error for error in v1_errors), v1_errors)
+
+        # A v2 manifest cannot point at a v1 payload.
+        v1_payload = make_structural_patch(stock_size, [(0, bytes(range(1, 200)))])
+        v2_on_v1 = self.validate(v1_payload, target_size=good_size)
+        self.assertTrue(any("magic is not SRWFKP2" in error for error in v2_on_v1), v2_on_v1)
 
 
 if __name__ == "__main__":

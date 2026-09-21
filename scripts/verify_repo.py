@@ -68,6 +68,22 @@ JS_SAFE_INTEGER_MAX = 9_007_199_254_740_991
 PATCH_MAGIC = b"SRWFKP1\0"
 PATCH_HEADER_SIZE = 100
 RECORD_HEADER_SIZE = 44
+PATCH_FORMAT_V1 = "srwf.sparse-byte-delta.v1"
+PATCH_FORMAT_V2 = "srwf.sparse-byte-delta.v2"
+# srwf.sparse-byte-delta.v2: 결과가 고정 원본보다 클 때만 쓰는 형식(docs/PATCH_FORMAT_V2.md).
+PATCH_V2_MAGIC = b"SRWFKP2\0"
+PATCH_V2_HEADER_SIZE = 128
+V2_KIND_REPLACE = 1
+V2_KIND_COPY = 2
+V2_KIND_LITERAL = 3
+V2_MIN_RECORD_BYTES = {V2_KIND_REPLACE: 46, V2_KIND_COPY: 53, V2_KIND_LITERAL: 14}
+V2_COPY_RECORD_MAX = 65_536
+V2_COPY_LENGTH_MIN = 64
+V2_GROWTH_MAX = 64 * 1024 * 1024
+CD_SECTOR_BYTES = 2_352
+V2_TARGET_SECTOR_MAX = 333_000  # 74분 CD-R
+V2_TARGET_SIZE_MAX = CD_SECTOR_BYTES * V2_TARGET_SECTOR_MAX
+V2_PATCH_MIN = PATCH_V2_HEADER_SIZE + 1
 JSON_SCHEMA_DRAFT = "https://json-schema.org/draft/2020-12/schema"
 HEX64_PATTERN = r"^[0-9a-f]{64}$"
 ID_PATTERN = r"^[a-z0-9][a-z0-9._-]{0,63}$"
@@ -87,21 +103,25 @@ REQUIRED_FILES = {
     "package.json",
     "assets/app.mjs",
     "assets/patch-core.mjs",
+    "assets/patch-core-v2.mjs",
     "assets/patch-worker.mjs",
     "assets/release-notes.mjs",
     "assets/sha256.mjs",
     "assets/style.css",
     "docs/PATCH_FORMAT.md",
+    "docs/PATCH_FORMAT_V2.md",
     "docs/RELEASE_POLICY.md",
     "manifest/releases.json",
     "schemas/acceptance-receipt.schema.json",
     "schemas/patch-descriptor.schema.json",
+    "schemas/patch-descriptor-v2.schema.json",
     "schemas/release.schema.json",
     "schemas/releases.schema.json",
     "scripts/verify_repo.py",
     ".githooks/pre-commit",
     "tests/frontend-contract.test.mjs",
     "tests/patch-core.test.mjs",
+    "tests/patch-core-v2.test.mjs",
     "tests/patch-worker.test.mjs",
     "tests/test_verify_repo.py",
 }
@@ -729,6 +749,269 @@ def inspect_srwfp_cached(data: bytes) -> dict[str, int | str]:
     return dict(_PATCH_DESCRIPTOR_CACHE[key])
 
 
+def _inflate_srwfp_body(compressed: bytes, body_size: int) -> bytes:
+    """Decompress one RFC 1950 stream with the same rules as the v1 inspector."""
+    if len(compressed) < 6:
+        raise SrwfpFormatError("body is too short to be an RFC 1950 zlib stream")
+    compression_method = compressed[0] & 0x0F
+    compression_info = compressed[0] >> 4
+    header_check = (compressed[0] << 8) | compressed[1]
+    if compression_method != 8:
+        raise SrwfpFormatError("zlib stream does not use the DEFLATE compression method")
+    if compression_info > 7:
+        raise SrwfpFormatError("zlib stream advertises an invalid window size")
+    if header_check % 31 != 0:
+        raise SrwfpFormatError("zlib stream has an invalid FCHECK header")
+    if compressed[1] & 0x20:
+        raise SrwfpFormatError("preset-dictionary zlib streams are not supported")
+    advertised_window = 1 << (compression_info + 8)
+    inspect_deflate_payload(compressed, body_size, advertised_window)
+    try:
+        decompressor = zlib.decompressobj(zlib.MAX_WBITS)
+        body = decompressor.decompress(compressed, min(body_size, BODY_MAX) + 1)
+    except zlib.error as exc:
+        raise SrwfpFormatError(f"body is not a valid RFC 1950 zlib stream: {exc}") from exc
+    if decompressor.unconsumed_tail:
+        raise SrwfpFormatError("decompressed body exceeds its declared size or safety cap")
+    if not decompressor.eof:
+        raise SrwfpFormatError("zlib stream is truncated or did not terminate")
+    if decompressor.unused_data:
+        raise SrwfpFormatError("zlib stream has trailing compressed data")
+    if len(body) != body_size:
+        raise SrwfpFormatError(f"decompressed body is {len(body)} bytes, declared {body_size}")
+    return body
+
+
+def inspect_srwfp_v2(data: bytes) -> dict[str, int | str]:
+    """Parse an SRWFKP2 growth payload with the public browser safety limits.
+
+    Mirrors assets/patch-core-v2.mjs: REPLACE stays inside the source and
+    replaces same-offset bytes, COPY references another range of the user's
+    own source, LITERAL lives only beyond the source, and [sourceSize,
+    targetSize) is covered exactly once by COPY/LITERAL. Source-dependent
+    checks (preimages, COPY source hashes, whole-source hash) remain the
+    browser applier's job.
+    """
+    patch_size = len(data)
+    if patch_size < V2_PATCH_MIN:
+        raise SrwfpFormatError("patch is shorter than its v2 header and zlib body")
+    if patch_size > PATCH_MAX:
+        raise SrwfpFormatError(f"patch exceeds the {PATCH_MAX}-byte cap")
+    if data[:8] != PATCH_V2_MAGIC:
+        raise SrwfpFormatError("patch magic is not SRWFKP2\\0")
+
+    record_count, source_size, target_size, body_size = struct.unpack_from(">IQQQ", data, 8)
+    source_sha256 = data[36:68].hex()
+    target_sha256 = data[68:100].hex()
+    replace_count, copy_count, literal_count, copy_bytes, literal_bytes = struct.unpack_from(
+        ">IIIQQ", data, 100
+    )
+    if max(source_size, target_size, body_size, copy_bytes, literal_bytes) > JS_SAFE_INTEGER_MAX:
+        raise SrwfpFormatError("a v2 header integer exceeds JavaScript's safe integer range")
+    if source_size < 1:
+        raise SrwfpFormatError("v2 requires a non-empty source")
+    if target_size <= source_size:
+        raise SrwfpFormatError("v2 is only valid when the target is larger than the source")
+    growth = target_size - source_size
+    if growth > V2_GROWTH_MAX:
+        raise SrwfpFormatError(f"target growth exceeds the {V2_GROWTH_MAX}-byte cap")
+    if body_size > BODY_MAX:
+        raise SrwfpFormatError(f"body exceeds the {BODY_MAX}-byte cap")
+    if record_count > RECORD_MAX:
+        raise SrwfpFormatError(f"record count exceeds the {RECORD_MAX}-record cap")
+    if copy_count > V2_COPY_RECORD_MAX:
+        raise SrwfpFormatError(f"COPY record count exceeds the {V2_COPY_RECORD_MAX}-record cap")
+    if replace_count + copy_count + literal_count != record_count:
+        raise SrwfpFormatError("header record kinds do not sum to the record count")
+    if literal_bytes > growth:
+        raise SrwfpFormatError("header LITERAL bytes exceed the target growth")
+    minimum_body = (
+        replace_count * V2_MIN_RECORD_BYTES[V2_KIND_REPLACE]
+        + copy_count * V2_MIN_RECORD_BYTES[V2_KIND_COPY]
+        + literal_count * V2_MIN_RECORD_BYTES[V2_KIND_LITERAL]
+    )
+    if minimum_body > body_size:
+        raise SrwfpFormatError("declared body is too small for its declared records")
+
+    body = _inflate_srwfp_body(data[PATCH_V2_HEADER_SIZE:], body_size)
+
+    counts = {V2_KIND_REPLACE: 0, V2_KIND_COPY: 0, V2_KIND_LITERAL: 0}
+    copy_sum = 0
+    literal_sum = 0
+    position = 0
+    previous: tuple[int, int, int, int] | None = None  # kind, offset, end, source end
+    extension_cursor = source_size
+    capture_window_start: int | None = None
+    capture_window_end: int | None = None
+    captured_bytes = 0
+    for index in range(record_count):
+        if position + 13 > len(body):
+            raise SrwfpFormatError(f"record {index} header is truncated")
+        kind = body[position]
+        if kind not in counts:
+            raise SrwfpFormatError(f"record {index} has unknown kind {kind}")
+        offset, length = struct.unpack_from(">QI", body, position + 1)
+        position += 13
+        if offset > JS_SAFE_INTEGER_MAX:
+            raise SrwfpFormatError(f"record {index} offset exceeds the safe integer range")
+        if length == 0:
+            raise SrwfpFormatError(f"record {index} has zero length")
+        if previous is not None:
+            if offset == previous[1]:
+                raise SrwfpFormatError(f"record {index} duplicates its predecessor's target offset")
+            if offset < previous[1]:
+                raise SrwfpFormatError(f"record {index} is not sorted by target offset")
+            if offset < previous[2]:
+                raise SrwfpFormatError(f"record {index} overlaps its predecessor")
+        if offset > target_size or length > target_size - offset:
+            raise SrwfpFormatError(f"record {index} exceeds the target bounds")
+        end = offset + length
+        source_end = -1
+        if kind == V2_KIND_REPLACE:
+            if position + 32 + length > len(body):
+                raise SrwfpFormatError(f"record {index} replacement bytes are truncated")
+            if end > source_size:
+                raise SrwfpFormatError(f"record {index} REPLACE extends beyond the source")
+            if previous is not None and previous[0] == V2_KIND_REPLACE and previous[2] == offset:
+                raise SrwfpFormatError(
+                    f"record {index} is adjacent and must be merged with its predecessor"
+                )
+            position += 32 + length
+        elif kind == V2_KIND_COPY:
+            if position + 40 > len(body):
+                raise SrwfpFormatError(f"record {index} COPY fields are truncated")
+            (copy_source,) = struct.unpack_from(">Q", body, position)
+            if copy_source > source_size or length > source_size - copy_source:
+                raise SrwfpFormatError(f"record {index} COPY source range is outside the source")
+            if copy_source == offset:
+                raise SrwfpFormatError(f"record {index} is an identity COPY")
+            if length < V2_COPY_LENGTH_MIN:
+                raise SrwfpFormatError(
+                    f"record {index} COPY is shorter than {V2_COPY_LENGTH_MIN} bytes"
+                )
+            if (
+                previous is not None
+                and previous[0] == V2_KIND_COPY
+                and previous[2] == offset
+                and previous[3] == copy_source
+            ):
+                raise SrwfpFormatError(
+                    f"record {index} is adjacent and must be merged with its predecessor"
+                )
+            position += 40
+            source_end = copy_source + length
+            copy_sum += length
+        else:
+            if position + length > len(body):
+                raise SrwfpFormatError(f"record {index} LITERAL bytes are truncated")
+            if offset < source_size:
+                raise SrwfpFormatError(f"record {index} places LITERAL bytes inside the source")
+            if previous is not None and previous[0] == V2_KIND_LITERAL and previous[2] == offset:
+                raise SrwfpFormatError(
+                    f"record {index} is adjacent and must be merged with its predecessor"
+                )
+            position += length
+            literal_sum += length
+        counts[kind] += 1
+
+        if end > source_size:
+            if max(offset, source_size) != extension_cursor:
+                raise SrwfpFormatError(
+                    f"extension gap: target bytes from {extension_cursor} are not covered"
+                )
+            extension_cursor = end
+
+        # 다운로드 캡처 예산은 패치가 운반하는 바이트(REPLACE·LITERAL)에만 매긴다.
+        if kind != V2_KIND_COPY:
+            window_start = offset // DOWNLOAD_CAPTURE_CHUNK_BYTES * DOWNLOAD_CAPTURE_CHUNK_BYTES
+            window_end = min(
+                target_size,
+                ((end + DOWNLOAD_CAPTURE_CHUNK_BYTES - 1) // DOWNLOAD_CAPTURE_CHUNK_BYTES)
+                * DOWNLOAD_CAPTURE_CHUNK_BYTES,
+            )
+            if capture_window_start is None or capture_window_end is None:
+                capture_window_start, capture_window_end = window_start, window_end
+            elif window_start <= capture_window_end:
+                capture_window_end = max(capture_window_end, window_end)
+            else:
+                captured_bytes += capture_window_end - capture_window_start
+                if captured_bytes > MAX_DOWNLOAD_CAPTURE_BYTES:
+                    raise SrwfpFormatError(
+                        "sparse download requires more than "
+                        f"{MAX_DOWNLOAD_CAPTURE_BYTES} captured bytes"
+                    )
+                capture_window_start, capture_window_end = window_start, window_end
+        previous = (kind, offset, end, source_end)
+
+    if capture_window_start is not None and capture_window_end is not None:
+        captured_bytes += capture_window_end - capture_window_start
+        if captured_bytes > MAX_DOWNLOAD_CAPTURE_BYTES:
+            raise SrwfpFormatError(
+                "sparse download requires more than "
+                f"{MAX_DOWNLOAD_CAPTURE_BYTES} captured bytes"
+            )
+    if position != len(body):
+        raise SrwfpFormatError(f"body has {len(body) - position} trailing bytes")
+    if extension_cursor != target_size:
+        raise SrwfpFormatError(
+            f"extension gap: target bytes from {extension_cursor} are not covered"
+        )
+    if (counts[V2_KIND_REPLACE], counts[V2_KIND_COPY], counts[V2_KIND_LITERAL]) != (
+        replace_count, copy_count, literal_count
+    ):
+        raise SrwfpFormatError("record kinds do not match the header counts")
+    if (copy_sum, literal_sum) != (copy_bytes, literal_bytes):
+        raise SrwfpFormatError("record byte totals do not match the header")
+
+    return {
+        "patchSize": patch_size,
+        "patchSha256": hashlib.sha256(data).hexdigest(),
+        "sourceSize": source_size,
+        "sourceSha256": source_sha256,
+        "targetSize": target_size,
+        "targetSha256": target_sha256,
+        "recordCount": record_count,
+        "bodyUncompressedSize": body_size,
+        "format": PATCH_FORMAT_V2,
+        "replaceCount": replace_count,
+        "copyCount": copy_count,
+        "literalCount": literal_count,
+        "copyBytes": copy_bytes,
+        "literalBytes": literal_bytes,
+        "capturedBytes": captured_bytes,
+    }
+
+
+_PATCH_V2_DESCRIPTOR_CACHE: dict[tuple, dict[str, int | str]] = {}
+
+
+def inspect_srwfp_v2_cached(data: bytes) -> dict[str, int | str]:
+    key = (hashlib.sha256(data).digest(), PATCH_MAX, BODY_MAX, RECORD_MAX,
+           MAX_DOWNLOAD_CAPTURE_BYTES, DOWNLOAD_CAPTURE_CHUNK_BYTES,
+           V2_GROWTH_MAX, V2_COPY_RECORD_MAX, V2_COPY_LENGTH_MIN)
+    if key not in _PATCH_V2_DESCRIPTOR_CACHE:
+        actual = inspect_srwfp_v2(data)
+        if len(_PATCH_V2_DESCRIPTOR_CACHE) >= 16:
+            _PATCH_V2_DESCRIPTOR_CACHE.pop(next(iter(_PATCH_V2_DESCRIPTOR_CACHE)))
+        _PATCH_V2_DESCRIPTOR_CACHE[key] = actual
+    return dict(_PATCH_V2_DESCRIPTOR_CACHE[key])
+
+
+def is_v2_growth_target_size(size: Any, source_profile: dict[str, Any] | None) -> bool:
+    """A v2 target must be larger than the pinned stock, sector-aligned and bounded."""
+    if source_profile is None or isinstance(size, bool) or not isinstance(size, int):
+        return False
+    stock_size = source_profile.get("size")
+    if isinstance(stock_size, bool) or not isinstance(stock_size, int):
+        return False
+    return (
+        size > stock_size
+        and size % CD_SECTOR_BYTES == 0
+        and size - stock_size <= V2_GROWTH_MAX
+        and size <= V2_TARGET_SIZE_MAX
+    )
+
+
 def require_srwfp_descriptor(
     path: Path,
     *,
@@ -747,10 +1030,13 @@ def require_srwfp_descriptor(
         "recordCount": patch.get("recordCount"),
         "bodyUncompressedSize": patch.get("bodyUncompressedSize"),
     }
+    growth_format = patch.get("format") == PATCH_FORMAT_V2
+    if growth_format:
+        expected["format"] = PATCH_FORMAT_V2
     try:
         with path.open("rb") as handle:
             data = handle.read(PATCH_MAX + 1)
-        actual = inspect_srwfp_cached(data)
+        actual = inspect_srwfp_v2_cached(data) if growth_format else inspect_srwfp_cached(data)
     except (OSError, SrwfpFormatError) as exc:
         complain(f"{context}: malformed .srwfp payload: {exc}")
         return
@@ -1084,6 +1370,7 @@ def validate_schema_documents() -> None:
         ROOT / "schemas/releases.schema.json",
         ROOT / "schemas/release.schema.json",
         ROOT / "schemas/patch-descriptor.schema.json",
+        ROOT / "schemas/patch-descriptor-v2.schema.json",
         ROOT / "schemas/acceptance-receipt.schema.json",
     ]
     documents: dict[str, dict[str, Any]] = {}
@@ -1278,7 +1565,7 @@ def validate_schema_documents() -> None:
         release_schema,
         release_keys,
         "schemas/release.schema.json root",
-        allowed_metadata={"$schema", "$id", "title"},
+        allowed_metadata={"$schema", "$id", "title", "allOf"},
     )
     for key, expected in {
         "schema": {"const": "srwf-kor.public-release.v1"},
@@ -1315,7 +1602,8 @@ def validate_schema_documents() -> None:
     for key, expected in {
         "filename": {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$"},
         "cueFilename": {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$"},
-        "size": {"enum": [profile["size"] for profile in STOCK_PROFILES_BY_GAME.values()]},
+        # 형식별 결과 크기 규칙은 아래 allOf에 있다(v1 = stock 크기, v2 = 증가 배치).
+        "size": {"type": "integer", "minimum": 1, "maximum": V2_TARGET_SIZE_MAX},
         "sha256": {"type": "string", "pattern": HEX64_PATTERN},
     }.items():
         expect_schema_fragment(target_props.get(key), expected, f"public release target {key}")
@@ -1326,14 +1614,78 @@ def validate_schema_documents() -> None:
         "public release patch",
     )
     for key, expected in {
-        "format": {"const": "srwf.sparse-byte-delta.v1"},
+        "format": {"enum": [PATCH_FORMAT_V1, PATCH_FORMAT_V2]},
         "url": {"type": "string", "pattern": PATCH_REFERENCE_PATTERN},
         "size": {"type": "integer", "minimum": 101, "maximum": PATCH_MAX},
         "sha256": {"type": "string", "pattern": HEX64_PATTERN},
         "recordCount": {"type": "integer", "minimum": 1, "maximum": RECORD_MAX},
-        "bodyUncompressedSize": {"type": "integer", "minimum": 45, "maximum": BODY_MAX},
+        "bodyUncompressedSize": {
+            "type": "integer",
+            "minimum": V2_MIN_RECORD_BYTES[V2_KIND_LITERAL],
+            "maximum": BODY_MAX,
+        },
     }.items():
         expect_schema_fragment(patch_props.get(key), expected, f"public release patch {key}")
+
+    def format_condition(value: str) -> dict[str, Any]:
+        return {
+            "properties": {
+                "patch": {
+                    "properties": {"format": {"const": value}},
+                    "required": ["format"],
+                }
+            },
+            "required": ["patch"],
+        }
+
+    expected_format_rules = [
+        {
+            "if": format_condition(PATCH_FORMAT_V1),
+            "then": {
+                "properties": {
+                    "target": {
+                        "properties": {
+                            "size": {
+                                "enum": [
+                                    profile["size"] for profile in STOCK_PROFILES_BY_GAME.values()
+                                ]
+                            }
+                        }
+                    },
+                    "patch": {"properties": {"bodyUncompressedSize": {"minimum": 45}}},
+                }
+            },
+        },
+        {
+            "if": format_condition(PATCH_FORMAT_V2),
+            "then": {
+                "properties": {
+                    "target": {
+                        "properties": {
+                            "size": {
+                                "type": "integer",
+                                "multipleOf": CD_SECTOR_BYTES,
+                                "maximum": V2_TARGET_SIZE_MAX,
+                            }
+                        }
+                    },
+                    "patch": {
+                        "properties": {
+                            "size": {"minimum": V2_PATCH_MIN},
+                            "bodyUncompressedSize": {
+                                "minimum": V2_MIN_RECORD_BYTES[V2_KIND_LITERAL]
+                            },
+                        }
+                    },
+                }
+            },
+        },
+    ]
+    expect_schema_fragment(
+        release_schema.get("allOf"),
+        expected_format_rules,
+        "public release per-format target and patch rules",
+    )
 
     provenance_props = schema_object_properties(
         release_props.get("provenance"),
@@ -1374,6 +1726,37 @@ def validate_schema_documents() -> None:
         "bodyUncompressedSize": {"type": "integer", "minimum": 0, "maximum": BODY_MAX},
     }.items():
         expect_schema_fragment(descriptor_props.get(key), expected, f"patch descriptor {key}")
+
+    descriptor_v2_schema = documents.get("patch-descriptor-v2.schema.json", {})
+    expect_schema_fragment(
+        descriptor_v2_schema.get("$id"),
+        "urn:srwf-kor:schema:patch-descriptor:v2",
+        "schemas/patch-descriptor-v2.schema.json $id",
+    )
+    descriptor_v2_props = schema_object_properties(
+        descriptor_v2_schema,
+        descriptor_keys | {"format"},
+        "schemas/patch-descriptor-v2.schema.json root",
+        allowed_metadata={"$schema", "$id", "title"},
+    )
+    for key, expected in {
+        "patchSize": {"type": "integer", "minimum": V2_PATCH_MIN, "maximum": PATCH_MAX},
+        "patchSha256": {"type": "string", "pattern": HEX64_PATTERN},
+        "sourceSize": {"type": "integer", "minimum": 1, "maximum": JS_SAFE_INTEGER_MAX},
+        "sourceSha256": {"type": "string", "pattern": HEX64_PATTERN},
+        "targetSize": {"type": "integer", "minimum": 2, "maximum": JS_SAFE_INTEGER_MAX},
+        "targetSha256": {"type": "string", "pattern": HEX64_PATTERN},
+        "recordCount": {"type": "integer", "minimum": 1, "maximum": RECORD_MAX},
+        "bodyUncompressedSize": {
+            "type": "integer",
+            "minimum": V2_MIN_RECORD_BYTES[V2_KIND_LITERAL],
+            "maximum": BODY_MAX,
+        },
+        "format": {"const": PATCH_FORMAT_V2},
+    }.items():
+        expect_schema_fragment(
+            descriptor_v2_props.get(key), expected, f"patch descriptor v2 {key}"
+        )
 
     receipt_schema = documents.get("acceptance-receipt.schema.json", {})
     expect_schema_fragment(
@@ -1428,6 +1811,23 @@ def validate_schema_documents() -> None:
         core_text = core_path.read_text(encoding="utf-8")
         if re.search(r"maxRecordCount:\s*2_?000_?000\b", core_text) is None:
             complain("assets/patch-core.mjs: maxRecordCount must match the 2,000,000 public hard cap")
+    core_v2_path = ROOT / "assets/patch-core-v2.mjs"
+    if core_v2_path.is_file():
+        core_v2_text = core_v2_path.read_text(encoding="utf-8")
+        for pattern, label in (
+            (r"maxCopyRecords:\s*65_?536\b", "maxCopyRecords must match the 65,536 COPY cap"),
+            (r"minCopyLength:\s*64\b", "minCopyLength must match the 64-byte COPY minimum"),
+            (
+                r"maxGrowthBytes:\s*64 \* 1024 \* 1024\b",
+                "maxGrowthBytes must match the 64 MiB growth cap",
+            ),
+            (
+                r"minRecordBytes:\s*Object\.freeze\(\{ replace: 46, copy: 53, literal: 14 \}\)",
+                "minRecordBytes must match the 46/53/14-byte record minimums",
+            ),
+        ):
+            if re.search(pattern, core_v2_text) is None:
+                complain(f"assets/patch-core-v2.mjs: {label}")
 
 
 def validate_acceptance_receipt(
@@ -1570,7 +1970,15 @@ def validate_release_manifest(
             if isinstance(source, dict)
             else None
         )
-        if (
+        declared_patch = manifest.get("patch")
+        if isinstance(declared_patch, dict) and declared_patch.get("format") == PATCH_FORMAT_V2:
+            # v2만 결과가 고정 원본보다 클 수 있다. v1 조건은 아래 분기 그대로다.
+            if (
+                not is_v2_growth_target_size(target.get("size"), source_profile)
+                or not is_hex64(target.get("sha256"))
+            ):
+                complain(f"release {release_id}: v2 target size/hash is invalid")
+        elif (
             source_profile is None
             or target.get("size") != source_profile.get("size")
             or not is_hex64(target.get("sha256"))
@@ -1582,19 +1990,38 @@ def validate_release_manifest(
     if exact_keys(patch, {"format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"}, f"release {release_id} patch"):
         assert isinstance(patch, dict)
         patch_ref = patch.get("url") if isinstance(patch.get("url"), str) else None
-        if patch.get("format") != "srwf.sparse-byte-delta.v1":
+        growth_format = patch.get("format") == PATCH_FORMAT_V2
+        if patch.get("format") != PATCH_FORMAT_V1 and not growth_format:
             complain(f"release {release_id}: unsupported patch format")
         expected_patch = f"patches/{release_id}.srwfp"
         if patch_ref != expected_patch or not is_safe_relative(patch_ref, prefix="patches/", suffix=".srwfp"):
             complain(f"release {release_id}: patch URL must be {expected_patch}")
-        for key, minimum, maximum in (
-            ("size", 101, PATCH_MAX),
-            ("recordCount", 1, RECORD_MAX),
-            ("bodyUncompressedSize", 45, BODY_MAX),
-        ):
+        limits = (
+            (
+                ("size", V2_PATCH_MIN, PATCH_MAX),
+                ("recordCount", 1, RECORD_MAX),
+                ("bodyUncompressedSize", V2_MIN_RECORD_BYTES[V2_KIND_LITERAL], BODY_MAX),
+            )
+            if growth_format
+            else (
+                ("size", 101, PATCH_MAX),
+                ("recordCount", 1, RECORD_MAX),
+                ("bodyUncompressedSize", 45, BODY_MAX),
+            )
+        )
+        for key, minimum, maximum in limits:
             value = patch.get(key)
             if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
                 complain(f"release {release_id}: patch {key} is outside its hard limits")
+        if growth_format:
+            record_count = patch.get("recordCount")
+            body_size = patch.get("bodyUncompressedSize")
+            if (
+                isinstance(record_count, int)
+                and isinstance(body_size, int)
+                and body_size < record_count * V2_MIN_RECORD_BYTES[V2_KIND_LITERAL]
+            ):
+                complain(f"release {release_id}: v2 patch body is too small for its records")
         if not is_hex64(patch.get("sha256")):
             complain(f"release {release_id}: patch SHA-256 is invalid")
         if patch_ref and is_safe_relative(patch_ref, prefix="patches/", suffix=".srwfp"):

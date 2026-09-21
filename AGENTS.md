@@ -31,7 +31,10 @@ release rows or publish a new row without another complete acceptance chain.
 - Never publish `READY`, `CANDIDATE`, `TEST`, `RC`, frontier, latest, or other
   unaccepted states.
 - A public patch payload must be a sparse `.srwfp` file in the documented v1
-  format. Full images and aggregate undocumented deltas are forbidden.
+  format, or — only when the accepted target image is larger than the pinned
+  stock image — in the documented v2 format (`docs/PATCH_FORMAT_V2.md`). v1
+  rules are unchanged, and an equal-size target must stay v1. Full images and
+  aggregate undocumented deltas are forbidden.
 - Do not add a `.srwfp` payload before its explicit acceptance receipt, release
   manifest, source/target hashes, and payload hash all agree.
 - The accepted receipt is a release decision. A build receipt, identity pass,
@@ -54,8 +57,12 @@ release rows or publish a new row without another complete acceptance chain.
   transform are pinned in the browser source normalizer, every discarded byte
   is verified, and the transform yields a manifest-pinned canonical stock
   profile whose whole-image SHA-256 is verified before patching.
-- Patch payloads must contain changed bytes plus bounded verification metadata,
-  not a complete game image.
+- Patch payloads must contain changed bytes plus bounded verification metadata
+  (and, in v2 only, references to ranges of the user's own source), not a
+  complete game image.
+- In v2, original bytes that move unchanged (for example a displaced audio
+  track) must be referenced from the user's own source with COPY records and
+  must never be carried as literal bytes.
 - Keep notices and user-facing copy clear that this is an unofficial fan
   project and that no game content is distributed.
 
@@ -68,8 +75,8 @@ release rows or publish a new row without another complete acceptance chain.
 - The selected stock image is processed locally in the browser. Never upload
   it or retain it outside the user's browser session.
 - Fail closed on an empty release index, an unknown stock hash, a manifest
-  mismatch, a malformed patch, a record preimage mismatch, or a target hash
-  mismatch.
+  mismatch, a malformed patch, a record preimage mismatch, a COPY source
+  mismatch, an extension-coverage error, or a target hash mismatch.
 
 ## Changes and validation
 

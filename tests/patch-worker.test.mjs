@@ -471,3 +471,203 @@ test('worker prepares without reading, applies in one pass, and keeps capability
   assert.equal(resetApply.error.code, 'PREPARED_SOURCE_MISSING');
   assert.equal(resetOutput.state.createCalls, 0);
 });
+
+function v2WorkerFixture() {
+  // 원본 안 REPLACE 1개 + 원본 끝 256 B를 128 B 뒤로 미는 COPY 1개(경계를 가로지름).
+  const source = Uint8Array.from({ length: 1024 }, (_, index) => (index * 37 + 11) & 0xff);
+  const growth = 128;
+  const target = new Uint8Array(source.byteLength + growth);
+  target.set(source);
+  const replaceOffset = 768;
+  const replacement = Uint8Array.from(source.subarray(replaceOffset, replaceOffset + growth), (byte) => byte ^ 0xff);
+  target.set(replacement, replaceOffset);
+  target.set(source.subarray(768), 768 + growth);
+
+  const replace = new Uint8Array(45 + replacement.byteLength);
+  const replaceView = new DataView(replace.buffer);
+  replace[0] = 1;
+  replaceView.setBigUint64(1, BigInt(replaceOffset), false);
+  replaceView.setUint32(9, replacement.byteLength, false);
+  replace.set(hexToBytes(sha256Hex(source.subarray(replaceOffset, replaceOffset + replacement.byteLength))), 13);
+  replace.set(replacement, 45);
+  const copy = new Uint8Array(53);
+  const copyView = new DataView(copy.buffer);
+  copy[0] = 2;
+  copyView.setBigUint64(1, BigInt(768 + growth), false);
+  copyView.setUint32(9, 256, false);
+  copyView.setBigUint64(13, 768n, false);
+  copy.set(hexToBytes(sha256Hex(source.subarray(768))), 21);
+  const body = concatBytes([replace, copy]);
+
+  const header = new Uint8Array(128);
+  const headerView = new DataView(header.buffer);
+  header.set(encoder.encode('SRWFKP2'), 0);
+  headerView.setUint32(8, 2, false);
+  headerView.setBigUint64(12, BigInt(source.byteLength), false);
+  headerView.setBigUint64(20, BigInt(target.byteLength), false);
+  headerView.setBigUint64(28, BigInt(body.byteLength), false);
+  header.set(hexToBytes(sha256Hex(source)), 36);
+  header.set(hexToBytes(sha256Hex(target)), 68);
+  headerView.setUint32(100, 1, false);
+  headerView.setUint32(104, 1, false);
+  headerView.setBigUint64(112, 256n, false);
+  const patch = concatBytes([header, new Uint8Array(deflateSync(body))]);
+  const descriptor = {
+    patchSize: patch.byteLength,
+    patchSha256: sha256Hex(patch),
+    sourceSize: source.byteLength,
+    sourceSha256: sha256Hex(source),
+    targetSize: target.byteLength,
+    targetSha256: sha256Hex(target),
+    recordCount: 2,
+    bodyUncompressedSize: body.byteLength,
+    format: 'srwf.sparse-byte-delta.v2',
+  };
+  return { descriptor, patch, source, target };
+}
+
+test('worker dispatches nine-key v2 descriptors to the growth engine and never crosses formats', { timeout: 10_000 }, async () => {
+  messageListener({ data: { type: 'RESET' } });
+  const fixture = v2WorkerFixture();
+  const v1 = workerFixture();
+  const patchUrl = new URL('/patches/growth.srwfp', workerLocation).href;
+  const releaseKey = `growth:${fixture.descriptor.patchSha256}`;
+  let served = fixture.patch;
+  globalThis.fetch = async () => new Response(served, { status: 200 });
+
+  const sourceFile = new CountingBlob([fixture.source]);
+  const prepared = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'v2-prepare',
+    sourceFile,
+    releaseKey,
+    patchUrl,
+    descriptor: fixture.descriptor,
+  });
+  assert.equal(prepared.type, 'complete');
+  assert.equal(sourceFile.streamCalls, 0);
+
+  const output = outputHandle();
+  const applied = await dispatch({
+    type: 'APPLY_PATCH',
+    jobId: 'v2-apply',
+    releaseKey,
+    preparationToken: prepared.preparationToken,
+    outputHandle: output.handle,
+  });
+  assert.equal(applied.type, 'complete');
+  assert.deepEqual(output.bytes(), fixture.target);
+  assert.equal(output.state.closeCalls, 1);
+  assert.equal(output.state.abortCalls, 0);
+  assert.equal(applied.result.bytesWritten, fixture.target.byteLength);
+  assert.equal(applied.result.targetSha256, fixture.descriptor.targetSha256);
+  assert.equal(sourceFile.streamCalls, 1);
+
+  const preparedDownload = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'v2-prepare-download',
+    sourceFile: new Blob([fixture.source]),
+    releaseKey,
+    patchUrl,
+    descriptor: fixture.descriptor,
+  });
+  const downloaded = await dispatch({
+    type: 'BUILD_PATCH_DOWNLOAD',
+    jobId: 'v2-download',
+    releaseKey,
+    preparationToken: preparedDownload.preparationToken,
+    imageName: 'SRWFIN-KOR-test-v0.1-a.bin',
+    cueName: 'SRWFIN-KOR-test-v0.1-a.cue',
+  });
+  assert.equal(downloaded.type, 'complete');
+  assert.equal(downloaded.result.outputBlob.size, fixture.target.byteLength);
+  assert.deepEqual(new Uint8Array(await downloaded.result.outputBlob.arrayBuffer()), fixture.target);
+
+  // COPY 원본 불일치는 원본 인증 실패로 보고 준비 상태를 폐기한다.
+  const tampered = fixture.source.slice();
+  tampered[1000] ^= 1;
+  const preparedTampered = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'v2-prepare-tampered',
+    sourceFile: new Blob([tampered]),
+    releaseKey,
+    patchUrl,
+    descriptor: fixture.descriptor,
+  });
+  const tamperedOutput = outputHandle();
+  const tamperedApply = await dispatch({
+    type: 'APPLY_PATCH',
+    jobId: 'v2-apply-tampered',
+    releaseKey,
+    preparationToken: preparedTampered.preparationToken,
+    outputHandle: tamperedOutput.handle,
+  });
+  assert.equal(tamperedApply.type, 'error');
+  assert.equal(tamperedApply.error.code, 'COPY_SOURCE_MISMATCH');
+  assert.equal(tamperedOutput.state.closeCalls, 0);
+  assert.equal(tamperedOutput.state.abortCalls, 1);
+  const afterRevocation = await dispatch({
+    type: 'APPLY_PATCH',
+    jobId: 'v2-apply-after-revocation',
+    releaseKey,
+    preparationToken: preparedTampered.preparationToken,
+    outputHandle: outputHandle().handle,
+  });
+  assert.equal(afterRevocation.error.code, 'PREPARED_SOURCE_MISSING');
+
+  // v1 descriptor(8키)가 SRWFKP2 본문을, v2 descriptor가 SRWFKP1 본문을 가리키면 멈춘다.
+  messageListener({ data: { type: 'RESET' } });
+  const { format: _format, ...eightKeys } = fixture.descriptor;
+  const v1DescriptorOnV2 = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'v1-descriptor-v2-payload',
+    sourceFile: new Blob([fixture.source]),
+    releaseKey: 'cross-1',
+    patchUrl,
+    descriptor: { ...eightKeys, targetSize: fixture.source.byteLength },
+  });
+  assert.equal(v1DescriptorOnV2.type, 'error');
+  assert.equal(v1DescriptorOnV2.error.code, 'PATCH_FORMAT_MISMATCH');
+
+  served = v1.patch;
+  assert.ok(v1.patch.byteLength >= 129);
+  const v2DescriptorOnV1 = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'v2-descriptor-v1-payload',
+    sourceFile: new Blob([v1.source]),
+    releaseKey: 'cross-2',
+    patchUrl,
+    descriptor: {
+      ...v1.descriptor,
+      targetSize: v1.descriptor.sourceSize + 1,
+      format: 'srwf.sparse-byte-delta.v2',
+    },
+  });
+  assert.equal(v2DescriptorOnV1.type, 'error');
+  assert.equal(v2DescriptorOnV1.error.code, 'PATCH_FORMAT_MISMATCH');
+  served = fixture.patch;
+
+  const invalidDescriptors = [
+    { ...fixture.descriptor, targetSize: fixture.descriptor.sourceSize },
+    { ...fixture.descriptor, targetSize: fixture.descriptor.sourceSize - 1 },
+    { ...fixture.descriptor, targetSize: fixture.descriptor.sourceSize + 64 * 1024 * 1024 + 1 },
+    { ...fixture.descriptor, patchSize: 128 },
+    { ...fixture.descriptor, bodyUncompressedSize: 27 },
+    { ...fixture.descriptor, recordCount: 0 },
+    { ...fixture.descriptor, format: 'srwf.sparse-byte-delta.v1' },
+    { ...fixture.descriptor, format: 'srwf.sparse-byte-delta.v3' },
+    { ...fixture.descriptor, extra: true },
+  ];
+  for (const [index, descriptor] of invalidDescriptors.entries()) {
+    const invalid = await dispatch({
+      type: 'PREPARE_SOURCE',
+      jobId: `v2-invalid-descriptor-${index}`,
+      sourceFile: new Blob([fixture.source]),
+      releaseKey,
+      patchUrl,
+      descriptor,
+    });
+    assert.equal(invalid.type, 'error', `descriptor ${index}`);
+    assert.equal(invalid.error.code, 'PATCH_DESCRIPTOR_INVALID', `descriptor ${index}`);
+  }
+});

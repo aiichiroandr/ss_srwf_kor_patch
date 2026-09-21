@@ -104,10 +104,9 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.cue$"
         },
         "size": {
-          "enum": [
-            578512032,
-            520408224
-          ]
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 783216000
         },
         "sha256": {
           "type": "string",
@@ -128,7 +127,10 @@
       ],
       "properties": {
         "format": {
-          "const": "srwf.sparse-byte-delta.v1"
+          "enum": [
+            "srwf.sparse-byte-delta.v1",
+            "srwf.sparse-byte-delta.v2"
+          ]
         },
         "url": {
           "type": "string",
@@ -150,7 +152,7 @@
         },
         "bodyUncompressedSize": {
           "type": "integer",
-          "minimum": 45,
+          "minimum": 14,
           "maximum": 134217728
         }
       }
@@ -178,5 +180,89 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "patch": {
+            "properties": {
+              "format": {
+                "const": "srwf.sparse-byte-delta.v1"
+              }
+            },
+            "required": [
+              "format"
+            ]
+          }
+        },
+        "required": [
+          "patch"
+        ]
+      },
+      "then": {
+        "properties": {
+          "target": {
+            "properties": {
+              "size": {
+                "enum": [
+                  578512032,
+                  520408224
+                ]
+              }
+            }
+          },
+          "patch": {
+            "properties": {
+              "bodyUncompressedSize": {
+                "minimum": 45
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "patch": {
+            "properties": {
+              "format": {
+                "const": "srwf.sparse-byte-delta.v2"
+              }
+            },
+            "required": [
+              "format"
+            ]
+          }
+        },
+        "required": [
+          "patch"
+        ]
+      },
+      "then": {
+        "properties": {
+          "target": {
+            "properties": {
+              "size": {
+                "type": "integer",
+                "multipleOf": 2352,
+                "maximum": 783216000
+              }
+            }
+          },
+          "patch": {
+            "properties": {
+              "size": {
+                "minimum": 129
+              },
+              "bodyUncompressedSize": {
+                "minimum": 14
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

@@ -3,8 +3,15 @@ import {
   applyPatchToWritable,
   buildVerifiedPatchedBlob,
   parsePatch,
-} from "./patch-core.mjs?v=20260916-13";
-import { sha256Hex } from "./sha256.mjs?v=20260916-13";
+} from "./patch-core.mjs?v=20260921-1";
+import {
+  PATCH_FORMAT_V2,
+  PATCH_V2_LIMITS,
+  applyPatchV2ToWritable,
+  buildVerifiedPatchedBlobV2,
+  parsePatchV2,
+} from "./patch-core-v2.mjs?v=20260921-1";
+import { sha256Hex } from "./sha256.mjs?v=20260921-1";
 
 let activeJob = null;
 let preparedSource = null;
@@ -18,6 +25,24 @@ const DESCRIPTOR_KEYS = Object.freeze([
   "targetSha256",
   "recordCount",
   "bodyUncompressedSize",
+]);
+const V2_DESCRIPTOR_KEYS = Object.freeze([...DESCRIPTOR_KEYS, "format"]);
+const PATCH_FORMAT_V1 = "srwf.sparse-byte-delta.v1";
+// descriptor 모양으로 형식을 고른다: 키 8개 = v1(기존 규칙 그대로),
+// v1 키 8개 + format = v2. 패치 본문 magic이 이와 다르면 추측하지 않고 멈춘다.
+const PATCH_ENGINES = new Map([
+  [PATCH_FORMAT_V1, Object.freeze({
+    magic: "SRWFKP1\0",
+    parse: parsePatch,
+    applyToWritable: applyPatchToWritable,
+    buildDownload: buildVerifiedPatchedBlob,
+  })],
+  [PATCH_FORMAT_V2, Object.freeze({
+    magic: "SRWFKP2\0",
+    parse: parsePatchV2,
+    applyToWritable: applyPatchV2ToWritable,
+    buildDownload: buildVerifiedPatchedBlobV2,
+  })],
 ]);
 const SAFE_IMAGE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
 const SAFE_CUE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
@@ -144,7 +169,7 @@ async function buildPatchedDownload(message, signal) {
     // retains only bounded windows containing changed records and reuses
     // source Blob slices for every unchanged gap. It returns nothing until the
     // complete source hash, every record preimage, and the target hash match.
-    result = await buildVerifiedPatchedBlob(
+    result = await patchEngineFor(context.descriptor).buildDownload(
       context.sourceFile,
       context.parsedPatch,
       {
@@ -232,7 +257,7 @@ async function applyPreparedPatch(
   try {
     // The core authenticates the source and output in the same source pass. It
     // closes only after both hashes and every record preimage match.
-    result = await applyPatchToWritable(
+    result = await patchEngineFor(context.descriptor).applyToWritable(
       context.sourceFile,
       writable,
       context.parsedPatch,
@@ -347,9 +372,19 @@ async function loadParsedPatch(releaseKey, patchUrl, descriptor, jobId, signal) 
     throw new WorkerPatcherError("PATCH_HASH_MISMATCH", "Patch SHA-256 does not match the release manifest");
   }
 
+  const engine = patchEngineFor(descriptor);
+  const actualMagic = String.fromCharCode(...patchBytes.subarray(0, 8));
+  const knownMagic = [...PATCH_ENGINES.values()].some((candidate) => candidate.magic === actualMagic);
+  if (knownMagic && actualMagic !== engine.magic) {
+    throw new WorkerPatcherError(
+      "PATCH_FORMAT_MISMATCH",
+      "Patch payload format does not match the release descriptor",
+    );
+  }
+
   let parsedPatch;
   try {
-    parsedPatch = await parsePatch(patchBytes, descriptor);
+    parsedPatch = await engine.parse(patchBytes, descriptor);
   } catch (error) {
     if (signal.aborted || error?.name === "AbortError") {
       throw error;
@@ -540,12 +575,79 @@ function isSourceAuthenticationError(error) {
     "SOURCE_HASH_MISMATCH",
     "NON_DIFFERING_BYTE",
     "PREIMAGE_MISMATCH",
+    "COPY_SOURCE_MISMATCH",
   ]).has(error?.code);
+}
+
+function hasExactDescriptorKeys(descriptor, keys) {
+  const suppliedKeys = Reflect.ownKeys(descriptor);
+  return suppliedKeys.length === keys.length
+    && keys.every((key) => Object.hasOwn(descriptor, key))
+    && suppliedKeys.every((key) => typeof key === "string" && keys.includes(key));
+}
+
+function isV2Descriptor(descriptor) {
+  return Boolean(descriptor)
+    && typeof descriptor === "object"
+    && !Array.isArray(descriptor)
+    && hasExactDescriptorKeys(descriptor, V2_DESCRIPTOR_KEYS);
+}
+
+function patchEngineFor(descriptor) {
+  return PATCH_ENGINES.get(isV2Descriptor(descriptor) ? PATCH_FORMAT_V2 : PATCH_FORMAT_V1);
+}
+
+function validateDescriptorV2(descriptor) {
+  if (descriptor.format !== PATCH_FORMAT_V2) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "Patch descriptor format is not supported");
+  }
+  for (const key of ["patchSize", "sourceSize", "targetSize"]) {
+    if (!Number.isSafeInteger(descriptor[key]) || descriptor[key] <= 0) {
+      throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", `${key} must be a positive safe integer`);
+    }
+  }
+  if (descriptor.patchSize < 129) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "patchSize is smaller than the v2 format minimum");
+  }
+  if (descriptor.patchSize > PATCH_V2_LIMITS.maxPatchBytes) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "patchSize exceeds the parser safety cap");
+  }
+  if (descriptor.targetSize <= descriptor.sourceSize) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "A v2 target must be larger than its source");
+  }
+  if (descriptor.targetSize - descriptor.sourceSize > PATCH_V2_LIMITS.maxGrowthBytes) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "Target growth exceeds the v2 safety cap");
+  }
+  if (!Number.isSafeInteger(descriptor.recordCount) || descriptor.recordCount < 1) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "recordCount must be a positive safe integer");
+  }
+  if (descriptor.recordCount > PATCH_V2_LIMITS.maxRecordCount) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "recordCount exceeds the worker safety cap");
+  }
+  if (!Number.isSafeInteger(descriptor.bodyUncompressedSize)
+    || descriptor.bodyUncompressedSize < descriptor.recordCount * PATCH_V2_LIMITS.minRecordBytes.literal) {
+    throw new WorkerPatcherError(
+      "PATCH_DESCRIPTOR_INVALID",
+      "bodyUncompressedSize is too small for the declared records",
+    );
+  }
+  if (descriptor.bodyUncompressedSize > PATCH_V2_LIMITS.maxBodyUncompressedBytes) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "bodyUncompressedSize exceeds the safety cap");
+  }
+  for (const key of ["patchSha256", "sourceSha256", "targetSha256"]) {
+    if (typeof descriptor[key] !== "string" || !/^[0-9a-f]{64}$/i.test(descriptor[key])) {
+      throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", `${key} must be a SHA-256 digest`);
+    }
+  }
 }
 
 function validateDescriptor(descriptor) {
   if (!descriptor || typeof descriptor !== "object" || Array.isArray(descriptor)) {
     throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "Patch descriptor is missing");
+  }
+  if (isV2Descriptor(descriptor)) {
+    validateDescriptorV2(descriptor);
+    return;
   }
   const suppliedKeys = Reflect.ownKeys(descriptor);
   if (
@@ -596,7 +698,8 @@ function validateDescriptor(descriptor) {
 }
 
 function descriptorFingerprint(descriptor) {
-  return DESCRIPTOR_KEYS.map((key) => `${key}=${descriptor[key]}`).join("\n");
+  const keys = isV2Descriptor(descriptor) ? V2_DESCRIPTOR_KEYS : DESCRIPTOR_KEYS;
+  return keys.map((key) => `${key}=${descriptor[key]}`).join("\n");
 }
 
 function requireJobId(value) {
