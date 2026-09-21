@@ -885,7 +885,11 @@ test("accepted release manifests expose clean version-only BIN and CUE names", a
       `SRWF-KOR-20260915-v0.4-${font}.bin`,
       `SRWF-KOR-20260915-v0.4-${font}.cue`,
     ]),
-    ["srwf-final-20260814-v0-1.json", "SRWFIN-KOR-20260814-v0.1.bin", "SRWFIN-KOR-20260814-v0.1.cue"],
+    ...["a", "b", "c"].map((font) => [
+      `srwf-final-20260921-v0-1-${font}.json`,
+      `SRWFIN-KOR-20260921-v0.1-${font}.bin`,
+      `SRWFIN-KOR-20260921-v0.1-${font}.cue`,
+    ]),
   ]) {
     const release = JSON.parse(await readFile(
       new URL(`../releases/${manifestName}`, import.meta.url),
@@ -902,7 +906,7 @@ test("accepted release manifests expose clean version-only BIN and CUE names", a
   }
 });
 
-test("each game points at its accepted default while F v0.1.1 remains selectable as history", async () => {
+test("each game points at its accepted default while withdrawn history stays unindexed", async () => {
   const index = JSON.parse(await readFile(
     new URL("../manifest/releases.json", import.meta.url),
     "utf8",
@@ -932,7 +936,6 @@ test("each game points at its accepted default while F v0.1.1 remains selectable
       "srwf-final-20260921-v0-1-a",
       "srwf-final-20260921-v0-1-b",
       "srwf-final-20260921-v0-1-c",
-      FINAL_RELEASE_ID,
     ],
   );
   assert.equal(finalReleases.every((entry) => entry.state === "ACCEPTED"), true);
@@ -950,7 +953,7 @@ test("v0.3 patched-image CUE is the four-track layout reported working on a burn
   );
 });
 
-test("historical F and Final CUEs keep their accepted geometry and unpinned targets fail closed", () => {
+test("historical F CUEs keep their accepted geometry and withdrawn targets fail closed", () => {
   // v0.1.1·v0.1.2 는 다트랙 구성을 따로 확인한 적이 없어 승인 당시의 단일 데이터 트랙이다.
   for (const targetSha256 of [
     V0_1_1_TARGET_SHA256,
@@ -963,17 +966,9 @@ test("historical F and Final CUEs keep their accepted geometry and unpinned targ
         + "    INDEX 01 00:00:00\r\n",
     );
   }
-  assert.equal(
-    __testHooks.buildPatchedImageCue("SRWFIN-KOR-20260814-v0.1.bin", FINAL_TARGET_SHA256),
-    "FILE \"SRWFIN-KOR-20260814-v0.1.bin\" BINARY\r\n"
-      + "  TRACK 01 MODE1/2352\r\n"
-      + "    INDEX 01 00:00:00\r\n"
-      + "  TRACK 02 MODE2/2352\r\n"
-      + "    INDEX 00 17:03:64\r\n"
-      + "    INDEX 01 17:06:64\r\n"
-      + "  TRACK 03 AUDIO\r\n"
-      + "    INDEX 00 48:48:12\r\n"
-      + "    INDEX 01 48:50:12\r\n",
+  assert.throws(
+    () => __testHooks.buildPatchedImageCue("SRWFIN-KOR-20260814-v0.1.bin", FINAL_TARGET_SHA256),
+    (error) => error?.code === "CUE_LAYOUT_MISSING",
   );
   // 새 결과 이미지는 트랙 구성을 등록하기 전까지 다른 릴리스 구성을 빌려 쓰지 않는다.
   for (const unpinned of ["b".repeat(64), STOCK_PROFILE.sha256, STOCK_PROFILE.id]) {
@@ -1327,7 +1322,11 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
     .map((release) => release.id);
   const referencedAssets = new Map();
 
-  assert.deepEqual(Object.keys(PATCH_NOTES).sort(), [...acceptedReleaseIds].sort());
+  // 공개 인덱스에서 빠진 2026.08.14 시험판의 노트는 역사 자료로만 남긴다.
+  assert.deepEqual(
+    Object.keys(PATCH_NOTES).sort(),
+    [...acceptedReleaseIds, FINAL_RELEASE_ID].sort(),
+  );
   for (const releaseId of acceptedReleaseIds) {
     const notes = getPatchNotesForRelease(releaseId);
     assert.ok(notes, `missing patch notes for ${releaseId}`);
@@ -1368,6 +1367,15 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
         }
         referencedAssets.set(side.src, { width: side.width, height: side.height });
       }
+    }
+  }
+
+  // 공개 목록에서 제외한 시험판의 비교 이미지도 역사 자료로 보존하므로
+  // 정적 자산 해시 검증 대상에는 계속 포함한다.
+  for (const item of getPatchNotesForRelease(FINAL_RELEASE_ID).items) {
+    for (const sideName of ["asIs", "toBe"]) {
+      const side = item[sideName];
+      referencedAssets.set(side.src, { width: side.width, height: side.height });
     }
   }
 
@@ -1607,7 +1615,7 @@ test("runtime accepts the exact public index and Final accepted manifest contrac
   );
   assert.deepEqual(
     index.releases.find((release) => release.id === FINAL_RELEASE_ID),
-    makeFinalReleaseRow(),
+    undefined,
   );
   assert.doesNotThrow(() => __testHooks.validateReleaseIndex(index));
   assert.doesNotThrow(() => __testHooks.validateGames(index.games));
