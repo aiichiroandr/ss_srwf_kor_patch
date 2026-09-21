@@ -111,14 +111,6 @@
    "manifestSha256": "f549db387b23461a219421480a00c6e270110224a70f7484feef6ff74038931b"
   },
   {
-   "gameId": "srwf-final",
-   "id": "srwf-final-20260814-v0-1",
-   "state": "ACCEPTED",
-   "label": "2026.08.14 · v0.1 시험판 (설치 비권장)",
-   "manifest": "releases/srwf-final-20260814-v0-1.json",
-   "manifestSha256": "86c7843f7984e79f75836e641184a1735d4591ef57ebcec27996ce9954e95c09"
-  },
-  {
    "gameId": "srwf-f",
    "id": "srwf-f-20260814-v0-1-1",
    "state": "ACCEPTED",

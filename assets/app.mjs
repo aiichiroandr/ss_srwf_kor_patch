@@ -1608,17 +1608,6 @@ const PATCHED_IMAGE_CUE_TRACKS = new Map([
   // 승인 당시의 단일 데이터 트랙을 그대로 둔다.
   ["12a9614e16ffc9b0020bb2536ccc2f4b8dddcd9619ff6a24823d86cfc87ea27e", CUE_SINGLE_DATA_TRACK],
   ["b6364d14688f6dc68dfc4199f144c102de2061eea49f81e482276a620eff1e1c", CUE_SINGLE_DATA_TRACK],
-  // F 완결편 2026.08.14 v0.1 시험판. 원본 MODE1·MODE2·AUDIO 경계를 보존한 빌드다.
-  ["922b1d15d54acfec5f3923ead2b969226305b35327c17bde9a39754b4ae15901", Object.freeze([
-    "TRACK 01 MODE1/2352",
-    "INDEX 01 00:00:00",
-    "TRACK 02 MODE2/2352",
-    "INDEX 00 17:03:64",
-    "INDEX 01 17:06:64",
-    "TRACK 03 AUDIO",
-    "INDEX 00 48:48:12",
-    "INDEX 01 48:50:12",
-  ])],
   // F 완결편 2026.09.21 v0.1 r110 G541 배치. Track 3 AUDIO가 뒤로 이동한 결과다.
   ["09301e2d3a1a04376b812866e9de84f4ab8f37e2da5a4b1613f66a54a0b79150", Object.freeze([
     "TRACK 01 MODE1/2352",

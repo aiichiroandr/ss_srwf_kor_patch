@@ -225,6 +225,17 @@ WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST: dict[str, str] = {
     "releases/srwf-f-20260814-v0-1.json": (
         "b4ac6d616c3f09d59eee946387de7926cc20969da4d5c0f723170cca32ac6f10"
     ),
+    # F 완결편 2026.08.14 시험판은 공개 선택 목록에서 제거했다. 기존
+    # payload·영수증·manifest는 재현 가능한 역사 자료로만 보존한다.
+    "patches/srwf-final-20260814-v0-1.srwfp": (
+        "5e26aaef8ed7b91701ac9ffc3f027af27285b56702f26949bce80f84edfd466d"
+    ),
+    "receipts/srwf-final-20260814-v0-1.acceptance.json": (
+        "45c7eae686321898fd0dbb9760bb163fb30e9ddd183780f3bdd40efcfa291b79"
+    ),
+    "releases/srwf-final-20260814-v0-1.json": (
+        "86c7843f7984e79f75836e641184a1735d4591ef57ebcec27996ce9954e95c09"
+    ),
 }
 ACTIVE_WEB_SUFFIXES = {
     ".html", ".htm", ".shtml", ".xhtml", ".xht", ".svg",
