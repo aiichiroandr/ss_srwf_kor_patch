@@ -2365,7 +2365,7 @@ function updateControls() {
   });
   elements.gameSelect.disabled = interactionBusy || state.games.size <= 1 || state.availability === "loading";
   elements.releaseSelect.disabled = interactionBusy
-    || groupFontReleases(state.visibleReleaseRows).length <= 1
+    || groupFontReleases(state.visibleReleaseRows).length === 0
     || state.availability === "loading"
     || state.availability === "preparing";
   elements.fontSelect.disabled = interactionBusy || !releaseReady
