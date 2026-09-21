@@ -360,7 +360,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260921-1";
+  const revision = "20260921-2";
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
@@ -1518,7 +1518,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260921-1$/);
+    assert.match(image.src, /\?v=20260921-2$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -2112,7 +2112,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260921-1$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260921-2$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2121,7 +2121,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260921-1$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260921-2$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",
