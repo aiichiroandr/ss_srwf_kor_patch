@@ -2106,6 +2106,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(element("fontSelect").tabIndex, -1);
     assert.equal(element("fontSelect").getAttribute("aria-hidden"), "true");
     assert.equal(element("releaseSelect").children.length, 1);
+    assert.equal(element("releaseSelect").disabled, false);
     const previewButtons = () => element("fontPreview").querySelectorAll("button");
     const previewImages = () => findDescendants(element("fontPreview"), (node) => node.tagName === "IMG");
     assert.equal(previewButtons().length, 3);
