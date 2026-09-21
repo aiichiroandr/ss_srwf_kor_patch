@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260916-13";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260921-1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,20 +7,21 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260916-13";
+} from "./font-revisions.mjs?v=20260921-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260916-13";
+} from "./release-notes.mjs?v=20260921-1";
 
-const STATIC_ASSET_REVISION = "20260916-13";
+const STATIC_ASSET_REVISION = "20260921-1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
 const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
 const RELEASE_SCHEMA = "srwf-kor.public-release.v1";
 const PATCH_FORMAT = "srwf.sparse-byte-delta.v1";
+const PATCH_FORMAT_V2 = "srwf.sparse-byte-delta.v2";
 const PROJECT_ID = "srwf-kor-v5";
 const ACCEPTED = "ACCEPTED";
 const NO_ACCEPTED_RELEASE = "NO_ACCEPTED_RELEASE";
@@ -34,6 +35,24 @@ const MIN_PATCH_BODY_BYTES = 45;
 const MAX_PATCH_BODY_BYTES = 128 * 1024 * 1024;
 const MAX_PATCH_RECORDS = 2_000_000;
 const MIN_RECORD_BODY_BYTES = 45;
+// 지원 형식 표. v1 행의 값은 기존 상수 그대로다. v2는 결과가 고정 원본보다 클 때만
+// 쓰며(크기가 같으면 v1), 최소 레코드가 LITERAL 14 B이고 헤더가 128 B다.
+const SUPPORTED_PATCH_FORMATS = new Map([
+  [PATCH_FORMAT, Object.freeze({
+    minPatchBytes: MIN_PATCH_BYTES,
+    minPatchBodyBytes: MIN_PATCH_BODY_BYTES,
+    minRecordBodyBytes: MIN_RECORD_BODY_BYTES,
+  })],
+  [PATCH_FORMAT_V2, Object.freeze({
+    minPatchBytes: 129,
+    minPatchBodyBytes: 14,
+    minRecordBodyBytes: 14,
+  })],
+]);
+const CD_SECTOR_BYTES = 2352;
+const MAX_V2_GROWTH_BYTES = 64 * 1024 * 1024;
+// 74분 CD-R 한 장(333,000 섹터, 783,216,000 B)을 넘는 결과는 받지 않는다.
+const MAX_V2_TARGET_SECTORS = 333_000;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const BIN_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
 const CUE_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
@@ -235,6 +254,24 @@ function sourceSupportCopy(gameId = state.selectedGameId ?? state.release?.gameI
   return SOURCE_SUPPORT_COPY.get(gameId) ?? GENERIC_SOURCE_SUPPORT_COPY;
 }
 
+// 새로 만들 BIN의 크기 안내는 선택한 릴리스의 결과 크기(release.target.size)를 따른다.
+// v1 릴리스는 결과가 원본과 같은 크기라 기존 문구(579 MB / 520 MB)와 같다.
+function outputImageSizeLabel(release, gameId) {
+  if (
+    release
+    && release.gameId === gameId
+    && Number.isSafeInteger(release.target?.size)
+    && release.target.size > 0
+  ) {
+    return `${Math.round(release.target.size / 1_000_000)} MB`;
+  }
+  return sourceSupportCopy(gameId).imageSize;
+}
+
+function outputImageSize(gameId = state.selectedGameId ?? state.release?.gameId) {
+  return outputImageSizeLabel(state.release, gameId);
+}
+
 function showBrowserCompatibility() {
   elements.compatibilityBadge.classList.remove("is-supported", "is-unsupported");
   if (state.fileSystemSupported) {
@@ -246,7 +283,7 @@ function showBrowserCompatibility() {
 
   elements.compatibilityBadge.classList.add("is-unsupported");
   elements.compatibilityBadge.lastChild.textContent = " 안전 저장 불가";
-  const { imageSize } = sourceSupportCopy();
+  const imageSize = outputImageSize();
   // 이 경로는 브라우저가 파일을 통째로 받아 쓰므로 크롬 계열보다 훨씬 느리다.
   elements.sourceHelp.textContent = `이 브라우저에서는 원본 폴더에 약 ${imageSize}의 새 BIN/CUE를 안전하게 만들 수 없습니다.`
     + " 다운로드 방식으로 진행되어 저장이 크게 느려집니다 — PC라면 크롬이나 엣지를 권합니다."
@@ -784,28 +821,32 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
   if (!CUE_FILENAME_PATTERN.test(manifest.target.cueFilename)) {
     throw new PatcherError("MANIFEST_INVALID", "Target CUE filename is not canonical");
   }
-  if (manifest.target.size !== stockProfile.size) {
+  const growthFormat = manifest.patch.format === PATCH_FORMAT_V2;
+  if (growthFormat) {
+    requireGrowthTargetSize(manifest.target.size, stockProfile);
+  } else if (manifest.target.size !== stockProfile.size) {
     throw new PatcherError("MANIFEST_INVALID", "Target size must match the pinned stock image size");
   }
   requireSha256(manifest.target.sha256, "target SHA-256");
 
-  if (manifest.patch.format !== PATCH_FORMAT) {
+  const formatRules = SUPPORTED_PATCH_FORMATS.get(manifest.patch.format);
+  if (!formatRules) {
     throw new PatcherError("PATCH_FORMAT_UNSUPPORTED", "Unsupported patch format");
   }
   requireRelativeReference(manifest.patch.url, "patch URL");
   if (manifest.patch.url !== expectedPatchReference(row.id)) {
     throw new PatcherError("MANIFEST_INVALID", "Patch URL is not canonical");
   }
-  requireIntegerInRange(manifest.patch.size, MIN_PATCH_BYTES, MAX_PATCH_BYTES, "patch size");
+  requireIntegerInRange(manifest.patch.size, formatRules.minPatchBytes, MAX_PATCH_BYTES, "patch size");
   requireSha256(manifest.patch.sha256, "patch SHA-256");
   requireIntegerInRange(manifest.patch.recordCount, 1, MAX_PATCH_RECORDS, "patch record count");
   requireIntegerInRange(
     manifest.patch.bodyUncompressedSize,
-    MIN_PATCH_BODY_BYTES,
+    formatRules.minPatchBodyBytes,
     MAX_PATCH_BODY_BYTES,
     "patch body size",
   );
-  if (manifest.patch.bodyUncompressedSize < manifest.patch.recordCount * MIN_RECORD_BODY_BYTES) {
+  if (manifest.patch.bodyUncompressedSize < manifest.patch.recordCount * formatRules.minRecordBodyBytes) {
     throw new PatcherError("MANIFEST_INVALID", "Patch body is too small for its declared non-empty records");
   }
   if (typeof manifest.provenance.v5Commit !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(manifest.provenance.v5Commit)) {
@@ -849,8 +890,26 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
       targetSha256: manifest.target.sha256.toLowerCase(),
       recordCount: manifest.patch.recordCount,
       bodyUncompressedSize: manifest.patch.bodyUncompressedSize,
+      // v1 descriptor는 기존 8개 키 그대로다. v2만 format을 더해 9개 키가 되고,
+      // 워커는 이 모양으로 형식을 고른다.
+      ...(growthFormat ? { format: PATCH_FORMAT_V2 } : {}),
     }),
   });
+}
+
+function requireGrowthTargetSize(size, stockProfile) {
+  requireSafeSize(size, "target size");
+  if (
+    size <= stockProfile.size
+    || size % CD_SECTOR_BYTES !== 0
+    || size - stockProfile.size > MAX_V2_GROWTH_BYTES
+    || size / CD_SECTOR_BYTES > MAX_V2_TARGET_SECTORS
+  ) {
+    throw new PatcherError(
+      "MANIFEST_INVALID",
+      "A v2 target must be larger than the pinned stock image, sector-aligned, and within the growth limits",
+    );
+  }
 }
 
 async function fetchJsonDocument(url, expectedSha256 = null, timeoutMs = MANIFEST_FETCH_TIMEOUT_MS) {
@@ -1842,6 +1901,7 @@ function handleOperationFailure(error, operation = state.operation) {
     "SOURCE_HASH_MISMATCH",
     "NON_DIFFERING_BYTE",
     "PREIMAGE_MISMATCH",
+    "COPY_SOURCE_MISMATCH",
   ]).has(error?.code);
   const preparationLost = new Set([
     "PREPARED_SOURCE_MISSING",
@@ -2344,7 +2404,7 @@ function canApplyPatch() {
 }
 
 function showUnsupportedBrowser() {
-  const { imageSize } = sourceSupportCopy();
+  const imageSize = outputImageSize();
   const message = `이 브라우저에는 원본 폴더에 약 ${imageSize}의 새 BIN/CUE를 안전하게 만들 파일 API가 없습니다. Android Chrome 132 이상 또는 데스크톱 Chrome·Edge에서 이 페이지를 열어 주세요.`;
   elements.sourceHelp.textContent = message;
   elements.sourceState.textContent = "환경 확인";
@@ -2402,7 +2462,7 @@ function showError(title, message) {
 function friendlyOutputCreationError(error, gameId) {
   const code = error?.code;
   const name = error?.name;
-  const { imageSize } = sourceSupportCopy(gameId);
+  const imageSize = outputImageSize(gameId);
   if (
     code === "OUTPUT_PERMISSION_DENIED"
     || name === "NotAllowedError"
@@ -2558,7 +2618,7 @@ function friendlyDiscSourceError(code, gameId) {
 }
 
 function friendlyWorkerError(code, gameId) {
-  const { imageSize } = sourceSupportCopy(gameId);
+  const imageSize = outputImageSize(gameId);
   const errors = {
     SOURCE_SIZE_MISMATCH: ["원본 크기가 일치하지 않습니다", "지원하는 정품 원본 IMG/BIN 또는 CUE+BIN 구성인지 확인해 주세요."],
     SOURCE_HASH_MISMATCH: ["지원하는 원본이 아닙니다", "전체 SHA-256이 공개 명세와 다릅니다. 원본을 수정하지 않은 정품 이미지인지 확인해 주세요."],
@@ -2570,6 +2630,9 @@ function friendlyWorkerError(code, gameId) {
     PATCH_TOO_LARGE: ["패치 데이터가 허용 범위를 벗어났습니다", "공개 패치의 안전 한도를 넘어 작업을 차단했습니다."],
     NON_DIFFERING_BYTE: ["패치 데이터 정책 검증에 실패했습니다", "변경되지 않는 바이트가 패치 레코드에 포함되어 있어 작업을 차단했습니다."],
     PREIMAGE_MISMATCH: ["원본 부분 검증에 실패했습니다", "패치할 영역의 원본 데이터가 공개 명세와 달라 작업을 차단했습니다."],
+    COPY_SOURCE_MISMATCH: ["원본 부분 검증에 실패했습니다", "위치만 옮겨 쓸 원본 구간의 데이터가 공개 명세와 달라 작업을 차단했습니다."],
+    PATCH_FORMAT_MISMATCH: ["패치 형식이 명세와 다릅니다", "공개 릴리스 명세가 가리키는 패치 형식과 패치 데이터의 형식이 달라 작업을 차단했습니다."],
+    DOWNLOAD_BLOB_SIZE_MISMATCH: ["다운로드 결과 검증에 실패했습니다", "조립한 BIN의 크기가 목표값과 달라 다운로드를 만들지 않았습니다."],
     DESCRIPTOR_MISMATCH: ["패치 명세와 데이터가 다릅니다", "공개 릴리스 명세와 패치 본문이 일치하지 않아 작업을 차단했습니다."],
     BAD_DESCRIPTOR: ["패치 명세가 올바르지 않습니다", "공개 릴리스 명세와 패치 본문을 함께 확인할 수 없어 작업을 차단했습니다."],
     PATCH_DESCRIPTOR_INVALID: ["패치 명세가 올바르지 않습니다", "공개 릴리스 명세가 안전 한도와 일치하지 않아 작업을 차단했습니다."],
@@ -2610,10 +2673,26 @@ function friendlyWorkerError(code, gameId) {
     "SIZE_CHANGE_UNSUPPORTED",
     "UNSAFE_INTEGER",
     "UNTRUSTED_PATCH_OBJECT",
+    // srwf.sparse-byte-delta.v2 구조 오류
+    "BAD_SIZE",
+    "SIZE_NOT_GROWING",
+    "GROWTH_TOO_LARGE",
+    "TOO_MANY_COPY_RECORDS",
+    "RECORD_COUNT_MISMATCH",
+    "RECORD_BYTES_MISMATCH",
+    "UNKNOWN_RECORD_KIND",
+    "DUPLICATE_RECORD",
+    "IDENTITY_COPY",
+    "COPY_TOO_SHORT",
+    "REPLACE_OUT_OF_SOURCE",
+    "LITERAL_INSIDE_SOURCE",
+    "COPY_SOURCE_OUT_OF_RANGE",
+    "EXTENSION_GAP",
   ]);
   const internalFailureCodes = new Set([
     "INTERNAL_RECORD_STATE",
     "PATCH_OPERATION_FAILED",
+    "DOWNLOAD_ASSEMBLY_INVALID",
   ]);
   const fallback = internalFailureCodes.has(code)
     ? [
@@ -2851,6 +2930,7 @@ export const __testHooks = Object.freeze({
   isPickerCancellation,
   isRfc3339DateTime,
   normalizeReleaseManifest,
+  outputImageSizeLabel,
   clearPatchNotes,
   closePatchNotes,
   openPatchNotes,

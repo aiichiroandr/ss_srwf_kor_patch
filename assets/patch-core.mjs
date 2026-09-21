@@ -1302,3 +1302,24 @@ export async function buildVerifiedPatchedBlob(blob, parsedPatch, options = {}) 
     captureWindowCount: capturePlan.windows.length,
   });
 }
+
+// srwf.sparse-byte-delta.v2(assets/patch-core-v2.mjs)가 같은 zlib·DEFLATE 검사기와
+// 스트리밍·캡처 도우미를 재사용하도록 내보낸다. 추가 export일 뿐이며 SRWFKP1 파서·
+// 적용기·정규형·오류 코드는 그대로다.
+export {
+  acquireWriter,
+  asByteView,
+  blobChunks,
+  createSparseCaptureWriter,
+  hexFromBytes,
+  inflateZlib,
+  isBlobLike,
+  normalizeExpectedHash,
+  normalizeExpectedInteger,
+  ownPatchBytes,
+  readSafeU64,
+  reportProgress,
+  reportProgressAfterCommit,
+  throwIfAborted,
+  writeWithAbort,
+};

@@ -354,12 +354,16 @@ test("public page exposes the legal and accessibility contracts", async () => {
 });
 
 test("static entry assets share an explicit cache revision", async () => {
-  const [html, appSource, workerSource] = await Promise.all([
+  const [html, appSource, workerSource, v2Source] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260916-13";
+  const revision = "20260921-1";
+  // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
+  assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
+  assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -1497,7 +1501,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260916-13$/);
+    assert.match(image.src, /\?v=20260921-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1774,6 +1778,138 @@ test("runtime enforces stock-sized targets and all public patch hard limits", ()
   assert.doesNotThrow(() => normalizeManifest(twoRecords));
 });
 
+const PATCH_FORMAT_V2 = "srwf.sparse-byte-delta.v2";
+// F 완결편 v0.1 G541 배치의 결과 크기(221,803 섹터). 인덱스에는 넣지 않은 합성 명세다.
+const G541_TARGET_SIZE = 521_680_656;
+
+function makeFinalGrowthManifest({ target = {}, patch = {} } = {}) {
+  const manifest = makeFinalReleaseManifest();
+  manifest.target = {
+    ...manifest.target,
+    size: G541_TARGET_SIZE,
+    sha256: "ec0e3f3f4fc9eb2ff8c64a897d2a07c95d849a32df5db3f4aa1db121ffb7ea15",
+    ...target,
+  };
+  manifest.patch = {
+    ...manifest.patch,
+    format: PATCH_FORMAT_V2,
+    size: 3_000_000,
+    sha256: "c".repeat(64),
+    recordCount: 100_000,
+    bodyUncompressedSize: 7_000_000,
+    ...patch,
+  };
+  return manifest;
+}
+
+test("runtime accepts v2 manifests only for larger sector-aligned targets and keeps v1 descriptors at eight keys", () => {
+  const normalized = normalizeFinalManifest(makeFinalGrowthManifest());
+  assert.equal(normalized.patch.format, PATCH_FORMAT_V2);
+  assert.equal(normalized.target.size, G541_TARGET_SIZE);
+  assert.deepEqual(Object.keys(normalized.descriptor), [
+    "patchSize",
+    "patchSha256",
+    "sourceSize",
+    "sourceSha256",
+    "targetSize",
+    "targetSha256",
+    "recordCount",
+    "bodyUncompressedSize",
+    "format",
+  ]);
+  assert.equal(normalized.descriptor.format, PATCH_FORMAT_V2);
+  assert.equal(normalized.descriptor.sourceSize, FINAL_STOCK_PROFILE.size);
+  assert.equal(normalized.descriptor.targetSize, G541_TARGET_SIZE);
+
+  // v1 명세와 descriptor는 그대로다.
+  const v1 = normalizeFinalManifest(makeFinalReleaseManifest());
+  assert.equal(Object.keys(v1.descriptor).length, 8);
+  assert.equal(Object.hasOwn(v1.descriptor, "format"), false);
+
+  // F 원본에서도 같은 규칙이다.
+  const fGrowth = makeReleaseManifest();
+  fGrowth.target = { ...fGrowth.target, size: STOCK_PROFILE.size + 2352 };
+  fGrowth.patch = { ...fGrowth.patch, format: PATCH_FORMAT_V2, size: 129, bodyUncompressedSize: 53 };
+  assert.equal(normalizeManifest(fGrowth).descriptor.format, PATCH_FORMAT_V2);
+
+  const rejected = [
+    // 크기가 같거나 줄어드는 결과는 v2로 만들 수 없다.
+    [{ target: { size: FINAL_STOCK_PROFILE.size } }, "MANIFEST_INVALID"],
+    [{ target: { size: FINAL_STOCK_PROFILE.size - 2352 } }, "MANIFEST_INVALID"],
+    // 2352의 배수가 아닌 결과.
+    [{ target: { size: G541_TARGET_SIZE + 1 } }, "MANIFEST_INVALID"],
+    [{ target: { size: FINAL_STOCK_PROFILE.size + 2351 } }, "MANIFEST_INVALID"],
+    // 증가량 64 MiB 초과 (28,534 섹터 = 67,111,968 B).
+    [{ target: { size: FINAL_STOCK_PROFILE.size + 28_534 * 2352 } }, "MANIFEST_INVALID"],
+    [{ target: { size: 2 ** 53 } }, "MANIFEST_INVALID"],
+    [{ patch: { size: 128 } }, "MANIFEST_INVALID"],
+    [{ patch: { size: 64 * 1024 * 1024 + 1 } }, "MANIFEST_INVALID"],
+    [{ patch: { bodyUncompressedSize: 13 } }, "MANIFEST_INVALID"],
+    [{ patch: { recordCount: 100_000, bodyUncompressedSize: 1_399_999 } }, "MANIFEST_INVALID"],
+    [{ patch: { recordCount: 2_000_001 } }, "MANIFEST_INVALID"],
+    [{ patch: { format: "srwf.sparse-byte-delta.v3" } }, "MANIFEST_INVALID"],
+    [{ target: { size: FINAL_STOCK_PROFILE.size }, patch: { format: "srwf.sparse-byte-delta.v3" } }, "PATCH_FORMAT_UNSUPPORTED"],
+  ];
+  for (const [overrides, code] of rejected) {
+    assert.throws(
+      () => normalizeFinalManifest(makeFinalGrowthManifest(overrides)),
+      (error) => error?.code === code,
+      JSON.stringify(overrides),
+    );
+  }
+  assert.doesNotThrow(() => normalizeFinalManifest(makeFinalGrowthManifest({
+    target: { size: FINAL_STOCK_PROFILE.size + 28_532 * 2352 },
+    patch: { recordCount: 100_000, bodyUncompressedSize: 1_400_000 },
+  })));
+
+  // v1 형식은 결과 크기 규칙이 바뀌지 않는다.
+  const v1Growth = makeFinalReleaseManifest();
+  v1Growth.target = { ...v1Growth.target, size: G541_TARGET_SIZE };
+  assert.throws(() => normalizeFinalManifest(v1Growth), (error) => error?.code === "MANIFEST_INVALID");
+});
+
+test("new BIN size copy follows the selected release target size", () => {
+  const finalGrowth = { gameId: "srwf-final", target: { size: G541_TARGET_SIZE } };
+  assert.equal(__testHooks.outputImageSizeLabel(finalGrowth, "srwf-final"), "522 MB");
+  assert.equal(
+    __testHooks.outputImageSizeLabel({ gameId: "srwf-final", target: { size: FINAL_STOCK_PROFILE.size } }, "srwf-final"),
+    "520 MB",
+  );
+  assert.equal(
+    __testHooks.outputImageSizeLabel({ gameId: "srwf-f", target: { size: STOCK_PROFILE.size } }, "srwf-f"),
+    "579 MB",
+  );
+  // 다른 게임의 릴리스 크기를 빌려 쓰지 않는다.
+  assert.equal(__testHooks.outputImageSizeLabel(finalGrowth, "srwf-f"), "579 MB");
+  assert.equal(__testHooks.outputImageSizeLabel(null, "srwf-final"), "520 MB");
+});
+
+test("v2 worker errors have Korean copy and source mismatches revoke preparation", () => {
+  assert.match(__testHooks.friendlyWorkerError("COPY_SOURCE_MISMATCH").title, /원본 부분 검증/);
+  assert.match(__testHooks.friendlyWorkerError("COPY_SOURCE_MISMATCH").message, /옮겨 쓸 원본 구간/);
+  assert.match(__testHooks.friendlyWorkerError("PATCH_FORMAT_MISMATCH").title, /패치 형식/);
+  assert.match(__testHooks.friendlyWorkerError("DOWNLOAD_BLOB_SIZE_MISMATCH").title, /다운로드 결과/);
+  for (const code of [
+    "BAD_SIZE",
+    "SIZE_NOT_GROWING",
+    "GROWTH_TOO_LARGE",
+    "TOO_MANY_COPY_RECORDS",
+    "RECORD_COUNT_MISMATCH",
+    "RECORD_BYTES_MISMATCH",
+    "UNKNOWN_RECORD_KIND",
+    "DUPLICATE_RECORD",
+    "IDENTITY_COPY",
+    "COPY_TOO_SHORT",
+    "REPLACE_OUT_OF_SOURCE",
+    "LITERAL_INSIDE_SOURCE",
+    "COPY_SOURCE_OUT_OF_RANGE",
+    "EXTENSION_GAP",
+  ]) {
+    assert.match(__testHooks.friendlyWorkerError(code).title, /패치 데이터 형식/, code);
+  }
+  assert.match(__testHooks.friendlyWorkerError("DOWNLOAD_ASSEMBLY_INVALID").title, /로컬 패치 작업/);
+});
+
 test("worker errors distinguish output, storage, and malformed patch failures", () => {
   assert.match(__testHooks.friendlyWorkerError("OUTPUT_SIZE_MISMATCH").message, /크기/);
   assert.match(__testHooks.friendlyWorkerError("OUTPUT_HANDLE_INVALID").title, /출력 파일/);
@@ -1958,7 +2094,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260916-13$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260921-1$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -1967,7 +2103,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260916-13$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260921-1$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",

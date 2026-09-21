@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:srwf-kor:schema:patch-descriptor:v2",
+  "title": "Decoded SRWFP v2 growth patch descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "patchSize",
+    "patchSha256",
+    "sourceSize",
+    "sourceSha256",
+    "targetSize",
+    "targetSha256",
+    "recordCount",
+    "bodyUncompressedSize",
+    "format"
+  ],
+  "properties": {
+    "patchSize": {
+      "type": "integer",
+      "minimum": 129,
+      "maximum": 67108864
+    },
+    "patchSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sourceSize": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "sourceSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "targetSize": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 9007199254740991
+    },
+    "targetSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "recordCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000
+    },
+    "bodyUncompressedSize": {
+      "type": "integer",
+      "minimum": 14,
+      "maximum": 134217728
+    },
+    "format": {
+      "const": "srwf.sparse-byte-delta.v2"
+    }
+  }
+}

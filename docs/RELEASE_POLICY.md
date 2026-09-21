@@ -104,11 +104,16 @@ F 완결편 빌드는 hash-pinned 원장 파일의 64자리 SHA-256을 씁니다
 모든 입력이 준비된 뒤 하나의 검토 가능한 변경으로 다음을 추가합니다.
 
 1. `receipts/<id>.acceptance.json` — explicit `ACCEPTED` receipt
-2. `patches/<id>.srwfp` — 64 MiB 이하의 정규형 sparse patch
+2. `patches/<id>.srwfp` — 64 MiB 이하의 정규형 sparse patch. 결과 크기가 고정
+   원본과 같으면 v1, 고정 원본보다 클 때만 v2입니다. v2에서 위치만 옮기는 원본
+   바이트(밀려난 오디오 트랙 등)는 COPY로 참조하며 LITERAL로 싣지 않습니다.
 3. `releases/<id>.json` — source, target, patch, provenance 명세
 4. `manifest/releases.json`의 `ACCEPTED` index row
 5. `assets/app.mjs`의 `PATCHED_IMAGE_CUE_TRACKS` — target SHA-256에 결과 이미지에서
    확인한 트랙 구성(모드와 INDEX)을 등록. 이전 릴리스의 구성을 빌려 쓰지 않습니다.
+   크기 증가(v2) 배치는 밀려난 트랙의 INDEX를 결과 이미지에서 다시 확인하고, 그
+   트랙을 옮기는 COPY 레코드의 target offset이 해당 트랙 INDEX 00 × 2352와 같은지
+   확인한 뒤 등록합니다.
 6. 최초 릴리스라면 project status를 `HAS_ACCEPTED_RELEASE`로 변경
 
 index의 `manifestSha256`은 release manifest 파일 bytes의 SHA-256입니다.
@@ -182,7 +187,10 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
 ```
 
 실제 공개 값에서는 patch `size >= 101`, `recordCount >= 1`,
-`bodyUncompressedSize >= 45`여야 합니다. 상세 schema는
+`bodyUncompressedSize >= 45`여야 합니다. `format`이 `srwf.sparse-byte-delta.v2`인
+명세만 예외적으로 `target.size`가 고정 원본보다 크고 2352의 배수이며 증가량 64 MiB,
+333,000 섹터 이하여야 하고, `size >= 129`, `bodyUncompressedSize >= 14 ×
+recordCount`입니다([PATCH_FORMAT_V2.md](PATCH_FORMAT_V2.md)). 상세 schema는
 [`schemas/release.schema.json`](../schemas/release.schema.json)입니다.
 
 ## 정적·개인정보 경계
@@ -221,7 +229,9 @@ npm test
 `.srwfp` 구조와 상한, 금지 artifact 및 정적 사이트의 외부 network dependency를
 검사합니다. 하나라도 실패하면 공개 변경을 만들지 않습니다.
 구조 검사는 실제 indexed payload의 header, 단일 zlib stream, record 정렬·범위·
-정규형과 manifest descriptor까지 포함합니다. 원본 byte가 필요한 record
+정규형과 manifest descriptor까지 포함합니다. v2 payload는 COPY·LITERAL의 원본 끝
+뒤 덮기 규칙과 COPY 상한까지 같은 방식으로 검사하고, COPY가 가리키는 원본 구간의
+SHA-256은 브라우저 적용기가 확인합니다. 원본 byte가 필요한 record
 preimage 및 모든 target byte의 실제 변경 여부는 브라우저 적용기가 exact stock
 원본을 읽은 뒤 별도로 fail-closed 검증합니다.
 
