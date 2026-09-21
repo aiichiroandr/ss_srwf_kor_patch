@@ -925,8 +925,17 @@ test("each game points at its accepted default while F v0.1.1 remains selectable
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
   assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");
-  assert.equal(finalGame.defaultReleaseId, FINAL_RELEASE_ID);
-  assert.deepEqual(finalReleases, [makeFinalReleaseRow()]);
+  assert.equal(finalGame.defaultReleaseId, "srwf-final-20260921-v0-1-a");
+  assert.deepEqual(
+    finalReleases.map((entry) => entry.id),
+    [
+      "srwf-final-20260921-v0-1-a",
+      "srwf-final-20260921-v0-1-b",
+      "srwf-final-20260921-v0-1-c",
+      FINAL_RELEASE_ID,
+    ],
+  );
+  assert.equal(finalReleases.every((entry) => entry.state === "ACCEPTED"), true);
 });
 
 test("v0.3 patched-image CUE is the four-track layout reported working on a burned CD-R", () => {
@@ -2123,9 +2132,7 @@ test("font selector loads the exact revision for both games and blocks an absent
         revision === "c" ? "true" : "false",
       ]);
     }
-    // 완결편은 지금 화면에서 숨겨져 있다.  이 시험의 주제는 두 게임이 각자의
-    // 폰트 리비전으로만 연결된다는 것이므로, 이 시험 안에서만 잠시 연다.
-    fresh.__testHooks.HIDDEN_GAME_IDS.delete("srwf-final");
+    // 완결편도 각자의 폰트 리비전으로 연결된다.
     await fresh.__testHooks.activateGame("srwf-final");
     assert.equal(element("fontSelect").value, "a");
     assert.equal(element("fontSelect").children.find((option) => option.value === "c").disabled, true);
@@ -2277,10 +2284,10 @@ test("an ambiguous font group blocks the patcher at boot, including a hidden gam
   }
 });
 
-test("완결편은 목록에 뜨지 않고 골라도 열리지 않는다", async () => {
+test("완결편은 목록에 표시되고 선택할 수 있다", async () => {
   const originalFetch = globalThis.fetch;
   const encoder = new TextEncoder();
-  const releaseId = "v5-hidden";
+  const releaseId = "v5-f-main";
   const manifest = makeReleaseManifest({ id: releaseId });
   const manifestBytes = encoder.encode(JSON.stringify(manifest));
   const manifestSha256 = createHash("sha256").update(manifestBytes).digest("hex");
@@ -2327,14 +2334,13 @@ test("완결편은 목록에 뜨지 않고 골라도 열리지 않는다", async
   try {
     const fresh = await import(`../assets/app.mjs?hidden-game=${Date.now()}`);
     await manifestRequested;
-    // 인덱스는 두 게임을 그대로 싣는다 — 철회가 아니라 숨김이다.
+    // 두 게임 모두 공개 카탈로그에 표시한다.
     assert.equal(index.games.length, 2);
     const offered = element("gameSelect").children.map((option) => option.value);
-    assert.deepEqual(offered, ["srwf-f"]);
-    await assert.rejects(
-      () => fresh.__testHooks.activateGame("srwf-final"),
-      (error) => error.code === "GAME_CATALOG_INVALID",
-    );
+    assert.deepEqual(offered, ["srwf-f", "srwf-final"]);
+    await fresh.__testHooks.activateGame("srwf-final");
+    assert.equal(element("gameSelect").value, "srwf-final");
+    assert.equal(element("releaseState").textContent, "ACCEPTED");
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -2401,10 +2407,7 @@ test("a delayed F manifest cannot overwrite an accepted Final game switch", asyn
 
   try {
     const fresh = await import(`../assets/app.mjs?stale-release-race=${Date.now()}`);
-    // 완결편은 지금 화면에서 숨겨져 있다.  숨김은 표시 정책이고 이 시험의 주제는
-    // 늦게 도착한 매니페스트가 뒤에 일어난 전환을 덮어쓰지 못한다는 것이므로,
-    // 경합 자체를 계속 재현하려고 이 시험 안에서만 잠시 연다.
-    fresh.__testHooks.HIDDEN_GAME_IDS.delete("srwf-final");
+    // 완결편 전환 뒤 늦게 도착한 F 매니페스트가 상태를 덮어쓰지 않아야 한다.
     await manifestRequested;
     await fresh.__testHooks.activateGame("srwf-final");
     resolveManifestResponse(responseFor(manifestBytes));

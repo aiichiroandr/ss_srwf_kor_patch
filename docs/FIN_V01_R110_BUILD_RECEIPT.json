@@ -1,0 +1,123 @@
+{
+  "claimBoundary": "정적 G541 배치·v2 독립 재적용·r110 사본상태 매트릭스까지. fresh coldboot/R7 및 장기 진행은 별도 검수 대상.",
+  "fix": "전투 애니메이션 OFF 상태에서 방어 결과의 중복 전투 이펙트 호출을 제거해 방어 이펙트만 1회 표시",
+  "format": "srwf.sparse-byte-delta.v2",
+  "lanes": {
+    "a": {
+      "bytes": {
+        "copy": 3880800,
+        "literal": 0,
+        "preimage_sha": 2670272,
+        "replace": 3298329
+      },
+      "independentReapply": "PASS",
+      "literalBytes": 0,
+      "patch": {
+        "path": "/Users/garlicb/Documents/260702_srwfin_kor_v1/build/exports/FIN.r110-cdgrowth-v1/srwf-final-20260921-v0-1-a.srwfp",
+        "sha256": "9173f53c037256839c58887a9375efdc1af7df735dc26f0c820afde882c1f4b0",
+        "size": 3589250
+      },
+      "records": {
+        "copy": 1,
+        "literal": 0,
+        "replace": 83446,
+        "total": 83447
+      },
+      "staticFull34": "PASS_STATIC_FULL34",
+      "target": {
+        "sha256": "09301e2d3a1a04376b812866e9de84f4ab8f37e2da5a4b1613f66a54a0b79150",
+        "size": 521680656
+      }
+    },
+    "b": {
+      "bytes": {
+        "copy": 3880800,
+        "literal": 0,
+        "preimage_sha": 2686176,
+        "replace": 3362930
+      },
+      "independentReapply": "PASS",
+      "literalBytes": 0,
+      "patch": {
+        "path": "/Users/garlicb/Documents/260702_srwfin_kor_v1/build/exports/FIN.r110-cdgrowth-v1/srwf-final-20260921-v0-1-b.srwfp",
+        "sha256": "caa3e0707d028c9f7490a54118c743121d1d0a3a40498b6f42ad87e3a39b1212",
+        "size": 3669853
+      },
+      "records": {
+        "copy": 1,
+        "literal": 0,
+        "replace": 83943,
+        "total": 83944
+      },
+      "staticFull34": "PASS_STATIC_FULL34",
+      "target": {
+        "sha256": "20a87277c2f6138b87e1f769405590871fcf3f248ffd48ce7a241ef75f33a4ba",
+        "size": 521680656
+      }
+    },
+    "c": {
+      "bytes": {
+        "copy": 3880800,
+        "literal": 0,
+        "preimage_sha": 2686240,
+        "replace": 3363089
+      },
+      "independentReapply": "PASS",
+      "literalBytes": 0,
+      "patch": {
+        "path": "/Users/garlicb/Documents/260702_srwfin_kor_v1/build/exports/FIN.r110-cdgrowth-v1/srwf-final-20260921-v0-1-c.srwfp",
+        "sha256": "d5c9ccd47072a8794115095c93fb9bff57e3f9bd5d029baacda0a26d251e402b",
+        "size": 3670267
+      },
+      "records": {
+        "copy": 1,
+        "literal": 0,
+        "replace": 83945,
+        "total": 83946
+      },
+      "staticFull34": "PASS_STATIC_FULL34",
+      "target": {
+        "sha256": "b6ddb95cb6c8a053106a5e169ad8d366d73f070a184465e031ca94054a6424df",
+        "size": 521680656
+      }
+    }
+  },
+  "layout": {
+    "copy": "Track 3 AUDIO를 사용자 원본 범위에서 COPY로 참조",
+    "cue": [
+      "TRACK 01 MODE1/2352",
+      "INDEX 01 00:00:00",
+      "TRACK 02 MODE2/2352",
+      "INDEX 00 17:03:64",
+      "INDEX 01 17:06:64",
+      "TRACK 03 AUDIO",
+      "INDEX 00 48:55:28",
+      "INDEX 01 48:57:28"
+    ],
+    "growthBytes": 1272432,
+    "name": "G541",
+    "targetSize": 521680656
+  },
+  "parentFamily": "FIN.r109a/b/c",
+  "provenance": {
+    "buildSource": "/Users/garlicb/Documents/260702_srwfin_kor_v1/reports/fin_r109_growth_media_20260921/layout.py + srwfp2.py with r110 integrated payloads",
+    "publicEngineCommit": "0781ed99537c6d72762a7efc426653eb6ff3d4ee"
+  },
+  "releaseVersion": "v0.1",
+  "revisionFamily": "FIN.r110a/b/c",
+  "schema": "srwf.fin.r110.public-build-receipt.v1",
+  "source": {
+    "sha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+    "size": 520408224
+  },
+  "sourceEvidence": {
+    "finalGateSha256": "361557c03f7fd472a9a306218c0bd478671aca791b91b61bec3a565fdf4be4fe",
+    "gateVerdict": "FINAL_STATIC_PROJECTION__USER_R7_PENDING",
+    "revisionCards": {
+      "a": "86b60549cbc55befd64036a43ba9dc3adcbf9d54c24a09a20eaecbbfb42414eb",
+      "b": "a809ed144e48db06712b31e7e9f06288f15e0f3e5b459cc8aeede9b47bfb31ed",
+      "c": "7ce5e3ae8ecbee3e3009cf94eb61f5eb2672c6499b05bf86035cc32028a6fb1f"
+    },
+    "runtimeMatrix": "36 copied-state runs across a/b/c; fresh coldboot and long-play are not claimed"
+  }
+}

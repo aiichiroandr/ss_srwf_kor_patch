@@ -81,10 +81,8 @@ const PINNED_STOCK_PROFILES = new Map([
   })],
 ]);
 const PUBLIC_GAME_IDS = new Set(["srwf-f", "srwf-final"]);
-/* 인덱스 계약은 두 게임 그대로다 — 완결편 릴리스는 철회하지 않았고 매니페스트에도
-   남아 있다.  다만 완결편은 F 보다 검수가 한참 덜 돼서 지금 상태로 설치를 권할 수
-   없으므로, 고를 수 없게 화면에서만 뺀다.  다시 열 때는 이 집합에서 지우면 된다. */
-const HIDDEN_GAME_IDS = new Set(["srwf-final"]);
+/* 완결편도 이제 승인된 v0.1 a/b/c를 패처에서 선택할 수 있다. */
+const HIDDEN_GAME_IDS = new Set();
 const isSelectableGame = (game) => !HIDDEN_GAME_IDS.has(game.id);
 const SOURCE_SUPPORT_COPY = new Map([
   ["srwf-f", Object.freeze({
@@ -489,8 +487,7 @@ function validateGameBindings(projectStatus) {
 }
 
 /* 폰트 묶음이 모호한 인덱스(같은 버전의 기존 id 와 -a/-b/-c 공존, 같은 폰트
-   중복, 묶음 안 label 불일치)는 게임을 고를 때가 아니라 부팅 때 막는다.
-   숨긴 게임도 검사해야 숨김을 풀었을 때 사이트 전체가 갑자기 차단되지 않는다. */
+   중복, 묶음 안 label 불일치)는 게임을 고를 때가 아니라 부팅 때 막는다. */
 function validateFontReleaseGroups() {
   for (const gameId of state.games.keys()) {
     try {
@@ -1621,6 +1618,37 @@ const PATCHED_IMAGE_CUE_TRACKS = new Map([
     "TRACK 03 AUDIO",
     "INDEX 00 48:48:12",
     "INDEX 01 48:50:12",
+  ])],
+  // F 완결편 2026.09.21 v0.1 r110 G541 배치. Track 3 AUDIO가 뒤로 이동한 결과다.
+  ["09301e2d3a1a04376b812866e9de84f4ab8f37e2da5a4b1613f66a54a0b79150", Object.freeze([
+    "TRACK 01 MODE1/2352",
+    "INDEX 01 00:00:00",
+    "TRACK 02 MODE2/2352",
+    "INDEX 00 17:03:64",
+    "INDEX 01 17:06:64",
+    "TRACK 03 AUDIO",
+    "INDEX 00 48:55:28",
+    "INDEX 01 48:57:28",
+  ])],
+  ["20a87277c2f6138b87e1f769405590871fcf3f248ffd48ce7a241ef75f33a4ba", Object.freeze([
+    "TRACK 01 MODE1/2352",
+    "INDEX 01 00:00:00",
+    "TRACK 02 MODE2/2352",
+    "INDEX 00 17:03:64",
+    "INDEX 01 17:06:64",
+    "TRACK 03 AUDIO",
+    "INDEX 00 48:55:28",
+    "INDEX 01 48:57:28",
+  ])],
+  ["b6ddb95cb6c8a053106a5e169ad8d366d73f070a184465e031ca94054a6424df", Object.freeze([
+    "TRACK 01 MODE1/2352",
+    "INDEX 01 00:00:00",
+    "TRACK 02 MODE2/2352",
+    "INDEX 00 17:03:64",
+    "INDEX 01 17:06:64",
+    "TRACK 03 AUDIO",
+    "INDEX 00 48:55:28",
+    "INDEX 01 48:57:28",
   ])],
 ]);
 

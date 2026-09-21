@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-final-20260921-v0-1-a",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-09-21T00:00:00+09:00",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+  "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+  "targetSha256": "09301e2d3a1a04376b812866e9de84f4ab8f37e2da5a4b1613f66a54a0b79150",
+  "patchSha256": "9173f53c037256839c58887a9375efdc1af7df735dc26f0c820afde882c1f4b0",
+  "v5Commit": "0781ed99537c6d72762a7efc426653eb6ff3d4ee",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "NOT_CLAIMED"
+  },
+  "decisionAuthority": "사용자 지시: r109 후속 최신 리비전 r110 a/b/c를 F 완결편 v0.1로 로컬 등록하고 원격 배포. r110 방어 이펙트 중복 호출 수정 반영. fresh coldboot·장기 진행은 별도 미청구."
+}
