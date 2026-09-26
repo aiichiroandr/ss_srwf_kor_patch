@@ -1,0 +1,56 @@
+<!--
+  Saturn runtime panel-edge reconstruction.
+  The 8x6 repeat and RGB colors were measured from the r110c MC7 runtime
+  frame capture. This is an original vector drawing; it does not bundle a
+  game screenshot, ROM tile, or extracted game asset.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <defs>
+    <pattern id="runtime-edge" width="8" height="6" patternUnits="userSpaceOnUse">
+      <rect width="8" height="6" fill="#000010" />
+      <!-- Measured green pixel rhythm: dark body, paired light rails, brown/gold shadow. -->
+      <path d="M0 0h2M3 0h1M5 0h2M0 5h1M3 5h1M5 5h2" stroke="#103000" />
+      <path d="M2 0h1M4 0h1M7 0h1M1 5h2M4 5h1M7 5h1" stroke="#082800" />
+      <path d="M0 1h2M3 1h1M5 1h2" stroke="#205800" />
+      <path d="M2 1h1M4 1h1M7 1h1M2 4h1M4 4h1M7 4h1" stroke="#104800" />
+      <path d="M0 4h2M3 4h1M5 4h2" stroke="#205800" />
+      <path d="M2 2h1M6 2h2M2 3h1M6 3h2" stroke="#302018" />
+      <path d="M2 3h1M6 3h2" stroke="#785810" />
+    </pattern>
+    <pattern id="runtime-edge-vertical" width="6" height="8" patternUnits="userSpaceOnUse">
+      <g transform="translate(0 8) rotate(-90)">
+        <rect width="8" height="6" fill="url(#runtime-edge)" />
+      </g>
+    </pattern>
+  </defs>
+
+  <!-- Horizontal repeat: two full runtime tile cycles between the corners. -->
+  <rect x="8" y="1" width="16" height="6" fill="url(#runtime-edge)" />
+  <rect x="8" y="0" width="16" height="1" fill="#302018" />
+  <rect x="8" y="7" width="16" height="1" fill="#302018" />
+  <rect x="8" y="25" width="16" height="6" fill="url(#runtime-edge)" />
+  <rect x="8" y="24" width="16" height="1" fill="#302018" />
+  <rect x="8" y="31" width="16" height="1" fill="#302018" />
+
+  <!-- Vertical sides use the same tile turned through 90 degrees. -->
+  <rect x="1" y="8" width="6" height="16" fill="url(#runtime-edge-vertical)" />
+  <rect x="0" y="8" width="1" height="16" fill="#302018" />
+  <rect x="7" y="8" width="1" height="16" fill="#302018" />
+  <rect x="25" y="8" width="6" height="16" fill="url(#runtime-edge-vertical)" />
+  <rect x="24" y="8" width="1" height="16" fill="#302018" />
+  <rect x="31" y="8" width="1" height="16" fill="#302018" />
+
+  <!-- Pixel-step corner caps join the horizontal and vertical rails. -->
+  <path d="M0 0h8v1H2v1H1v6H0z" fill="#302018" />
+  <path d="M1 1h7v1H2v6H1z" fill="#104800" />
+  <path d="M2 2h6v1H3v5H2z" fill="#205800" />
+  <path d="M24 0h8v8h-1V2h-1V1h-6z" fill="#302018" />
+  <path d="M24 1h7v7h-1V2h-6z" fill="#104800" />
+  <path d="M24 2h6v6h-1V3h-5z" fill="#205800" />
+  <path d="M0 24h1v6h1v1h6v1H0z" fill="#302018" />
+  <path d="M1 24h1v6h6v1H1z" fill="#104800" />
+  <path d="M2 24h1v5h5v1H2z" fill="#205800" />
+  <path d="M24 31h6v-1h1v-6h1v8h-8z" fill="#302018" />
+  <path d="M24 30h6v-6h1v7h-7z" fill="#104800" />
+  <path d="M24 29h5v-5h1v6h-6z" fill="#205800" />
+</svg>

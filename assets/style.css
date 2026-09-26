@@ -3431,3 +3431,1372 @@ main {
     grid-template-rows: auto minmax(84px, 0.5fr) minmax(140px, 1.3fr);
   }
 }
+
+.editor-section {
+  width: min(calc(100% - 32px), var(--content));
+  margin: 32px auto 64px;
+}
+
+body.editor-focus-mode #patcher {
+  display: none !important;
+}
+
+body.editor-focus-mode #editorRegion {
+  width: min(calc(100% - 32px), var(--content));
+  margin: 0 auto;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.editor-card {
+  padding: clamp(18px, 3vw, 34px);
+  border: 1px solid rgba(16, 31, 47, 0.14);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-card {
+  padding: 16px 20px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-intro,
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-help {
+  display: none;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-heading-row h2 {
+  font-size: 21px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions {
+  gap: 7px;
+  margin-top: 8px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions > button {
+  min-height: 36px;
+  padding: 6px 11px;
+  font-size: 12px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-workspace {
+  margin-top: 10px;
+  padding-top: 9px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-tab-row {
+  margin-bottom: 8px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-data-panel.has-preview {
+  grid-template-columns: minmax(170px, 0.8fr) minmax(80px, 0.35fr) minmax(0, 2fr);
+  gap: 14px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual {
+  min-height: 120px;
+  padding: 7px;
+  gap: 5px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual canvas {
+  width: min(100%, 144px);
+  max-height: 112px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual.is-portrait canvas {
+  width: 80px;
+  height: 80px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-export-row {
+  margin-top: 11px;
+  padding-top: 9px;
+}
+
+.editor-heading-row,
+.editor-progress-topline,
+.editor-progress-actions,
+.editor-export-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editor-kicker {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+}
+
+.editor-heading-row h2 {
+  margin: 2px 0 0;
+  font-size: clamp(21px, 3vw, 28px);
+  letter-spacing: -0.04em;
+  line-height: 1.25;
+}
+
+.editor-local-badge {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid rgba(8, 125, 104, 0.25);
+  border-radius: 999px;
+  color: var(--green);
+  background: rgba(32, 196, 178, 0.1);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.editor-patcher-button {
+  min-height: 34px;
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink-soft);
+  background: var(--white);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.editor-patcher-button:hover {
+  border-color: var(--blue);
+  color: var(--blue-deep);
+}
+
+.editor-intro,
+.editor-help,
+.editor-field-help {
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.editor-intro {
+  max-width: 900px;
+  margin: 16px 0;
+}
+
+.editor-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.editor-primary-button,
+.editor-secondary-button,
+.editor-cancel-button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.editor-primary-button {
+  color: var(--white);
+  background: var(--blue);
+}
+
+.editor-primary-button:not(:disabled):hover {
+  background: var(--blue-deep);
+}
+
+.editor-secondary-button {
+  border-color: var(--line-strong);
+  color: var(--ink);
+  background: var(--white);
+}
+
+.editor-secondary-button:not(:disabled):hover {
+  border-color: var(--blue);
+  color: var(--blue-deep);
+}
+
+.editor-primary-button:disabled,
+.editor-secondary-button:disabled,
+.editor-cancel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.editor-help {
+  margin: 11px 0 0;
+}
+
+.editor-status {
+  margin: 15px 0 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  color: var(--ink-soft);
+  background: rgba(16, 31, 47, 0.045);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.editor-progress {
+  margin-top: 13px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f7f9ff;
+}
+
+.editor-progress-topline strong {
+  font-size: 12px;
+}
+
+.editor-progress-topline span {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.editor-progress progress {
+  width: 100%;
+  height: 9px;
+  margin: 10px 0 2px;
+  accent-color: var(--blue);
+}
+
+.editor-progress-actions span {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.editor-cancel-button {
+  min-height: 34px;
+  padding: 5px 10px;
+  border-color: var(--line-strong);
+  color: var(--ink-soft);
+  background: var(--white);
+  font-size: 11px;
+}
+
+.editor-error {
+  margin-top: 12px;
+  padding: 11px 13px;
+  border: 1px solid rgba(200, 62, 67, 0.3);
+  border-radius: 9px;
+  color: #812b30;
+  background: rgba(200, 62, 67, 0.07);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.editor-workspace {
+  margin-top: 22px;
+  padding-top: 17px;
+  border-top: 1px solid var(--line);
+}
+
+.editor-tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.editor-tab {
+  min-width: 76px;
+  flex: 1 1 76px;
+  min-height: 40px;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: var(--white);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.editor-tab[aria-selected="true"] {
+  border-color: var(--blue);
+  color: var(--white);
+  background: var(--blue);
+}
+
+.editor-data-panel {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.8fr) minmax(0, 2fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.editor-data-panel.has-preview {
+  grid-template-columns: minmax(190px, 0.8fr) minmax(128px, 0.48fr) minmax(0, 2fr);
+}
+
+.editor-visual {
+  display: grid;
+  min-height: 190px;
+  margin: 0;
+  padding: 12px;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background:
+    linear-gradient(45deg, rgba(16, 31, 47, 0.035) 25%, transparent 25%, transparent 75%, rgba(16, 31, 47, 0.035) 75%),
+    linear-gradient(45deg, rgba(16, 31, 47, 0.035) 25%, transparent 25%, transparent 75%, rgba(16, 31, 47, 0.035) 75%),
+    #fbfcff;
+  background-position: 0 0, 8px 8px;
+  background-size: 16px 16px;
+}
+
+.editor-visual canvas {
+  display: block;
+  width: min(100%, 180px);
+  max-height: 180px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.editor-visual.is-portrait canvas {
+  width: 112px;
+  height: 112px;
+}
+
+.editor-visual figcaption {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-record-picker .field-label {
+  display: block;
+  margin: 0 0 5px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.editor-search,
+.editor-record-select,
+.editor-stat-grid input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--white);
+  font: inherit;
+}
+
+.editor-search {
+  min-height: 42px;
+  margin-bottom: 11px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.editor-record-select {
+  width: 100%;
+  height: 145px;
+  min-height: 145px;
+  max-height: 145px;
+  padding: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.editor-record-select option {
+  min-height: 26px;
+  padding: 4px 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.editor-stat-area h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 9px;
+}
+
+.editor-stat-grid label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-rows: minmax(14px, auto) auto;
+  gap: 4px;
+  min-width: 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.editor-field-name {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-diff-reset {
+  grid-column: 2;
+  grid-row: 1;
+  width: 48px;
+  min-height: 14px;
+  overflow: hidden;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--blue-deep);
+  background: rgba(39, 93, 225, 0.08);
+  font: inherit;
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+  line-height: 14px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor-diff-reset.is-empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.editor-diff-reset:not(.is-empty):hover {
+  background: rgba(39, 93, 225, 0.16);
+}
+
+.editor-stat-grid label.is-modified {
+  color: var(--blue-deep);
+}
+
+.editor-stat-grid input {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-height: 42px;
+  padding: 7px 9px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-stat-grid input.is-modified {
+  border-color: var(--blue);
+  background: #eef3ff;
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.editor-stat-grid input:invalid {
+  border-color: var(--red);
+  background: #fff8f7;
+}
+
+.editor-stat-grid input:focus-visible,
+.editor-search:focus-visible,
+.editor-record-select:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+.editor-field-help {
+  margin: 9px 0 0;
+  font-size: 11px;
+}
+
+.editor-export-row {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.editor-export-row > span {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.editor-download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.editor-download-actions > span {
+  flex-basis: 100%;
+  color: var(--ink-soft);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.editor-download-actions .download-link {
+  min-height: 40px;
+}
+
+@media (max-width: 760px) {
+  body.editor-focus-mode #editorRegion {
+    width: 100%;
+    margin: 0;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) {
+    width: 100%;
+    margin: 0;
+  }
+
+  .editor-section {
+    width: calc(100% - 24px);
+    margin: 18px auto 40px;
+  }
+
+  .editor-card {
+    padding: 17px 14px;
+    border-radius: 14px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-card {
+    padding: 8px 10px 10px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .editor-heading-row {
+    align-items: flex-start;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-heading-row {
+    align-items: center;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-kicker,
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-local-badge {
+    display: none;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-heading-row h2 {
+    margin: 0;
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  .editor-patcher-button {
+    min-height: 32px;
+    padding: 4px 8px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .editor-local-badge {
+    margin-top: 3px;
+    font-size: 10px;
+  }
+
+  .editor-intro {
+    font-size: 12px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-status {
+    margin: 5px 0 0;
+    padding: 4px 7px;
+    min-height: 23px;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions {
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) #editorOpenOutputButton:disabled {
+    display: none;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions > button {
+    flex: 0 1 auto;
+    min-height: 34px;
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-workspace {
+    margin-top: 7px;
+    padding-top: 7px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-tab-row {
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-tab {
+    min-height: 34px;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .editor-entry-actions > button,
+  .editor-export-row > button {
+    flex: 1 1 100%;
+  }
+
+  .editor-data-panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 17px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-data-panel.has-preview {
+    grid-template-columns: minmax(0, 1fr) 152px;
+    grid-template-areas:
+      "picker preview"
+      "stats stats";
+    gap: 7px;
+  }
+
+  .editor-record-picker {
+    grid-area: picker;
+    min-width: 0;
+  }
+
+  .editor-visual {
+    grid-area: preview;
+  }
+
+  .editor-stat-area {
+    grid-area: stats;
+  }
+
+  .editor-visual {
+    min-height: 112px;
+    height: 140px;
+    min-height: 140px;
+    padding: 4px;
+    gap: 2px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual canvas {
+    width: min(100%, 144px);
+    max-height: 112px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual.is-portrait canvas {
+    width: 80px;
+    height: 80px;
+    max-height: 80px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual figcaption {
+    font-size: 9px;
+    line-height: 1.15;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-picker .field-label {
+    margin-bottom: 3px;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-search {
+    min-height: 34px;
+    margin-bottom: 5px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  .editor-record-select {
+    height: 116px;
+    min-height: 116px;
+    max-height: 116px;
+    padding: 3px;
+    font-size: 11px;
+  }
+
+  .editor-record-select option {
+    min-height: 21px;
+    padding: 2px 4px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-area h3 {
+    margin-bottom: 5px;
+    font-size: 13px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid label {
+    grid-template-columns: minmax(0, 1fr) 38px;
+    gap: 3px;
+    font-size: 9px;
+  }
+
+  .editor-diff-reset {
+    width: 38px;
+    min-height: 14px;
+    font-size: 7px;
+  }
+
+  .editor-stat-grid input {
+    min-height: 36px;
+    padding: 5px 6px;
+    font-size: 14px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-field-help {
+    margin: 4px 0 0;
+    font-size: 9px;
+    line-height: 1.25;
+  }
+
+  #weaponEditorPanel:not([hidden]) {
+    grid-template-columns: minmax(120px, 0.78fr) minmax(0, 1.22fr);
+    grid-template-areas: "picker stats";
+    gap: 8px;
+  }
+
+  #weaponEditorPanel .editor-record-picker {
+    grid-area: picker;
+  }
+
+  #weaponEditorPanel .editor-stat-area {
+    grid-area: stats;
+  }
+
+  #weaponEditorPanel .editor-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-export-row {
+    gap: 6px;
+    margin-top: 7px;
+    padding-top: 7px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-export-row > button {
+    flex: 0 1 auto;
+    width: auto;
+    min-height: 40px;
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-export-row > span {
+    font-size: 9px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-download-actions {
+    gap: 6px;
+    margin-top: 7px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-download-actions .download-link {
+    flex: 1 1 calc(50% - 3px);
+    min-height: 38px;
+    padding: 7px 8px;
+    font-size: 10px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-download-actions > span {
+    max-height: 2.5em;
+    overflow: hidden;
+    font-size: 9px;
+    line-height: 1.25;
+  }
+
+  .editor-progress-actions {
+    align-items: flex-end;
+  }
+}
+
+/* Compact, game-screen editor styling based on headless R110c captures. */
+body.editor-focus-mode .site-header {
+  display: none;
+}
+
+body.editor-focus-mode main {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+body.editor-focus-mode #editorRegion,
+#editorRegion:has(#editorWorkspace:not([hidden])) {
+  width: min(calc(100% - 20px), 1200px);
+  margin: 5px auto;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) {
+  --game-ink: #e1e8d4;
+  --game-muted: #a9bcaa;
+  --game-night: #020916;
+  --game-blue: #07516b;
+  --game-green: #74dc53;
+  --game-gold: #d8cc78;
+  color: var(--game-ink);
+  color-scheme: dark;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-card {
+  padding: 8px 10px 9px;
+  border: 1px solid var(--game-gold);
+  border-radius: 2px;
+  background: var(--game-night);
+  box-shadow: 0 0 0 2px #075064, inset 0 0 0 1px #092238;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-heading-row {
+  min-height: 30px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px 6px;
+  border-bottom: 1px solid #155c70;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-heading-row h2 {
+  margin: 0;
+  color: #e8e5a0;
+  font-size: 17px;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-kicker,
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-local-badge {
+  display: none;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-patcher-button {
+  min-height: 28px;
+  padding: 3px 8px;
+  border: 1px solid #328d98;
+  border-radius: 2px;
+  color: #c8e6d0;
+  background: #07182b;
+  font-size: 10px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions {
+  gap: 5px;
+  margin-top: 6px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions > button {
+  min-height: 31px;
+  padding: 4px 9px;
+  border: 1px solid #2e8b93;
+  border-radius: 2px;
+  color: #d6e8d4;
+  background: #071a2d;
+  font-size: 10px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions > .editor-primary-button {
+  border-color: #78c653;
+  color: #04120e;
+  background: #88d85b;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-status {
+  min-height: 22px;
+  margin: 5px 0 0;
+  padding: 3px 7px;
+  overflow: hidden;
+  border: 1px solid #174a59;
+  border-radius: 0;
+  color: var(--game-muted);
+  background: #03101d;
+  font-size: 10px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-workspace {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #135267;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-tab-row {
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-tab {
+  min-width: 0;
+  min-height: 31px;
+  flex: 1 1 0;
+  padding: 4px 8px;
+  border: 1px solid #26778a;
+  border-radius: 2px;
+  color: #b9d3d1;
+  background: #051326;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-tab[aria-selected="true"] {
+  border-color: var(--game-green);
+  color: #04120d;
+  background: linear-gradient(#a3e56b, #60bd49);
+  box-shadow: inset 0 -2px 0 #32813d;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-data-panel.has-preview {
+  grid-template-columns: minmax(180px, 0.72fr) 154px minmax(0, 2.28fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "picker preview stats";
+  gap: 6px 9px;
+  align-items: stretch;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) #pilotEditorPanel.has-preview {
+  grid-template-columns: minmax(180px, 0.72fr) 58px minmax(0, 2.28fr);
+  grid-template-areas: "picker preview stats";
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) #weaponEditorPanel:not([hidden]) {
+  grid-template-columns: minmax(200px, 0.72fr) minmax(0, 2.28fr);
+  grid-template-areas: "picker stats";
+  gap: 6px 9px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-picker {
+  grid-area: picker;
+  align-self: start;
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-picker .field-label {
+  display: none;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-search,
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 35px;
+  min-height: 35px;
+  max-height: 35px;
+  margin: 0;
+  padding: 4px 7px;
+  border: 1px solid #227b8c;
+  border-radius: 2px;
+  color: #e1ebd7;
+  background: #020b18;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-select {
+  padding-right: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-select option {
+  min-height: 0;
+  padding: 2px 5px;
+  color: #e1ebd7;
+  background: #061426;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual {
+  grid-area: preview;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 122px;
+  align-self: start;
+  align-content: center;
+  justify-items: center;
+  grid-template-rows: 112px;
+  gap: 0;
+  margin: 0;
+  padding: 4px;
+  overflow: hidden;
+  border: 1px solid #2b9da3;
+  border-radius: 0;
+  background: #020a17;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual canvas {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 112px;
+  object-fit: none;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual.is-portrait canvas {
+  width: auto;
+  height: auto;
+  max-width: 40px;
+  max-height: 40px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual figcaption {
+  display: none;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual.is-portrait {
+  width: 58px;
+  height: 48px;
+  grid-template-rows: 40px;
+  padding: 3px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-area {
+  grid-area: stats;
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid #26758a;
+  background: #041326;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-area h3 {
+  min-height: 21px;
+  margin: 0 0 5px;
+  padding: 3px 6px;
+  border-bottom: 1px solid #277b88;
+  color: #e6e49a;
+  background: linear-gradient(90deg, #0b2c45, #071a2c 70%);
+  font-size: 12px;
+  line-height: 15px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid label {
+  grid-template-columns: minmax(0, 1fr) 43px;
+  grid-template-rows: 13px 34px;
+  gap: 2px 3px;
+  min-width: 0;
+  color: #b6c9bd;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-field-name {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-diff-reset {
+  grid-column: 2;
+  grid-row: 1;
+  width: 43px;
+  min-width: 43px;
+  min-height: 13px;
+  padding: 0 1px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 0;
+  color: #f1dd74;
+  background: rgba(216, 204, 120, 0.14);
+  font-size: 7px;
+  font-variant-numeric: tabular-nums;
+  line-height: 11px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-diff-reset.is-empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid label.is-modified {
+  color: #ffe689;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid input {
+  box-sizing: border-box;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  height: 34px;
+  padding: 3px 4px;
+  border: 1px solid #288690;
+  border-radius: 0;
+  color: #c9f0b4;
+  background: #020b18;
+  box-shadow: inset 0 1px 0 rgba(79, 185, 181, 0.15);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid input.is-modified {
+  border-color: #f0d760;
+  color: #fff3a7;
+  background: #10372d;
+  box-shadow: inset 0 0 0 1px rgba(240, 215, 96, 0.22);
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid input:focus-visible,
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-search:focus-visible,
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-select:focus-visible {
+  outline: 2px solid #e9d959;
+  outline-offset: 1px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-field-help {
+  margin: 4px 1px 0;
+  color: #9cb6a6;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-export-row {
+  gap: 7px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #14566a;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-export-row > button {
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 1px solid #8ed55b;
+  border-radius: 2px;
+  color: #05130d;
+  background: linear-gradient(#a6e86c, #65c44d);
+  font-size: 11px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-export-row > span,
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-download-actions > span {
+  color: #a8c0ad;
+  font-size: 9px;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-download-actions .download-link {
+  min-height: 34px;
+  padding: 6px 9px;
+  border-radius: 2px;
+  font-size: 10px;
+}
+
+@media (max-width: 760px) {
+  body.editor-focus-mode #editorRegion,
+  #editorRegion:has(#editorWorkspace:not([hidden])) {
+    width: calc(100% - 12px);
+    margin: 4px auto;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-card {
+    padding: 6px 7px 8px;
+    border-width: 1px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-heading-row {
+    min-height: 27px;
+    padding-bottom: 5px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-heading-row h2 {
+    font-size: 15px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions > button {
+    min-height: 29px;
+    padding: 4px 7px;
+    font-size: 9px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-status {
+    min-height: 20px;
+    padding: 2px 5px;
+    font-size: 9px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-data-panel.has-preview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas: "picker" "preview" "stats";
+    gap: 5px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) #pilotEditorPanel.has-preview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas: "picker" "preview" "stats";
+    gap: 5px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) #weaponEditorPanel:not([hidden]) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "picker" "stats";
+    gap: 5px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-picker {
+    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+    gap: 5px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-search,
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-select {
+    height: 33px;
+    min-height: 33px;
+    max-height: 33px;
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-record-select {
+    padding-right: 18px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual {
+    min-height: 0;
+    height: 122px;
+    padding: 4px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual:not(.is-portrait) {
+    min-height: 122px;
+    width: min(154px, 100%);
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual canvas {
+    max-width: 100%;
+    max-height: 112px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual.is-portrait {
+    min-height: 48px;
+    height: 48px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-visual.is-portrait canvas {
+    max-width: 40px;
+    max-height: 40px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-area {
+    padding: 4px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-area h3 {
+    min-height: 19px;
+    margin-bottom: 4px;
+    padding: 2px 5px;
+    font-size: 11px;
+    line-height: 14px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid label {
+    grid-template-columns: minmax(0, 1fr) 39px;
+    grid-template-rows: 12px 32px;
+    gap: 2px;
+    font-size: 9px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-diff-reset {
+    width: 39px;
+    min-width: 39px;
+    min-height: 12px;
+    font-size: 6.5px;
+    line-height: 10px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid input {
+    min-height: 32px;
+    height: 32px;
+    padding: 2px 3px;
+    font-size: 13px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-field-help {
+    margin-top: 3px;
+    font-size: 8px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-export-row {
+    gap: 5px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-export-row > button {
+    min-height: 32px;
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 720px) {
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-tab {
+    min-height: 28px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid label {
+    grid-template-rows: 11px 29px;
+  }
+
+  #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid input {
+    min-height: 29px;
+    height: 29px;
+  }
+}

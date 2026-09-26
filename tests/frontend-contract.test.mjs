@@ -131,6 +131,7 @@ Object.defineProperty(globalThis, "navigator", {
   value: {},
 });
 globalThis.document = {
+  body: new FakeElement({ tagName: "body" }),
   createElement: (tagName) => new FakeElement({ tagName }),
   createDocumentFragment: () => new FakeElement({ tagName: "fragment" }),
   createTextNode: (value) => ({ children: [], textContent: String(value) }),
@@ -309,6 +310,15 @@ const normalizeFinalManifest = (manifest) => __testHooks.normalizeReleaseManifes
   stockProfiles,
 );
 
+// 사용자에게 보이는 "STEP 1/2/3" 마법사 문구 금지. 숫자 입력의 HTML
+// step="1" 속성은 증가 단위일 뿐 마법사 단계가 아니므로 속성 형태만 제외한다.
+const WIZARD_STEP_COPY = /\bSTEP(?:\s*[123])?\b(?!\s*=)/i;
+
+// 배포 자산의 캐시 개정판은 하나뿐이다. 이 상수를 고쳐야만 고정값이 함께
+// 움직이도록 한 곳에만 적는다. 여러 시험이 각자 literal 을 들고 있으면
+// 개정판을 올릴 때 일부만 따라가서 모듈이 두 번 적재된다.
+const STATIC_ASSET_REVISION = "20260926-1";
+
 test("public page exposes the legal and accessibility contracts", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
@@ -332,7 +342,7 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /id="fontPreview"/);
   assert.match(html, /id="fontHelp"/);
   assert.doesNotMatch(html, /FABLE G25K/);
-  assert.doesNotMatch(html, /\bSTEP(?:\s*[123])?\b/i);
+  assert.doesNotMatch(html, WIZARD_STEP_COPY);
   assert.doesNotMatch(html, /PATCH FLOW/);
   assert.doesNotMatch(html, /data-step-/);
   assert.doesNotMatch(html, /aria-current="step"/);
@@ -353,14 +363,48 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.doesNotMatch(html, /선택 직후 전체 파일의 SHA-256/);
 });
 
+test("the wizard-step ban still rejects visible STEP copy", () => {
+  for (const visible of [
+    '<p class="step-copy">STEP 2</p>',
+    "<span>Step 1</span>",
+    "<li>step3</li>",
+    "<h2>STEP</h2>",
+    "<p>STEP&nbsp;1 · 원본 고르기</p>".replace("&nbsp;", " "),
+  ]) {
+    assert.match(visible, WIZARD_STEP_COPY, `visible wizard copy must stay banned: ${visible}`);
+  }
+  for (const attribute of [
+    '<input id="unitHp" type="number" step="1" min="0">',
+    "<input type='number' step='10'>",
+    '<input type="number" step ="1">',
+  ]) {
+    assert.doesNotMatch(
+      attribute,
+      WIZARD_STEP_COPY,
+      `numeric input increments are not wizard copy: ${attribute}`,
+    );
+  }
+});
+
 test("static entry assets share an explicit cache revision", async () => {
-  const [html, appSource, workerSource, v2Source] = await Promise.all([
+  const [
+    html,
+    appSource,
+    workerSource,
+    v2Source,
+    editorCoreSource,
+    editorWorkerSource,
+    editorRuntimeCss,
+  ] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/editor-core.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/editor-worker.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/editor-runtime.css", import.meta.url), "utf8"),
   ]);
-  const revision = "20260921-2";
+  const revision = STATIC_ASSET_REVISION;
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
@@ -375,6 +419,32 @@ test("static entry assets share an explicit cache revision", async () => {
   assert.match(workerSource, new RegExp(`patch-core\\.mjs\\?v=${revision}`));
   assert.match(workerSource, new RegExp(`sha256\\.mjs\\?v=${revision}`));
   assert.match(appSource, /imageUrl\.searchParams\.set\("v", STATIC_ASSET_REVISION\)/);
+
+  // 편집기 모듈도 같은 개정판을 쓴다. editor-worker 와 app 이 서로 다른
+  // ?v= 로 editor-core 를 부르면 워커가 다른 인스턴스를 물어 온다.
+  assert.match(html, new RegExp(`assets/editor-runtime\\.css\\?v=${revision}`));
+  assert.match(appSource, /editor-worker\.mjs\?v=\$\{STATIC_ASSET_REVISION\}/);
+  assert.match(editorWorkerSource, new RegExp(`editor-core\\.mjs\\?v=${revision}`));
+  assert.match(editorCoreSource, new RegExp(`sha256\\.mjs\\?v=${revision}`));
+  assert.match(editorCoreSource, new RegExp(`editor-name-map\\.mjs\\?v=${revision}`));
+  assert.match(editorRuntimeCss, new RegExp(`runtime-panel-frame\\.svg\\?v=${revision}`));
+
+  // 배포되는 어떤 소스도 다른 개정판 꼬리표를 남겨서는 안 된다.
+  const shipped = {
+    "index.html": html,
+    "assets/app.mjs": appSource,
+    "assets/patch-worker.mjs": workerSource,
+    "assets/patch-core-v2.mjs": v2Source,
+    "assets/editor-core.mjs": editorCoreSource,
+    "assets/editor-worker.mjs": editorWorkerSource,
+    "assets/editor-runtime.css": editorRuntimeCss,
+  };
+  for (const [name, source] of Object.entries(shipped)) {
+    const stale = [...source.matchAll(/\?v=([0-9]{8}-[0-9]+)/g)]
+      .map((match) => match[1])
+      .filter((value) => value !== revision);
+    assert.deepEqual(stale, [], `${name} must use only cache revision ${revision}`);
+  }
 });
 
 test("every required runtime element exists in the public HTML", async () => {
@@ -817,6 +887,7 @@ test("Android output failure automatically prepares fixed-name verified BIN and 
       outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
       imageName: plan.imageName,
       cueName: plan.cueName,
+      targetSha256: V0_1_1_TARGET_SHA256,
     }, plan, 3, V0_1_1_TARGET_SHA256);
     assert.equal(element("downloadBinLink").getAttribute("href"), "blob:test-1");
     assert.equal(element("downloadBinLink").getAttribute("download"), plan.imageName);
@@ -856,6 +927,7 @@ test("v0.3 mobile download CUE is the four-track layout that boots from a burned
       outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
       imageName: plan.imageName,
       cueName: plan.cueName,
+      targetSha256: V0_3_TARGET_SHA256,
     }, plan, 3, V0_3_TARGET_SHA256);
 
     // BIN 과 CUE 두 개뿐이다. 실기용 CUE 를 따로 두지 않고 기본 CUE 가 곧 실기용이다.
@@ -1208,7 +1280,7 @@ test("successful patch completion auto-saves CUE and exposes retry only after CU
     appSource,
     /elements\.cueButton\.(?:removeAttribute|toggleAttribute)\(\s*["']hidden["']/,
   );
-  assert.match(appSource, /const interactionBusy = state\.busy \|\| state\.cueSaving;/);
+  assert.match(appSource, /const interactionBusy = state\.busy \|\| state\.cueSaving \|\| state\.editorBusy;/);
   assert.match(appSource, /function canChooseSource\(\)[\s\S]*?!state\.busy && !state\.cueSaving/);
   assert.match(appSource, /function warnWhileBusy\(event\)[\s\S]*?!state\.busy && !state\.cueSaving/);
 
@@ -1518,7 +1590,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260921-2$/);
+    assert.match(image.src, new RegExp(`\\?v=${STATIC_ASSET_REVISION}$`));
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -2112,7 +2184,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260921-2$/,
+      new RegExp(`assets/font-previews/a-dos-thin-([a-z0-9]+)\\.png\\?v=${STATIC_ASSET_REVISION}$`),
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2121,7 +2193,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260921-2$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=${STATIC_ASSET_REVISION}$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",

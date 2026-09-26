@@ -15,8 +15,9 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 정품 디스크 이미지로 새 한글 패치 BIN/CUE를 만드는 웹 패처"
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20260921-2">
-    <script type="module" src="assets/app.mjs?v=20260921-2"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20260926-1">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20260926-1">
+    <script type="module" src="assets/app.mjs?v=20260926-1"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -245,7 +246,257 @@
           </div>
         </div>
       </section>
+
+      <section class="editor-section" id="editorRegion" aria-labelledby="editor-heading">
+        <div class="editor-card">
+          <div class="editor-heading-row">
+            <div>
+              <span class="editor-kicker">LOCAL GAME DATA EDITOR</span>
+              <h2 id="editor-heading">F / F 완결편 스탯 에디터</h2>
+            </div>
+            <span class="editor-local-badge">이 기기에서 처리</span>
+            <button class="editor-patcher-button" id="editorPatcherButton" type="button" hidden>
+              게임·패치 설정
+            </button>
+          </div>
+          <p class="editor-intro">
+            원본 폴더를 선택하면 검증 후 에디터가 열립니다. 수치를 편집하고 패치 실행을 누르세요. 이미 만든
+            BIN을 선택할 수 있습니다. 기체·파일럿의 능력치와 지형 적응도, 무기의 공격력·사거리 등을
+            고쳐 개인용 BIN/CUE를 만듭니다. 선택한 게임 이미지와 수치는 서버로 전송하지 않습니다.
+          </p>
+          <div class="editor-entry-actions">
+            <button class="editor-primary-button" type="button" id="editorOpenOutputButton" disabled>
+              현재 패치 결과 열기
+            </button>
+            <button class="editor-secondary-button" type="button" id="editorPickButton" disabled>
+              승인 패치 BIN 선택
+            </button>
+            <input id="editorImageInput" type="file" accept=".bin,.img,application/octet-stream" hidden>
+          </div>
+          <p class="editor-help" id="editorHelp">
+            에디터는 선택한 릴리스의 전체 파일 크기와 SHA-256이 정확히 일치하는 BIN만 엽니다.
+            수정본은 공개 패치가 아니며, 게임 실행 중 메모리는 변경하지 않습니다.
+          </p>
+          <p class="editor-status" id="editorState" role="status" aria-live="polite">
+            게임과 승인 패치를 선택하면 에디터를 사용할 수 있습니다.
+          </p>
+
+          <section class="editor-progress" id="editorProgressPanel" aria-busy="false" hidden>
+            <div class="editor-progress-topline">
+              <strong id="editorProgressTitle">패치 이미지를 확인하고 있습니다</strong>
+              <span id="editorProgressPercent">0%</span>
+            </div>
+            <progress id="editorProgressBar" max="100" value="0">0%</progress>
+            <div class="editor-progress-actions">
+              <span id="editorProgressDetail">전체 SHA-256 확인 후 데이터 표를 읽습니다.</span>
+              <button class="editor-cancel-button" type="button" id="editorCancelButton" hidden>중단</button>
+            </div>
+          </section>
+          <div class="editor-error" id="editorError" role="alert" hidden></div>
+
+          <div class="editor-workspace" id="editorWorkspace" hidden>
+            <div class="editor-tab-row" role="tablist" aria-label="편집할 데이터 종류">
+              <button class="editor-tab" id="unitTabButton" type="button" role="tab" aria-selected="true" aria-controls="unitEditorPanel">
+                기체
+              </button>
+              <button class="editor-tab" id="pilotTabButton" type="button" role="tab" aria-selected="false" aria-controls="pilotEditorPanel">
+                파일럿
+              </button>
+              <button class="editor-tab" id="weaponTabButton" type="button" role="tab" aria-selected="false" aria-controls="weaponEditorPanel">
+                무기
+              </button>
+            </div>
+
+            <section class="editor-data-panel game-screen-shell" id="unitEditorPanel" role="tabpanel" aria-labelledby="unitTabButton">
+              <div class="editor-game-screen unit-game-screen" id="unitStatsForm">
+                <div class="game-screen-title unit-screen-title">
+                  <span class="screen-title-label">유닛능력</span>
+                  <div class="editor-record-picker">
+                    <label class="field-label sr-only" for="unitSearch">기체 검색</label>
+                    <input class="editor-search" id="unitSearch" type="search" autocomplete="off" aria-label="기체 이름 또는 번호로 검색" placeholder="기체 검색">
+                    <label class="field-label sr-only" for="unitSelect">기체 목록</label>
+                    <select class="editor-record-select" id="unitSelect" size="1" aria-label="편집할 기체 선택"></select>
+                  </div>
+                </div>
+                <div class="game-panel unit-info-panel">
+                  <h3 class="unit-record-heading" id="unitStatsHeading">기체 수치</h3>
+                  <section class="unit-special-panel" aria-label="기체 특수능력과 효과값">
+                    <h4>특수능력</h4>
+                    <div class="unit-special-list" id="unitSpecialAbilities" aria-live="polite"></div>
+                  </section>
+                </div>
+                <figure class="editor-visual game-panel unit-image-panel" id="unitPreview" aria-live="polite">
+                  <canvas id="unitPreviewImage" width="144" height="112" aria-label="선택한 기체의 실제 게임 이미지"></canvas>
+                  <figcaption id="unitPreviewCaption">기체 이미지를 불러옵니다</figcaption>
+                </figure>
+                <section class="game-panel unit-vitals-panel" aria-label="기체 HP와 EN">
+                  <h4>HP / EN</h4>
+                  <div class="unit-vitals-grid">
+                    <label class="unit-vital-row"><span class="editor-field-name">HP</span><input type="number" data-editor-field="hp" min="0" max="65535" step="1" inputmode="numeric"><span class="unit-runtime-gauge" aria-hidden="true"><span></span></span></label>
+                    <label class="unit-vital-row"><span class="editor-field-name">EN</span><input type="number" data-editor-field="en" min="0" max="65535" step="1" inputmode="numeric"><span class="unit-runtime-gauge" aria-hidden="true"><span></span></span></label>
+                  </div>
+                </section>
+                <section class="game-panel unit-core-panel" aria-label="기체 능력">
+                  <h4>기체능력</h4>
+                  <div class="unit-core-grid">
+                    <label>이동력<input type="number" data-editor-field="move" min="0" max="255" step="1" inputmode="numeric"></label>
+                    <label>운동성<input type="number" data-editor-field="speed" min="0" max="65535" step="1" inputmode="numeric"></label>
+                    <label>장갑<input type="number" data-editor-field="armor" min="0" max="65535" step="1" inputmode="numeric"></label>
+                    <label>한계반응<input type="number" data-editor-field="limit" min="0" max="65535" step="1" inputmode="numeric"></label>
+                  </div>
+                </section>
+                <section class="game-panel unit-terrain-panel" aria-label="기체 지형 적응도, 값 범위 0부터 15">
+                  <h4>지형</h4>
+                  <div class="unit-terrain-grid">
+                    <label>지상<input type="number" data-editor-field="ground" min="0" max="15" step="1" inputmode="numeric"></label>
+                    <label>바다<input type="number" data-editor-field="sea" min="0" max="15" step="1" inputmode="numeric"></label>
+                    <label>공중<input type="number" data-editor-field="air" min="0" max="15" step="1" inputmode="numeric"></label>
+                    <label>우주<input type="number" data-editor-field="space" min="0" max="15" step="1" inputmode="numeric"></label>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="editor-data-panel game-screen-shell" id="pilotEditorPanel" role="tabpanel" aria-labelledby="pilotTabButton" hidden>
+              <div class="editor-game-screen pilot-game-screen" id="pilotStatsForm">
+                <div class="game-screen-title pilot-screen-title">
+                  <span class="screen-title-label">파일럿능력</span>
+                  <div class="editor-record-picker">
+                    <label class="field-label sr-only" for="pilotSearch">파일럿 검색</label>
+                    <input class="editor-search" id="pilotSearch" type="search" autocomplete="off" aria-label="파일럿 이름 또는 번호로 검색" placeholder="파일럿 검색">
+                    <label class="field-label sr-only" for="pilotSelect">파일럿 목록</label>
+                    <select class="editor-record-select" id="pilotSelect" size="1" aria-label="편집할 파일럿 선택"></select>
+                  </div>
+                </div>
+                <figure class="editor-visual is-portrait game-panel pilot-portrait-panel" id="pilotPreview" aria-live="polite">
+                  <canvas id="pilotPreviewImage" width="40" height="40" aria-label="선택한 파일럿의 실제 얼굴 이미지"></canvas>
+                  <figcaption id="pilotPreviewCaption">파일럿 얼굴을 불러옵니다</figcaption>
+                </figure>
+                <div class="game-panel pilot-picker-panel">
+                  <h3 class="pilot-record-heading" id="pilotStatsHeading">파일럿 능력치</h3>
+                </div>
+                <section class="game-panel pilot-exp-panel" aria-label="파일럿 초기 경험치">
+                  <h4>초기 EXP</h4>
+                  <label class="pilot-exp-field">초기 경험치<input type="number" data-editor-field="exp" min="0" max="255" step="1" inputmode="numeric"></label>
+                </section>
+                <section class="game-panel pilot-combat-panel" aria-label="파일럿 전투 능력">
+                  <h4>능력</h4>
+                  <div class="pilot-combat-grid">
+                    <label>격투<input type="number" data-editor-field="atk" min="0" max="255" step="1" inputmode="numeric"></label>
+                    <label>사격<input type="number" data-editor-field="shot" min="0" max="255" step="1" inputmode="numeric"></label>
+                    <label>회피<input type="number" data-editor-field="agi" min="0" max="65535" step="1" inputmode="numeric"></label>
+                    <label>명중<input type="number" data-editor-field="hit" min="0" max="65535" step="1" inputmode="numeric"></label>
+                    <label>기량<input type="number" data-editor-field="tech" min="0" max="65535" step="1" inputmode="numeric"></label>
+                    <label>방어<input type="number" data-editor-field="cnt" min="0" max="65535" step="1" inputmode="numeric"></label>
+                  </div>
+                </section>
+                <section class="game-panel pilot-lower-panel" aria-label="파일럿 능력 상세">
+                  <section class="game-panel pilot-mental-panel" aria-label="파일럿 정신커맨드와 습득 레벨">
+                    <h4><span>정신커맨드</span><label class="pilot-sp-field">정신P<input type="number" data-editor-field="mp" min="0" max="65535" step="1" inputmode="numeric"></label></h4>
+                    <div class="pilot-mental-grid" id="pilotMentalCommands" aria-live="polite"></div>
+                  </section>
+                  <section class="game-panel pilot-special-panel" aria-label="파일럿 특수능력">
+                    <h4>특수능력</h4>
+                    <div class="pilot-runtime-skills" id="pilotRuntimeSkills" aria-live="polite"></div>
+                    <button class="pilot-skill-schedule-button" id="pilotSkillScheduleButton" type="button">습득표 편집</button>
+                  </section>
+                  <section class="game-panel pilot-growth-panel" aria-label="파일럿 성장 보정 수치">
+                    <h4>성장 보정</h4>
+                    <div class="pilot-growth-grid">
+                      <label>격투<input type="number" data-editor-field="attackGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>사격<input type="number" data-editor-field="shotGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>명중<input type="number" data-editor-field="hitGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>기량<input type="number" data-editor-field="techGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>회피<input type="number" data-editor-field="agiGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>방어<input type="number" data-editor-field="defenseGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>정신<input type="number" data-editor-field="mindGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>동조<input type="number" data-editor-field="syncGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                    </div>
+                  </section>
+                  <section class="game-panel pilot-terrain-panel" aria-label="파일럿 지형 적응도, 값 범위 0부터 15">
+                    <h4>지형</h4>
+                    <div class="pilot-terrain-grid">
+                      <label>지상<input type="number" data-editor-field="ground" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>바다<input type="number" data-editor-field="sea" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>공중<input type="number" data-editor-field="air" min="0" max="15" step="1" inputmode="numeric"></label>
+                      <label>우주<input type="number" data-editor-field="space" min="0" max="15" step="1" inputmode="numeric"></label>
+                    </div>
+                  </section>
+                </section>
+              </div>
+            </section>
+
+            <section class="editor-data-panel game-screen-shell" id="weaponEditorPanel" role="tabpanel" aria-labelledby="weaponTabButton" hidden>
+              <div class="editor-game-screen weapon-game-screen" id="weaponStatsForm">
+                <div class="game-screen-title weapon-screen-title">
+                  <span>무기목록</span>
+                  <div class="editor-record-picker weapon-picker">
+                    <label class="field-label sr-only" for="weaponSearch">무기 검색</label>
+                    <input class="editor-search" id="weaponSearch" type="search" autocomplete="off" aria-label="무기 이름 또는 번호로 검색" placeholder="무기명 검색">
+                    <label class="field-label sr-only" for="weaponSelect">무기 목록</label>
+                    <select class="editor-record-select" id="weaponSelect" size="1" aria-label="편집할 무기 선택"></select>
+                  </div>
+                </div>
+                <div class="game-panel weapon-list-panel">
+                  <div class="weapon-list-column-head" aria-hidden="true">
+                    <span>무기명</span><span>공격</span><span>사정</span><span>명중</span>
+                  </div>
+                  <div class="weapon-catalog-rows" id="weaponCatalogRows" aria-label="전체 ROM 무기 데이터 목록"></div>
+                  <div class="weapon-list-pager">
+                    <span>전체 무기 데이터</span>
+                    <div class="weapon-page-controls">
+                      <button class="weapon-page-button" type="button" id="weaponPrevPageButton" aria-label="이전 무기 목록">‹</button>
+                      <output id="weaponCatalogPageCount" aria-live="polite">0 / 0</output>
+                      <button class="weapon-page-button" type="button" id="weaponNextPageButton" aria-label="다음 무기 목록">›</button>
+                    </div>
+                  </div>
+                </div>
+                <section class="game-panel weapon-detail-panel" aria-label="선택한 무기 수치">
+                  <h3 id="weaponStatsHeading">무기 수치</h3>
+                  <div class="weapon-detail-grid">
+                    <label>공격력<input type="number" data-editor-field="attack" min="0" max="65535" step="1" inputmode="numeric"></label>
+                    <label>명중 보정<input type="number" data-editor-field="hit" min="-128" max="127" step="1" inputmode="numeric"></label>
+                    <label>크리티컬<input type="number" data-editor-field="critical" min="0" max="15" step="1" inputmode="numeric"></label>
+                    <label>최소 사거리<input type="number" data-editor-field="minRange" min="0" max="255" step="1" inputmode="numeric"></label>
+                    <label>최대 사거리<input type="number" data-editor-field="maxRange" min="0" max="255" step="1" inputmode="numeric"></label>
+                    <label>지형 적응<input type="number" data-editor-field="terrain" min="0" max="255" step="1" inputmode="numeric"></label>
+                    <label>소비 EN<input type="number" data-editor-field="energy" min="0" max="65535" step="1" inputmode="numeric"></label>
+                  </div>
+                  <p class="weapon-data-note">기체 연결이 확인되지 않은 전체 ROM 무기 데이터입니다.</p>
+                </section>
+              </div>
+            </section>
+
+            <div class="editor-export-row">
+              <button class="editor-primary-button" type="button" id="editorExportButton" disabled>
+                개인 수정 BIN/CUE 만들기
+              </button>
+              <span>원본 파일을 덮어쓰지 않습니다.</span>
+            </div>
+            <div class="editor-download-actions" id="editorDownloadActions" hidden>
+              <a class="download-link is-bin" id="editorDownloadBinLink">수정 BIN 다운로드</a>
+              <a class="download-link is-cue" id="editorDownloadCueLink">CUE 다운로드</a>
+              <span id="editorDownloadSummary"></span>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
+
+    <dialog class="pilot-skill-dialog" id="pilotSkillDialog" aria-labelledby="pilotSkillDialogTitle">
+      <div class="pilot-skill-dialog-shell">
+        <header class="pilot-skill-dialog-header">
+          <div>
+            <span>MC7 · PILOT SKILL SCHEDULE</span>
+            <h2 id="pilotSkillDialogTitle">파일럿 특수능력 습득표</h2>
+          </div>
+          <button class="pilot-skill-dialog-close" id="pilotSkillDialogClose" type="button">닫기</button>
+        </header>
+        <p class="pilot-skill-dialog-note" id="pilotSkillDialogNote">특수능력 종류와 습득 레벨을 수정합니다. 기존 슬롯 수와 레코드 길이는 유지됩니다.</p>
+        <div class="pilot-skill-schedule" id="pilotSkillSchedule" aria-live="polite"></div>
+        <p class="pilot-skill-dialog-footnote">‘특정 서포트’는 원본 명칭 테이블에 있는 능력입니다. 캐릭터별 신뢰/연애 보정의 짝·레벨 조건표는 파일럿 TSR 레코드와 별도 데이터인지 추가 검증이 필요합니다.</p>
+      </div>
+    </dialog>
 
     <dialog
       class="patch-note-dialog"
