@@ -198,9 +198,6 @@ PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
     "assets/font-previews/c-mona12-melee.png": "f681c2bef5647cc789c15e62bbd2aac818c21196dfb9f1d784c9e5d23260264a",
     "assets/font-previews/c-mona12-gundammk2.png": "5d0f69276291ac32efd5a5b850d37ef664ef5f884f5479102822f57e6c7b5177",
     "assets/font-previews/c-mona12-mazingerz.png": "27d3bb259e5f11d9a40ed4db8dde0c2c270497258af5144d12c60608f8f14ef9",
-    # 로컬 편집기 문서용 실제 화면 갈무리. 프로젝트가 만든 편집기 UI(수치 입력
-    # 칸과 한글 이름)이며 추출한 게임 파일이 아니다. 위 patch-notes 갈무리와
-    # 같은 기준으로 경로와 SHA-256 을 고정한다.
 }
 # The withdrawn SRWF F v0.1 release contained the rejected final-003
 # KORPROL helper gate. Its three public artifacts remain byte-immutable
