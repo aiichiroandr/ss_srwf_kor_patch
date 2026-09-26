@@ -198,6 +198,9 @@ PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
     "assets/font-previews/c-mona12-melee.png": "f681c2bef5647cc789c15e62bbd2aac818c21196dfb9f1d784c9e5d23260264a",
     "assets/font-previews/c-mona12-gundammk2.png": "5d0f69276291ac32efd5a5b850d37ef664ef5f884f5479102822f57e6c7b5177",
     "assets/font-previews/c-mona12-mazingerz.png": "27d3bb259e5f11d9a40ed4db8dde0c2c270497258af5144d12c60608f8f14ef9",
+    # 로컬 편집기 문서용 실제 화면 갈무리. 프로젝트가 만든 편집기 UI(수치 입력
+    # 칸과 한글 이름)이며 추출한 게임 파일이 아니다. 위 patch-notes 갈무리와
+    # 같은 기준으로 경로와 SHA-256 을 고정한다.
 }
 # The withdrawn SRWF F v0.1 release contained the rejected final-003
 # KORPROL helper gate. Its three public artifacts remain byte-immutable
@@ -2542,6 +2545,17 @@ def validate_static_site(files: list[Path]) -> None:
         if suffix in ACTIVE_WEB_SUFFIXES and not path.is_symlink() and not excluded_test_fixture:
             site_files.append(path)
     external_url = re.compile(r"(?i)(?:https?:|wss?:)?//[^\s'\"`<>()]+")
+    # An SVG root element cannot be standards-conformant without its namespace
+    # declaration. These two URIs are XML namespace *identifiers*: a browser
+    # never dereferences them, so they are not a network fetch or a CDN. The
+    # exception covers exactly the `xmlns`/`xmlns:xlink` attribute form with
+    # exactly these URIs, in exactly .svg files. Any other http(s)/ws(s) URL —
+    # including the same URI used in `href`, `xlink:href`, or a stylesheet
+    # reference — still fails, and the network-write scan still reads the
+    # untouched file text.
+    svg_namespace_declaration = re.compile(
+        r'xmlns(?::xlink)?="http://www\.w3\.org/(?:2000/svg|1999/xlink)"'
+    )
     network_write = re.compile(
         r"(?i)\b(?:method\s*:\s*['\"`](?:POST|PUT|PATCH|DELETE)|"
         r"sendBeacon\s*\(|XMLHttpRequest\s*\(|WebSocket\s*\(|EventSource\s*\()"
@@ -2555,12 +2569,15 @@ def validate_static_site(files: list[Path]) -> None:
         except (OSError, UnicodeError) as exc:
             complain(f"{relative(path)}: deployable site file is not UTF-8: {exc}")
             continue
-        if external_url.search(text):
+        suffix = path.suffix.lower()
+        scanned = (
+            svg_namespace_declaration.sub("", text) if suffix == ".svg" else text
+        )
+        if external_url.search(scanned):
             complain(f"{relative(path)}: external/CDN URL is forbidden")
         if network_write.search(text):
             complain(f"{relative(path)}: upload or network-write API is forbidden")
 
-        suffix = path.suffix.lower()
         if suffix in MARKUP_WEB_SUFFIXES:
             inspector = ActiveMarkupInspector()
             try:

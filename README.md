@@ -9,6 +9,9 @@
 
 [GitHub Pages에서 패처 열기](https://aiichiroandr.github.io/ss_srwf_kor_patch/)
 
+패치 결과의 기체·파일럿·무기 수치를 브라우저에서 조정하는 로컬 에디터도 포함합니다.
+사용 방법과 지원 범위는 [로컬 데이터 에디터 안내](docs/LOCAL_EDITOR.md)를 확인하세요.
+
 ## 현재 공개 상태
 
 | 게임 | 상태 | 현재 공개 버전 |

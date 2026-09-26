@@ -88,3 +88,16 @@ release rows or publish a new row without another complete acceptance chain.
   already configured. The hook must remain network-free.
 - Do not create a remote, push, publish GitHub Pages, or deploy unless the user
   separately asks for that external action.
+
+## Editor investigation workflow
+
+For F/F Final editor or CD-ROM reverse-engineering work, read
+`docs/EDITOR_REVERSE_ENGINEERING_GUIDE.md` before investigating new offsets.
+Luna-family models MUST read it at task start and consult its stuck-workflow
+section after two repeated failures or ten minutes without new evidence.
+Reuse existing parsers and analysis assets; distinguish observations from
+hypotheses. Modify runtime layout in `assets/editor-runtime.css` instead of
+adding competing overrides. Use `scripts/editor-probe.cjs` for bounded local
+browser captures where applicable; its captures do not establish export or
+binary-write correctness. This guidance does not authorize deployment or
+change the release/publication restrictions above.

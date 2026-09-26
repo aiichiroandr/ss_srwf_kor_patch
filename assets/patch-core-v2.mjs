@@ -17,7 +17,7 @@ import {
   sha256Hex,
   throwIfAborted,
   writeWithAbort,
-} from './patch-core.mjs?v=20260921-2';
+} from './patch-core.mjs?v=20260926-1';
 
 // srwf.sparse-byte-delta.v2 (magic SRWFKP2\0): 결과가 고정 원본보다 **클 때만** 쓰는
 // 공개 형식이다. 크기가 같은 결과는 계속 v1(SRWFKP1)만 쓴다. 규칙은

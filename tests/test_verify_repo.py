@@ -661,6 +661,91 @@ class RepositoryPolicyTests(unittest.TestCase):
                 self.assertNotIn("tests/fixture.mjs: external/CDN", joined)
                 self.assertNotIn("tests/fixture.mjs: upload or network-write", joined)
 
+    def test_svg_namespace_declaration_is_the_only_allowed_svg_url(self) -> None:
+        # 표준 SVG 는 namespace 선언 없이는 규격에 맞지 않는다. 그 두 URI 는
+        # 브라우저가 절대 가져오지 않는 XML 식별자이므로 예외를 두되, 예외는
+        # .svg 파일의 xmlns/xmlns:xlink 속성 형태에만 적용되어야 한다.
+        allowed = {
+            "plain.svg": '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>',
+            "xlink.svg": (
+                '<svg xmlns="http://www.w3.org/2000/svg" '
+                'xmlns:xlink="http://www.w3.org/1999/xlink">'
+                '<use xlink:href="#local"/></svg>'
+            ),
+        }
+        rejected = {
+            # 같은 URI 라도 속성이 xmlns 가 아니면 실제 가져오기 시도다.
+            "dereferenced.svg": (
+                '<svg xmlns="http://www.w3.org/2000/svg">'
+                '<image xlink:href="http://www.w3.org/2000/svg/logo.png"/></svg>'
+            ),
+            "remote-use.svg": (
+                '<svg xmlns="http://www.w3.org/2000/svg">'
+                '<use href="https://remote.example/sprite.svg#icon"/></svg>'
+            ),
+            "protocol-relative.svg": (
+                '<svg xmlns="http://www.w3.org/2000/svg">'
+                '<image href="//remote.example/image.png"/></svg>'
+            ),
+            "remote-style.svg": (
+                '<svg xmlns="http://www.w3.org/2000/svg"><style>'
+                '@import url("https://cdn.example/style.css");</style></svg>'
+            ),
+            "remote-script.svg": (
+                '<svg xmlns="http://www.w3.org/2000/svg">'
+                '<script href="https://cdn.example/code.js"/></svg>'
+            ),
+            # 예외는 .svg 에만 적용된다. 다른 활성 웹 소스는 그대로 걸린다.
+            "namespace.html": '<p>http://www.w3.org/2000/svg</p>',
+            "namespace.css": '/* xmlns="http://www.w3.org/2000/svg" */',
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / "index.html").write_text(exact_csp_meta(), encoding="utf-8")
+            write_json(root / "package.json", {
+                "private": True,
+                "scripts": verifier.EXPECTED_PACKAGE_SCRIPTS,
+            })
+            paths = []
+            for name, source in {**allowed, **rejected}.items():
+                path = root / name
+                path.write_text(source, encoding="utf-8")
+                paths.append(path)
+            with verifier_root(root):
+                verifier.validate_static_site([root / "index.html", root / "package.json", *paths])
+                external = [
+                    error for error in verifier.errors if "external/CDN URL is forbidden" in error
+                ]
+                joined = "\n".join(external)
+                for name in rejected:
+                    self.assertIn(f"{name}: external/CDN URL is forbidden", joined)
+                for name in allowed:
+                    self.assertNotIn(f"{name}: external/CDN URL is forbidden", joined)
+
+        # 네트워크 쓰기 검사는 원문 그대로 읽어야 한다. namespace 제거가
+        # 다른 검사를 가려서는 안 된다.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / "index.html").write_text(exact_csp_meta(), encoding="utf-8")
+            write_json(root / "package.json", {
+                "private": True,
+                "scripts": verifier.EXPECTED_PACKAGE_SCRIPTS,
+            })
+            beacon = root / "beacon.svg"
+            beacon.write_text(
+                '<svg xmlns="http://www.w3.org/2000/svg">'
+                '<script>navigator.sendBeacon("./collect");</script></svg>',
+                encoding="utf-8",
+            )
+            with verifier_root(root):
+                verifier.validate_static_site(
+                    [root / "index.html", root / "package.json", beacon]
+                )
+                self.assertIn(
+                    "beacon.svg: upload or network-write API is forbidden",
+                    "\n".join(verifier.errors),
+                )
+
     def test_csp_requires_one_effective_structured_meta(self) -> None:
         comment_only = f"<html><head><!-- {exact_csp_meta()} --></head><body></body></html>"
         weak_meta_with_policy_comment = (
