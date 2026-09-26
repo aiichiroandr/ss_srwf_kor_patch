@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260921-2";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260924-1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,14 +7,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260921-2";
+} from "./font-revisions.mjs?v=20260924-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260921-2";
+} from "./release-notes.mjs?v=20260924-1";
 
-const STATIC_ASSET_REVISION = "20260921-2";
+const STATIC_ASSET_REVISION = "20260924-1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
