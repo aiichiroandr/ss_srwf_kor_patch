@@ -722,17 +722,23 @@ a:focus-visible {
 
 .select-wrap {
   position: relative;
+  display: flex;
   min-width: 0;
 }
 
+/* Game and version sit side by side only while both texts fit; otherwise
+   each takes its own row. A cell's automatic minimum is its select's text
+   width (min-content), capped at the row by max-width so an overlong label
+   ellipsizes inside the card instead of overflowing it. */
 .selector-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 9px;
 }
 
 .selector-grid > div {
-  min-width: 0;
+  flex: 1 1 0;
+  max-width: 100%;
 }
 
 .select-wrap::after {
@@ -745,8 +751,17 @@ a:focus-visible {
   transform: translateY(-54%);
 }
 
+/* An auto width keeps the select's text width as its min-content
+   contribution (a percentage width would collapse it to padding only);
+   flex growth fills the cell and min-width: 0 lets it ellipsize.
+   field-sizing narrows that text width from the widest option to the
+   selected one where supported, so a short choice does not force a stack;
+   elsewhere the widest option still sets it. */
 .select-wrap select {
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  field-sizing: content;
   min-height: 48px;
   padding: 10px 45px 10px 14px;
   border: 1px solid var(--line-strong);
@@ -2618,21 +2633,22 @@ main {
   }
 
   .selector-grid {
-    grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
     gap: 7px;
   }
 
+  /* Narrow side padding keeps both full labels side by side from a 372px
+     phone up even where the select still sizes to its widest option. */
   .select-wrap select {
     min-height: 40px;
-    padding-right: 26px;
-    padding-left: 10px;
+    padding-right: 22px;
+    padding-left: 8px;
     padding-top: 7px;
     padding-bottom: 7px;
     font-size: 12px;
   }
 
   .select-wrap::after {
-    right: 9px;
+    right: 7px;
   }
 
   .release-facts {
@@ -2893,9 +2909,23 @@ main {
   align-self: start;
 }
 
+/* The card keeps its content height but never grows past its grid area.
+   When stacked selectors make it taller than a short screen allows, its
+   lower rows scroll inside the card instead of being clipped by the
+   workspace or hidden under the next zone. */
 .release-card.workflow-zone {
   height: auto;
+  max-height: 100%;
   align-self: start;
+  overflow-y: auto;
+}
+
+/* The glow ring's outer 1px sat outside the padding box, where the card's
+   overflow already hid it; in a scrolling card it would also count as
+   overflow and give a card that fits a stray scrollbar. */
+.release-card.workflow-zone::after {
+  inset: 0;
+  padding: 1px;
 }
 
 .card-heading,
@@ -3284,9 +3314,10 @@ main {
   }
 }
 
-.font-selector {
+.selector-grid > .font-selector {
   position: relative;
-  grid-column: 1 / -1;
+  flex: 1 1 100%;
+  min-width: 0;
 }
 
 .font-selector.is-visual .select-wrap {
@@ -3385,10 +3416,6 @@ main {
 }
 
 @media (min-width: 761px) and (max-width: 1100px) {
-  .selector-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .release-card {
     overflow-y: auto;
   }

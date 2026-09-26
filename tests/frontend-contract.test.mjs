@@ -360,7 +360,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260921-2";
+  const revision = "20260924-1";
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
@@ -1259,6 +1259,27 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.match(html, /id="sourceButtonText"/);
 });
 
+test("game and version selectors wrap by their text width instead of fixed column ratios", async () => {
+  const css = await readFile(new URL("../assets/style.css", import.meta.url), "utf8");
+
+  // 고정 비율 칼럼은 긴 게임 이름을 잘랐다. 두 칸은 글자가 다 들어갈 때만 나란히 선다.
+  assert.doesNotMatch(css, /\.selector-grid\s*\{[^}]*grid-template-columns/s);
+  assert.doesNotMatch(css, /0\.78fr\) minmax\(0, 1\.22fr\)/);
+  assert.match(css, /\.selector-grid\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/s);
+  assert.match(css, /\.selector-grid > div\s*\{[^}]*flex:\s*1 1 0[^}]*max-width:\s*100%/s);
+  assert.doesNotMatch(css, /\.selector-grid > div\s*\{[^}]*min-width:\s*0/s);
+  // 퍼센트 width 는 select 의 min-content 를 padding 으로 줄이므로 쓰지 않는다.
+  assert.match(css, /\.select-wrap select\s*\{[^}]*width:\s*auto[^}]*min-width:\s*0/s);
+  assert.doesNotMatch(css, /\.select-wrap select\s*\{[^}]*\bwidth:\s*100%/s);
+  // 지원 브라우저에서는 가장 긴 옵션이 아니라 고른 글자 폭이 최소 폭이라 짧은 선택이 칸을 쌓지 않는다.
+  assert.match(css, /\.select-wrap select\s*\{[^}]*field-sizing:\s*content/s);
+  assert.match(css, /\.selector-grid > \.font-selector\s*\{[^}]*flex:\s*1 1 100%/s);
+  // 쌓인 선택 칸으로 카드가 낮은 화면보다 길어지면 잘리지 않고 카드 안에서 스크롤된다.
+  assert.match(css, /\.release-card\.workflow-zone\s*\{[^}]*max-height:\s*100%[^}]*overflow-y:\s*auto/s);
+  // 테두리 빛 링이 패딩 박스 밖으로 1px 나가면 맞는 화면에도 빈 스크롤바가 생긴다.
+  assert.match(css, /\.release-card\.workflow-zone::after\s*\{[^}]*inset:\s*0;[^}]*padding:\s*1px/s);
+});
+
 test("patch notes sit between release selection and source selection without adding another workflow zone", async () => {
   const [html, css] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
@@ -1518,7 +1539,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260921-2$/);
+    assert.match(image.src, /\?v=20260924-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -2112,7 +2133,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260921-2$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260924-1$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2121,7 +2142,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260921-2$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260924-1$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",
