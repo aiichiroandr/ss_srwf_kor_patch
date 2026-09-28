@@ -15,9 +15,9 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 정품 디스크 이미지로 새 한글 패치 BIN/CUE를 만드는 웹 패처"
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20260926-1">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20260926-1">
-    <script type="module" src="assets/app.mjs?v=20260926-1"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20260928-1">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20260928-1">
+    <script type="module" src="assets/app.mjs?v=20260928-1"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -94,22 +94,25 @@
                   <p id="fontHelp">이 버전은 폰트 선택을 지원하지 않습니다.</p>
                 </div>
               </div>
-              <button
-                class="patch-note-toggle"
-                type="button"
-                id="patchNotesToggle"
-                aria-haspopup="dialog"
-                aria-controls="patchNotesDialog"
-                aria-expanded="false"
-                disabled
-              >
-                <span>
-                  <small>PATCH NOTES</small>
-                  <strong><span id="patchNotesVersion">—</span> 변경 내역</strong>
-                </span>
-                <span id="patchNotesCount">준비 중</span>
-                <span aria-hidden="true">↗</span>
-              </button>
+              <div class="release-actions">
+                <button
+                  class="patch-note-toggle"
+                  type="button"
+                  id="patchNotesToggle"
+                  aria-haspopup="dialog"
+                  aria-controls="patchNotesDialog"
+                  aria-expanded="false"
+                  disabled
+                >
+                  <span>
+                    <small>PATCH NOTES</small>
+                    <strong><span id="patchNotesVersion">—</span> 변경 내역</strong>
+                  </span>
+                  <span id="patchNotesCount">준비 중</span>
+                  <span aria-hidden="true">↗</span>
+                </button>
+                <button class="editor-entry-button" type="button" id="editorEntryButton" aria-controls="editorRegion" disabled>스탯 에디터 열기</button>
+              </div>
               <dl class="release-facts">
                 <div>
                   <dt>원본 프로필</dt>
@@ -253,9 +256,10 @@
             <div>
               <span class="editor-kicker">LOCAL GAME DATA EDITOR</span>
               <h2 id="editor-heading">F / F 완결편 스탯 에디터</h2>
+              <p class="editor-legal-note">비공식 팬 프로젝트 · 게임 원본 미포함 · 권리자·플랫폼과 무관</p>
             </div>
             <span class="editor-local-badge">이 기기에서 처리</span>
-            <button class="editor-patcher-button" id="editorPatcherButton" type="button" hidden>
+            <button class="editor-patcher-button" id="editorPatcherButton" type="button" aria-controls="patcher">
               게임·패치 설정
             </button>
           </div>
@@ -265,9 +269,6 @@
             고쳐 개인용 BIN/CUE를 만듭니다. 선택한 게임 이미지와 수치는 서버로 전송하지 않습니다.
           </p>
           <div class="editor-entry-actions">
-            <button class="editor-primary-button" type="button" id="editorOpenOutputButton" disabled>
-              현재 패치 결과 열기
-            </button>
             <button class="editor-secondary-button" type="button" id="editorPickButton" disabled>
               승인 패치 BIN 선택
             </button>

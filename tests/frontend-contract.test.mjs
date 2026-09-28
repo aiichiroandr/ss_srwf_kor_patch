@@ -317,7 +317,7 @@ const WIZARD_STEP_COPY = /\bSTEP(?:\s*[123])?\b(?!\s*=)/i;
 // 배포 자산의 캐시 개정판은 하나뿐이다. 이 상수를 고쳐야만 고정값이 함께
 // 움직이도록 한 곳에만 적는다. 여러 시험이 각자 literal 을 들고 있으면
 // 개정판을 올릴 때 일부만 따라가서 모듈이 두 번 적재된다.
-const STATIC_ASSET_REVISION = "20260926-1";
+const STATIC_ASSET_REVISION = "20260928-1";
 
 test("public page exposes the legal and accessibility contracts", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
@@ -2527,5 +2527,105 @@ test("a delayed F manifest cannot overwrite an accepted Final game switch", asyn
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalConsoleError;
+  }
+});
+
+test("the editor view is reachable from the patcher and keeps its controls, notice and errors visible", async () => {
+  const [html, appSource, styleSource, runtimeCss] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/style.css", import.meta.url), "utf8"),
+    readFile(new URL("../assets/editor-runtime.css", import.meta.url), "utf8"),
+  ]);
+  const releaseCard = html.slice(html.indexOf('id="releaseRegion"'), html.indexOf('id="sourceRegion"'));
+  assert.match(
+    releaseCard,
+    /<div class="release-actions">[\s\S]*?id="patchNotesToggle"[\s\S]*?id="editorEntryButton"/,
+    "the editor entry sits next to the patch notes in the patcher",
+  );
+  assert.doesNotMatch(html, /editorOpenOutputButton|현재 패치 결과 열기/);
+  assert.doesNotMatch(appSource, /editorOpenOutputButton|openCurrentPatchedImage/);
+  assert.match(html, /id="editorPatcherButton" type="button" aria-controls="patcher">/);
+  assert.match(html, /class="editor-legal-note">비공식 팬 프로젝트 · 게임 원본 미포함/);
+  assert.match(styleSource, /body:not\(\.editor-focus-mode\) #editorRegion \{\s*display: none;/);
+
+  const functionSource = (name) => {
+    const start = appSource.search(new RegExp(`\\n(?:async )?function ${name}\\(`));
+    assert.ok(start >= 0, `${name} must exist`);
+    return appSource.slice(start, appSource.slice(start + 1).search(/\n(?:async )?function /) + start + 1);
+  };
+  assert.match(appSource, /elements\.editorEntryButton\.addEventListener\("click", \(\) => setEditorView\(true\)\);/);
+  assert.match(appSource, /elements\.editorPatcherButton\.addEventListener\("click", \(\) => setEditorView\(false\)\);/);
+  assert.match(functionSource("updateControls"), /state\.editorSessionToken \? "에디터로 돌아가기" : "스탯 에디터 열기"/);
+  // Inspection progress, cancellation and errors happen inside the editor view.
+  const inspection = functionSource("beginEditorInspection");
+  assert.match(inspection, /setEditorView\(true\)/);
+  assert.doesNotMatch(inspection, /classList\.remove\("editor-focus-mode"\)/);
+  assert.doesNotMatch(functionSource("handleEditorWorkerMessage"), /classList\.remove\("editor-focus-mode"\)/);
+  assert.doesNotMatch(functionSource("handleEditorWorkerCrash"), /classList\.remove\("editor-focus-mode"\)/);
+  // Edits cannot change while an export runs, and a later edit drops the stale download.
+  assert.match(functionSource("updateControls"), /elements\.editorWorkspace\.inert = state\.editorBusy;/);
+  for (const name of ["updateEditorRowFromForm", "updatePilotSkillFromForm", "restorePilotSkill", "restoreEditorField"]) {
+    assert.match(functionSource(name), /discardStaleEditorDownloads\(\);/, `${name} must drop a stale export`);
+  }
+  // Unsaved edits are only discarded after the user agrees.
+  for (const name of ["handleGameChange", "handleReleaseChange", "handleFontChange", "chooseSource"]) {
+    assert.match(functionSource(name), /confirmDiscardEditorChanges\(\)/, `${name} must confirm before discarding edits`);
+  }
+  assert.match(appSource, /if \(confirmDiscardEditorChanges\(\)\) elements\.editorImageInput\.click\(\);/);
+  // Phone inputs use a 16px font (no iOS focus zoom) and touch-sized heights.
+  assert.match(runtimeCss, /@media \(max-width: 760px\) \{[\s\S]*input\[data-editor-field\][^{]*\{ height:36px;[^}]*font-size:16px;/);
+});
+
+test("the source-folder editor flow leaves a usable patch button on success and on failure", async () => {
+  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
+  const completeStart = appSource.indexOf("function handleOperationComplete(");
+  const preparingBranch = appSource.slice(
+    appSource.indexOf("if (state.preparingEditor) {", completeStart),
+    appSource.indexOf("beginEditorInspection(artifacts.outputBlob", completeStart),
+  );
+  assert.match(preparingBranch, /setWorkflowPhase\("patch"\);/, "the busy patch zone must be cleared");
+
+  const abandonStart = appSource.indexOf("function abandonEditorSourceFlow(");
+  const abandon = appSource.slice(abandonStart, appSource.indexOf("\nfunction ", abandonStart + 1));
+  for (const expected of [
+    /state\.editorFromSource = false;/,
+    /state\.needsEditorPreparation = false;/,
+    /elements\.applyState\.textContent = "편집 준비 실패";/,
+    /elements\.applyHint\.textContent = /,
+    /setZoneState\("patch", "error"\);/,
+    /showError\(title, message\);/,
+  ]) {
+    assert.match(abandon, expected);
+  }
+  const workerStart = appSource.indexOf("function handleEditorWorkerMessage(");
+  const workerHandler = appSource.slice(workerStart, appSource.indexOf("\nfunction ", workerStart + 1));
+  assert.match(workerHandler, /if \(operation === "INSPECT"\) \{\s*abandonEditorSourceFlow\(/);
+  assert.match(workerHandler, /if \(!state\.editorSessionToken\) abandonEditorSourceFlow\(friendly\.title, friendly\.message\);/);
+  const crashStart = appSource.indexOf("function handleEditorWorkerCrash(");
+  assert.match(
+    appSource.slice(crashStart, appSource.indexOf("\nfunction ", crashStart + 1)),
+    /abandonEditorSourceFlow\(/,
+  );
+});
+
+test("every editor error code has Korean copy", async () => {
+  const [appSource, coreSource, workerSource] = await Promise.all([
+    readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/editor-core.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/editor-worker.mjs", import.meta.url), "utf8"),
+  ]);
+  const thrown = new Set([
+    ...[...coreSource.matchAll(/fail\(\s*"(EDITOR_[A-Z_]+)"/g)].map((match) => match[1]),
+    ...[...coreSource.matchAll(/\?\s*"(EDITOR_[A-Z_]+)"\s*:\s*"(EDITOR_[A-Z_]+)"/g)].flatMap((match) => [match[1], match[2]]),
+    ...[...workerSource.matchAll(/(?:makeError|postError)\([^"]*"(EDITOR_[A-Z_]+)"/g)].map((match) => match[1]),
+  ]);
+  // Preview failures only change the image caption.
+  thrown.delete("EDITOR_PREVIEW_INVALID");
+  assert.ok(thrown.size >= 20);
+  const start = appSource.indexOf("function friendlyEditorError(");
+  const friendly = appSource.slice(start, appSource.indexOf("\nfunction ", start + 1));
+  for (const code of thrown) {
+    assert.match(friendly, new RegExp(`\\b${code}: \\["[^"]+", "[^"]+"\\]`), `${code} needs a Korean title and message`);
   }
 });

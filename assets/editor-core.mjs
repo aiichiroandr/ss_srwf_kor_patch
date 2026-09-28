@@ -1,10 +1,11 @@
-import { Sha256 } from "./sha256.mjs?v=20260926-1";
-import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20260926-1";
+import { Sha256 } from "./sha256.mjs?v=20260928-1";
+import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20260928-1";
 
 const SECTOR_SIZE = 2352;
 const SECTOR_USER_OFFSET = 16;
 const SECTOR_USER_SIZE = 2048;
 const MAX_TSR_BYTES = 16 * 1024 * 1024;
+const MAX_MEDIA_BYTES = 16 * 1024 * 1024;
 const MAX_DECOMPRESSED_TSR_BYTES = 8 * 1024 * 1024;
 const MAX_DIRECTORY_BYTES = 32 * 1024 * 1024;
 const MAX_DIRECTORY_RECORDS = 100_000;
@@ -197,17 +198,30 @@ async function readMode1Sector(blob, lba, { signal, checksum = false } = {}) {
   return sector;
 }
 
-async function readMode1UserExtent(blob, lba, byteLength, options = {}) {
+async function readMode1UserExtent(blob, lba, byteLength, { signal, checksum = false } = {}) {
   if (!Number.isSafeInteger(byteLength)
     || byteLength < 0
     || byteLength > MAX_DIRECTORY_BYTES) {
     fail("EDITOR_ISO_MALFORMED", "An ISO9660 directory exceeds the local inspection limit.");
   }
+  checkAbort(signal);
   const result = new Uint8Array(byteLength);
-  let written = 0;
   const count = Math.ceil(byteLength / SECTOR_USER_SIZE);
+  if (count === 0) return result;
+  // Read the contiguous raw span once and strip the sector framing in memory.
+  const firstOffset = sectorAtOffset(blob, lba);
+  const lastOffset = sectorAtOffset(blob, lba + count - 1);
+  const raw = new Uint8Array(await blob.slice(firstOffset, lastOffset + SECTOR_SIZE).arrayBuffer());
+  checkAbort(signal);
+  let written = 0;
   for (let index = 0; index < count; index += 1) {
-    const sector = await readMode1Sector(blob, lba + index, options);
+    const sector = raw.subarray(index * SECTOR_SIZE, (index + 1) * SECTOR_SIZE);
+    if (!isMode1Sync(sector)) {
+      fail("EDITOR_SECTOR_UNSUPPORTED", "The game data is not stored in supported MODE1/2352 sectors.");
+    }
+    if (checksum && !verifyMode1Sector(sector)) {
+      fail("EDITOR_SECTOR_CHECKSUM", "A MODE1 sector checksum is invalid; editing was stopped.");
+    }
     const take = Math.min(SECTOR_USER_SIZE, byteLength - written);
     result.set(sector.subarray(SECTOR_USER_OFFSET, SECTOR_USER_OFFSET + take), written);
     written += take;
@@ -345,25 +359,34 @@ async function locateIsoFiles(blob, signal, requestedNames = ["TSR.BIN", "FACE.B
   }
   const files = {};
   for (const name of requestedNames) {
+    const key = name.replace(/\.BIN$/i, "").toLowerCase();
     const found = matches.get(name);
+    const isTsr = name === "TSR.BIN";
+    const sizeLimit = isTsr ? MAX_TSR_BYTES : MAX_MEDIA_BYTES;
+    const file = found.length === 1 ? found[0] : null;
+    const usable = file !== null
+      && file.byteLength > 0
+      && file.byteLength <= sizeLimit
+      && file.extentLba + Math.ceil(file.byteLength / SECTOR_USER_SIZE) <= Math.floor(blob.size / SECTOR_SIZE);
+    // Sprite and face files only feed the preview. Without a single usable
+    // copy the editor still opens and the preview simply shows no image.
+    if (!isTsr && !usable) {
+      files[key] = null;
+      continue;
+    }
     if (found.length !== 1) {
-      const missing = found.length === 0;
-      const isTsr = name === "TSR.BIN";
       fail(
-        isTsr ? (missing ? "EDITOR_TSR_NOT_FOUND" : "EDITOR_TSR_AMBIGUOUS") : "EDITOR_MEDIA_NOT_FOUND",
-        missing ? `${name} was not found in the authenticated disc image.` : `The disc image contains more than one ${name}.`,
+        found.length === 0 ? "EDITOR_TSR_NOT_FOUND" : "EDITOR_TSR_AMBIGUOUS",
+        found.length === 0 ? `${name} was not found in the authenticated disc image.` : `The disc image contains more than one ${name}.`,
       );
     }
-    const file = found[0];
-    const sizeLimit = name === "TSR.BIN" ? MAX_TSR_BYTES : 16 * 1024 * 1024;
     if (file.byteLength <= 0 || file.byteLength > sizeLimit) {
-      fail(name === "TSR.BIN" ? "EDITOR_TSR_SIZE_UNSUPPORTED" : "EDITOR_MEDIA_NOT_FOUND", `${name} has a size outside the local inspection limit.`);
+      fail("EDITOR_TSR_SIZE_UNSUPPORTED", `${name} has a size outside the local inspection limit.`);
     }
-    const fileSectors = Math.ceil(file.byteLength / SECTOR_USER_SIZE);
-    if (file.extentLba + fileSectors > Math.floor(blob.size / SECTOR_SIZE)) {
+    if (!usable) {
       fail("EDITOR_ISO_MALFORMED", `${name} points outside the authenticated disc image.`);
     }
-    files[name.replace(/\.BIN$/i, "").toLowerCase()] = file;
+    files[key] = file;
   }
   return files;
 }
@@ -609,8 +632,10 @@ function encodeLongReference(writer, distance, length) {
 }
 
 export async function compressTsr(bytes, { signal, onProgress } = {}) {
+  // decompressTsr rejects a decoded length of MAX_DECOMPRESSED_TSR_BYTES, so
+  // the largest stream this encoder may produce decodes to one byte less.
   if (!(bytes instanceof Uint8Array) || bytes.length === 0
-    || bytes.length > MAX_DECOMPRESSED_TSR_BYTES) {
+    || bytes.length >= MAX_DECOMPRESSED_TSR_BYTES) {
     fail("EDITOR_TSR_COMPRESS_FAILED", "The edited TSR data has an unsupported size.");
   }
   const n = bytes.length;
@@ -809,10 +834,8 @@ function dataRecordOffsets(data, minimumLength) {
 function pilotRecordLists(data, start, end, decoded, spiritNameSegment, abilityNames, nameMap) {
   const commands = [];
   let cursor = start + 23;
-  const firstId = data[cursor];
-  const firstLevel = data[cursor + 1];
   // TSRViewer treats the 00 01 leading pair as its explicit empty-spirit marker.
-  if (firstId === 0 && firstLevel === 1) {
+  if (start + 24 < end && data[cursor] === 0 && data[cursor + 1] === 1) {
     const command = Object.freeze({
       id: 0,
       level: 1,
@@ -823,6 +846,7 @@ function pilotRecordLists(data, start, end, decoded, spiritNameSegment, abilityN
     return Object.freeze({
       spiritCommands: Object.freeze([command]),
       specialAbilities: Object.freeze([]),
+      firstSpecialAbilityMinimumId: 0,
     });
   }
 
@@ -872,6 +896,9 @@ function pilotRecordLists(data, start, end, decoded, spiritNameSegment, abilityN
   return Object.freeze({
     spiritCommands: Object.freeze(commands),
     specialAbilities: Object.freeze(specialAbilities),
+    // With fewer than six spirit slots the first skill ID is also the
+    // spirit/skill delimiter, so updatePilotRecords only accepts IDs above 47.
+    firstSpecialAbilityMinimumId: commands.length < 6 ? 48 : 0,
   });
 }
 
@@ -983,6 +1010,7 @@ function pilotRows(segments, decoded, pilotAbilityNames, nameMap) {
       mp: readU16BE(data, start + 21),
       spiritCommands: lists.spiritCommands,
       specialAbilities: lists.specialAbilities,
+      firstSpecialAbilityMinimumId: lists.firstSpecialAbilityMinimumId,
       byteOffset: start,
     });
   }
@@ -1086,7 +1114,13 @@ export async function previewEditorRecord(session, kind, recordIndex, { signal }
     fail("EDITOR_PREVIEW_INVALID", "The selected record has an invalid preview identity.");
   }
   const file = kind === "unit" ? session.mediaFiles.robot : session.mediaFiles.face;
-  const bytes = await readMode1UserExtent(session.sourceBlob, file.extentLba, file.byteLength, { signal });
+  if (!file) return Object.freeze({ kind, recordIndex, image: null });
+  let bytes = session.mediaCache.get(kind);
+  if (!bytes) {
+    bytes = await readMode1UserExtent(session.sourceBlob, file.extentLba, file.byteLength, { signal });
+    session.mediaCache.set(kind, bytes);
+  }
+  checkAbort(signal);
   const imageIndex = recordIndex & 0x1ff;
   const image = decodeImageRecord(bytes, imageIndex);
   return Object.freeze({ kind, recordIndex, image });
@@ -1188,7 +1222,7 @@ function updateWeaponRecords(segment, edits) {
 
 function readPilotSpecialSchedule(data, start, end) {
   let cursor = start + 23;
-  if (data[cursor] === 0 && data[cursor + 1] === 1) return [];
+  if (start + 24 < end && data[cursor] === 0 && data[cursor + 1] === 1) return [];
   for (let slot = 0; slot < 6 && cursor + 1 < end; slot += 1) {
     const id = data[cursor];
     const level = data[cursor + 1];
@@ -1324,6 +1358,8 @@ export async function inspectPatchedImage(blob, descriptor, { signal, onProgress
     }),
     file,
     mediaFiles: Object.freeze({ face: files.face, robot: files.c_robot }),
+    // Decoded FACE.BIN / C_ROBOT.BIN user data, read once per session.
+    mediaCache: new Map(),
     compressedTsr,
     decoded,
     root,

@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260926-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260928-1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,14 +7,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260926-1";
+} from "./font-revisions.mjs?v=20260928-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260926-1";
+} from "./release-notes.mjs?v=20260928-1";
 
-const STATIC_ASSET_REVISION = "20260926-1";
+const STATIC_ASSET_REVISION = "20260928-1";
 const WEAPON_CATALOG_PAGE_SIZE = 5;
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
@@ -161,7 +161,7 @@ const elements = {
   downloadCueLink: byId("downloadCueLink"),
   downloadHelp: byId("downloadHelp"),
   patcher: byId("patcher"),
-  editorOpenOutputButton: byId("editorOpenOutputButton"),
+  editorEntryButton: byId("editorEntryButton"),
   editorPickButton: byId("editorPickButton"),
   editorPatcherButton: byId("editorPatcherButton"),
   editorImageInput: byId("editorImageInput"),
@@ -295,9 +295,11 @@ elements.sourceButton.addEventListener("click", chooseSource);
 elements.patchButton.addEventListener("click", applyPatch);
 elements.cancelButton.addEventListener("click", cancelCurrentOperation);
 elements.cueButton.addEventListener("click", saveCueFile);
-elements.editorOpenOutputButton.addEventListener("click", openCurrentPatchedImage);
-elements.editorPickButton.addEventListener("click", () => elements.editorImageInput.click());
-elements.editorPatcherButton.addEventListener("click", toggleEditorFocusMode);
+elements.editorEntryButton.addEventListener("click", () => setEditorView(true));
+elements.editorPickButton.addEventListener("click", () => {
+  if (confirmDiscardEditorChanges()) elements.editorImageInput.click();
+});
+elements.editorPatcherButton.addEventListener("click", () => setEditorView(false));
 elements.editorImageInput.addEventListener("change", handleEditorImageSelection);
 elements.editorCancelButton.addEventListener("click", cancelEditorOperation);
 elements.pilotSkillScheduleButton.addEventListener("click", openPilotSkillDialog);
@@ -779,6 +781,10 @@ function replaceFontPreviews(row = null) {
 
 async function handleReleaseChange() {
   if (state.busy || state.cueSaving || state.availability === "loading") return;
+  if (!confirmDiscardEditorChanges()) {
+    restoreReleaseControls();
+    return;
+  }
   const group = selectedFontGroup();
   const chosenFont = elements.fontSelect.value;
   const defaultReleaseId = state.games.get(state.selectedGameId)?.defaultReleaseId;
@@ -802,6 +808,10 @@ async function handleReleaseChange() {
 
 async function handleFontChange() {
   if (state.busy || state.cueSaving || state.availability !== "ready") return;
+  if (!confirmDiscardEditorChanges()) {
+    restoreReleaseControls();
+    return;
+  }
   const row = selectFontRelease(selectedFontGroup(), elements.fontSelect.value);
   if (!row) {
     replaceFontOptions(state.release);
@@ -815,6 +825,10 @@ async function handleFontChange() {
 }
 
 async function handleGameChange() {
+  if (!confirmDiscardEditorChanges()) {
+    restoreReleaseControls();
+    return;
+  }
   try {
     await activateGame(elements.gameSelect.value);
   } catch (error) {
@@ -1183,6 +1197,9 @@ async function chooseSource() {
   if (!canChooseSource()) {
     return;
   }
+  if (!confirmDiscardEditorChanges()) {
+    return;
+  }
   if (!state.fileSystemSupported) {
     clearMessages();
     showUnsupportedBrowser();
@@ -1299,6 +1316,8 @@ function prefersDownloadOutput(navigatorLike = globalThis.navigator) {
 
 async function applyPatch() {
   if (state.editorFromSource && state.editorSessionToken) {
+    // The export's progress, cancel control and downloads live in the editor view.
+    setEditorView(true);
     return exportEditorImage();
   }
   if (!canApplyPatch()) {
@@ -1551,8 +1570,6 @@ function clearEditorState() {
   elements.editorCancelButton.disabled = true;
   elements.editorError.hidden = true;
   elements.editorWorkspace.hidden = true;
-  elements.editorPatcherButton.hidden = true;
-  elements.editorPatcherButton.textContent = "게임·패치 설정";
   document.body.classList.remove("editor-focus-mode");
   elements.editorState.textContent = "게임과 승인 패치를 선택하면 에디터를 사용할 수 있습니다.";
   elements.unitSelect.replaceChildren();
@@ -1582,16 +1599,45 @@ function clearEditorState() {
   updateControls();
 }
 
-function toggleEditorFocusMode() {
-  const enteringFocusMode = !document.body.classList.contains("editor-focus-mode");
-  document.body.classList.toggle("editor-focus-mode", enteringFocusMode);
-  elements.editorPatcherButton.textContent = enteringFocusMode
-    ? "게임·패치 설정"
-    : "에디터로 돌아가기";
+// The editor and the patcher share one screen: body.editor-focus-mode shows
+// the editor view and hides the patcher, otherwise only the patcher shows.
+function setEditorView(open) {
+  document.body.classList.toggle("editor-focus-mode", open);
+  updateControls();
   requestAnimationFrame(() => {
-    const target = enteringFocusMode ? elements.editorRegion : elements.patcher;
+    const target = open ? elements.editorRegion : elements.patcher;
     target.scrollIntoView({ block: "start", behavior: "instant" });
   });
+}
+
+function countEditorChanges() {
+  return ["unit", "pilot", "weapon"].reduce((count, kind) => {
+    const fields = editorFieldsFor(kind);
+    return count + editorRowsFor(kind).reduce((rowCount, candidate) => {
+      const changedFields = fields.filter((field) => candidate[field] !== candidate.original?.[field]).length;
+      const changedAbilities = kind === "pilot"
+        ? (candidate.specialAbilities ?? []).filter((ability, index) => {
+          const original = candidate.originalSpecialAbilities?.[index];
+          return original && (ability.id !== original.id || ability.level !== original.level);
+        }).length
+        : 0;
+      return rowCount + changedFields + changedAbilities;
+    }, 0);
+  }, 0);
+}
+
+function confirmDiscardEditorChanges() {
+  if (countEditorChanges() === 0 || typeof window.confirm !== "function") return true;
+  return window.confirm("에디터에서 수정한 값이 있습니다. 계속하면 수정값이 모두 사라집니다. 계속할까요?");
+}
+
+function restoreReleaseControls() {
+  if (state.selectedGameId) elements.gameSelect.value = state.selectedGameId;
+  const row = state.visibleReleaseRows.find((candidate) => candidate.id === state.release?.id);
+  if (!row) return;
+  const identity = fontReleaseIdentity(row);
+  elements.releaseSelect.value = identity.groupId;
+  elements.fontSelect.value = identity.revision ?? "";
 }
 
 function canOfferDownloadFallback(error) {
@@ -2088,32 +2134,6 @@ function getEditorWorker() {
   return worker;
 }
 
-async function openCurrentPatchedImage() {
-  if (!state.patchCompleted || !state.release || state.editorBusy) return;
-  const artifacts = state.downloadArtifacts;
-  let imageBlob = artifacts?.outputBlob ?? null;
-  const verifiedTargetSha256 = imageBlob instanceof Blob
-    && artifacts?.verifiedTargetSha256 === state.release.target.sha256
-    ? artifacts.verifiedTargetSha256
-    : null;
-  try {
-    if (!imageBlob && state.outputHandle && typeof state.outputHandle.getFile === "function") {
-      imageBlob = await state.outputHandle.getFile();
-    }
-  } catch (error) {
-    showEditorError("패치 결과를 열지 못했습니다", error?.message ?? "저장된 BIN을 읽을 수 없습니다.");
-    return;
-  }
-  if (!(imageBlob instanceof Blob)) {
-    showEditorError(
-      "패치 결과를 찾을 수 없습니다",
-      "현재 브라우저가 결과 파일을 다시 읽지 못합니다. 아래 승인 패치 BIN 선택을 눌러 저장한 파일을 골라 주세요.",
-    );
-    return;
-  }
-  beginEditorInspection(imageBlob, { verifiedTargetSha256 });
-}
-
 function handleEditorImageSelection() {
   const file = elements.editorImageInput.files?.[0];
   elements.editorImageInput.value = "";
@@ -2136,11 +2156,11 @@ function beginEditorInspection(imageBlob, { verifiedTargetSha256 = null } = {}) 
   state.editorWeapons = [];
   state.weaponCatalogPage = 0;
   elements.editorWorkspace.hidden = true;
-  elements.editorPatcherButton.hidden = true;
-  elements.editorPatcherButton.textContent = "게임·패치 설정";
-  document.body.classList.remove("editor-focus-mode");
   elements.editorError.hidden = true;
   clearEditorDownloads();
+  // Stay in (or enter) the editor view so the progress and cancel controls
+  // and any inspection error remain visible.
+  if (!document.body.classList.contains("editor-focus-mode")) setEditorView(true);
   state.editorSequence += 1;
   const jobId = `editor-${Date.now()}-${state.editorSequence}-${Math.random().toString(16).slice(2, 10)}`;
   state.editorJobId = jobId;
@@ -2176,7 +2196,9 @@ function beginEditorInspection(imageBlob, { verifiedTargetSha256 = null } = {}) 
     });
   } catch (error) {
     finishEditorOperation();
+    elements.editorProgressPanel.hidden = true;
     showEditorError("에디터를 시작하지 못했습니다", error?.message ?? "선택한 BIN을 워커에 전달하지 못했습니다.");
+    abandonEditorSourceFlow("에디터를 시작하지 못했습니다", "선택한 원본으로 에디터를 열지 못했습니다.");
   }
 }
 
@@ -2203,11 +2225,11 @@ function handleEditorWorkerMessage(event) {
       state.editorPilots = [];
       state.editorWeapons = [];
       elements.editorWorkspace.hidden = true;
-      elements.editorPatcherButton.hidden = true;
-      elements.editorPatcherButton.textContent = "게임·패치 설정";
-      document.body.classList.remove("editor-focus-mode");
     }
     elements.editorState.textContent = "에디터 작업을 중단했습니다.";
+    if (operation === "INSPECT") {
+      abandonEditorSourceFlow("편집 준비를 중단했습니다", "에디터 데이터 읽기를 중단했습니다.");
+    }
     updateControls();
     return;
   }
@@ -2220,12 +2242,10 @@ function handleEditorWorkerMessage(event) {
       state.editorPilots = [];
       state.editorWeapons = [];
       elements.editorWorkspace.hidden = true;
-      elements.editorPatcherButton.hidden = true;
-      elements.editorPatcherButton.textContent = "게임·패치 설정";
-      document.body.classList.remove("editor-focus-mode");
     }
     const friendly = friendlyEditorError(message.error?.code, message.error?.message);
     showEditorError(friendly.title, friendly.message);
+    if (!state.editorSessionToken) abandonEditorSourceFlow(friendly.title, friendly.message);
     updateControls();
     return;
   }
@@ -2245,12 +2265,15 @@ function handleEditorWorkerMessage(event) {
       || view.weaponCount !== view.weapons.length
       || view.targetHash !== state.release?.target.sha256
       || view.gameId !== state.release?.gameId) {
+      elements.editorProgressPanel.hidden = true;
       showEditorError("데이터 목록이 올바르지 않습니다", "검증 결과가 선택한 릴리스와 맞지 않아 에디터를 잠갔습니다.");
+      abandonEditorSourceFlow("데이터 목록이 올바르지 않습니다", "검증 결과가 선택한 릴리스와 맞지 않아 에디터를 잠갔습니다.");
       updateControls();
       return;
     }
     if (state.editorFromSource) {
       elements.applyState.textContent = "편집 가능";
+      elements.applyState.className = "zone-state is-ready";
       elements.applyHint.textContent = "수치를 편집한 뒤 패치 실행을 누르면 수정값까지 반영된 BIN/CUE를 만듭니다.";
       elements.sourceSelection.classList.remove("is-verifying");
     }
@@ -2263,7 +2286,6 @@ function handleEditorWorkerMessage(event) {
     state.editorPilots = prepareEditorRows(view.pilots, "pilot");
     state.editorWeapons = prepareEditorRows(view.weapons, "weapon");
     elements.editorWorkspace.hidden = false;
-    elements.editorPatcherButton.hidden = false;
     document.body.classList.add("editor-focus-mode");
     elements.editorError.hidden = true;
     elements.editorState.textContent = `${editorGameLabel(view.gameId)} · 승인 이미지 해시 일치 · 기체 ${view.unitCount}대 · 파일럿 ${view.pilotCount}명 · 무기 ${view.weaponCount}개`;
@@ -2285,8 +2307,10 @@ function handleEditorWorkerMessage(event) {
       if (state.editorFromSource) {
         state.patchCompleted = true;
         elements.applyState.textContent = "수정 패치 준비 완료";
+        elements.applyState.className = "zone-state is-complete";
       }
       elements.editorState.textContent = "개인 수정 BIN/CUE를 준비했습니다. 이 파일은 공개 승인 릴리스가 아닙니다.";
+      requestAnimationFrame(() => elements.editorDownloadActions.scrollIntoView({ block: "nearest", behavior: "instant" }));
     } catch (error) {
       showEditorError("수정본 다운로드를 준비하지 못했습니다", error?.message ?? "결과 파일을 확인하지 못했습니다.");
     }
@@ -2341,11 +2365,29 @@ function handleEditorWorkerCrash(event) {
     finishEditorOperation();
     elements.editorProgressPanel.hidden = true;
     elements.editorWorkspace.hidden = true;
-    elements.editorPatcherButton.hidden = true;
-    elements.editorPatcherButton.textContent = "게임·패치 설정";
-    document.body.classList.remove("editor-focus-mode");
     showEditorError("에디터가 중단되었습니다", event?.message ?? "브라우저 워커가 응답하지 않았습니다.");
   }
+  // The session lived in the stopped worker, so a source-folder edit cannot continue.
+  abandonEditorSourceFlow("에디터가 중단되었습니다", "브라우저 워커가 응답하지 않았습니다.");
+  updateControls();
+}
+
+// The source-folder flow builds a verified patch result and opens it in the
+// editor. When that editor session cannot be used, return the patcher to its
+// plain patch path so the patch button stays usable, and say why.
+function abandonEditorSourceFlow(title, message) {
+  if (!state.editorFromSource && !state.preparingEditor) return;
+  state.editorFromSource = false;
+  state.preparingEditor = false;
+  state.needsEditorPreparation = false;
+  state.patchCompleted = false;
+  elements.sourceSelection.classList.remove("is-verifying");
+  elements.applyState.textContent = "편집 준비 실패";
+  elements.applyState.className = "zone-state is-error";
+  elements.applyHint.textContent = "에디터를 열지 못했습니다. 패치 실행을 누르면 수정값 없이 한글 패치 BIN/CUE를 만듭니다.";
+  setWorkflowPhase("patch");
+  setZoneState("patch", "error");
+  showError(title, message);
   updateControls();
 }
 
@@ -2365,6 +2407,19 @@ function friendlyEditorError(code, fallback = "") {
     EDITOR_TSR_ROUNDTRIP_FAILED: ["수정 데이터 압축 확인에 실패했습니다", "결과를 저장하지 않았습니다. 다른 값으로 다시 시도해 주세요."],
     EDITOR_IMAGE_READ_FAILED: ["BIN을 끝까지 읽지 못했습니다", "파일 접근을 허용하고 다른 앱에서 사용 중이지 않은지 확인해 주세요."],
     EDITOR_SESSION_MISSING: ["에디터 세션이 만료되었습니다", "승인 패치 BIN을 다시 열어 주세요."],
+    EDITOR_EDIT_INVALID: ["수정 요청이 올바르지 않습니다", "편집한 항목이 승인 이미지의 데이터 구조와 맞지 않아 저장하지 않았습니다."],
+    EDITOR_VALUE_OUT_OF_RANGE: ["입력값이 허용 범위를 벗어났습니다", "표시된 최소·최대 범위 안의 정수로 고쳐 주세요."],
+    EDITOR_ISO_MALFORMED: ["디스크 파일 시스템이 손상되었습니다", "ISO9660 목록을 안전하게 읽지 못했습니다. 승인 패치 BIN을 다시 만들어 주세요."],
+    EDITOR_ISO_UNSUPPORTED: ["지원하지 않는 디스크 구조입니다", "이 이미지의 ISO9660 구성은 에디터가 안전하게 수정할 수 없습니다."],
+    EDITOR_RELEASE_INVALID: ["선택한 릴리스를 편집할 수 없습니다", "위에서 게임과 승인 버전을 다시 선택해 주세요."],
+    EDITOR_IMAGE_INVALID: ["BIN 파일을 읽을 수 없습니다", "비어 있지 않은 승인 패치 BIN을 선택해 주세요."],
+    EDITOR_TSR_MALFORMED: ["게임 데이터가 손상되었습니다", "TSR.BIN이 너무 짧거나 형식이 맞지 않습니다."],
+    EDITOR_TSR_COMPRESS_FAILED: ["수정 데이터를 압축하지 못했습니다", "결과를 저장하지 않았습니다. 수정값을 확인한 뒤 다시 시도해 주세요."],
+    EDITOR_DATA_MALFORMED: ["게임 데이터 표가 올바르지 않습니다", "기체·파일럿·무기 표를 안전하게 해석하지 못해 편집을 멈췄습니다."],
+    EDITOR_ECC_INTERNAL: ["섹터 검증값을 만들지 못했습니다", "내부 오류로 수정본을 만들지 않았습니다. 페이지를 새로 고친 뒤 다시 시도해 주세요."],
+    EDITOR_OUTPUT_INTERNAL: ["수정본을 구성하지 못했습니다", "내부 오류로 수정본을 만들지 않았습니다. 페이지를 새로 고친 뒤 다시 시도해 주세요."],
+    EDITOR_BUSY: ["다른 에디터 작업이 진행 중입니다", "진행 중인 작업이 끝난 뒤 다시 시도해 주세요."],
+    EDITOR_JOB_INVALID: ["에디터 작업을 시작하지 못했습니다", "페이지를 새로 고친 뒤 다시 시도해 주세요."],
   };
   const [title, message] = messages[code] ?? ["에디터 작업을 완료하지 못했습니다", fallback || "파일을 확인한 뒤 다시 시도해 주세요."];
   return Object.freeze({ title, message });
@@ -2779,8 +2834,11 @@ function renderPilotSkillSchedule(record) {
     select.className = "pilot-skill-select";
     select.dataset.pilotSkillId = String(index);
     select.setAttribute("aria-label", `특수능력 ${index + 1} 종류`);
+    // The first slot doubles as the spirit/skill boundary in short records,
+    // so offer only the IDs the export accepts there.
+    const minimumId = index === 0 ? (record.firstSpecialAbilityMinimumId ?? 0) : 0;
     state.editorPilotAbilityNames.forEach((name, nameIndex) => {
-      if (nameIndex === 0 || !name) return;
+      if (nameIndex === 0 || !name || nameIndex + 32 < minimumId) return;
       const option = document.createElement("option");
       option.value = String(nameIndex + 32);
       option.textContent = normaliseGameAbilityName(name);
@@ -2937,6 +2995,7 @@ function restoreEditorField(type, event) {
   const recordIndex = Number(editorSelectFor(type).value);
   const row = editorRowsFor(type).find((candidate) => candidate.recordIndex === recordIndex);
   if (!row || !Object.hasOwn(row.original ?? {}, field)) return;
+  discardStaleEditorDownloads();
   row[field] = row.original[field];
   const input = [...editorFormFor(type).querySelectorAll("[data-editor-field]")]
     .find((candidate) => candidate.dataset.editorField === field);
@@ -3018,10 +3077,23 @@ function sizeEditorGameImage(image, sourceWidth, sourceHeight) {
   image.style.height = `${((sourceHeight * scale * 100) / 289).toFixed(4)}cqw`;
 }
 
+// A finished export describes the values at export time. Once any value
+// changes, drop its download so it cannot be mistaken for the edited result.
+function discardStaleEditorDownloads() {
+  if (state.editorDownloadUrls.length === 0) return;
+  clearEditorDownloads();
+  if (state.editorFromSource) {
+    state.patchCompleted = false;
+    elements.applyState.textContent = "편집 가능";
+    elements.applyState.className = "zone-state is-ready";
+  }
+}
+
 function updateEditorRowFromForm(type) {
   const recordIndex = Number(editorSelectFor(type).value);
   const row = editorRowsFor(type).find((candidate) => candidate.recordIndex === recordIndex);
   if (!row) return;
+  discardStaleEditorDownloads();
   let valid = true;
   for (const control of editorFormFor(type).querySelectorAll("[data-editor-field]")) {
     const field = control.dataset.editorField;
@@ -3049,6 +3121,7 @@ function updatePilotSkillFromForm(event) {
   const index = Number(event.target.dataset.pilotSkillId ?? event.target.dataset.pilotSkillLevel);
   const ability = row?.specialAbilities?.[index];
   if (!row || !ability || !Number.isSafeInteger(index)) return;
+  discardStaleEditorDownloads();
   const isAbilityId = event.target.matches("[data-pilot-skill-id]");
   const value = event.target instanceof HTMLSelectElement
     ? Number(event.target.value)
@@ -3105,6 +3178,7 @@ function restorePilotSkill(event) {
   const original = row?.originalSpecialAbilities?.[index];
   const ability = row?.specialAbilities?.[index];
   if (!row || !original || !ability) return true;
+  discardStaleEditorDownloads();
   ability.id = original.id;
   ability.level = original.level;
   const name = state.editorPilotAbilityNames[ability.id - 32] ?? "";
@@ -3118,20 +3192,7 @@ function restorePilotSkill(event) {
 }
 
 function updateEditorStatus(type, row = null) {
-  const labels = { unit: "기체", pilot: "파일럿", weapon: "무기" };
-  const changedCount = ["unit", "pilot", "weapon"].reduce((count, kind) => {
-    const fields = editorFieldsFor(kind);
-    return count + editorRowsFor(kind).reduce((rowCount, candidate) => {
-      const changedFields = fields.filter((field) => candidate[field] !== candidate.original?.[field]).length;
-      const changedAbilities = kind === "pilot"
-        ? (candidate.specialAbilities ?? []).filter((ability, index) => {
-          const original = candidate.originalSpecialAbilities?.[index];
-          return original && (ability.id !== original.id || ability.level !== original.level);
-        }).length
-        : 0;
-      return rowCount + changedFields + changedAbilities;
-    }, 0);
-  }, 0);
+  const changedCount = countEditorChanges();
   const selected = row ?? editorRowsFor(type).find(
     (candidate) => candidate.recordIndex === Number(editorSelectFor(type).value),
   );
@@ -3225,6 +3286,7 @@ async function exportEditorImage() {
   elements.editorCancelButton.hidden = false;
   elements.editorCancelButton.disabled = false;
   updateControls();
+  requestAnimationFrame(() => elements.editorProgressPanel.scrollIntoView({ block: "nearest", behavior: "instant" }));
   try {
     getEditorWorker().postMessage({
       type: "EXPORT",
@@ -3337,10 +3399,16 @@ function handleOperationComplete(message) {
       state.downloadFallbackReady = false;
       elements.downloadActions.hidden = true;
       elements.successPanel.hidden = true;
+      elements.sourceSelection.classList.remove("is-verifying");
       elements.sourceCheck.textContent = "✓";
-      elements.sourceState.textContent = "SHA-256 일치";
       elements.sourceMeta.textContent = sourceSelectionMeta(state, "전체 SHA-256 일치 · 원본 보존");
+      // Leave the busy patch zone so the patch button (which applies the
+      // edits) is shown again once the editor data is ready.
+      setWorkflowPhase("patch");
+      elements.sourceState.textContent = "SHA-256 일치";
+      elements.sourceState.className = "zone-state is-complete";
       elements.applyState.textContent = "편집 준비";
+      elements.applyState.className = "zone-state is-working";
       const artifacts = state.downloadArtifacts;
       beginEditorInspection(artifacts.outputBlob, { verifiedTargetSha256: artifacts.verifiedTargetSha256 });
       return;
@@ -3860,9 +3928,13 @@ function updateControls() {
   elements.patchButtonText.textContent = state.downloadFallbackReady
     ? (state.patchCompleted ? "다운로드 다시 만들기" : "다운로드 만들기")
     : "패치 실행";
-  elements.editorOpenOutputButton.disabled = !releaseReady || !state.patchCompleted || interactionBusy || state.editorFromSource;
+  elements.editorEntryButton.disabled = !releaseReady || interactionBusy;
+  elements.editorEntryButton.textContent = state.editorSessionToken ? "에디터로 돌아가기" : "스탯 에디터 열기";
   elements.editorPickButton.disabled = !releaseReady || interactionBusy;
   elements.editorPatcherButton.disabled = interactionBusy;
+  // Edits made while an export runs would not be in its result.
+  elements.editorWorkspace.inert = state.editorBusy;
+  elements.editorWorkspace.setAttribute("aria-busy", String(state.editorBusy));
   elements.editorExportButton.disabled = !state.editorSessionToken || interactionBusy;
   elements.editorExportButton.textContent = state.editorFromSource ? "패치 실행 · 수정값 반영" : "개인 수정 BIN/CUE 만들기";
   if (state.editorFromSource) elements.patchButtonText.textContent = "패치 실행 · 수정값 반영";
