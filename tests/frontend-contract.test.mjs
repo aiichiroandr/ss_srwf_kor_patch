@@ -1331,6 +1331,27 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.match(html, /id="sourceButtonText"/);
 });
 
+test("game and version selectors wrap by their text width instead of fixed column ratios", async () => {
+  const css = await readFile(new URL("../assets/style.css", import.meta.url), "utf8");
+
+  // 고정 비율 칼럼은 긴 게임 이름을 잘랐다. 두 칸은 글자가 다 들어갈 때만 나란히 선다.
+  assert.doesNotMatch(css, /\.selector-grid\s*\{[^}]*grid-template-columns/s);
+  assert.doesNotMatch(css, /\.selector-grid\s*\{[^}]*1\.22fr/s);
+  assert.match(css, /\.selector-grid\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/s);
+  assert.match(css, /\.selector-grid > div\s*\{[^}]*flex:\s*1 1 0[^}]*max-width:\s*100%/s);
+  assert.doesNotMatch(css, /\.selector-grid > div\s*\{[^}]*min-width:\s*0/s);
+  // 퍼센트 width 는 select 의 min-content 를 padding 으로 줄이므로 쓰지 않는다.
+  assert.match(css, /\.select-wrap select\s*\{[^}]*width:\s*auto[^}]*min-width:\s*0/s);
+  assert.doesNotMatch(css, /\.select-wrap select\s*\{[^}]*\bwidth:\s*100%/s);
+  // 지원 브라우저에서는 가장 긴 옵션이 아니라 고른 글자 폭이 최소 폭이라 짧은 선택이 칸을 쌓지 않는다.
+  assert.match(css, /\.select-wrap select\s*\{[^}]*field-sizing:\s*content/s);
+  assert.match(css, /\.selector-grid > \.font-selector\s*\{[^}]*flex:\s*1 1 100%/s);
+  // 쌓인 선택 칸으로 카드가 낮은 화면보다 길어지면 잘리지 않고 카드 안에서 스크롤된다.
+  assert.match(css, /\.release-card\.workflow-zone\s*\{[^}]*max-height:\s*100%[^}]*overflow-y:\s*auto/s);
+  // 테두리 빛 링이 패딩 박스 밖으로 1px 나가면 맞는 화면에도 빈 스크롤바가 생긴다.
+  assert.match(css, /\.release-card\.workflow-zone::after\s*\{[^}]*inset:\s*0;[^}]*padding:\s*1px/s);
+});
+
 test("patch notes sit between release selection and source selection without adding another workflow zone", async () => {
   const [html, css] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
