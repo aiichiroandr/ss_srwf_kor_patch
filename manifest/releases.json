@@ -104,6 +104,14 @@
     },
     {
       "gameId": "srwf-f",
+      "id": "srwf-f-20260928-v0-5-b",
+      "state": "ACCEPTED",
+      "label": "2026.09.28 · v0.5",
+      "manifest": "releases/srwf-f-20260928-v0-5-b.json",
+      "manifestSha256": "658f7b9e8d14fa5ff91c3281f39ceaf8b1e36834e9a2396f86bde5078381d0df"
+    },
+    {
+      "gameId": "srwf-f",
       "id": "srwf-f-20260915-v0-4-a",
       "state": "ACCEPTED",
       "label": "2026.09.15 · v0.4",
