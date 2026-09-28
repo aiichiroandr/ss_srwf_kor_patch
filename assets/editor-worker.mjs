@@ -2,9 +2,10 @@ import {
   exportEditedImage,
   inspectPatchedImage,
   previewEditorRecord,
-} from "./editor-core.mjs?v=20260926-1";
+} from "./editor-core.mjs?v=20260928-1";
 
 let activeJob = null;
+let activePreview = null;
 let editorSession = null;
 
 self.addEventListener("message", (event) => {
@@ -19,6 +20,7 @@ self.addEventListener("message", (event) => {
   }
   if (message.type === "RESET") {
     activeJob?.controller.abort(new DOMException("Operation aborted", "AbortError"));
+    activePreview?.abort(new DOMException("Operation aborted", "AbortError"));
     editorSession = null;
     return;
   }
@@ -32,11 +34,18 @@ self.addEventListener("message", (event) => {
 });
 
 async function runPreview(message) {
+  // Only the latest selection matters; stop reading for an older one.
+  activePreview?.abort(new DOMException("Operation aborted", "AbortError"));
+  const controller = new AbortController();
+  activePreview = controller;
   try {
     if (!editorSession || message.sessionToken !== editorSession.sessionToken) {
       throw makeError("EDITOR_SESSION_MISSING", "The authenticated editor session is no longer available.");
     }
-    const result = await previewEditorRecord(editorSession, message.kind, message.recordIndex);
+    const result = await previewEditorRecord(editorSession, message.kind, message.recordIndex, {
+      signal: controller.signal,
+    });
+    if (controller.signal.aborted) return;
     const response = {
       type: "PREVIEW_COMPLETE",
       previewId: message.previewId,
@@ -46,6 +55,7 @@ async function runPreview(message) {
     };
     self.postMessage(response, result.image ? [result.image.pixels.buffer] : []);
   } catch (error) {
+    if (controller.signal.aborted) return;
     self.postMessage({
       type: "PREVIEW_ERROR",
       previewId: message.previewId,
@@ -53,6 +63,8 @@ async function runPreview(message) {
       recordIndex: message.recordIndex,
       error: typeof error?.message === "string" ? error.message : "Preview is unavailable.",
     });
+  } finally {
+    if (activePreview === controller) activePreview = null;
   }
 }
 
@@ -75,6 +87,9 @@ async function runJob(message) {
         signal: controller.signal,
         onProgress: (progress) => postProgress(message.jobId, progress),
       });
+      // A CANCEL or RESET that arrived while the last step finished must not
+      // install the session or report it as ready.
+      checkAborted(controller.signal);
       editorSession = result.session;
       self.postMessage({
         type: "INSPECT_COMPLETE",
@@ -91,6 +106,7 @@ async function runJob(message) {
       signal: controller.signal,
       onProgress: (progress) => postProgress(message.jobId, progress),
     });
+    checkAborted(controller.signal);
     self.postMessage({
       type: "EXPORT_COMPLETE",
       jobId: message.jobId,
@@ -131,6 +147,10 @@ function postError(jobId, code, message) {
     jobId: typeof jobId === "string" ? jobId : null,
     error: { code, message },
   });
+}
+
+function checkAborted(signal) {
+  if (signal.aborted) throw signal.reason ?? new DOMException("Operation aborted", "AbortError");
 }
 
 function makeError(code, message) {

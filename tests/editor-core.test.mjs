@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { inspectPatchedImage } from '../assets/editor-core.mjs';
+import { inspectPatchedImage, previewEditorRecord } from '../assets/editor-core.mjs';
 
 const targetSha256 = 'a'.repeat(64);
 
@@ -50,4 +50,58 @@ test('only a same-session patch result attestation skips the editor target rehas
     })),
   );
   assert.equal(verifiedOutput.streamCalls, 0, 'the immutable patch result reuses its completed target hash');
+});
+
+function mode1Image(sectorCount) {
+  const bytes = new Uint8Array(2352 * sectorCount);
+  for (let sector = 0; sector < sectorCount; sector += 1) {
+    const base = sector * 2352;
+    bytes.fill(0xff, base + 1, base + 11);
+    bytes[base + 15] = 1;
+    for (let index = 0; index < 2048; index += 1) bytes[base + 16 + index] = (sector * 31 + index) & 0xff;
+  }
+  return bytes;
+}
+
+function previewSession(blob, mediaFiles) {
+  return Object.freeze({
+    sessionToken: 'preview-session',
+    sourceBlob: blob,
+    mediaFiles: Object.freeze(mediaFiles),
+    mediaCache: new Map(),
+  });
+}
+
+test('preview reads each media file once per session with a single contiguous slice', async () => {
+  const blob = new Blob([mode1Image(3)]);
+  let sliceCalls = 0;
+  const slice = blob.slice.bind(blob);
+  Object.defineProperty(blob, 'slice', {
+    value: (...args) => {
+      sliceCalls += 1;
+      return slice(...args);
+    },
+  });
+  const session = previewSession(blob, { face: { extentLba: 0, byteLength: 3 * 2048 }, robot: null });
+  const first = await previewEditorRecord(session, 'pilot', 1);
+  const second = await previewEditorRecord(session, 'pilot', 2);
+  assert.equal(first.image, null, 'synthetic data holds no image table');
+  assert.equal(second.recordIndex, 2);
+  assert.equal(sliceCalls, 1, 'three sectors are read with one slice and then served from the session cache');
+  assert.equal(session.mediaCache.get('pilot').length, 3 * 2048);
+});
+
+test('preview without a media file reports no image instead of failing', async () => {
+  const session = previewSession(new Blob([mode1Image(1)]), { face: null, robot: null });
+  const preview = await previewEditorRecord(session, 'unit', 1);
+  assert.deepEqual({ ...preview }, { kind: 'unit', recordIndex: 1, image: null });
+});
+
+test('preview honours an aborted signal before reading media', async () => {
+  const session = previewSession(new Blob([mode1Image(1)]), { face: { extentLba: 0, byteLength: 2048 }, robot: null });
+  await assert.rejects(
+    previewEditorRecord(session, 'pilot', 1, { signal: AbortSignal.abort() }),
+    (error) => error.name === 'AbortError',
+  );
+  assert.equal(session.mediaCache.size, 0);
 });

@@ -3468,6 +3468,12 @@ body.editor-focus-mode #patcher {
   display: none !important;
 }
 
+/* The page never scrolls outside the editor view, so the editor only
+   renders there; the patcher's editor entry button opens that view. */
+body:not(.editor-focus-mode) #editorRegion {
+  display: none;
+}
+
 body.editor-focus-mode #editorRegion {
   width: min(calc(100% - 32px), var(--content));
   margin: 0 auto;
@@ -4065,10 +4071,6 @@ body.editor-focus-mode #editorRegion {
   #editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions {
     gap: 6px;
     margin-top: 6px;
-  }
-
-  #editorRegion:has(#editorWorkspace:not([hidden])) #editorOpenOutputButton:disabled {
-    display: none;
   }
 
   #editorRegion:has(#editorWorkspace:not([hidden])) .editor-entry-actions > button {
@@ -4825,5 +4827,90 @@ body.editor-focus-mode #editorRegion,
   #editorRegion:has(#editorWorkspace:not([hidden])) .editor-stat-grid input {
     min-height: 29px;
     height: 29px;
+  }
+}
+
+/* Patch notes and the editor entry share one row in the release card. */
+.release-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 14px;
+}
+
+.release-actions > .patch-note-toggle {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.editor-entry-button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--blue);
+  border-radius: 12px;
+  color: var(--blue-deep);
+  background: var(--white);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor-entry-button:hover:not(:disabled) {
+  background: rgba(39, 93, 225, 0.08);
+}
+
+.editor-entry-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+/* The site header (with its notice) is hidden in the editor view, so the
+   editor carries its own unofficial / no-game-content notice. */
+.editor-legal-note {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+#editorRegion:has(#editorWorkspace:not([hidden])) .editor-legal-note {
+  margin: 2px 0 0;
+  color: #a9bcaa;
+  font-size: 10px;
+}
+
+.editor-workspace[inert] {
+  opacity: 0.6;
+}
+
+@media (max-width: 760px) {
+  .release-actions {
+    flex-direction: row;
+    gap: 5px;
+    margin-top: 5px;
+  }
+
+  .editor-heading-row > div {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .editor-local-badge {
+    display: none;
+  }
+
+  .editor-entry-button {
+    min-height: 34px;
+    padding: 4px 9px;
+    border-radius: 9px;
+    font-size: 11px;
   }
 }
