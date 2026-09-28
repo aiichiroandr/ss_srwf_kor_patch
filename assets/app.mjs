@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260924-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260928-1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,14 +7,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260924-1";
+} from "./font-revisions.mjs?v=20260928-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260924-1";
+} from "./release-notes.mjs?v=20260928-1";
 
-const STATIC_ASSET_REVISION = "20260924-1";
+const STATIC_ASSET_REVISION = "20260928-1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -30,7 +30,7 @@ const INDEX_SCHEMA_REFERENCE = "../schemas/releases.schema.json";
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MANIFEST_FETCH_TIMEOUT_MS = 10_000;
 const MIN_PATCH_BYTES = 101;
-const MAX_PATCH_BYTES = 64 * 1024 * 1024;
+const MAX_PATCH_BYTES = 80 * 1024 * 1024;
 const MIN_PATCH_BODY_BYTES = 45;
 const MAX_PATCH_BODY_BYTES = 128 * 1024 * 1024;
 const MAX_PATCH_RECORDS = 2_000_000;
@@ -1588,6 +1588,12 @@ const F_V04_CUE_TRACKS = Object.freeze([
   "INDEX 01 54:26:37",
 ]);
 const PATCHED_IMAGE_CUE_TRACKS = new Map([
+  ["b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9", F_V04_CUE_TRACKS],
+  ["85b9cbf349c421d621f3a6e6819d94f9ee1405137430046469562a2176e798a3", F_V04_CUE_TRACKS],
+  ["75555116f784115e7104c593fd990491ae182b9493d9f159201e17b3e3d88202", F_V04_CUE_TRACKS],
+  ["b882fec4d79b866bc5ff162fdf460e0eedf5b7b31033f7048f8cce9f3ffe357c", Object.freeze(["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 MODE2/2352", "INDEX 00 17:03:64", "INDEX 01 17:06:64", "TRACK 03 AUDIO", "INDEX 00 48:55:28", "INDEX 01 48:57:28"])],
+  ["7a80036d11f66b0afd1110b5e34b1b673228ad5ac9350d6967e2f36716ed43e2", Object.freeze(["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 MODE2/2352", "INDEX 00 17:03:64", "INDEX 01 17:06:64", "TRACK 03 AUDIO", "INDEX 00 48:55:28", "INDEX 01 48:57:28"])],
+  ["118450235e03d664241d926e2f02f87438670074d51827a953c0be1132d0b547", Object.freeze(["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 MODE2/2352", "INDEX 00 17:03:64", "INDEX 01 17:06:64", "TRACK 03 AUDIO", "INDEX 00 48:55:28", "INDEX 01 48:57:28"])],
   ["f3292551e827ac66d4406a2994350342d9084a5d24a121a70185029fba574a3e", F_V04_CUE_TRACKS],
   ["fe713fcab98279f8f6ffe6da45c145bcf75ab70ebe7361e733b71559b94f8589", F_V04_CUE_TRACKS],
   ["5489ed4e2d980a0010ecffba3801621b88cf20d7aa317811eddcd37eff13fe5f", F_V04_CUE_TRACKS],
@@ -2095,6 +2101,32 @@ function renderPatchNotesForRelease(releaseId) {
     }));
   } else {
     elements.patchNotesSummary.textContent = notes.summary;
+  }
+  if (notes.bgmTables) {
+    const intro = document.createElement("p");
+    intro.textContent = "파일럿 계열별 BGM — 탑승 기체가 아닌 파일럿 계열을 기준으로 하며, 시작 곡은 파일럿에 따라 다릅니다. F와 완결편에서 실제 등장·사용 가능한 파일럿은 다릅니다.";
+    elements.patchNotesSummary.append(intro);
+    for (const group of notes.bgmTables) {
+      const table = document.createElement("table");
+      table.className = "patch-note-bgm-table";
+      const caption = document.createElement("caption");
+      caption.textContent = group.title;
+      table.append(caption);
+      for (const [index, cells] of [["파일럿 계열", "배정 BGM"], ...group.rows].entries()) {
+        const row = document.createElement("tr");
+        cells.forEach((value, column) => {
+          const cell = document.createElement(index === 0 || column === 0 ? "th" : "td");
+          if (index === 0 || column === 0) cell.setAttribute("scope", index === 0 ? "col" : "row");
+          cell.textContent = value;
+          row.append(cell);
+        });
+        table.append(row);
+      }
+      elements.patchNotesSummary.append(table);
+    }
+    const foot = document.createElement("p");
+    foot.textContent = "- 보스 전용곡이 우선되는 전투에서는 보스곡 → 아군 계열의 곡 → 보스곡 순서로 전환할 수 있습니다.\n- 한 곡만 배정된 계열은 일반 전투에서 L을 눌러도 곡이 바뀌지 않습니다.\n- 선택한 곡은 세이브에 저장되지 않습니다.";
+    elements.patchNotesSummary.append(foot);
   }
   elements.patchNotesToggle.disabled = false;
 }

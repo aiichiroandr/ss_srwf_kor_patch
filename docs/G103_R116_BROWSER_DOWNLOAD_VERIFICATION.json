@@ -1,0 +1,50 @@
+[
+  {
+    "id": "srwf-f-20260928-v0-5-a",
+    "sourceSelection": "PASS",
+    "patchWorker": "PASS",
+    "binDownloadSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",
+    "cueDownload": "PASS",
+    "mobileNotes": "PASS"
+  },
+  {
+    "id": "srwf-f-20260928-v0-5-b",
+    "sourceSelection": "PASS",
+    "patchWorker": "PASS",
+    "binDownloadSha256": "85b9cbf349c421d621f3a6e6819d94f9ee1405137430046469562a2176e798a3",
+    "cueDownload": "PASS",
+    "mobileNotes": "PASS"
+  },
+  {
+    "id": "srwf-f-20260928-v0-5-c",
+    "sourceSelection": "PASS",
+    "patchWorker": "PASS",
+    "binDownloadSha256": "75555116f784115e7104c593fd990491ae182b9493d9f159201e17b3e3d88202",
+    "cueDownload": "PASS",
+    "mobileNotes": "PASS"
+  },
+  {
+    "id": "srwf-final-20260928-v0-2-a",
+    "sourceSelection": "PASS",
+    "patchWorker": "PASS",
+    "binDownloadSha256": "b882fec4d79b866bc5ff162fdf460e0eedf5b7b31033f7048f8cce9f3ffe357c",
+    "cueDownload": "PASS",
+    "mobileNotes": "PASS"
+  },
+  {
+    "id": "srwf-final-20260928-v0-2-b",
+    "sourceSelection": "PASS",
+    "patchWorker": "PASS",
+    "binDownloadSha256": "7a80036d11f66b0afd1110b5e34b1b673228ad5ac9350d6967e2f36716ed43e2",
+    "cueDownload": "PASS",
+    "mobileNotes": "PASS"
+  },
+  {
+    "id": "srwf-final-20260928-v0-2-c",
+    "sourceSelection": "PASS",
+    "patchWorker": "PASS",
+    "binDownloadSha256": "118450235e03d664241d926e2f02f87438670074d51827a953c0be1132d0b547",
+    "cueDownload": "PASS",
+    "mobileNotes": "PASS"
+  }
+]

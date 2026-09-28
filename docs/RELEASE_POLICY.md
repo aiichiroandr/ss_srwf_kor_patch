@@ -105,7 +105,7 @@ F 완결편 빌드는 hash-pinned 원장 파일의 64자리 SHA-256을 씁니다
 모든 입력이 준비된 뒤 하나의 검토 가능한 변경으로 다음을 추가합니다.
 
 1. `receipts/<id>.acceptance.json` — explicit `ACCEPTED` receipt
-2. `patches/<id>.srwfp` — 64 MiB 이하의 정규형 sparse patch. 결과 크기가 고정
+2. `patches/<id>.srwfp` — 80 MiB 이하의 정규형 sparse patch. 결과 크기가 고정
    원본과 같으면 v1, 고정 원본보다 클 때만 v2입니다. v2에서 위치만 옮기는 원본
    바이트(밀려난 오디오 트랙 등)는 COPY로 참조하며 LITERAL로 싣지 않습니다.
 3. `releases/<id>.json` — source, target, patch, provenance 명세

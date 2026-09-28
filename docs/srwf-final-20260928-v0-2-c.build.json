@@ -1,0 +1,49 @@
+{
+  "revision": "FIN.r116c",
+  "targetSha256": "118450235e03d664241d926e2f02f87438670074d51827a953c0be1132d0b547",
+  "patch": {
+    "format": "srwf.sparse-byte-delta.v2",
+    "size": 3716160,
+    "sha256": "6992caf9a7279ff850bd872c3757e62d7eab5fd0e6340eaafa8f154dd63fe792",
+    "recordCount": 85122,
+    "bodyUncompressedSize": 7196499
+  },
+  "verification": {
+    "verdict": "PASS",
+    "size": 521680656,
+    "sha256": "118450235e03d664241d926e2f02f87438670074d51827a953c0be1132d0b547",
+    "byte_exact_vs_projection": true,
+    "descriptor": {
+      "patchSize": 3716160,
+      "patchSha256": "6992caf9a7279ff850bd872c3757e62d7eab5fd0e6340eaafa8f154dd63fe792",
+      "sourceSize": 520408224,
+      "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+      "targetSize": 521680656,
+      "targetSha256": "118450235e03d664241d926e2f02f87438670074d51827a953c0be1132d0b547",
+      "recordCount": 85122,
+      "bodyUncompressedSize": 7196499,
+      "format": "srwf.sparse-byte-delta.v2"
+    },
+    "records": {
+      "replace": 85121,
+      "copy": 1,
+      "literal": 0,
+      "total": 85122
+    },
+    "copyBytes": 3880800,
+    "literalBytes": 0,
+    "captureWindows": 3,
+    "capturedBytes": 10485760,
+    "copies": [
+      {
+        "target_offset": 517799856,
+        "length": 3880800,
+        "source_offset": 516527424,
+        "source_sha256": "f10169c2768f2a5b4cd91391c11368d0d53fe5414b5df9afdb22fc140a38f7ca"
+      }
+    ],
+    "bodyUncompressedSize": 7196499
+  },
+  "evidenceCeiling": "Exact registered media plus copied-state runtime/visual evidence; fresh user coldboot, individual a/b runtime, long play and CD-R not claimed.",
+  "registrationReceiptSha256": "ccf886cc22f82845e3359c8193fb6c1064a0b665dcfe1cfc55749b64d7076a38"
+}

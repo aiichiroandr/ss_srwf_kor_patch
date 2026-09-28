@@ -10,7 +10,7 @@
 
 ## 상한과 바이트 순서
 
-- 패치 파일 전체: 최대 `67,108,864` bytes (64 MiB)
+- 패치 파일 전체: 최대 `83,886,080` bytes (80 MiB)
 - 압축 해제한 body: 최대 `134,217,728` bytes (128 MiB)
 - 모든 정수: unsigned, big-endian
 - 모든 SHA-256 필드: 32-byte raw digest

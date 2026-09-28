@@ -6,6 +6,10 @@ This repository is the public, static distribution surface for an accepted
 SRWF Korean patch. It is not a continuation of an internal binary lineage and
 it is not a candidate-testing area.
 
+The current local release targets are F G103 a/b/c as v0.5 and FIN r116 a/b/c as v0.2, accepted for local patch/download registration by the user's 2026-09-28 instruction. Defaults are `srwf-f-20260928-v0-5-a` and `srwf-final-20260928-v0-2-a`. Evidence ceiling: `docs/F_V05_FIN_V02_VALIDATION.md`; no fresh user coldboot, a/b individual gameplay, long-play or CD-R claim. Remote publication of this accepted six-release set is authorized by the user's subsequent instruction: “원격배포도해”.
+
+The historical release state below is retained for earlier release context.
+
 The current repository state is `HAS_ACCEPTED_RELEASE`. The default indexed
 release is `srwf-f-20260915-v0-4-a`, with b/c font variants. Its acceptance evidence
 ceiling is documented in `docs/F_V04_VALIDATION.md`; b/c individual coldboots,

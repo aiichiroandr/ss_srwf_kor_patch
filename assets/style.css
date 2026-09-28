@@ -3458,3 +3458,9 @@ main {
     grid-template-rows: auto minmax(84px, 0.5fr) minmax(140px, 1.3fr);
   }
 }
+
+.patch-note-bgm-table { width:100%; table-layout:fixed; border-collapse:collapse; white-space:normal; margin:20px 0; }
+.patch-note-bgm-table caption { text-align:left; font-weight:700; margin-bottom:8px; }
+.patch-note-bgm-table th, .patch-note-bgm-table td { text-align:left; vertical-align:top; border-bottom:1px solid currentColor; padding:9px 7px; overflow-wrap:anywhere; }
+.patch-note-bgm-table th:first-child { width:27%; }
+@media(max-width:520px) { .patch-note-bgm-table { font-size:12px; } .patch-note-bgm-table th:first-child { width:30%; } }

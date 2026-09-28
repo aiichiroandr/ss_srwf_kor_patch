@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-final-20260928-v0-2-a",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-09-28T22:04:20+09:00",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+  "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+  "targetSha256": "b882fec4d79b866bc5ff162fdf460e0eedf5b7b31033f7048f8cce9f3ffe357c",
+  "patchSha256": "ae7ec47edda7e3edb5a91ed612d2e644bc674c52c2fa7c317e113efbc9b4b9d4",
+  "v5Commit": "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "NOT_CLAIMED"
+  },
+  "decisionAuthority": "사용자 2026-09-28 지시: G103/r116 abc 로컬 패치·다운로드 목록 등록. 기존 복사 상태 검증 범위로 수용. 신규 콜드부트·a/b 개별 플레이·장기 진행·CD-R 검수는 주장하지 않음. 원격 배포 제외."
+}

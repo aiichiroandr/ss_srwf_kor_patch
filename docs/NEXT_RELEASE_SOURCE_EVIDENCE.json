@@ -1,0 +1,29 @@
+{
+  "scope": "Read-only preparation evidence; no runtime acceptance claimed",
+  "files": [
+    {
+      "path": "/Users/garlicb/Documents/260729_srwf_kor_v5/reports/g98_delivery_20260924.md",
+      "sha256": "eca121a1b0d67587ce28be4f1e223cdd366ec1868717b21dd7ff2696ef539964"
+    },
+    {
+      "path": "/Users/garlicb/Documents/260729_srwf_kor_v5/reports/g98_exact_family_20260924/delivery-audit.json",
+      "sha256": "2098b08781cf67491ccad784447c9fbf53488312b8b22e0e69ae1fd91dc9b277"
+    },
+    {
+      "path": "/Users/garlicb/Documents/260702_srwfin_kor_v1/reports/fin_r111_battle_ui_20260924/HANDOFF.md",
+      "sha256": "34c2e3fc041d4da4286691ae88fa0d59382e426f0d152dac89f27f3626fdaa01"
+    },
+    {
+      "path": "/Users/garlicb/Documents/260702_srwfin_kor_v1/ai_artifacts/revision_control/revisions/FIN.r111a.json",
+      "sha256": "18a5d1fe7b9873ec342baed6ac937c4ade69247909397e0bcd34828d80d21def"
+    },
+    {
+      "path": "/Users/garlicb/Documents/260702_srwfin_kor_v1/ai_artifacts/revision_control/revisions/FIN.r111b.json",
+      "sha256": "a58d64d4fb9a4e53bc3fc0f729b2e2b6b36d3f7d2015dd7faa2a19eb561a98aa"
+    },
+    {
+      "path": "/Users/garlicb/Documents/260702_srwfin_kor_v1/ai_artifacts/revision_control/revisions/FIN.r111c.json",
+      "sha256": "40d6c848f7ee7dbea99412ea998e03e8dd514cfba2ffc014745eed2872ea614b"
+    }
+  ]
+}

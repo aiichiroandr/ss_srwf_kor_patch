@@ -1,3 +1,4 @@
+import { NEXT_RELEASE_NOTES } from "./next-release-notes.mjs?v=20260928-1";
 const image = (src, alt, width, height) => Object.freeze({ src, alt, width, height });
 
 const item = ({ id, title, description, evidenceType, asIs, toBe }) => Object.freeze({
@@ -60,6 +61,7 @@ export const FIN_R110_V01_NOTES = release(
 );
 
 export const PATCH_NOTES = Object.freeze({
+  ...NEXT_RELEASE_NOTES,
   "srwf-f-20260915-v0-4-a": F_V04_NOTES,
   "srwf-f-20260915-v0-4-b": F_V04_NOTES,
   "srwf-f-20260915-v0-4-c": F_V04_NOTES,
@@ -321,11 +323,11 @@ const SUMMARY_ONLY_RELEASE_IDS = new Set([
 ]);
 
 export function getPatchNotesForRelease(releaseId) {
-  return Object.hasOwn(PATCH_NOTES, releaseId) ? PATCH_NOTES[releaseId] : null;
+  return NEXT_RELEASE_NOTES[releaseId] ?? (Object.hasOwn(PATCH_NOTES, releaseId) ? PATCH_NOTES[releaseId] : null);
 }
 
 export function isSummaryOnlyPatchNotesRelease(releaseId) {
-  return SUMMARY_ONLY_RELEASE_IDS.has(releaseId);
+  return Object.hasOwn(NEXT_RELEASE_NOTES, releaseId) || SUMMARY_ONLY_RELEASE_IDS.has(releaseId);
 }
 
 export function isSafePatchNoteAssetPath(value) {

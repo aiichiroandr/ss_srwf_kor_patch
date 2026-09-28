@@ -19,7 +19,7 @@
     "patchSize": {
       "type": "integer",
       "minimum": 129,
-      "maximum": 67108864
+      "maximum": 83886080
     },
     "patchSha256": {
       "type": "string",
