@@ -1,0 +1,19 @@
+{
+  "revision": "G103a",
+  "targetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",
+  "patch": {
+    "format": "srwf.sparse-byte-delta.v1",
+    "size": 69587546,
+    "sha256": "a309a7951effdbde05d5bd4c853eb41ccd8a5b00bb2be8a57df380734f28df59",
+    "recordCount": 1330782,
+    "bodyUncompressedSize": 95142058
+  },
+  "verification": {
+    "targetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",
+    "capturedBytes": 46137344,
+    "browserDownloadReapply": "PASS",
+    "outputBytes": 578512032
+  },
+  "evidenceCeiling": "Exact registered media plus copied-state runtime/visual evidence; fresh user coldboot, individual a/b runtime, long play and CD-R not claimed.",
+  "registrationReceiptSha256": "37fdd5536806274f5347c893f517f104b020e2fff28e9718db57a5a6dac2e5e5"
+}
