@@ -202,7 +202,7 @@ test('SHA-256 matches Node crypto at padding boundaries and across long arbitrar
 });
 
 test('public parser safety caps are fixed', () => {
-  assert.equal(PATCH_LIMITS.maxPatchBytes, 64 * 1024 * 1024);
+  assert.equal(PATCH_LIMITS.maxPatchBytes, 80 * 1024 * 1024);
   assert.equal(PATCH_LIMITS.maxBodyUncompressedBytes, 128 * 1024 * 1024);
   assert.equal(PATCH_LIMITS.maxRecordCount, 2_000_000);
   assert.equal(PATCH_LIMITS.downloadCaptureChunkBytes, 1024 * 1024);

@@ -360,7 +360,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260924-1";
+  const revision = "20260928-1";
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
@@ -917,22 +917,25 @@ test("each game points at its accepted default while withdrawn history stays uni
   const finalReleases = index.releases.filter((entry) => entry.gameId === "srwf-final");
 
   // 목록은 최신이 맨 위다. 새 릴리스가 들어오면 기본 선택도 그 최신본으로 옮긴다.
-  assert.equal(game.defaultReleaseId, "srwf-f-20260915-v0-4-a");
+  assert.equal(game.defaultReleaseId, "srwf-f-20260928-v0-5-a");
   assert.deepEqual(
     fReleases.map((entry) => entry.id),
     // v0.2 는 정규형 위반(record 안 동일 byte)으로 철회되어 인덱스에 없다.
-    ["srwf-f-20260915-v0-4-a", "srwf-f-20260915-v0-4-b", "srwf-f-20260915-v0-4-c", "srwf-f-20260823-v0-3", "srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
+    ["srwf-f-20260928-v0-5-a", "srwf-f-20260928-v0-5-b", "srwf-f-20260928-v0-5-c", "srwf-f-20260915-v0-4-a", "srwf-f-20260915-v0-4-b", "srwf-f-20260915-v0-4-c", "srwf-f-20260823-v0-3", "srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
   );
   assert.deepEqual(
     fReleases.map((entry) => entry.label),
-    ["2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.08.23 · v0.3", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
+    ["2026.09.28 · v0.5", "2026.09.28 · v0.5", "2026.09.28 · v0.5", "2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.08.23 · v0.3", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
   assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");
-  assert.equal(finalGame.defaultReleaseId, "srwf-final-20260921-v0-1-a");
+  assert.equal(finalGame.defaultReleaseId, "srwf-final-20260928-v0-2-a");
   assert.deepEqual(
     finalReleases.map((entry) => entry.id),
     [
+      "srwf-final-20260928-v0-2-a",
+      "srwf-final-20260928-v0-2-b",
+      "srwf-final-20260928-v0-2-c",
       "srwf-final-20260921-v0-1-a",
       "srwf-final-20260921-v0-1-b",
       "srwf-final-20260921-v0-1-c",
@@ -1351,7 +1354,18 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
   for (const releaseId of acceptedReleaseIds) {
     const notes = getPatchNotesForRelease(releaseId);
     assert.ok(notes, `missing patch notes for ${releaseId}`);
-    assert.deepEqual(Object.keys(notes).sort(), ["items", "summary", "version"]);
+    assert.deepEqual(Object.keys(notes).sort(), notes.bgmTables ? ["bgmTables", "items", "summary", "version"] : ["items", "summary", "version"]);
+    if (notes.bgmTables) {
+      assert.equal(notes.bgmTables.length, 2);
+      for (const table of notes.bgmTables) {
+        assert.deepEqual(Object.keys(table).sort(), ["rows", "title"]);
+        assert.ok(table.title.trim());
+        for (const row of table.rows) {
+          assert.equal(row.length, 2);
+          assert.ok(row.every(cell => typeof cell === "string" && cell.trim()));
+        }
+      }
+    }
     assert.match(notes.version, /^v\d+\.\d+(?:\.\d+)?$/);
     assert.equal(typeof notes.summary, "string");
     assert.ok(notes.summary.trim().length > 0);
@@ -1539,7 +1553,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260924-1$/);
+    assert.match(image.src, /\?v=20260928-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1794,7 +1808,7 @@ test("runtime enforces stock-sized targets and all public patch hard limits", ()
 
   const invalidPatches = [
     { size: 100 },
-    { size: 64 * 1024 * 1024 + 1 },
+    { size: 80 * 1024 * 1024 + 1 },
     { recordCount: 0 },
     { recordCount: 2_000_001 },
     { bodyUncompressedSize: 44 },
@@ -1881,7 +1895,7 @@ test("runtime accepts v2 manifests only for larger sector-aligned targets and ke
     [{ target: { size: FINAL_STOCK_PROFILE.size + 28_534 * 2352 } }, "MANIFEST_INVALID"],
     [{ target: { size: 2 ** 53 } }, "MANIFEST_INVALID"],
     [{ patch: { size: 128 } }, "MANIFEST_INVALID"],
-    [{ patch: { size: 64 * 1024 * 1024 + 1 } }, "MANIFEST_INVALID"],
+    [{ patch: { size: 80 * 1024 * 1024 + 1 } }, "MANIFEST_INVALID"],
     [{ patch: { bodyUncompressedSize: 13 } }, "MANIFEST_INVALID"],
     [{ patch: { recordCount: 100_000, bodyUncompressedSize: 1_399_999 } }, "MANIFEST_INVALID"],
     [{ patch: { recordCount: 2_000_001 } }, "MANIFEST_INVALID"],
@@ -2133,7 +2147,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260924-1$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260928-1$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2142,7 +2156,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260924-1$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260928-1$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",

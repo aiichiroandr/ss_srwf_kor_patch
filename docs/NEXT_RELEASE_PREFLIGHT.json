@@ -1,0 +1,289 @@
+{
+  "status": "PREPARED_NOT_ACCEPTED",
+  "baseCommit": "19987edb50efd005569df0693fc2eb631019fa8a",
+  "scope": "local only; metadata only; no BIN/CUE/SRWFP written",
+  "releases": [
+    {
+      "id": "srwf-f-20260924-v0-5-a",
+      "revision": "V5.r001-fable-g98a-v01-rollup-on-g97c-20260924",
+      "format": "srwf.sparse-byte-delta.v1",
+      "sourceSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+      "targetSha256": "4816155257f9b27255f4537d79966d855979019946a050586a730bdb36c218b6",
+      "targetSize": 578512032,
+      "patchSha256": "dfaa4a3dc56635e78c6c5a29ad39a0c72223e4431943ee7934b150de5836b9c6",
+      "patchSize": 69579611,
+      "recordCount": 1330712,
+      "bodyUncompressedSize": 95133361,
+      "withinCurrentLimits": true,
+      "byteExactReapply": true,
+      "sectorModeTransitions": [
+        [
+          0,
+          1
+        ],
+        [
+          101568,
+          2
+        ],
+        [
+          244166,
+          1
+        ],
+        [
+          244987,
+          "AUDIO"
+        ]
+      ],
+      "browserVerification": {
+        "targetSha256": "4816155257f9b27255f4537d79966d855979019946a050586a730bdb36c218b6",
+        "capturedBytes": 46137344,
+        "browserDownloadReapply": "PASS",
+        "outputBytes": 578512032
+      }
+    },
+    {
+      "id": "srwf-f-20260924-v0-5-b",
+      "revision": "V5.r001-fable-g98b-v01-rollup-on-g97c-20260924",
+      "format": "srwf.sparse-byte-delta.v1",
+      "sourceSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+      "targetSha256": "6d388eb4fd95f34599dd04137b77d9c8d6e77b4606bcd8378551a41d08ecb0d8",
+      "targetSize": 578512032,
+      "patchSha256": "466ab2baa4645684a8a6e817e93afa16fe855dfb6440375180cb5d94a4fa413e",
+      "patchSize": 69580790,
+      "recordCount": 1330723,
+      "bodyUncompressedSize": 95133831,
+      "withinCurrentLimits": true,
+      "byteExactReapply": true,
+      "sectorModeTransitions": [
+        [
+          0,
+          1
+        ],
+        [
+          101568,
+          2
+        ],
+        [
+          244166,
+          1
+        ],
+        [
+          244987,
+          "AUDIO"
+        ]
+      ],
+      "browserVerification": {
+        "targetSha256": "6d388eb4fd95f34599dd04137b77d9c8d6e77b4606bcd8378551a41d08ecb0d8",
+        "capturedBytes": 46137344,
+        "browserDownloadReapply": "PASS",
+        "outputBytes": 578512032
+      }
+    },
+    {
+      "id": "srwf-f-20260924-v0-5-c",
+      "revision": "V5.r001-fable-g98c-v01-rollup-on-g97c-20260924",
+      "format": "srwf.sparse-byte-delta.v1",
+      "sourceSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",
+      "targetSha256": "e8bac7da0e376ecd768c96229ca58818defd18b5ca7e82771ec64daa523c6cb4",
+      "targetSize": 578512032,
+      "patchSha256": "4745f32cda864e073fa3a8f74c2e4393798323038da8b63b0b33b9c0ce91cbbb",
+      "patchSize": 69583098,
+      "recordCount": 1330788,
+      "bodyUncompressedSize": 95136627,
+      "withinCurrentLimits": true,
+      "byteExactReapply": true,
+      "sectorModeTransitions": [
+        [
+          0,
+          1
+        ],
+        [
+          101568,
+          2
+        ],
+        [
+          244166,
+          1
+        ],
+        [
+          244987,
+          "AUDIO"
+        ]
+      ],
+      "browserVerification": {
+        "targetSha256": "e8bac7da0e376ecd768c96229ca58818defd18b5ca7e82771ec64daa523c6cb4",
+        "capturedBytes": 46137344,
+        "browserDownloadReapply": "PASS",
+        "outputBytes": 578512032
+      }
+    },
+    {
+      "id": "srwf-final-20260924-v0-2-a",
+      "revision": "FIN.r111a",
+      "cardSha256": "18a5d1fe7b9873ec342baed6ac937c4ade69247909397e0bcd34828d80d21def",
+      "patchSize": 3587991,
+      "patchSha256": "296f8070ee06109ad7a0e01f9aec8b019aff6bf53536845c3953ec3b8fd0743b",
+      "sourceSize": 520408224,
+      "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+      "targetSize": 521680656,
+      "targetSha256": "22e089ae317680c3cebe6e7a1f779f7151b2231dd7b032b93aecb57c7ce7e210",
+      "recordCount": 83388,
+      "bodyUncompressedSize": 7051666,
+      "format": "srwf.sparse-byte-delta.v2",
+      "static": "PASS_STATIC_FULL34",
+      "byteExactReapply": true,
+      "cueTracks": [
+        "  TRACK 01 MODE1/2352",
+        "    INDEX 01 00:00:00",
+        "  TRACK 02 MODE2/2352",
+        "    INDEX 00 17:03:64",
+        "    INDEX 01 17:06:64",
+        "  TRACK 03 AUDIO",
+        "    INDEX 00 48:55:28",
+        "    INDEX 01 48:57:28"
+      ],
+      "stats": {
+        "records": {
+          "total": 83388,
+          "replace": 83387,
+          "copy": 1,
+          "literal": 0
+        },
+        "bytes": {
+          "replace": 3299198,
+          "copy": 3880800,
+          "literal": 0,
+          "preimage_sha": 2668384
+        },
+        "copies": [
+          {
+            "target_offset": 517799856,
+            "length": 3880800,
+            "source_offset": 516527424,
+            "source_sha256": "f10169c2768f2a5b4cd91391c11368d0d53fe5414b5df9afdb22fc140a38f7ca"
+          }
+        ],
+        "zlib": {
+          "level": 9,
+          "wbits": 15,
+          "memLevel": 8,
+          "strategy": "Z_DEFAULT_STRATEGY",
+          "runtime": "1.2.12",
+          "compiled": "1.2.12"
+        }
+      }
+    },
+    {
+      "id": "srwf-final-20260924-v0-2-b",
+      "revision": "FIN.r111b",
+      "cardSha256": "a58d64d4fb9a4e53bc3fc0f729b2e2b6b36d3f7d2015dd7faa2a19eb561a98aa",
+      "patchSize": 3668816,
+      "patchSha256": "67499df5d1f878d5ee226a8aee09eda2fd75a96cf43298971c9323a83fc9092a",
+      "sourceSize": 520408224,
+      "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+      "targetSize": 521680656,
+      "targetSha256": "0cc84414649c3324bc67c41388b567761a79b49133bb60960350af697149a726",
+      "recordCount": 83878,
+      "bodyUncompressedSize": 7137545,
+      "format": "srwf.sparse-byte-delta.v2",
+      "static": "PASS_STATIC_FULL34",
+      "byteExactReapply": true,
+      "cueTracks": [
+        "  TRACK 01 MODE1/2352",
+        "    INDEX 01 00:00:00",
+        "  TRACK 02 MODE2/2352",
+        "    INDEX 00 17:03:64",
+        "    INDEX 01 17:06:64",
+        "  TRACK 03 AUDIO",
+        "    INDEX 00 48:55:28",
+        "    INDEX 01 48:57:28"
+      ],
+      "stats": {
+        "records": {
+          "total": 83878,
+          "replace": 83877,
+          "copy": 1,
+          "literal": 0
+        },
+        "bytes": {
+          "replace": 3363027,
+          "copy": 3880800,
+          "literal": 0,
+          "preimage_sha": 2684064
+        },
+        "copies": [
+          {
+            "target_offset": 517799856,
+            "length": 3880800,
+            "source_offset": 516527424,
+            "source_sha256": "f10169c2768f2a5b4cd91391c11368d0d53fe5414b5df9afdb22fc140a38f7ca"
+          }
+        ],
+        "zlib": {
+          "level": 9,
+          "wbits": 15,
+          "memLevel": 8,
+          "strategy": "Z_DEFAULT_STRATEGY",
+          "runtime": "1.2.12",
+          "compiled": "1.2.12"
+        }
+      }
+    },
+    {
+      "id": "srwf-final-20260924-v0-2-c",
+      "revision": "FIN.r111c",
+      "cardSha256": "40d6c848f7ee7dbea99412ea998e03e8dd514cfba2ffc014745eed2872ea614b",
+      "patchSize": 3671163,
+      "patchSha256": "714a5e77a06ff450a55c1104c1358e70367e583d0f477ab90ac0cc80ff928700",
+      "sourceSize": 520408224,
+      "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+      "targetSize": 521680656,
+      "targetSha256": "e39cedee9acb9fedc8ecf5e0c615c4070bcad194890933f07a98c0a49e6bc2f2",
+      "recordCount": 83934,
+      "bodyUncompressedSize": 7140229,
+      "format": "srwf.sparse-byte-delta.v2",
+      "static": "PASS_STATIC_FULL34",
+      "byteExactReapply": true,
+      "cueTracks": [
+        "  TRACK 01 MODE1/2352",
+        "    INDEX 01 00:00:00",
+        "  TRACK 02 MODE2/2352",
+        "    INDEX 00 17:03:64",
+        "    INDEX 01 17:06:64",
+        "  TRACK 03 AUDIO",
+        "    INDEX 00 48:55:28",
+        "    INDEX 01 48:57:28"
+      ],
+      "stats": {
+        "records": {
+          "total": 83934,
+          "replace": 83933,
+          "copy": 1,
+          "literal": 0
+        },
+        "bytes": {
+          "replace": 3363191,
+          "copy": 3880800,
+          "literal": 0,
+          "preimage_sha": 2685856
+        },
+        "copies": [
+          {
+            "target_offset": 517799856,
+            "length": 3880800,
+            "source_offset": 516527424,
+            "source_sha256": "f10169c2768f2a5b4cd91391c11368d0d53fe5414b5df9afdb22fc140a38f7ca"
+          }
+        ],
+        "zlib": {
+          "level": 9,
+          "wbits": 15,
+          "memLevel": 8,
+          "strategy": "Z_DEFAULT_STRATEGY",
+          "runtime": "1.2.12",
+          "compiled": "1.2.12"
+        }
+      }
+    }
+  ]
+}

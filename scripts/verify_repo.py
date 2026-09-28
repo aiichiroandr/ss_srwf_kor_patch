@@ -59,7 +59,7 @@ PINNED_STOCK_PROFILES = {
     profile["id"]: {"gameId": game_id, **profile}
     for game_id, profile in STOCK_PROFILES_BY_GAME.items()
 }
-PATCH_MAX = 64 * 1024 * 1024
+PATCH_MAX = 80 * 1024 * 1024
 BODY_MAX = 128 * 1024 * 1024
 RECORD_MAX = 2_000_000
 DOWNLOAD_CAPTURE_CHUNK_BYTES = 1024 * 1024

@@ -6,11 +6,11 @@ export const PATCH_HEADER_SIZE = 100;
 const RECORD_HEADER_SIZE = 44;
 const MAX_BODY_UNCOMPRESSED_BYTES = 128 * 1024 * 1024;
 const DOWNLOAD_CAPTURE_CHUNK_BYTES = 1024 * 1024;
-// g92의 영상 변경을 포함한 정규형 패치: 약 61MiB 압축 / 88MiB body.
+// G98의 영상 변경을 포함한 정규형 패치: 약 66.4MiB 압축 / 90.8MiB body.
 // 실제 변경 데이터의 다운로드 캡처 예산은 64MiB를 유지한다.
 const MAX_DOWNLOAD_CAPTURE_BYTES = 64 * 1024 * 1024;
 export const PATCH_LIMITS = Object.freeze({
-  maxPatchBytes: 64 * 1024 * 1024,
+  maxPatchBytes: 80 * 1024 * 1024,
   maxBodyUncompressedBytes: MAX_BODY_UNCOMPRESSED_BYTES,
   maxRecordCount: 2_000_000,
   downloadCaptureChunkBytes: DOWNLOAD_CAPTURE_CHUNK_BYTES,
