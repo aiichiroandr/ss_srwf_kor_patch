@@ -90,7 +90,10 @@ v0.4의 실제 검수 범위와 대표 레인 실행 근거 재사용 판단은
 통과나 정식 검수 완료로 해석하면 안 됩니다.
 
 영수증은 release id, stock profile/source hash, target hash, patch hash, 빌드
-provenance identity, 결정 시각과 decision authority를 고정합니다. build receipt hash만
+provenance identity, 결정 시각과 decision authority를 고정합니다. 레이어 배포로 옮긴
+릴리스의 영수증은 patch hash 대신 `intermediateSha256`, `basePatchSha256`,
+`fontPatchSha256`과 대체된 단일 payload 영수증을 가리키는 `supersedes`를 고정하며,
+target hash와 gate는 원래 승인 값 그대로여야 합니다([LAYERED_RELEASES.md](LAYERED_RELEASES.md)). build receipt hash만
 있는 경우에는 승격할 수 없습니다. 구조는
 [`schemas/acceptance-receipt.schema.json`](../schemas/acceptance-receipt.schema.json)에
 정의되어 있습니다.
@@ -99,6 +102,15 @@ provenance identity, 결정 시각과 decision authority를 고정합니다. bui
 허용합니다. Git 기반 빌드는 40자리 또는 64자리 commit id를 쓰고, 비-Git 기반
 F 완결편 빌드는 hash-pinned 원장 파일의 64자리 SHA-256을 씁니다. 공개 문서에서
 후자를 Git commit이라고 부르면 안 됩니다. 축약·가공 값은 허용하지 않습니다.
+
+## 레이어 재배포
+
+이미 `ACCEPTED`인 글꼴 변형 릴리스의 단일 payload를 공통 base + 폰트 font layer로
+바꾸는 것은 새 승인 결과를 만드는 일이 아니라 같은 결과 이미지의 재배포입니다. 소유자가
+자신의 stock으로 `scripts/split_font_variants.py`를 실행해 모든 변형의 최종 SHA-256이
+승인 target과 같음을 확인했을 때만 허용됩니다. manifest·receipt·payload를 손으로
+고치지 않습니다. 결과 SHA-256이 하나라도 다르면 레이어 재배포가 아니라 새 릴리스이며
+아래의 전체 승격 절차를 따릅니다.
 
 ## 원자적 승격 순서
 
@@ -186,6 +198,12 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
   }
 }
 ```
+
+글꼴 변형(`-a/-b/-c`) 릴리스는 `patch` 대신 `patchLayers`(`[base, font]`, 둘 다 v1)와
+`intermediate`(`size`, `sha256`)를 쓰는 레이어 형태일 수 있습니다. 공유 base는
+`patches/<group>.base.srwfp`, font는 `patches/<release-id>.font.srwfp`이며, 각 layer의
+크기·SHA-256·header 사슬(stock → intermediate → target)을 따로 검증합니다. 규칙은
+[LAYERED_RELEASES.md](LAYERED_RELEASES.md)에 있습니다.
 
 실제 공개 값에서는 patch `size >= 101`, `recordCount >= 1`,
 `bodyUncompressedSize >= 45`여야 합니다. `format`이 `srwf.sparse-byte-delta.v2`인

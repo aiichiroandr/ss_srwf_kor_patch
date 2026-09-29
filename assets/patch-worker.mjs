@@ -1,21 +1,27 @@
 import {
   PATCH_LIMITS,
+  applyLayeredPatchToWritable,
   applyPatchToWritable,
+  buildVerifiedLayeredPatchedBlob,
   buildVerifiedPatchedBlob,
+  composeLayeredPatch,
   parsePatch,
-} from "./patch-core.mjs?v=20260928-1";
+} from "./patch-core.mjs?v=20260929-1";
 import {
   PATCH_FORMAT_V2,
   PATCH_V2_LIMITS,
   applyPatchV2ToWritable,
   buildVerifiedPatchedBlobV2,
   parsePatchV2,
-} from "./patch-core-v2.mjs?v=20260928-1";
-import { sha256Hex } from "./sha256.mjs?v=20260928-1";
+} from "./patch-core-v2.mjs?v=20260929-1";
+import { sha256Hex } from "./sha256.mjs?v=20260929-1";
 
 let activeJob = null;
 let preparedSource = null;
-let patchCache = null;
+// Parsed payloads keyed by cache identity. Each preparation keeps only the
+// payloads it uses (a shared base layer stays between preparations that both
+// use it) and RESET clears everything, so memory stays bounded to one release.
+const patchCache = new Map();
 const DESCRIPTOR_KEYS = Object.freeze([
   "patchSize",
   "patchSha256",
@@ -44,6 +50,13 @@ const PATCH_ENGINES = new Map([
     buildDownload: buildVerifiedPatchedBlobV2,
   })],
 ]);
+// 레이어 배포(docs/LAYERED_RELEASES.md): 공통 base + 폰트 font, 둘 다 v1이다.
+const LAYERED_ENGINE = Object.freeze({
+  applyToWritable: applyLayeredPatchToWritable,
+  buildDownload: buildVerifiedLayeredPatchedBlob,
+});
+const LAYER_ROLES = Object.freeze(["base", "font"]);
+const LAYER_MESSAGE_KEYS = Object.freeze(["role", "patchUrl", "descriptor"]);
 const SAFE_IMAGE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
 const SAFE_CUE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
 
@@ -63,7 +76,7 @@ self.addEventListener("message", (event) => {
   if (message.type === "RESET") {
     activeJob?.controller.abort(createAbortError());
     preparedSource = null;
-    patchCache = null;
+    patchCache.clear();
     return;
   }
 
@@ -115,27 +128,24 @@ async function prepareSource(message, signal) {
     throw new WorkerPatcherError("SOURCE_FILE_INVALID", "Source must be a browser File or Blob");
   }
   requireString(message.releaseKey, "release key");
-  validateDescriptor(message.descriptor);
-  if (message.sourceFile.size !== message.descriptor.sourceSize) {
-    throw new WorkerPatcherError("SOURCE_SIZE_MISMATCH", "Source size does not match the release descriptor");
+  const layered = Object.hasOwn(message, "layers");
+  if (layered && (Object.hasOwn(message, "patchUrl") || Object.hasOwn(message, "descriptor"))) {
+    throw new WorkerPatcherError("WORKER_MESSAGE_INVALID", "A layered request cannot also carry a single patch");
   }
-
-  const parsedPatch = await loadParsedPatch(
-    message.releaseKey,
-    message.patchUrl,
-    message.descriptor,
-    message.jobId,
-    signal,
-  );
+  const prepared = layered
+    ? await prepareLayeredPatch(message, signal)
+    : await prepareSinglePatch(message, signal);
   throwIfAborted(signal);
+  retainOnlyCacheKeys(prepared.cacheKeys);
 
   const preparationToken = createToken();
   preparedSource = {
     token: preparationToken,
     releaseKey: message.releaseKey,
     sourceFile: message.sourceFile,
-    parsedPatch,
-    descriptor: message.descriptor,
+    parsedPatch: prepared.parsedPatch,
+    engine: prepared.engine,
+    targetSize: prepared.targetSize,
   };
 
   postMessage({
@@ -144,6 +154,114 @@ async function prepareSource(message, signal) {
     operation: "PREPARE_SOURCE",
     preparationToken,
   });
+}
+
+async function prepareSinglePatch(message, signal) {
+  validateDescriptor(message.descriptor);
+  if (message.sourceFile.size !== message.descriptor.sourceSize) {
+    throw new WorkerPatcherError("SOURCE_SIZE_MISMATCH", "Source size does not match the release descriptor");
+  }
+  const cacheKey = `${message.releaseKey}:${message.descriptor.patchSha256}`;
+  // Drop payloads this preparation cannot use before downloading a new one.
+  retainOnlyCacheKeys([cacheKey]);
+  const parsedPatch = await loadParsedPatch(
+    cacheKey,
+    message.patchUrl,
+    message.descriptor,
+    message.jobId,
+    signal,
+  );
+  return {
+    parsedPatch,
+    engine: patchEngineFor(message.descriptor),
+    targetSize: message.descriptor.targetSize,
+    cacheKeys: [cacheKey],
+  };
+}
+
+function validateLayeredRequest(message) {
+  const { layers, intermediate } = message;
+  if (!Array.isArray(layers) || layers.length !== LAYER_ROLES.length) {
+    throw new WorkerPatcherError("LAYER_DESCRIPTOR_INVALID", "A layered release needs exactly a base and a font layer");
+  }
+  for (const [index, layer] of layers.entries()) {
+    if (!layer || typeof layer !== "object" || Array.isArray(layer)
+      || !hasExactDescriptorKeys(layer, LAYER_MESSAGE_KEYS)
+      || layer.role !== LAYER_ROLES[index]) {
+      throw new WorkerPatcherError("LAYER_DESCRIPTOR_INVALID", "Layer entries must be base then font with exact keys");
+    }
+    validateDescriptor(layer.descriptor);
+    if (isV2Descriptor(layer.descriptor)) {
+      throw new WorkerPatcherError("LAYER_DESCRIPTOR_INVALID", "Layered releases only use v1 layers");
+    }
+  }
+  if (!intermediate || typeof intermediate !== "object" || Array.isArray(intermediate)
+    || !hasExactDescriptorKeys(intermediate, ["size", "sha256"])
+    || !Number.isSafeInteger(intermediate.size)
+    || typeof intermediate.sha256 !== "string"
+    || !/^[0-9a-f]{64}$/.test(intermediate.sha256)) {
+    throw new WorkerPatcherError("LAYER_DESCRIPTOR_INVALID", "Layered intermediate image identity is invalid");
+  }
+  const [base, font] = layers.map((layer) => layer.descriptor);
+  const sizes = [base.sourceSize, base.targetSize, font.sourceSize, font.targetSize];
+  if (sizes.some((size) => size !== intermediate.size)
+    || base.targetSha256.toLowerCase() !== intermediate.sha256
+    || font.sourceSha256.toLowerCase() !== intermediate.sha256
+    || base.patchSha256.toLowerCase() === font.patchSha256.toLowerCase()) {
+    throw new WorkerPatcherError(
+      "LAYER_CHAIN_MISMATCH",
+      "Base target, font source, and the intermediate image identity do not chain",
+    );
+  }
+  return { base, font, intermediate };
+}
+
+async function prepareLayeredPatch(message, signal) {
+  const { base, font, intermediate } = validateLayeredRequest(message);
+  if (message.sourceFile.size !== base.sourceSize) {
+    throw new WorkerPatcherError("SOURCE_SIZE_MISMATCH", "Source size does not match the release descriptor");
+  }
+  const progress = { done: 0, total: base.patchSize + font.patchSize };
+  // Content-addressed: the shared base layer is identical for every font, so a
+  // font switch keeps it; anything else is dropped before downloading.
+  const cacheKeys = message.layers.map((layer) => `layer:${layer.descriptor.patchSha256.toLowerCase()}`);
+  retainOnlyCacheKeys(cacheKeys);
+  const parsed = [];
+  for (const [index, layer] of message.layers.entries()) {
+    const cacheKey = cacheKeys[index];
+    parsed.push(await loadParsedPatch(
+      cacheKey,
+      layer.patchUrl,
+      layer.descriptor,
+      message.jobId,
+      signal,
+      progress,
+    ));
+    progress.done += layer.descriptor.patchSize;
+    throwIfAborted(signal);
+  }
+  postPhase(message.jobId, "patch-parse");
+  const parsedPatch = composeLayeredPatch(parsed[0], parsed[1], {
+    sourceSize: base.sourceSize,
+    sourceSha256: base.sourceSha256,
+    intermediateSha256: intermediate.sha256,
+    targetSize: font.targetSize,
+    targetSha256: font.targetSha256,
+  });
+  return {
+    parsedPatch,
+    engine: LAYERED_ENGINE,
+    targetSize: font.targetSize,
+    cacheKeys,
+  };
+}
+
+function retainOnlyCacheKeys(keys) {
+  for (const key of [...patchCache.keys()]) {
+    if (!keys.includes(key)) {
+      patchCache.delete(key);
+    }
+  }
 }
 
 async function writePatchedImage(message, signal) {
@@ -169,7 +287,7 @@ async function buildPatchedDownload(message, signal) {
     // retains only bounded windows containing changed records and reuses
     // source Blob slices for every unchanged gap. It returns nothing until the
     // complete source hash, every record preimage, and the target hash match.
-    result = await patchEngineFor(context.descriptor).buildDownload(
+    result = await context.engine.buildDownload(
       context.sourceFile,
       context.parsedPatch,
       {
@@ -177,7 +295,7 @@ async function buildPatchedDownload(message, signal) {
         onProgress: createProgressReporter(
           message.jobId,
           "source-apply",
-          context.descriptor.targetSize,
+          context.targetSize,
           signal,
         ),
       },
@@ -257,7 +375,7 @@ async function applyPreparedPatch(
   try {
     // The core authenticates the source and output in the same source pass. It
     // closes only after both hashes and every record preimage match.
-    result = await patchEngineFor(context.descriptor).applyToWritable(
+    result = await context.engine.applyToWritable(
       context.sourceFile,
       writable,
       context.parsedPatch,
@@ -266,7 +384,7 @@ async function applyPreparedPatch(
         onProgress: createProgressReporter(
           message.jobId,
           "source-apply",
-          context.descriptor.targetSize,
+          context.targetSize,
           signal,
         ),
       },
@@ -317,25 +435,25 @@ function validateDownloadOutputNames(message) {
   });
 }
 
-async function loadParsedPatch(releaseKey, patchUrl, descriptor, jobId, signal) {
+async function loadParsedPatch(cacheKey, patchUrl, descriptor, jobId, signal, progress = null) {
   requireString(patchUrl, "patch URL");
   const resolvedUrl = new URL(patchUrl, self.location.href);
   if (resolvedUrl.origin !== self.location.origin) {
     throw new WorkerPatcherError("EXTERNAL_URL_REJECTED", "Patch URL must be same-origin");
   }
 
-  const cacheKey = `${releaseKey}:${descriptor.patchSha256}`;
-  if (patchCache?.key === cacheKey) {
+  const cached = patchCache.get(cacheKey);
+  if (cached) {
     if (
-      patchCache.patchUrl !== resolvedUrl.href
-      || patchCache.descriptorFingerprint !== descriptorFingerprint(descriptor)
+      cached.patchUrl !== resolvedUrl.href
+      || cached.descriptorFingerprint !== descriptorFingerprint(descriptor)
     ) {
       throw new WorkerPatcherError(
         "PATCH_CACHE_MISMATCH",
         "Cached patch identity does not match the current URL and descriptor",
       );
     }
-    return patchCache.parsedPatch;
+    return cached.parsedPatch;
   }
 
   postPhase(jobId, "patch-download");
@@ -363,6 +481,7 @@ async function loadParsedPatch(releaseKey, patchUrl, descriptor, jobId, signal) 
     descriptor.patchSize,
     jobId,
     signal,
+    progress,
   );
   throwIfAborted(signal);
 
@@ -396,18 +515,20 @@ async function loadParsedPatch(releaseKey, patchUrl, descriptor, jobId, signal) 
   }
   throwIfAborted(signal);
 
-  patchCache = {
-    key: cacheKey,
+  patchCache.set(cacheKey, {
     patchUrl: resolvedUrl.href,
     descriptorFingerprint: descriptorFingerprint(descriptor),
     parsedPatch,
-  };
+  });
   return parsedPatch;
 }
 
-async function readExactResponse(response, expectedSize, jobId, signal) {
+async function readExactResponse(response, expectedSize, jobId, signal, progress = null) {
   const bytes = new Uint8Array(expectedSize);
   let offset = 0;
+  // A layered release reports one download bar across both layers.
+  const progressBase = progress?.done ?? 0;
+  const progressTotal = progress?.total ?? expectedSize;
 
   if (!response.body) {
     const body = new Uint8Array(await response.arrayBuffer());
@@ -415,7 +536,7 @@ async function readExactResponse(response, expectedSize, jobId, signal) {
       throw new WorkerPatcherError("PATCH_SIZE_MISMATCH", "Patch byte length does not match the release manifest");
     }
     bytes.set(body);
-    postProgress(jobId, "patch-download", expectedSize, expectedSize);
+    postProgress(jobId, "patch-download", progressBase + expectedSize, progressTotal);
     return bytes;
   }
 
@@ -432,7 +553,7 @@ async function readExactResponse(response, expectedSize, jobId, signal) {
       }
       bytes.set(value, offset);
       offset += value.byteLength;
-      postProgress(jobId, "patch-download", offset, expectedSize);
+      postProgress(jobId, "patch-download", progressBase + offset, progressTotal);
     }
   } finally {
     reader.releaseLock();
@@ -558,6 +679,7 @@ function sanitizeResult(result) {
     "size",
     "sha256",
     "sourceSha256",
+    "intermediateSha256",
     "targetSha256",
     "capturedBytes",
     "captureWindowCount",

@@ -5,9 +5,9 @@
   "description": "Local-first static patcher for accepted SRWF Korean patch releases",
   "type": "module",
   "scripts": {
-    "build": "python3 scripts/verify_repo.py && node --test && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_verify_repo.py",
+    "build": "python3 scripts/verify_repo.py && node --test && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_verify_repo.py tests/test_split_font_variants.py",
     "verify": "python3 scripts/verify_repo.py",
-    "test": "node --test && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_verify_repo.py && python3 scripts/verify_repo.py"
+    "test": "node --test && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_verify_repo.py tests/test_split_font_variants.py && python3 scripts/verify_repo.py"
   },
   "engines": {
     "node": ">=20"
