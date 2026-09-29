@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260928-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260929-1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,14 +7,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260928-1";
+} from "./font-revisions.mjs?v=20260929-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260928-1";
+} from "./release-notes.mjs?v=20260929-1";
 
-const STATIC_ASSET_REVISION = "20260928-1";
+const STATIC_ASSET_REVISION = "20260929-1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -54,6 +54,18 @@ const MAX_V2_GROWTH_BYTES = 64 * 1024 * 1024;
 // 74분 CD-R 한 장(333,000 섹터, 783,216,000 B)을 넘는 결과는 받지 않는다.
 const MAX_V2_TARGET_SECTORS = 333_000;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+// 레이어 배포: 같은 승인 결과를 공통 base + 폰트 font 두 v1 파일로 나눠 싣는다.
+const SINGLE_MANIFEST_KEYS = Object.freeze([
+  "schema", "id", "state", "version", "title", "publishedAt", "source", "target", "patch", "provenance",
+]);
+const LAYERED_MANIFEST_KEYS = Object.freeze([
+  "schema", "id", "state", "version", "title", "publishedAt", "source", "target",
+  "patchLayers", "intermediate", "provenance",
+]);
+const PATCH_LAYER_ROLES = Object.freeze(["base", "font"]);
+const PATCH_LAYER_KEYS = Object.freeze([
+  "role", "format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize",
+]);
 const BIN_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
 const CUE_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*\.cue$/;
 const PINNED_STOCK_PROFILES = new Map([
@@ -760,9 +772,12 @@ function invalidateReleaseLoad() {
 }
 
 function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = state.stockProfiles) {
+  const layered = manifest !== null
+    && typeof manifest === "object"
+    && Object.hasOwn(manifest, "patchLayers");
   requireExactOwnKeys(
     manifest,
-    ["schema", "id", "state", "version", "title", "publishedAt", "source", "target", "patch", "provenance"],
+    layered ? LAYERED_MANIFEST_KEYS : SINGLE_MANIFEST_KEYS,
     "release manifest",
   );
   if (manifest.schema !== RELEASE_SCHEMA) {
@@ -787,11 +802,13 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
 
   requireExactOwnKeys(manifest.source, ["profileId", "size", "sha256"], "release source");
   requireExactOwnKeys(manifest.target, ["filename", "cueFilename", "size", "sha256"], "release target");
-  requireExactOwnKeys(
-    manifest.patch,
-    ["format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"],
-    "release patch",
-  );
+  if (!layered) {
+    requireExactOwnKeys(
+      manifest.patch,
+      ["format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"],
+      "release patch",
+    );
+  }
   requireExactOwnKeys(
     manifest.provenance,
     ["v5Commit", "buildReceiptSha256", "acceptanceReceiptSha256"],
@@ -818,13 +835,21 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
   if (!CUE_FILENAME_PATTERN.test(manifest.target.cueFilename)) {
     throw new PatcherError("MANIFEST_INVALID", "Target CUE filename is not canonical");
   }
-  const growthFormat = manifest.patch.format === PATCH_FORMAT_V2;
+  const growthFormat = !layered && manifest.patch.format === PATCH_FORMAT_V2;
   if (growthFormat) {
     requireGrowthTargetSize(manifest.target.size, stockProfile);
   } else if (manifest.target.size !== stockProfile.size) {
     throw new PatcherError("MANIFEST_INVALID", "Target size must match the pinned stock image size");
   }
   requireSha256(manifest.target.sha256, "target SHA-256");
+  if (typeof manifest.provenance.v5Commit !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(manifest.provenance.v5Commit)) {
+    throw new PatcherError("PROVENANCE_INVALID", "Build commit provenance is missing or invalid");
+  }
+  requireSha256(manifest.provenance.buildReceiptSha256, "build receipt SHA-256");
+  requireSha256(manifest.provenance.acceptanceReceiptSha256, "acceptance receipt SHA-256");
+  if (layered) {
+    return normalizeLayeredReleaseManifest(manifest, row, stockProfile);
+  }
 
   const formatRules = SUPPORTED_PATCH_FORMATS.get(manifest.patch.format);
   if (!formatRules) {
@@ -846,11 +871,6 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
   if (manifest.patch.bodyUncompressedSize < manifest.patch.recordCount * formatRules.minRecordBodyBytes) {
     throw new PatcherError("MANIFEST_INVALID", "Patch body is too small for its declared non-empty records");
   }
-  if (typeof manifest.provenance.v5Commit !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(manifest.provenance.v5Commit)) {
-    throw new PatcherError("PROVENANCE_INVALID", "Build commit provenance is missing or invalid");
-  }
-  requireSha256(manifest.provenance.buildReceiptSha256, "build receipt SHA-256");
-  requireSha256(manifest.provenance.acceptanceReceiptSha256, "acceptance receipt SHA-256");
 
   const patchUrl = resolveLocalReference(manifest.patch.url, SITE_ROOT_URL);
   return Object.freeze({
@@ -890,6 +910,116 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
       // v1 descriptor는 기존 8개 키 그대로다. v2만 format을 더해 9개 키가 되고,
       // 워커는 이 모양으로 형식을 고른다.
       ...(growthFormat ? { format: PATCH_FORMAT_V2 } : {}),
+    }),
+  });
+}
+
+function releaseIdentityFields(manifest, row) {
+  return {
+    gameId: row.gameId,
+    id: manifest.id,
+    version: manifest.version,
+    title: manifest.title,
+    publishedAt: manifest.publishedAt,
+    source: Object.freeze({
+      profileId: manifest.source.profileId,
+      size: manifest.source.size,
+      sha256: manifest.source.sha256.toLowerCase(),
+    }),
+    target: Object.freeze({
+      filename: manifest.target.filename,
+      cueFilename: manifest.target.cueFilename ?? null,
+      size: manifest.target.size,
+      sha256: manifest.target.sha256.toLowerCase(),
+    }),
+  };
+}
+
+// 레이어 배포 명세: patchLayers = [base, font] (둘 다 v1), intermediate = base 결과.
+// 결과(target)는 승인된 그대로이며 워커가 한 번의 원본 스트리밍으로 검증한다.
+function normalizeLayeredReleaseManifest(manifest, row, stockProfile) {
+  const { groupId, revision } = fontReleaseIdentity(row);
+  if (revision === null) {
+    throw new PatcherError("MANIFEST_INVALID", "Only font-variant releases can use layered payloads");
+  }
+  if (manifest.target.size !== stockProfile.size) {
+    throw new PatcherError("MANIFEST_INVALID", "Layered targets must match the pinned stock image size");
+  }
+  if (!Array.isArray(manifest.patchLayers) || manifest.patchLayers.length !== PATCH_LAYER_ROLES.length) {
+    throw new PatcherError("MANIFEST_INVALID", "A layered release needs exactly a base and a font layer");
+  }
+  requireExactOwnKeys(manifest.intermediate, ["size", "sha256"], "release intermediate image");
+  if (manifest.intermediate.size !== stockProfile.size) {
+    throw new PatcherError("MANIFEST_INVALID", "Intermediate image size must match the pinned stock image");
+  }
+  requireSha256(manifest.intermediate.sha256, "intermediate SHA-256");
+  if (
+    manifest.intermediate.sha256 === manifest.source.sha256
+    || manifest.intermediate.sha256 === manifest.target.sha256
+  ) {
+    throw new PatcherError("MANIFEST_INVALID", "Intermediate image must differ from stock and target");
+  }
+
+  const expectedUrls = [expectedBasePatchReference(groupId), expectedFontPatchReference(row.id)];
+  const layers = manifest.patchLayers.map((layer, index) => {
+    requireExactOwnKeys(layer, PATCH_LAYER_KEYS, "release patch layer");
+    if (layer.role !== PATCH_LAYER_ROLES[index]) {
+      throw new PatcherError("MANIFEST_INVALID", "Patch layers must be ordered base then font");
+    }
+    if (layer.format !== PATCH_FORMAT) {
+      throw new PatcherError("PATCH_FORMAT_UNSUPPORTED", "Patch layers must use the v1 format");
+    }
+    requireRelativeReference(layer.url, "patch layer URL");
+    if (layer.url !== expectedUrls[index]) {
+      throw new PatcherError("MANIFEST_INVALID", "Patch layer URL is not canonical");
+    }
+    requireIntegerInRange(layer.size, MIN_PATCH_BYTES, MAX_PATCH_BYTES, "patch layer size");
+    requireSha256(layer.sha256, "patch layer SHA-256");
+    requireIntegerInRange(layer.recordCount, 1, MAX_PATCH_RECORDS, "patch layer record count");
+    requireIntegerInRange(
+      layer.bodyUncompressedSize,
+      MIN_PATCH_BODY_BYTES,
+      MAX_PATCH_BODY_BYTES,
+      "patch layer body size",
+    );
+    if (layer.bodyUncompressedSize < layer.recordCount * MIN_RECORD_BODY_BYTES) {
+      throw new PatcherError("MANIFEST_INVALID", "Patch layer body is too small for its declared records");
+    }
+    const [sourceSha256, targetSha256] = index === 0
+      ? [manifest.source.sha256, manifest.intermediate.sha256]
+      : [manifest.intermediate.sha256, manifest.target.sha256];
+    return Object.freeze({
+      role: layer.role,
+      format: layer.format,
+      url: resolveLocalReference(layer.url, SITE_ROOT_URL).href,
+      size: layer.size,
+      sha256: layer.sha256,
+      recordCount: layer.recordCount,
+      bodyUncompressedSize: layer.bodyUncompressedSize,
+      descriptor: Object.freeze({
+        patchSize: layer.size,
+        patchSha256: layer.sha256,
+        sourceSize: manifest.source.size,
+        sourceSha256,
+        targetSize: manifest.target.size,
+        targetSha256,
+        recordCount: layer.recordCount,
+        bodyUncompressedSize: layer.bodyUncompressedSize,
+      }),
+    });
+  });
+  if (layers[0].sha256 === layers[1].sha256) {
+    throw new PatcherError("MANIFEST_INVALID", "Base and font layers must be distinct payloads");
+  }
+
+  return Object.freeze({
+    ...releaseIdentityFields(manifest, row),
+    patch: null,
+    descriptor: null,
+    patchLayers: Object.freeze(layers),
+    intermediate: Object.freeze({
+      size: manifest.intermediate.size,
+      sha256: manifest.intermediate.sha256,
     }),
   });
 }
@@ -1128,9 +1258,27 @@ async function chooseSource() {
   beginWorkerOperation("PREPARE_SOURCE", {
     sourceFile: selection.blob,
     releaseKey: releaseKey(state.release),
-    patchUrl: state.release.patch.url,
-    descriptor: state.release.descriptor,
+    ...workerPatchRequest(state.release),
   });
+}
+
+// 단일 payload 릴리스는 기존 patchUrl + descriptor 그대로, 레이어 릴리스는 base/font 두
+// v1 descriptor와 intermediate 식별값을 함께 보낸다.
+function workerPatchRequest(release) {
+  if (release.patchLayers) {
+    return {
+      layers: release.patchLayers.map((layer) => ({
+        role: layer.role,
+        patchUrl: layer.url,
+        descriptor: layer.descriptor,
+      })),
+      intermediate: { size: release.intermediate.size, sha256: release.intermediate.sha256 },
+    };
+  }
+  return {
+    patchUrl: release.patch.url,
+    descriptor: release.descriptor,
+  };
 }
 
 function sourceDirectoryPickerOptions(navigatorLike = globalThis.navigator) {
@@ -2685,6 +2833,10 @@ function friendlyWorkerError(code, gameId) {
     DESCRIPTOR_MISMATCH: ["패치 명세와 데이터가 다릅니다", "공개 릴리스 명세와 패치 본문이 일치하지 않아 작업을 차단했습니다."],
     BAD_DESCRIPTOR: ["패치 명세가 올바르지 않습니다", "공개 릴리스 명세와 패치 본문을 함께 확인할 수 없어 작업을 차단했습니다."],
     PATCH_DESCRIPTOR_INVALID: ["패치 명세가 올바르지 않습니다", "공개 릴리스 명세가 안전 한도와 일치하지 않아 작업을 차단했습니다."],
+    LAYER_CHAIN_MISMATCH: ["패치 레이어 명세가 서로 맞지 않습니다", "공통 패치와 폰트 패치가 가리키는 중간 이미지 SHA-256이 서로 달라 작업을 차단했습니다."],
+    LAYER_RECORD_OVERLAP: ["패치 레이어가 서로 겹칩니다", "공통 패치와 폰트 패치가 같은 영역을 바꾸려 해 작업을 차단했습니다."],
+    LAYER_DESCRIPTOR_INVALID: ["패치 레이어 명세가 올바르지 않습니다", "공개 릴리스 명세의 공통·폰트 패치 구성을 확인할 수 없어 작업을 차단했습니다."],
+    INTERMEDIATE_HASH_MISMATCH: ["중간 결과 검증에 실패했습니다", "공통 패치를 적용한 중간 결과의 SHA-256이 명세와 달라 저장을 확정하지 않았습니다."],
     PATCH_CACHE_MISMATCH: ["패치 명세와 캐시가 일치하지 않습니다", "이전에 확인한 패치 데이터가 현재 릴리스 명세와 달라 작업을 차단했습니다. 페이지를 새로 연 뒤 다시 시도해 주세요."],
     OUTPUT_SIZE_MISMATCH: ["출력 데이터 검증에 실패했습니다", "기록할 전체 바이트의 크기가 목표값과 달라 저장을 확정하지 않았습니다."],
     TARGET_SIZE_MISMATCH: ["출력 데이터 검증에 실패했습니다", "기록할 전체 바이트의 크기가 목표값과 달라 저장을 확정하지 않았습니다."],
@@ -2768,6 +2920,14 @@ function resolveLocalReference(reference, baseUrl) {
 
 function expectedManifestReference(releaseId) {
   return `releases/${releaseId}.json`;
+}
+
+function expectedBasePatchReference(groupId) {
+  return `patches/${groupId}.base.srwfp`;
+}
+
+function expectedFontPatchReference(releaseId) {
+  return `patches/${releaseId}.font.srwfp`;
 }
 
 function expectedPatchReference(releaseId) {
@@ -2884,7 +3044,10 @@ function isRfc3339DateTime(value) {
 }
 
 function releaseKey(release) {
-  return `${release.id}:${release.patch.sha256}`;
+  const payloads = release.patchLayers
+    ? release.patchLayers.map((layer) => layer.sha256).join("+")
+    : release.patch.sha256;
+  return `${release.id}:${payloads}`;
 }
 
 function formatPublishedAt(value) {
@@ -2968,6 +3131,8 @@ export const __testHooks = Object.freeze({
   detectFileSystemSupport,
   deriveFileControlState,
   ensureDirectoryWritePermission,
+  expectedBasePatchReference,
+  expectedFontPatchReference,
   expectedManifestReference,
   expectedPatchReference,
   fetchJsonDocument,
@@ -2984,6 +3149,7 @@ export const __testHooks = Object.freeze({
   closePatchNotes,
   openPatchNotes,
   prefersDownloadOutput,
+  releaseKey,
   renderPatchNotesForRelease,
   sourceDirectoryPickerOptions,
   showUnsupportedBrowser,
@@ -2994,5 +3160,6 @@ export const __testHooks = Object.freeze({
   validateGames,
   validateReleaseRow,
   validateStockProfiles,
+  workerPatchRequest,
   writeCueFile,
 });

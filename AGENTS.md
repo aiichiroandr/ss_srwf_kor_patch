@@ -39,6 +39,12 @@ release rows or publish a new row without another complete acceptance chain.
   stock image — in the documented v2 format (`docs/PATCH_FORMAT_V2.md`). v1
   rules are unchanged, and an equal-size target must stay v1. Full images and
   aggregate undocumented deltas are forbidden.
+- An already-accepted `-a/-b/-c` font-variant release may instead be delivered
+  as a shared v1 base layer plus a per-variant v1 font layer
+  (`docs/LAYERED_RELEASES.md`), only when `scripts/split_font_variants.py`, run
+  by the owner with their own stock image, has verified that every final
+  SHA-256 equals the accepted target. This is redistribution of the same
+  accepted result, not a new release; never hand-edit its artifacts.
 - Do not add a `.srwfp` payload before its explicit acceptance receipt, release
   manifest, source/target hashes, and payload hash all agree.
 - The accepted receipt is a release decision. A build receipt, identity pass,
@@ -80,7 +86,8 @@ release rows or publish a new row without another complete acceptance chain.
   it or retain it outside the user's browser session.
 - Fail closed on an empty release index, an unknown stock hash, a manifest
   mismatch, a malformed patch, a record preimage mismatch, a COPY source
-  mismatch, an extension-coverage error, or a target hash mismatch.
+  mismatch, an extension-coverage error, a layer-chain, layer-overlap or
+  intermediate hash mismatch, or a target hash mismatch.
 
 ## Changes and validation
 

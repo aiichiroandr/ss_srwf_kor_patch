@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:srwf-kor:schema:acceptance-receipt:v1",
-  "title": "Explicit SRWF Korean release acceptance receipt",
+  "title": "Explicit SRWF Korean release acceptance receipt (single payload or layered base + font)",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,7 +12,6 @@
     "stockProfileId",
     "sourceSha256",
     "targetSha256",
-    "patchSha256",
     "v5Commit",
     "gates",
     "decisionAuthority"
@@ -52,6 +51,18 @@
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     },
+    "intermediateSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "basePatchSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "fontPatchSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "v5Commit": {
       "type": "string",
       "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
@@ -88,6 +99,75 @@
       "minLength": 1,
       "maxLength": 160,
       "pattern": "\\S"
+    },
+    "supersedes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receiptSha256",
+        "patchSha256",
+        "decisionAuthority"
+      ],
+      "properties": {
+        "receiptSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "patchSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "decisionAuthority": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "\\S"
+        }
+      }
     }
-  }
+  },
+  "oneOf": [
+    {
+      "required": [
+        "patchSha256"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "intermediateSha256"
+            ]
+          },
+          {
+            "required": [
+              "basePatchSha256"
+            ]
+          },
+          {
+            "required": [
+              "fontPatchSha256"
+            ]
+          },
+          {
+            "required": [
+              "supersedes"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "intermediateSha256",
+        "basePatchSha256",
+        "fontPatchSha256",
+        "supersedes"
+      ],
+      "not": {
+        "required": [
+          "patchSha256"
+        ]
+      }
+    }
+  ]
 }

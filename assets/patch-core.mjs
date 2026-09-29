@@ -572,6 +572,17 @@ function parseRecords(body, header) {
   }
   return {
     length: positions.length,
+    // Cheap span accessors for layered disjointness checks and capture windows.
+    offsetAt(index) {
+      return readSafeU64(view, positions[index], 'Record offset');
+    },
+    lengthAt(index) {
+      return view.getUint32(positions[index] + 8, false);
+    },
+    targetBytesAt(index) {
+      const start = positions[index] + RECORD_HEADER_SIZE;
+      return body.subarray(start, start + view.getUint32(positions[index] + 8, false));
+    },
     at(index) {
       if (index < 0 || index >= positions.length) return undefined;
       const start = positions[index];
@@ -773,8 +784,10 @@ function validateSourceBlob(blob, parsedPatch) {
   }
 }
 
-function createSourceAuthenticator(parsedPatch, internals) {
-  const sourceHasher = new Sha256();
+function createSourceAuthenticator(parsedPatch, internals, { hashSource = true } = {}) {
+  // A layered font stage reads the base stage's output, whose SHA-256 the
+  // layered engine already computes once; it skips only that duplicate hash.
+  const sourceHasher = hashSource ? new Sha256() : null;
   let recordIndex = 0;
   let spanHasher = null;
   let position = 0;
@@ -785,7 +798,7 @@ function createSourceAuthenticator(parsedPatch, internals) {
         fail('SOURCE_SIZE_MISMATCH', 'Source stream produced more bytes than its Blob size');
       }
 
-      sourceHasher.update(chunk);
+      sourceHasher?.update(chunk);
       const chunkStart = position;
       const chunkEnd = position + chunk.byteLength;
 
@@ -843,6 +856,9 @@ function createSourceAuthenticator(parsedPatch, internals) {
         fail('INTERNAL_RECORD_STATE', 'Not every record preimage was verified');
       }
 
+      if (sourceHasher === null) {
+        return null;
+      }
       const sourceSha256 = sourceHasher.hex();
       if (sourceSha256 !== parsedPatch.sourceSha256) {
         fail('SOURCE_HASH_MISMATCH', 'Source SHA-256 does not match the patch header');
@@ -1060,6 +1076,11 @@ export async function applyPatchToWritable(blob, writable, parsedPatch, options 
 }
 
 function buildDownloadCaptureWindows(parsedPatch, internals, maxCapturedBytes) {
+  return buildCaptureWindowsFromSpans(internals.records, parsedPatch.targetSize, maxCapturedBytes);
+}
+
+// `spans` yields { offset, length } in ascending offset order.
+function buildCaptureWindowsFromSpans(spans, targetSize, maxCapturedBytes) {
   if (!Number.isSafeInteger(maxCapturedBytes)
     || maxCapturedBytes <= 0
     || maxCapturedBytes > MAX_DOWNLOAD_CAPTURE_BYTES) {
@@ -1070,12 +1091,12 @@ function buildDownloadCaptureWindows(parsedPatch, internals, maxCapturedBytes) {
   }
 
   const windows = [];
-  for (const record of internals.records) {
+  for (const record of spans) {
     const start = Math.floor(record.offset / DOWNLOAD_CAPTURE_CHUNK_BYTES)
       * DOWNLOAD_CAPTURE_CHUNK_BYTES;
     const recordEnd = record.offset + record.length;
     const end = Math.min(
-      parsedPatch.targetSize,
+      targetSize,
       Math.ceil(recordEnd / DOWNLOAD_CAPTURE_CHUNK_BYTES) * DOWNLOAD_CAPTURE_CHUNK_BYTES,
     );
     const previous = windows.at(-1);
@@ -1297,6 +1318,399 @@ export async function buildVerifiedPatchedBlob(blob, parsedPatch, options = {}) 
     blob: outputBlob,
     bytesWritten: applied.bytesWritten,
     sourceSha256: applied.sourceSha256,
+    targetSha256: applied.targetSha256,
+    capturedBytes: capturePlan.capturedBytes,
+    captureWindowCount: capturePlan.windows.length,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Layered delivery (docs/LAYERED_RELEASES.md)
+//
+// One accepted target is reached through two ordinary SRWFKP1 files:
+//   base: stock        -> intermediate  (records shared by every font variant)
+//   font: intermediate -> target        (records unique to one font variant)
+// Both layers are applied in ONE streaming pass over the user's stock. The
+// intermediate image is computed chunk by chunk and never stored or written.
+// ---------------------------------------------------------------------------
+
+const LAYERED_INTERNALS = new WeakMap();
+const LAYERED_EXPECTED_KEYS = Object.freeze([
+  'sourceSize',
+  'sourceSha256',
+  'intermediateSha256',
+  'targetSize',
+  'targetSha256',
+]);
+
+function assertLayersDisjoint(baseRecords, fontRecords) {
+  // Both lists are canonical (sorted, disjoint). A font record may neither
+  // overlap nor abut any base record, so the union stays canonical too.
+  let low = 0;
+  for (let index = 0; index < fontRecords.length; index += 1) {
+    const start = fontRecords.offsetAt(index);
+    const end = start + fontRecords.lengthAt(index);
+    // First base record whose end is >= start (records are sorted and disjoint,
+    // so ends are sorted as well). Font records are sorted, so `low` only grows.
+    let high = baseRecords.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (baseRecords.offsetAt(middle) + baseRecords.lengthAt(middle) < start) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    if (low < baseRecords.length && baseRecords.offsetAt(low) <= end) {
+      const baseStart = baseRecords.offsetAt(low);
+      const baseEnd = baseStart + baseRecords.lengthAt(low);
+      const overlapping = baseStart < end && start < baseEnd;
+      fail(
+        'LAYER_RECORD_OVERLAP',
+        `Font record at ${start} ${overlapping ? 'overlaps' : 'abuts'} the base record at ${baseStart}`,
+      );
+    }
+  }
+}
+
+/**
+ * Bind a parsed base layer and a parsed font layer into one verified chain.
+ * `expected` must contain exactly sourceSize, sourceSha256, intermediateSha256,
+ * targetSize and targetSha256 from the release manifest.
+ */
+export function composeLayeredPatch(basePatch, fontPatch, expected) {
+  const baseInternals = getInternals(basePatch);
+  const fontInternals = getInternals(fontPatch);
+  if (basePatch === fontPatch) {
+    fail('LAYER_CHAIN_MISMATCH', 'Base and font layers must be distinct patches');
+  }
+  if (expected === null || typeof expected !== 'object' || Array.isArray(expected)) {
+    fail('BAD_DESCRIPTOR', 'Layered expectation must be an object');
+  }
+  const suppliedKeys = Reflect.ownKeys(expected);
+  if (suppliedKeys.length !== LAYERED_EXPECTED_KEYS.length
+    || LAYERED_EXPECTED_KEYS.some((key) => !Object.hasOwn(expected, key))) {
+    fail('BAD_DESCRIPTOR', 'Layered expectation must contain exactly the five documented keys');
+  }
+  const sourceSize = normalizeExpectedInteger(expected.sourceSize, 'sourceSize');
+  const targetSize = normalizeExpectedInteger(expected.targetSize, 'targetSize');
+  const sourceSha256 = normalizeExpectedHash(expected.sourceSha256, 'sourceSha256');
+  const intermediateSha256 = normalizeExpectedHash(expected.intermediateSha256, 'intermediateSha256');
+  const targetSha256 = normalizeExpectedHash(expected.targetSha256, 'targetSha256');
+
+  const sizes = [
+    basePatch.sourceSize,
+    basePatch.targetSize,
+    fontPatch.sourceSize,
+    fontPatch.targetSize,
+    targetSize,
+  ];
+  if (sizes.some((size) => size !== sourceSize)) {
+    fail('LAYER_CHAIN_MISMATCH', 'Every layer must keep the stock image size');
+  }
+  if (basePatch.sourceSha256 !== sourceSha256) {
+    fail('LAYER_CHAIN_MISMATCH', 'Base layer source is not the release stock image');
+  }
+  if (basePatch.targetSha256 !== intermediateSha256 || fontPatch.sourceSha256 !== intermediateSha256) {
+    fail('LAYER_CHAIN_MISMATCH', 'Base target, font source, and manifest intermediate SHA-256 differ');
+  }
+  if (fontPatch.targetSha256 !== targetSha256) {
+    fail('LAYER_CHAIN_MISMATCH', 'Font layer target is not the accepted release target');
+  }
+  if (intermediateSha256 === sourceSha256 || intermediateSha256 === targetSha256) {
+    fail('LAYER_CHAIN_MISMATCH', 'Intermediate image must differ from both stock and target');
+  }
+  assertLayersDisjoint(baseInternals.records, fontInternals.records);
+
+  const layered = Object.freeze({
+    format: 'SRWFKP1-layered',
+    sourceSize,
+    sourceSha256,
+    intermediateSha256,
+    targetSize,
+    targetSha256,
+    recordCount: basePatch.recordCount + fontPatch.recordCount,
+    layers: Object.freeze([basePatch, fontPatch]),
+  });
+  LAYERED_INTERNALS.set(layered, {
+    base: basePatch,
+    font: fontPatch,
+    baseInternals,
+    fontInternals,
+  });
+  return layered;
+}
+
+function getLayeredInternals(layeredPatch) {
+  const internals = LAYERED_INTERNALS.get(layeredPatch);
+  if (internals === undefined) {
+    fail('UNTRUSTED_PATCH_OBJECT', 'Layered patch object was not returned by composeLayeredPatch');
+  }
+  return internals;
+}
+
+// One layer as a chunk transform: authenticates this layer's source bytes
+// (record preimages and the non-differing rule) and returns the same-length
+// output chunk with the layer's records applied.
+function createLayerStage(parsedPatch, internals, { hashSource }) {
+  const authenticator = createSourceAuthenticator(parsedPatch, internals, { hashSource });
+  const outputHasher = new Sha256();
+  const records = internals.records;
+  let recordIndex = 0;
+  let position = 0;
+
+  return {
+    transform(chunk) {
+      authenticator.update(chunk);
+      const chunkStart = position;
+      const chunkEnd = position + chunk.byteLength;
+      let output = chunk;
+      while (recordIndex < records.length) {
+        const offset = records.offsetAt(recordIndex);
+        if (offset >= chunkEnd) {
+          break;
+        }
+        const recordEnd = offset + records.lengthAt(recordIndex);
+        const start = Math.max(offset, chunkStart);
+        const end = Math.min(recordEnd, chunkEnd);
+        if (output === chunk) {
+          output = chunk.slice();
+        }
+        const targetBytes = records.targetBytesAt(recordIndex);
+        output.set(targetBytes.subarray(start - offset, end - offset), start - chunkStart);
+        if (end !== recordEnd) {
+          break;
+        }
+        recordIndex += 1;
+      }
+      outputHasher.update(output);
+      position = chunkEnd;
+      return output;
+    },
+
+    finish() {
+      const sourceSha256 = authenticator.finish();
+      if (recordIndex !== records.length) {
+        fail('INTERNAL_RECORD_STATE', 'Not every layer record was applied');
+      }
+      return { sourceSha256, outputSha256: outputHasher.hex(), position };
+    },
+  };
+}
+
+function validateLayeredSource(blob, layeredPatch) {
+  if (!isBlobLike(blob)) {
+    throw new TypeError('Source must be a Blob or File');
+  }
+  if (blob.size !== layeredPatch.sourceSize) {
+    fail('SOURCE_SIZE_MISMATCH', `Source is ${blob.size} bytes, expected ${layeredPatch.sourceSize}`);
+  }
+}
+
+/**
+ * Stream stock -> base -> intermediate -> font -> target into `writable` in a
+ * single source pass. Closes the writer only after the stock, intermediate and
+ * target SHA-256 values and every record preimage of both layers match.
+ */
+export async function applyLayeredPatchToWritable(blob, writable, layeredPatch, options = {}) {
+  const { onProgress, signal } = options;
+  if (onProgress !== undefined && typeof onProgress !== 'function') {
+    throw new TypeError('onProgress must be a function');
+  }
+  const layered = getLayeredInternals(layeredPatch);
+  validateLayeredSource(blob, layeredPatch);
+  throwIfAborted(signal);
+  const writer = acquireWriter(writable);
+  const baseStage = createLayerStage(layered.base, layered.baseInternals, { hashSource: true });
+  const fontStage = createLayerStage(layered.font, layered.fontInternals, { hashSource: false });
+  let inputPosition = 0;
+  let outputPosition = 0;
+  let closed = false;
+  let writeBuffer = new Uint8Array(WRITE_CHUNK_SIZE);
+  let writeBufferLength = 0;
+
+  const flushWrites = async () => {
+    if (writeBufferLength === 0) {
+      return;
+    }
+    const chunk = writeBuffer.subarray(0, writeBufferLength);
+    await writeWithAbort(writer, chunk, signal);
+    writeBuffer = new Uint8Array(WRITE_CHUNK_SIZE);
+    writeBufferLength = 0;
+  };
+
+  const emit = async (bytes) => {
+    let offset = 0;
+    while (offset < bytes.byteLength) {
+      const taken = Math.min(WRITE_CHUNK_SIZE - writeBufferLength, bytes.byteLength - offset);
+      writeBuffer.set(bytes.subarray(offset, offset + taken), writeBufferLength);
+      writeBufferLength += taken;
+      offset += taken;
+      outputPosition += taken;
+      if (writeBufferLength === WRITE_CHUNK_SIZE) {
+        await flushWrites();
+      }
+    }
+  };
+
+  try {
+    reportProgress(onProgress, 'apply', 0, layeredPatch.targetSize, { writtenBytes: 0 });
+    for await (const chunk of blobChunks(blob, signal)) {
+      if (inputPosition + chunk.byteLength > layeredPatch.sourceSize) {
+        fail('SOURCE_SIZE_MISMATCH', 'Source stream produced more bytes than its Blob size');
+      }
+      const intermediate = baseStage.transform(chunk);
+      await emit(fontStage.transform(intermediate));
+      inputPosition += chunk.byteLength;
+      throwIfAborted(signal);
+      reportProgress(onProgress, 'apply', inputPosition, layeredPatch.sourceSize, {
+        writtenBytes: outputPosition,
+      });
+    }
+    await flushWrites();
+
+    if (inputPosition !== layeredPatch.sourceSize) {
+      fail('SOURCE_SIZE_MISMATCH', `Source stream produced ${inputPosition} bytes, expected ${layeredPatch.sourceSize}`);
+    }
+    // Stock first: a wrong source must be reported as a source problem.
+    const base = baseStage.finish();
+    if (base.outputSha256 !== layered.base.targetSha256
+      || base.outputSha256 !== layeredPatch.intermediateSha256) {
+      fail('INTERMEDIATE_HASH_MISMATCH', 'Base layer output does not match the intermediate SHA-256');
+    }
+    const font = fontStage.finish();
+    if (base.outputSha256 !== layered.font.sourceSha256) {
+      fail('INTERMEDIATE_HASH_MISMATCH', 'Font layer source does not match the intermediate SHA-256');
+    }
+    if (outputPosition !== layeredPatch.targetSize) {
+      fail('OUTPUT_SIZE_MISMATCH', `Output is ${outputPosition} bytes, expected ${layeredPatch.targetSize}`);
+    }
+    if (font.outputSha256 !== layered.font.targetSha256
+      || font.outputSha256 !== layeredPatch.targetSha256) {
+      fail('TARGET_HASH_MISMATCH', 'Patched output SHA-256 does not match the accepted target');
+    }
+
+    throwIfAborted(signal);
+    await writer.close();
+    closed = true;
+    reportProgressAfterCommit(
+      onProgress,
+      'apply',
+      layeredPatch.targetSize,
+      layeredPatch.targetSize,
+      { writtenBytes: outputPosition },
+    );
+    return Object.freeze({
+      ok: true,
+      bytesWritten: outputPosition,
+      sourceSha256: base.sourceSha256,
+      intermediateSha256: base.outputSha256,
+      targetSha256: font.outputSha256,
+    });
+  } catch (error) {
+    if (!closed) {
+      try {
+        await writer.abort(error);
+      } catch {
+        // Preserve the original verification, write, or abort error.
+      }
+    }
+    throw error;
+  } finally {
+    if (typeof writer.releaseLock === 'function') {
+      writer.releaseLock();
+    }
+  }
+}
+
+function* mergedLayerSpans(baseRecords, fontRecords) {
+  let baseIndex = 0;
+  let fontIndex = 0;
+  while (baseIndex < baseRecords.length || fontIndex < fontRecords.length) {
+    const takeBase = fontIndex >= fontRecords.length
+      || (baseIndex < baseRecords.length
+        && baseRecords.offsetAt(baseIndex) < fontRecords.offsetAt(fontIndex));
+    if (takeBase) {
+      yield { offset: baseRecords.offsetAt(baseIndex), length: baseRecords.lengthAt(baseIndex) };
+      baseIndex += 1;
+    } else {
+      yield { offset: fontRecords.offsetAt(fontIndex), length: fontRecords.lengthAt(fontIndex) };
+      fontIndex += 1;
+    }
+  }
+}
+
+/**
+ * Mobile/download path for a layered release: same single verified pass, but
+ * only bounded windows around changed records of either layer are retained.
+ */
+export async function buildVerifiedLayeredPatchedBlob(blob, layeredPatch, options = {}) {
+  const {
+    maxCapturedBytes = MAX_DOWNLOAD_CAPTURE_BYTES,
+    onProgress,
+    signal,
+  } = options;
+  if (onProgress !== undefined && typeof onProgress !== 'function') {
+    throw new TypeError('onProgress must be a function');
+  }
+  const layered = getLayeredInternals(layeredPatch);
+  validateLayeredSource(blob, layeredPatch);
+  throwIfAborted(signal);
+  const capturePlan = buildCaptureWindowsFromSpans(
+    mergedLayerSpans(layered.baseInternals.records, layered.fontInternals.records),
+    layeredPatch.targetSize,
+    maxCapturedBytes,
+  );
+  const capture = createSparseCaptureWriter(layeredPatch.targetSize, capturePlan);
+
+  let applied;
+  try {
+    applied = await applyLayeredPatchToWritable(blob, capture.writer, layeredPatch, {
+      onProgress,
+      signal,
+    });
+    throwIfAborted(signal);
+  } catch (error) {
+    capture.discard();
+    throw error;
+  }
+
+  const parts = [];
+  let position = 0;
+  for (const window of capture.parts()) {
+    if (position < window.start) {
+      parts.push(blob.slice(position, window.start));
+    }
+    parts.push(window.bytes);
+    position = window.end;
+  }
+  if (position < layeredPatch.targetSize) {
+    parts.push(blob.slice(position, layeredPatch.targetSize));
+  }
+
+  let outputBlob;
+  try {
+    outputBlob = new Blob(parts, { type: 'application/octet-stream' });
+  } catch (error) {
+    capture.discard();
+    throw error;
+  }
+  if (outputBlob.size !== layeredPatch.targetSize) {
+    capture.discard();
+    fail(
+      'DOWNLOAD_BLOB_SIZE_MISMATCH',
+      `Composed download Blob is ${outputBlob.size} bytes, expected ${layeredPatch.targetSize}`,
+    );
+  }
+  capture.discard();
+  throwIfAborted(signal);
+
+  return Object.freeze({
+    ok: true,
+    blob: outputBlob,
+    bytesWritten: applied.bytesWritten,
+    sourceSha256: applied.sourceSha256,
+    intermediateSha256: applied.intermediateSha256,
     targetSha256: applied.targetSha256,
     capturedBytes: capturePlan.capturedBytes,
     captureWindowCount: capturePlan.windows.length,

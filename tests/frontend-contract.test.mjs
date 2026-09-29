@@ -360,7 +360,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260928-1";
+  const revision = "20260929-1";
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
@@ -1553,7 +1553,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260928-1$/);
+    assert.match(image.src, /\?v=20260929-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -2147,7 +2147,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260928-1$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260929-1$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2156,7 +2156,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260928-1$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260929-1$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",
@@ -2469,5 +2469,183 @@ test("a delayed F manifest cannot overwrite an accepted Final game switch", asyn
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalConsoleError;
+  }
+});
+
+// 레이어 배포(docs/LAYERED_RELEASES.md): 같은 승인 결과를 공통 base + 폰트 font 두 v1 파일로 싣는다.
+const LAYERED_RELEASE_ID = "srwf-f-20260928-v0-5-b";
+const LAYERED_GROUP_ID = "srwf-f-20260928-v0-5";
+
+function makeLayeredReleaseRow(overrides = {}) {
+  return makeReleaseRow({
+    id: LAYERED_RELEASE_ID,
+    manifest: `releases/${LAYERED_RELEASE_ID}.json`,
+    ...overrides,
+  });
+}
+
+function makeLayeredReleaseManifest(overrides = {}) {
+  const { patch: _patch, provenance, ...identity } = makeReleaseManifest({ id: LAYERED_RELEASE_ID });
+  return {
+    ...identity,
+    patchLayers: [
+      {
+        role: "base",
+        format: "srwf.sparse-byte-delta.v1",
+        url: `patches/${LAYERED_GROUP_ID}.base.srwfp`,
+        size: 69_500_000,
+        sha256: "1".repeat(64),
+        recordCount: 1_330_116,
+        bodyUncompressedSize: 95_000_000,
+      },
+      {
+        role: "font",
+        format: "srwf.sparse-byte-delta.v1",
+        url: `patches/${LAYERED_RELEASE_ID}.font.srwfp`,
+        size: 40_000,
+        sha256: "2".repeat(64),
+        recordCount: 657,
+        bodyUncompressedSize: 91_000,
+      },
+    ],
+    intermediate: { size: STOCK_PROFILE.size, sha256: "3".repeat(64) },
+    provenance,
+    ...overrides,
+  };
+}
+
+const normalizeLayered = (manifest, row = makeLayeredReleaseRow()) => __testHooks.normalizeReleaseManifest(
+  manifest,
+  row,
+  new URL(`../releases/${row.id}.json`, import.meta.url),
+  stockProfiles,
+);
+
+test("runtime accepts a layered base + font manifest and chains v1 descriptors through the intermediate", () => {
+  const manifest = makeLayeredReleaseManifest();
+  const release = normalizeLayered(manifest);
+  assert.equal(release.patch, null);
+  assert.equal(release.descriptor, null);
+  assert.equal(release.patchLayers.length, 2);
+  const [base, font] = release.patchLayers;
+  assert.equal(base.role, "base");
+  assert.equal(font.role, "font");
+  assert.match(base.url, /\/patches\/srwf-f-20260928-v0-5\.base\.srwfp$/);
+  assert.match(font.url, /\/patches\/srwf-f-20260928-v0-5-b\.font\.srwfp$/);
+  for (const layer of [base, font]) {
+    assert.deepEqual(Object.keys(layer.descriptor), [
+      "patchSize", "patchSha256", "sourceSize", "sourceSha256",
+      "targetSize", "targetSha256", "recordCount", "bodyUncompressedSize",
+    ]);
+  }
+  assert.equal(base.descriptor.sourceSha256, STOCK_PROFILE.sha256);
+  assert.equal(base.descriptor.targetSha256, manifest.intermediate.sha256);
+  assert.equal(font.descriptor.sourceSha256, manifest.intermediate.sha256);
+  assert.equal(font.descriptor.targetSha256, manifest.target.sha256);
+  assert.deepEqual(release.intermediate, manifest.intermediate);
+  assert.equal(
+    __testHooks.releaseKey(release),
+    `${LAYERED_RELEASE_ID}:${"1".repeat(64)}+${"2".repeat(64)}`,
+  );
+  const request = __testHooks.workerPatchRequest(release);
+  assert.deepEqual(Object.keys(request), ["layers", "intermediate"]);
+  assert.deepEqual(request.layers.map((layer) => Object.keys(layer)), [
+    ["role", "patchUrl", "descriptor"],
+    ["role", "patchUrl", "descriptor"],
+  ]);
+  assert.deepEqual(request.intermediate, manifest.intermediate);
+  assert.equal(__testHooks.expectedBasePatchReference(LAYERED_GROUP_ID), `patches/${LAYERED_GROUP_ID}.base.srwfp`);
+  assert.equal(__testHooks.expectedFontPatchReference(LAYERED_RELEASE_ID), `patches/${LAYERED_RELEASE_ID}.font.srwfp`);
+
+  // Single-payload releases keep the exact previous request shape.
+  const single = normalizeManifest(makeReleaseManifest());
+  assert.deepEqual(Object.keys(__testHooks.workerPatchRequest(single)), ["patchUrl", "descriptor"]);
+  assert.equal(__testHooks.releaseKey(single), `v5-r001:${"c".repeat(64)}`);
+});
+
+test("runtime rejects malformed layered manifests at every layer", () => {
+  const layer = (index, patch) => {
+    const manifest = makeLayeredReleaseManifest();
+    manifest.patchLayers[index] = { ...manifest.patchLayers[index], ...patch };
+    return manifest;
+  };
+  const withoutKey = (object, key) => {
+    const { [key]: _removed, ...rest } = object;
+    return rest;
+  };
+  const base = makeLayeredReleaseManifest();
+  const invalid = [
+    // mixing or dropping the payload forms
+    { ...base, patch: makeReleaseManifest().patch },
+    withoutKey(base, "intermediate"),
+    withoutKey(base, "patchLayers"),
+    { ...base, unexpected: true },
+    // layer list shape
+    { ...base, patchLayers: base.patchLayers.slice(0, 1) },
+    { ...base, patchLayers: [...base.patchLayers, base.patchLayers[1]] },
+    { ...base, patchLayers: [base.patchLayers[1], base.patchLayers[0]] },
+    { ...base, patchLayers: "patches/x.srwfp" },
+    // per-layer keys and values
+    layer(0, { unexpected: true }),
+    { ...base, patchLayers: [withoutKey(base.patchLayers[0], "recordCount"), base.patchLayers[1]] },
+    layer(0, { role: "font" }),
+    layer(1, { role: "base" }),
+    layer(0, { format: "srwf.sparse-byte-delta.v2" }),
+    layer(1, { format: "srwf.sparse-byte-delta.v2" }),
+    layer(0, { url: "patches/srwf-f-20260928-v0-5-b.srwfp" }),
+    layer(0, { url: "patches/srwf-f-20260928-v0-4.base.srwfp" }),
+    layer(1, { url: "patches/srwf-f-20260928-v0-5-a.font.srwfp" }),
+    layer(1, { url: "https://example.test/patches/srwf-f-20260928-v0-5-b.font.srwfp" }),
+    layer(1, { url: "patches/../srwf-f-20260928-v0-5-b.font.srwfp" }),
+    layer(0, { size: 100 }),
+    layer(1, { size: 80 * 1024 * 1024 + 1 }),
+    layer(0, { sha256: "A".repeat(64) }),
+    layer(1, { recordCount: 0 }),
+    layer(1, { bodyUncompressedSize: 44 }),
+    layer(1, { recordCount: 3, bodyUncompressedSize: 134 }),
+    layer(1, { sha256: "1".repeat(64) }),
+    // intermediate identity
+    { ...base, intermediate: { ...base.intermediate, size: STOCK_PROFILE.size + 2352 } },
+    { ...base, intermediate: { ...base.intermediate, sha256: "3".repeat(63) } },
+    { ...base, intermediate: { ...base.intermediate, sha256: "D".repeat(64) } },
+    { ...base, intermediate: { ...base.intermediate, extra: 1 } },
+    { ...base, intermediate: { ...base.intermediate, sha256: STOCK_PROFILE.sha256 } },
+    { ...base, intermediate: { ...base.intermediate, sha256: base.target.sha256 } },
+    // layered targets stay stock-sized v1 results
+    { ...base, target: { ...base.target, size: STOCK_PROFILE.size + 2352 } },
+  ];
+  for (const [index, manifest] of invalid.entries()) {
+    assert.throws(
+      () => normalizeLayered(manifest),
+      (error) => typeof error?.code === "string",
+      `layered case ${index}`,
+    );
+  }
+  // Only a -a/-b/-c font variant can reference a shared base layer.
+  assert.throws(
+    () => normalizeLayered(
+      { ...base, id: "v5-r001" },
+      makeLayeredReleaseRow({ id: "v5-r001", manifest: "releases/v5-r001.json" }),
+    ),
+    (error) => error?.code === "MANIFEST_INVALID",
+  );
+  // A layered manifest never satisfies a different release row.
+  assert.throws(
+    () => normalizeLayered(base, makeLayeredReleaseRow({ id: "srwf-f-20260928-v0-5-c", manifest: "releases/srwf-f-20260928-v0-5-c.json" })),
+    (error) => error?.code === "RELEASE_IDENTITY_MISMATCH",
+  );
+});
+
+test("layered and new worker failure codes have Korean fail-closed copy", () => {
+  for (const code of [
+    "LAYER_CHAIN_MISMATCH",
+    "LAYER_RECORD_OVERLAP",
+    "LAYER_DESCRIPTOR_INVALID",
+    "INTERMEDIATE_HASH_MISMATCH",
+  ]) {
+    const friendly = __testHooks.friendlyWorkerError(code, "srwf-f");
+    assert.match(friendly.title, /[가-힣]/);
+    assert.match(friendly.message, /차단|확정하지/);
+    assert.notEqual(friendly.title, "패치 작업을 완료하지 못했습니다");
   }
 });

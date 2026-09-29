@@ -1332,5 +1332,351 @@ class SyntheticV2ReleaseTests(unittest.TestCase):
         self.assertTrue(any("magic is not SRWFKP2" in error for error in v2_on_v1), v2_on_v1)
 
 
+def make_layer_payload(
+    edits: list[tuple[int, bytes]], *, source_sha256: str, target_sha256: str
+) -> bytes:
+    """A wire-valid v1 layer over the pinned F stock size (no stock bytes needed)."""
+    size = verifier.STOCK_PROFILE["size"]
+    body = b"".join(
+        struct.pack(">QI", offset, len(replacement)) + bytes(32) + replacement
+        for offset, replacement in edits
+    )
+    header = bytearray(verifier.PATCH_HEADER_SIZE)
+    header[:8] = verifier.PATCH_MAGIC
+    struct.pack_into(">IQQQ", header, 8, len(edits), size, size, len(body))
+    header[36:68] = bytes.fromhex(source_sha256)
+    header[68:100] = bytes.fromhex(target_sha256)
+    return bytes(header) + zlib.compress(body)
+
+
+class SyntheticLayeredReleaseTests(unittest.TestCase):
+    group_id = "srwf-f-20990101-v9-9"
+    intermediate = "55" * 32
+    targets = {"a": "66" * 32, "b": "77" * 32}
+    base_edits = [(100, b"\x01" * 10), (5_000, b"\x02" * 3)]
+    font_edits = {"a": [(200, b"\x03" * 4)], "b": [(4_000, b"\x04" * 8)]}
+
+    def build_tree(self, root: Path, *, mutate=None) -> None:
+        stock = verifier.STOCK_PROFILE
+        shutil.copytree(PROJECT_ROOT / "schemas", root / "schemas")
+        (root / "patches").mkdir()
+        base_payload = make_layer_payload(
+            self.base_edits, source_sha256=stock["sha256"], target_sha256=self.intermediate
+        )
+        base_ref = verifier.layered_base_patch_reference(self.group_id)
+        (root / base_ref).write_bytes(base_payload)
+        rows = []
+        for revision, target_hash in self.targets.items():
+            release_id = f"{self.group_id}-{revision}"
+            font_payload = make_layer_payload(
+                self.font_edits[revision], source_sha256=self.intermediate, target_sha256=target_hash
+            )
+            font_ref = verifier.layered_font_patch_reference(release_id)
+            (root / font_ref).write_bytes(font_payload)
+            layers = [
+                {
+                    "role": "base",
+                    "format": "srwf.sparse-byte-delta.v1",
+                    "url": base_ref,
+                    "size": len(base_payload),
+                    "sha256": hashlib.sha256(base_payload).hexdigest(),
+                    "recordCount": len(self.base_edits),
+                    "bodyUncompressedSize": sum(44 + len(r) for _, r in self.base_edits),
+                },
+                {
+                    "role": "font",
+                    "format": "srwf.sparse-byte-delta.v1",
+                    "url": font_ref,
+                    "size": len(font_payload),
+                    "sha256": hashlib.sha256(font_payload).hexdigest(),
+                    "recordCount": len(self.font_edits[revision]),
+                    "bodyUncompressedSize": sum(44 + len(r) for _, r in self.font_edits[revision]),
+                },
+            ]
+            receipt = {
+                "schema": "srwf-kor.acceptance-receipt.v1",
+                "releaseId": release_id,
+                "state": "ACCEPTED",
+                "acceptedAt": "2099-01-01T00:00:00Z",
+                "stockProfileId": stock["id"],
+                "sourceSha256": stock["sha256"],
+                "targetSha256": target_hash,
+                "intermediateSha256": self.intermediate,
+                "basePatchSha256": layers[0]["sha256"],
+                "fontPatchSha256": layers[1]["sha256"],
+                "v5Commit": "33" * 20,
+                "gates": {
+                    "staticStructure": "PASS",
+                    "runtimeConsumption": "PASS",
+                    "visualLayout": "PASS",
+                    "longPlayProgression": "NOT_CLAIMED",
+                },
+                "decisionAuthority": "synthetic layered redistribution",
+                "supersedes": {
+                    "receiptSha256": "88" * 32,
+                    "patchSha256": "99" * 32,
+                    "decisionAuthority": "synthetic original authority",
+                },
+            }
+            manifest = {
+                "schema": "srwf-kor.public-release.v1",
+                "id": release_id,
+                "state": "ACCEPTED",
+                "version": "v9.9",
+                "title": "Synthetic layered release",
+                "publishedAt": "2099-01-01T00:00:00Z",
+                "source": {"profileId": stock["id"], "size": stock["size"], "sha256": stock["sha256"]},
+                "target": {
+                    "filename": f"SYN-{revision}.bin",
+                    "cueFilename": f"SYN-{revision}.cue",
+                    "size": stock["size"],
+                    "sha256": target_hash,
+                },
+                "patchLayers": layers,
+                "intermediate": {"size": stock["size"], "sha256": self.intermediate},
+                "provenance": {"v5Commit": "33" * 20, "buildReceiptSha256": "44" * 32},
+            }
+            if mutate:
+                mutate(revision, manifest, receipt, root)
+            receipt_path = root / f"receipts/{release_id}.acceptance.json"
+            write_json(receipt_path, receipt)
+            manifest["provenance"]["acceptanceReceiptSha256"] = hashlib.sha256(
+                receipt_path.read_bytes()
+            ).hexdigest()
+            manifest_path = root / f"releases/{release_id}.json"
+            write_json(manifest_path, manifest)
+            rows.append({
+                "gameId": "srwf-f",
+                "id": release_id,
+                "state": "ACCEPTED",
+                "label": "2099.01.01 · v9.9",
+                "manifest": f"releases/{release_id}.json",
+                "manifestSha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            })
+        write_json(root / "manifest/releases.json", {
+            "$schema": "../schemas/releases.schema.json",
+            "schema": "srwf-kor.public-release-index.v2",
+            "project": {"id": "srwf-kor-v5", "status": "HAS_ACCEPTED_RELEASE"},
+            "games": [
+                {"id": "srwf-f", "label": "슈퍼로봇대전 F", "status": "HAS_ACCEPTED_RELEASE",
+                 "defaultReleaseId": f"{self.group_id}-a"},
+                {"id": "srwf-final", "label": "슈퍼로봇대전 F 완결편", "status": "NO_ACCEPTED_RELEASE",
+                 "defaultReleaseId": None},
+            ],
+            "stock_profiles": [{"gameId": "srwf-f", **verifier.STOCK_PROFILE, "label": "Synthetic stock"}],
+            "releases": rows,
+        })
+
+    def validate(self, **options: Any) -> list[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self.build_tree(root, **options)
+            with verifier_root(root):
+                verifier.validate_index([path for path in root.rglob("*") if path.is_file()])
+                return list(verifier.errors)
+
+    def test_shared_base_layered_release_is_cross_checked(self) -> None:
+        self.assertEqual(self.validate(), [])
+
+    def test_layered_rules_fail_closed(self) -> None:
+        def on_a(change):
+            def mutate(revision, manifest, receipt, root):
+                if revision == "a":
+                    change(manifest, receipt, root)
+            return mutate
+
+        def set_layer(index, **values):
+            return on_a(lambda m, r, root: m["patchLayers"][index].update(values))
+
+        def add_single_patch(m, r, root):
+            m["patch"] = {"format": "srwf.sparse-byte-delta.v1"}
+
+        def receipt_with_patch(m, r, root):
+            r["patchSha256"] = "12" * 32
+
+        def drop_supersedes(m, r, root):
+            del r["supersedes"]
+
+        def overlapping_font(m, r, root):
+            payload = make_layer_payload(
+                [(105, b"\x05" * 2)], source_sha256=self.intermediate, target_sha256=self.targets["a"]
+            )
+            ref = m["patchLayers"][1]["url"]
+            (root / ref).write_bytes(payload)
+            m["patchLayers"][1].update(
+                size=len(payload), sha256=hashlib.sha256(payload).hexdigest(), bodyUncompressedSize=46
+            )
+            r["fontPatchSha256"] = m["patchLayers"][1]["sha256"]
+
+        def abutting_font(m, r, root):
+            payload = make_layer_payload(
+                [(110, b"\x05" * 2)], source_sha256=self.intermediate, target_sha256=self.targets["a"]
+            )
+            ref = m["patchLayers"][1]["url"]
+            (root / ref).write_bytes(payload)
+            m["patchLayers"][1].update(
+                size=len(payload), sha256=hashlib.sha256(payload).hexdigest(), bodyUncompressedSize=46
+            )
+            r["fontPatchSha256"] = m["patchLayers"][1]["sha256"]
+
+        cases = {
+            "keys differ": self.validate(mutate=on_a(add_single_patch)),
+            "patchLayers must be exactly": self.validate(
+                mutate=on_a(lambda m, r, root: m["patchLayers"].pop())
+            ),
+            "must have role base": self.validate(mutate=set_layer(0, role="font")),
+            "font layer must use": self.validate(mutate=set_layer(1, format="srwf.sparse-byte-delta.v2")),
+            "base layer URL must be": self.validate(
+                mutate=set_layer(0, url="patches/srwf-f-20990101-v9-9-a.srwfp")
+            ),
+            "font layer recordCount is outside": self.validate(mutate=set_layer(1, recordCount=0)),
+            "base layer: patch descriptor patchSha256": self.validate(mutate=set_layer(0, sha256="ab" * 32)),
+            "intermediate size must equal": self.validate(
+                mutate=on_a(lambda m, r, root: m["intermediate"].update(size=1))
+            ),
+            "base layer: patch descriptor targetSha256": self.validate(
+                mutate=on_a(lambda m, r, root: (
+                    m["intermediate"].update(sha256="cd" * 32),
+                    r.update(intermediateSha256="cd" * 32),
+                ))
+            ),
+            "intermediate image must differ": self.validate(
+                mutate=on_a(lambda m, r, root: m["intermediate"].update(sha256=m["target"]["sha256"]))
+            ),
+            "acceptance receipt: keys differ": self.validate(mutate=on_a(receipt_with_patch)),
+            "supersedes": self.validate(mutate=on_a(drop_supersedes)),
+            "basePatchSha256 does not match": self.validate(
+                mutate=on_a(lambda m, r, root: r.update(basePatchSha256="ef" * 32))
+            ),
+            "fontPatchSha256 does not match": self.validate(
+                mutate=on_a(lambda m, r, root: r.update(fontPatchSha256="ef" * 32))
+            ),
+            "intermediateSha256 does not match": self.validate(
+                mutate=on_a(lambda m, r, root: r.update(intermediateSha256="ef" * 32))
+            ),
+            "supersedes.patchSha256 must name": self.validate(
+                mutate=on_a(lambda m, r, root: r["supersedes"].update(patchSha256=r["basePatchSha256"]))
+            ),
+            "overlaps or abuts": self.validate(mutate=on_a(overlapping_font)),
+            "abuts base record": self.validate(mutate=on_a(abutting_font)),
+        }
+        for message, errors in cases.items():
+            with self.subTest(message=message):
+                self.assertTrue(any(message in error for error in errors), errors)
+
+    def test_layered_payloads_are_only_for_font_variants_and_leftovers_are_orphans(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self.build_tree(root)
+            # An unreferenced leftover layer is an unindexed payload.
+            (root / "patches/srwf-f-20990101-v9-8.base.srwfp").write_bytes(b"leftover")
+            with verifier_root(root):
+                verifier.validate_index([path for path in root.rglob("*") if path.is_file()])
+                self.assertTrue(any("unindexed .srwfp" in error for error in verifier.errors))
+
+        def legacy_id(revision, manifest, receipt, root):
+            pass
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self.build_tree(root)
+            index = json.loads((root / "manifest/releases.json").read_text(encoding="utf-8"))
+            row = dict(index["releases"][0], id="v5-r997", manifest="releases/v5-r997.json")
+            with verifier_root(root):
+                verifier.validate_release_manifest(row)
+                self.assertTrue(verifier.errors)
+
+    def test_layered_schema_contract_is_pinned(self) -> None:
+        for mutate, message in (
+            (lambda schema: schema["oneOf"].pop(), "payload forms"),
+            (lambda schema: schema["properties"]["patchLayers"]["prefixItems"][1]["properties"]["format"].update(
+                const="srwf.sparse-byte-delta.v2"), "patch layers"),
+            (lambda schema: schema["properties"]["intermediate"]["properties"]["size"].update(enum=[1]),
+             "intermediate image"),
+            (lambda schema: schema["required"].append("patch"), "required keys"),
+        ):
+            with self.subTest(message=message), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                copy_schema_files(root)
+                path = root / "schemas/release.schema.json"
+                schema = json.loads(path.read_text(encoding="utf-8"))
+                mutate(schema)
+                write_json(path, schema)
+                with verifier_root(root):
+                    verifier.validate_schema_documents()
+                    self.assertTrue(any(message in error for error in verifier.errors), verifier.errors)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            copy_schema_files(root)
+            path = root / "schemas/acceptance-receipt.schema.json"
+            schema = json.loads(path.read_text(encoding="utf-8"))
+            schema["properties"]["supersedes"]["additionalProperties"] = True
+            write_json(path, schema)
+            with verifier_root(root):
+                verifier.validate_schema_documents()
+                self.assertTrue(any("supersedes" in error for error in verifier.errors), verifier.errors)
+
+
+class LayeredReceiptTests(AcceptanceReceiptTests):
+    def layered(self) -> dict[str, Any]:
+        return {
+            "base": {"sha256": "aa" * 32},
+            "font": {"sha256": "bb" * 32},
+            "intermediate": {"sha256": "cc" * 32},
+        }
+
+    def layered_receipt(self) -> dict[str, Any]:
+        receipt = {key: value for key, value in self.receipt.items() if key != "patchSha256"}
+        receipt.update(
+            intermediateSha256="cc" * 32,
+            basePatchSha256="aa" * 32,
+            fontPatchSha256="bb" * 32,
+            supersedes={
+                "receiptSha256": "dd" * 32,
+                "patchSha256": self.patch["sha256"],
+                "decisionAuthority": "original authority",
+            },
+        )
+        return receipt
+
+    def validate_layered(self, receipt: dict[str, Any]) -> None:
+        verifier.validate_acceptance_receipt(
+            receipt,
+            release_id=self.release_id,
+            source=self.source,
+            target=self.target,
+            patch=None,
+            provenance=self.provenance,
+            layered=self.layered(),
+        )
+
+    def test_layered_receipt_passes_and_single_form_is_rejected(self) -> None:
+        self.validate_layered(self.layered_receipt())
+        self.assertEqual(verifier.errors, [])
+        # A single-payload receipt cannot authenticate a layered manifest...
+        self.validate_layered(self.receipt)
+        self.assertTrue(verifier.errors)
+        verifier.errors.clear()
+        # ...and a layered receipt cannot authenticate a single-payload manifest.
+        self.validate(self.layered_receipt())
+        self.assertTrue(verifier.errors)
+
+    def test_layered_receipt_fields_fail_closed(self) -> None:
+        for mutate in (
+            lambda r: r.update(basePatchSha256="AA" * 32),
+            lambda r: r.update(fontPatchSha256="aa" * 32),
+            lambda r: r.update(intermediateSha256="ee" * 32),
+            lambda r: r["supersedes"].update(extra=1),
+            lambda r: r["supersedes"].update(decisionAuthority=" "),
+            lambda r: r["supersedes"].update(receiptSha256="x"),
+            lambda r: r.update(decisionAuthority="가" * 161),
+        ):
+            receipt = json.loads(json.dumps(self.layered_receipt()))
+            mutate(receipt)
+            verifier.errors.clear()
+            self.validate_layered(receipt)
+            self.assertTrue(verifier.errors, receipt)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -91,6 +91,90 @@ COMMIT_PATTERN = r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
 VERSION_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$"
 MANIFEST_REFERENCE_PATTERN = r"^releases/[a-z0-9][a-z0-9._-]{0,63}\.json$"
 PATCH_REFERENCE_PATTERN = r"^patches/[a-z0-9][a-z0-9._-]{0,63}\.srwfp$"
+# Layered delivery (docs/LAYERED_RELEASES.md): one accepted target, reached by a
+# shared v1 base layer (stock -> intermediate) plus a per-font v1 layer
+# (intermediate -> accepted target). Both are ordinary SRWFKP1 files.
+LAYER_ROLES = ("base", "font")
+LAYER_KEYS = {"role", "format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"}
+LAYERED_RECEIPT_EXTRA_KEYS = {"intermediateSha256", "basePatchSha256", "fontPatchSha256", "supersedes"}
+SUPERSEDES_KEYS = {"receiptSha256", "patchSha256", "decisionAuthority"}
+
+
+LAYERED_BASE_URL_PATTERN = r"^patches/[a-z0-9][a-z0-9._-]{0,63}\.base\.srwfp$"
+LAYERED_FONT_URL_PATTERN = r"^patches/[a-z0-9][a-z0-9._-]{0,63}\.font\.srwfp$"
+
+
+def layered_base_patch_reference(group_id: str) -> str:
+    return f"patches/{group_id}.base.srwfp"
+
+
+def layered_font_patch_reference(release_id: str) -> str:
+    return f"patches/{release_id}.font.srwfp"
+
+
+def expected_patch_layer_schema(role: str, url_pattern: str) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["role", "format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"],
+        "properties": {
+            "role": {"const": role},
+            "format": {"const": PATCH_FORMAT_V1},
+            "url": {"type": "string", "pattern": url_pattern},
+            "size": {"type": "integer", "minimum": 101, "maximum": PATCH_MAX},
+            "sha256": {"type": "string", "pattern": HEX64_PATTERN},
+            "recordCount": {"type": "integer", "minimum": 1, "maximum": RECORD_MAX},
+            "bodyUncompressedSize": {"type": "integer", "minimum": 45, "maximum": BODY_MAX},
+        },
+    }
+
+
+EXPECTED_PATCH_LAYERS_SCHEMA = {
+    "type": "array",
+    "minItems": 2,
+    "maxItems": 2,
+    "prefixItems": [
+        expected_patch_layer_schema("base", LAYERED_BASE_URL_PATTERN),
+        expected_patch_layer_schema("font", LAYERED_FONT_URL_PATTERN),
+    ],
+    "items": False,
+}
+EXPECTED_RELEASE_PAYLOAD_FORMS = [
+    {
+        "required": ["patch"],
+        "not": {"anyOf": [{"required": ["patchLayers"]}, {"required": ["intermediate"]}]},
+    },
+    {
+        "required": ["patchLayers", "intermediate"],
+        "not": {"required": ["patch"]},
+        # A layered release is always an equal-size v1 result.
+        "properties": {
+            "target": {
+                "properties": {
+                    "size": {"enum": [profile["size"] for profile in STOCK_PROFILES_BY_GAME.values()]}
+                }
+            }
+        },
+    },
+]
+LAYERED_RECEIPT_KEY_ORDER = ["intermediateSha256", "basePatchSha256", "fontPatchSha256", "supersedes"]
+EXPECTED_RECEIPT_PAYLOAD_FORMS = [
+    {
+        "required": ["patchSha256"],
+        "not": {"anyOf": [{"required": [key]} for key in LAYERED_RECEIPT_KEY_ORDER]},
+    },
+    {"required": LAYERED_RECEIPT_KEY_ORDER, "not": {"required": ["patchSha256"]}},
+]
+EXPECTED_SUPERSEDES_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["receiptSha256", "patchSha256", "decisionAuthority"],
+    "properties": {
+        "receiptSha256": {"type": "string", "pattern": HEX64_PATTERN},
+        "patchSha256": {"type": "string", "pattern": HEX64_PATTERN},
+        "decisionAuthority": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": r"\S"},
+    },
+}
 
 REQUIRED_FILES = {
     ".gitattributes",
@@ -118,11 +202,16 @@ REQUIRED_FILES = {
     "schemas/release.schema.json",
     "schemas/releases.schema.json",
     "scripts/verify_repo.py",
+    "scripts/split_font_variants.py",
+    "docs/LAYERED_RELEASES.md",
     ".githooks/pre-commit",
     "tests/frontend-contract.test.mjs",
     "tests/patch-core.test.mjs",
     "tests/patch-core-v2.test.mjs",
+    "tests/patch-layered.test.mjs",
     "tests/patch-worker.test.mjs",
+    "tests/patch-worker-layered.test.mjs",
+    "tests/test_split_font_variants.py",
     "tests/test_verify_repo.py",
 }
 
@@ -268,12 +357,12 @@ REQUIRED_IGNORE_LINES = {
 EXPECTED_PACKAGE_SCRIPTS = {
     "build": (
         "python3 scripts/verify_repo.py && node --test && "
-        "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_verify_repo.py"
+        "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_verify_repo.py tests/test_split_font_variants.py"
     ),
     "verify": "python3 scripts/verify_repo.py",
     "test": (
         "node --test && PYTHONDONTWRITEBYTECODE=1 "
-        "python3 -m unittest tests/test_verify_repo.py && python3 scripts/verify_repo.py"
+        "python3 -m unittest tests/test_verify_repo.py tests/test_split_font_variants.py && python3 scripts/verify_repo.py"
     ),
 }
 EXPECTED_PRE_COMMIT_LINES = [
@@ -1346,6 +1435,7 @@ def schema_object_properties(
     context: str,
     *,
     allowed_metadata: set[str] | None = None,
+    optional: set[str] | None = None,
 ) -> dict[str, Any]:
     if not isinstance(value, dict):
         complain(f"{context}: must be an object schema")
@@ -1365,7 +1455,7 @@ def schema_object_properties(
     ):
         complain(f"{context}: required keys are out of sync")
     properties = value.get("properties")
-    if not isinstance(properties, dict) or set(properties) != required:
+    if not isinstance(properties, dict) or set(properties) != required | (optional or set()):
         complain(f"{context}: property keys are out of sync")
         return {}
     return properties
@@ -1570,13 +1660,37 @@ def validate_schema_documents() -> None:
     )
     release_keys = {
         "schema", "id", "state", "version", "title", "publishedAt",
-        "source", "target", "patch", "provenance",
+        "source", "target", "provenance",
     }
     release_props = schema_object_properties(
         release_schema,
         release_keys,
         "schemas/release.schema.json root",
-        allowed_metadata={"$schema", "$id", "title", "allOf"},
+        allowed_metadata={"$schema", "$id", "title", "allOf", "oneOf"},
+        optional={"patch", "patchLayers", "intermediate"},
+    )
+    expect_schema_fragment(
+        release_schema.get("oneOf"),
+        EXPECTED_RELEASE_PAYLOAD_FORMS,
+        "public release single-or-layered payload forms",
+    )
+    expect_schema_fragment(
+        release_props.get("patchLayers"),
+        EXPECTED_PATCH_LAYERS_SCHEMA,
+        "public release patch layers",
+    )
+    expect_schema_fragment(
+        release_props.get("intermediate"),
+        {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["size", "sha256"],
+            "properties": {
+                "size": {"enum": [profile["size"] for profile in STOCK_PROFILES_BY_GAME.values()]},
+                "sha256": {"type": "string", "pattern": HEX64_PATTERN},
+            },
+        },
+        "public release intermediate image",
     )
     for key, expected in {
         "schema": {"const": "srwf-kor.public-release.v1"},
@@ -1777,14 +1891,31 @@ def validate_schema_documents() -> None:
     )
     receipt_keys = {
         "schema", "releaseId", "state", "acceptedAt", "stockProfileId",
-        "sourceSha256", "targetSha256", "patchSha256", "v5Commit", "gates",
+        "sourceSha256", "targetSha256", "v5Commit", "gates",
         "decisionAuthority",
     }
     receipt_props = schema_object_properties(
         receipt_schema,
         receipt_keys,
         "schemas/acceptance-receipt.schema.json root",
-        allowed_metadata={"$schema", "$id", "title"},
+        allowed_metadata={"$schema", "$id", "title", "oneOf"},
+        optional={"patchSha256", *LAYERED_RECEIPT_KEY_ORDER},
+    )
+    expect_schema_fragment(
+        receipt_schema.get("oneOf"),
+        EXPECTED_RECEIPT_PAYLOAD_FORMS,
+        "acceptance receipt single-or-layered payload forms",
+    )
+    for key in ("intermediateSha256", "basePatchSha256", "fontPatchSha256"):
+        expect_schema_fragment(
+            receipt_props.get(key),
+            {"type": "string", "pattern": HEX64_PATTERN},
+            f"acceptance receipt {key}",
+        )
+    expect_schema_fragment(
+        receipt_props.get("supersedes"),
+        EXPECTED_SUPERSEDES_SCHEMA,
+        "acceptance receipt supersedes",
     )
     for key, expected in {
         "schema": {"const": "srwf-kor.acceptance-receipt.v1"},
@@ -1849,13 +1980,16 @@ def validate_acceptance_receipt(
     target: Any,
     patch: Any,
     provenance: Any,
+    layered: dict[str, Any] | None = None,
 ) -> None:
+    """``layered`` is {"base": layer, "font": layer, "intermediate": image} for
+    a layered release; the receipt must then pin both layers instead of one patch."""
     context = f"release {release_id} acceptance receipt"
     required = {
         "schema", "releaseId", "state", "acceptedAt", "stockProfileId",
-        "sourceSha256", "targetSha256", "patchSha256", "v5Commit", "gates",
+        "sourceSha256", "targetSha256", "v5Commit", "gates",
         "decisionAuthority",
-    }
+    } | ({*LAYERED_RECEIPT_KEY_ORDER} if layered is not None else {"patchSha256"})
     if not exact_keys(receipt, required, context):
         return
     assert isinstance(receipt, dict)
@@ -1873,8 +2007,10 @@ def validate_acceptance_receipt(
         complain(f"{context}: sourceSha256 does not match the release source")
     if not is_hex64(receipt.get("targetSha256")):
         complain(f"{context}: targetSha256 is invalid")
-    if not is_hex64(receipt.get("patchSha256")):
+    if layered is None and not is_hex64(receipt.get("patchSha256")):
         complain(f"{context}: patchSha256 is invalid")
+    if layered is not None:
+        validate_layered_receipt_fields(receipt, layered, context)
     if not isinstance(receipt.get("v5Commit"), str) or COMMIT_RE.fullmatch(receipt["v5Commit"]) is None:
         complain(f"{context}: v5Commit is invalid")
     if not is_bounded_string(receipt.get("decisionAuthority"), maximum=160):
@@ -1905,16 +2041,218 @@ def validate_acceptance_receipt(
         complain(f"{context}: source hash does not match release manifest")
     if receipt.get("targetSha256") != target_hash:
         complain(f"{context}: target hash does not match release manifest")
-    if receipt.get("patchSha256") != patch_hash:
+    if layered is None and receipt.get("patchSha256") != patch_hash:
         complain(f"{context}: patch hash does not match release manifest")
     if receipt.get("v5Commit") != v5_commit:
         complain(f"{context}: V5 commit does not match release manifest")
 
 
+def validate_layered_receipt_fields(receipt: dict[str, Any], layered: dict[str, Any], context: str) -> None:
+    expected = {
+        "intermediateSha256": layered["intermediate"].get("sha256")
+        if isinstance(layered.get("intermediate"), dict) else None,
+        "basePatchSha256": layered["base"].get("sha256") if isinstance(layered.get("base"), dict) else None,
+        "fontPatchSha256": layered["font"].get("sha256") if isinstance(layered.get("font"), dict) else None,
+    }
+    for key, value in expected.items():
+        if not is_hex64(receipt.get(key)):
+            complain(f"{context}: {key} is invalid")
+        elif receipt.get(key) != value:
+            complain(f"{context}: {key} does not match the layered release manifest")
+    supersedes = receipt.get("supersedes")
+    if exact_keys(supersedes, SUPERSEDES_KEYS, f"{context} supersedes"):
+        assert isinstance(supersedes, dict)
+        for key in ("receiptSha256", "patchSha256"):
+            if not is_hex64(supersedes.get(key)):
+                complain(f"{context}: supersedes.{key} is invalid")
+        if supersedes.get("patchSha256") in {expected["basePatchSha256"], expected["fontPatchSha256"]}:
+            complain(f"{context}: supersedes.patchSha256 must name the replaced single payload")
+        if not is_bounded_string(supersedes.get("decisionAuthority"), maximum=160):
+            complain(f"{context}: supersedes.decisionAuthority must be 1-160 non-blank characters")
+
+
+# Record spans of a structurally verified payload, keyed by its bytes' SHA-256.
+_SPAN_CACHE: dict[bytes, tuple[Any, Any]] = {}
+
+
+def srwfp_record_spans(data: bytes) -> tuple[Any, Any]:
+    """Offsets and ends of an already inspected v1 payload (ascending)."""
+    from array import array
+
+    key = hashlib.sha256(data).digest()
+    if key in _SPAN_CACHE:
+        return _SPAN_CACHE[key]
+    record_count, _source_size, _target_size, body_size = struct.unpack_from(">IQQQ", data, 8)
+    body = zlib.decompress(data[PATCH_HEADER_SIZE:])
+    if len(body) != body_size:
+        raise SrwfpFormatError("decompressed body differs from its declared size")
+    starts, ends = array("Q"), array("Q")
+    position = 0
+    for _ in range(record_count):
+        offset, length = struct.unpack_from(">QI", body, position)
+        starts.append(offset)
+        ends.append(offset + length)
+        position += RECORD_HEADER_SIZE + length
+    if len(_SPAN_CACHE) >= 4:
+        _SPAN_CACHE.pop(next(iter(_SPAN_CACHE)))
+    _SPAN_CACHE[key] = (starts, ends)
+    return starts, ends
+
+
+def check_layer_spans(
+    base: tuple[Any, Any], font: tuple[Any, Any], image_size: int, context: str
+) -> None:
+    """Font records may neither overlap nor abut base records, and the union of
+    both layers must fit the browser's sparse download capture budget."""
+    from bisect import bisect_left
+
+    base_starts, base_ends = base
+    font_starts, font_ends = font
+    for start, end in zip(font_starts, font_ends):
+        # First base record whose end is >= this font record's start.
+        index = bisect_left(base_ends, start)
+        if index < len(base_starts) and base_starts[index] <= end:
+            complain(
+                f"{context}: font record [{start},{end}) overlaps or abuts base record "
+                f"[{base_starts[index]},{base_ends[index]})"
+            )
+            return
+
+    captured = 0
+    window_start = window_end = -1
+    base_index = font_index = 0
+    while base_index < len(base_starts) or font_index < len(font_starts):
+        if font_index >= len(font_starts) or (
+            base_index < len(base_starts) and base_starts[base_index] < font_starts[font_index]
+        ):
+            start, end = base_starts[base_index], base_ends[base_index]
+            base_index += 1
+        else:
+            start, end = font_starts[font_index], font_ends[font_index]
+            font_index += 1
+        start_window = start // DOWNLOAD_CAPTURE_CHUNK_BYTES * DOWNLOAD_CAPTURE_CHUNK_BYTES
+        end_window = min(
+            image_size,
+            (end + DOWNLOAD_CAPTURE_CHUNK_BYTES - 1) // DOWNLOAD_CAPTURE_CHUNK_BYTES
+            * DOWNLOAD_CAPTURE_CHUNK_BYTES,
+        )
+        if window_end >= 0 and start_window <= window_end:
+            window_end = max(window_end, end_window)
+            continue
+        if window_end >= 0:
+            captured += window_end - window_start
+        window_start, window_end = start_window, end_window
+    if window_end >= 0:
+        captured += window_end - window_start
+    if captured > MAX_DOWNLOAD_CAPTURE_BYTES:
+        complain(
+            f"{context}: layered download requires more than "
+            f"{MAX_DOWNLOAD_CAPTURE_BYTES} captured bytes"
+        )
+
+
+def validate_layered_payloads(
+    row: dict[str, Any],
+    manifest: dict[str, Any],
+    source: Any,
+    target: Any,
+) -> tuple[list[str], dict[str, Any] | None]:
+    release_id = row["id"]
+    context = f"release {release_id}"
+    group_id, revision = font_release_identity(row)
+    if revision is None:
+        complain(f"{context}: layered payloads are only allowed for -a/-b/-c font variants")
+    intermediate = manifest.get("intermediate")
+    if exact_keys(intermediate, {"size", "sha256"}, f"{context} intermediate"):
+        assert isinstance(intermediate, dict)
+        if not isinstance(source, dict) or intermediate.get("size") != source.get("size"):
+            complain(f"{context}: intermediate size must equal the stock size")
+        if not is_hex64(intermediate.get("sha256")):
+            complain(f"{context}: intermediate SHA-256 is invalid")
+        elif intermediate.get("sha256") in {
+            source.get("sha256") if isinstance(source, dict) else None,
+            target.get("sha256") if isinstance(target, dict) else None,
+        }:
+            complain(f"{context}: intermediate image must differ from stock and target")
+    else:
+        intermediate = None
+
+    layers = manifest.get("patchLayers")
+    if not isinstance(layers, list) or len(layers) != len(LAYER_ROLES):
+        complain(f"{context}: patchLayers must be exactly [base, font]")
+        return [], None
+    expected_refs = [layered_base_patch_reference(group_id), layered_font_patch_reference(release_id)]
+    refs: list[str] = []
+    valid = intermediate is not None and revision is not None
+    for index, layer in enumerate(layers):
+        role = LAYER_ROLES[index]
+        if not exact_keys(layer, LAYER_KEYS, f"{context} {role} layer"):
+            valid = False
+            continue
+        assert isinstance(layer, dict)
+        if layer.get("role") != role:
+            complain(f"{context}: patch layer {index} must have role {role}")
+            valid = False
+        if layer.get("format") != PATCH_FORMAT_V1:
+            complain(f"{context}: {role} layer must use {PATCH_FORMAT_V1}")
+            valid = False
+        url = layer.get("url")
+        if url != expected_refs[index] or not is_safe_relative(url, prefix="patches/", suffix=".srwfp"):
+            complain(f"{context}: {role} layer URL must be {expected_refs[index]}")
+            valid = False
+        else:
+            refs.append(url)
+        for key, minimum, maximum in (
+            ("size", 101, PATCH_MAX),
+            ("recordCount", 1, RECORD_MAX),
+            ("bodyUncompressedSize", 45, BODY_MAX),
+        ):
+            value = layer.get(key)
+            if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
+                complain(f"{context}: {role} layer {key} is outside its hard limits")
+                valid = False
+        if not is_hex64(layer.get("sha256")):
+            complain(f"{context}: {role} layer SHA-256 is invalid")
+            valid = False
+    if not valid or len(refs) != 2:
+        return refs, None
+    base_layer, font_layer = layers
+    if base_layer.get("sha256") == font_layer.get("sha256"):
+        complain(f"{context}: base and font layers must be distinct payloads")
+        return refs, None
+
+    error_count = len(errors)
+    base_path, font_path = ROOT / refs[0], ROOT / refs[1]
+    for path, label in ((base_path, "base"), (font_path, "font")):
+        if not path.is_file():
+            complain(f"{context}: {label} layer .srwfp payload is missing")
+    if len(errors) == error_count and isinstance(source, dict) and isinstance(target, dict):
+        # base: stock -> intermediate, font: intermediate -> accepted target.
+        require_srwfp_descriptor(
+            base_path, source=source, target=intermediate, patch=base_layer,
+            context=f"{context} base layer",
+        )
+        require_srwfp_descriptor(
+            font_path, source=intermediate, target=target, patch=font_layer,
+            context=f"{context} font layer",
+        )
+        if len(errors) == error_count:
+            try:
+                check_layer_spans(
+                    srwfp_record_spans(base_path.read_bytes()),
+                    srwfp_record_spans(font_path.read_bytes()),
+                    int(source["size"]),
+                    context,
+                )
+            except (OSError, SrwfpFormatError, zlib.error, struct.error) as exc:
+                complain(f"{context}: cannot inspect layer records: {exc}")
+    return refs, {"base": base_layer, "font": font_layer, "intermediate": intermediate}
+
+
 def validate_release_manifest(
     row: dict[str, Any],
     stock_profiles_by_id: dict[str, dict[str, Any]] | None = None,
-) -> tuple[str | None, str | None, str | None]:
+) -> tuple[str | None, list[str], str | None]:
     release_id = row.get("id")
     game_id = row.get("gameId")
     if stock_profiles_by_id is None:
@@ -1925,23 +2263,26 @@ def validate_release_manifest(
     manifest_ref = row.get("manifest")
     if not isinstance(release_id, str) or ID_RE.fullmatch(release_id) is None:
         complain("release index row: invalid id")
-        return None, None, None
+        return None, [], None
     if row.get("state") != "ACCEPTED":
         complain(f"release {release_id}: public index state must be ACCEPTED")
     expected_manifest = f"releases/{release_id}.json"
     if manifest_ref != expected_manifest or not is_safe_relative(manifest_ref, prefix="releases/", suffix=".json"):
         complain(f"release {release_id}: manifest must be {expected_manifest}")
-        return None, None, None
+        return None, [], None
     manifest_path = ROOT / manifest_ref
     if not manifest_path.is_file():
         complain(f"release {release_id}: manifest file is missing")
-        return manifest_ref, None, None
+        return manifest_ref, [], None
     if not is_hex64(row.get("manifestSha256")) or sha256_file(manifest_path) != row.get("manifestSha256"):
         complain(f"release {release_id}: manifestSha256 does not match the file")
     manifest = load_json(manifest_path)
-    required = {"schema", "id", "state", "version", "title", "publishedAt", "source", "target", "patch", "provenance"}
+    layered = isinstance(manifest, dict) and "patchLayers" in manifest
+    required = {"schema", "id", "state", "version", "title", "publishedAt", "source", "target", "provenance"} | (
+        {"patchLayers", "intermediate"} if layered else {"patch"}
+    )
     if not exact_keys(manifest, required, f"release {release_id} manifest"):
-        return manifest_ref, None, None
+        return manifest_ref, [], None
     assert isinstance(manifest, dict)
     if manifest.get("schema") != "srwf-kor.public-release.v1" or manifest.get("id") != release_id or manifest.get("state") != "ACCEPTED":
         complain(f"release {release_id}: schema/id/state is not an exact accepted release")
@@ -1998,7 +2339,11 @@ def validate_release_manifest(
 
     patch = manifest.get("patch")
     patch_ref: str | None = None
-    if exact_keys(patch, {"format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"}, f"release {release_id} patch"):
+    patch_refs: list[str] = []
+    layered_info: dict[str, Any] | None = None
+    if layered:
+        patch_refs, layered_info = validate_layered_payloads(row, manifest, source, target)
+    elif exact_keys(patch, {"format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"}, f"release {release_id} patch"):
         assert isinstance(patch, dict)
         patch_ref = patch.get("url") if isinstance(patch.get("url"), str) else None
         growth_format = patch.get("format") == PATCH_FORMAT_V2
@@ -2047,6 +2392,8 @@ def validate_release_manifest(
                     patch=patch,
                     context=f"release {release_id}",
                 )
+        if patch_ref:
+            patch_refs = [patch_ref]
 
     provenance = manifest.get("provenance")
     receipt_ref = f"receipts/{release_id}.acceptance.json"
@@ -2062,6 +2409,8 @@ def validate_release_manifest(
             complain(f"release {release_id}: explicit ACCEPTED receipt is missing")
         elif sha256_file(receipt_path) != provenance.get("acceptanceReceiptSha256"):
             complain(f"release {release_id}: acceptance receipt hash mismatch")
+        elif layered and layered_info is None:
+            complain(f"release {release_id}: layered payloads must be valid before the receipt is checked")
         else:
             receipt = load_json(receipt_path)
             validate_acceptance_receipt(
@@ -2071,8 +2420,9 @@ def validate_release_manifest(
                 target=target,
                 patch=patch,
                 provenance=provenance,
+                layered=layered_info,
             )
-    return manifest_ref, patch_ref, receipt_ref
+    return manifest_ref, patch_refs, receipt_ref
 
 
 FONT_RELEASE_ID_PATTERN = re.compile(r"(srwf-(?:f|final)-\d{8}-v\d+(?:-\d+)+)-([abc])")
@@ -2236,11 +2586,10 @@ def validate_index(files: list[Path]) -> None:
             ids.add(row["id"])
             if game_id in release_ids_by_game:
                 release_ids_by_game[game_id].add(row["id"])
-        manifest_ref, patch_ref, receipt_ref = validate_release_manifest(row, stock_profiles_by_id)
+        manifest_ref, patch_refs, receipt_ref = validate_release_manifest(row, stock_profiles_by_id)
         if manifest_ref:
             referenced_manifests.add(manifest_ref)
-        if patch_ref:
-            referenced_patches.add(patch_ref)
+        referenced_patches.update(patch_refs)
         if receipt_ref:
             referenced_receipts.add(receipt_ref)
 
