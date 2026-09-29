@@ -225,7 +225,7 @@ v3 payload는 `zlib.decompressobj`로 검사해 엄격 디코드와 병합 검�
 
 ## 10. 재현
 
-작업 폴더의 `v3ref/`(구현 시 `scripts/`로 옮김). 모든 명령은 저장소를 읽기만 합니다.
+작업 폴더의 `v3ref/`(구현은 `scripts/convert_to_v3.py`의 `encode`·`verify`·`verify-stock`으로 옮겨졌고 같은 값을 냅니다). 모든 명령은 저장소를 읽기만 합니다.
 
 ```
 python3 roundtrip_v3.py --group srwf-f-20260928-v0-5 --out f5.v3.srwfp   # 인코딩 + 승인된 v1과 record 단위 대조

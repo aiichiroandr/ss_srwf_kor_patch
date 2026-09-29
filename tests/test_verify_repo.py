@@ -1312,6 +1312,10 @@ class SyntheticV2ReleaseTests(unittest.TestCase):
                 manifest_patch={"recordCount": 2, "bodyUncompressedSize": 27},
             ),
             "unsupported patch format": self.validate(
+                payload, target_size=good_size, patch_format="srwf.sparse-byte-delta.v4"
+            ),
+            # v3 has its own eight-key patch object, so a six-key v3 manifest is malformed.
+            "keys differ (missing=['commonRecordCount', 'variant']": self.validate(
                 payload, target_size=good_size, patch_format="srwf.sparse-byte-delta.v3"
             ),
         }
@@ -1330,6 +1334,760 @@ class SyntheticV2ReleaseTests(unittest.TestCase):
         v1_payload = make_structural_patch(stock_size, [(0, bytes(range(1, 200)))])
         v2_on_v1 = self.validate(v1_payload, target_size=good_size)
         self.assertTrue(any("magic is not SRWFKP2" in error for error in v2_on_v1), v2_on_v1)
+
+
+def load_v3_fixtures():
+    """The synthetic v3 fixtures live with the converter tests (one builder, two consumers)."""
+    import importlib.util
+
+    path = PROJECT_ROOT / "tests/test_convert_to_v3.py"
+    spec = importlib.util.spec_from_file_location("srwf_v3_fixtures", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+v3fx = load_v3_fixtures()
+convert = v3fx.convert
+
+
+def v3_payload_from_records(
+    common: list[tuple[int, int, bytes]],
+    unique: dict[str, list[tuple[int, int, bytes]]],
+    canaries: list[tuple[int, int, bytes]],
+    *,
+    image_size: int = verifier.STOCK_PROFILE["size"],
+) -> bytes:
+    """A wire-valid v3 payload from explicit sections (no partition, no canary rule applied)."""
+    ids = sorted(unique)
+    targets = {variant: (hashlib.sha256(b"t" + variant.encode()).digest(), []) for variant in ids}
+    header, body, _ = convert.build_header_and_body(
+        image_size, hashlib.sha256(b"source").digest(), targets, canaries, common=common, unique=unique
+    )
+    return header + convert.compress_body(body)
+
+
+class SrwfpV3InspectionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        verifier.errors.clear()
+        self.payload = v3fx.golden_payload()
+
+    def tearDown(self) -> None:
+        verifier.errors.clear()
+
+    def test_golden_vector_is_accepted_with_the_documented_fingerprints(self) -> None:
+        descriptor = verifier.inspect_srwfp_v3(self.payload)
+        self.assertEqual(descriptor["patchSize"], 871)
+        self.assertEqual(descriptor["patchSha256"], v3fx.GOLDEN_SHA256)
+        self.assertEqual(descriptor["sourceSize"], 4096)
+        self.assertEqual(descriptor["targetSize"], 4096)
+        self.assertEqual(descriptor["bodyUncompressedSize"], 585)
+        self.assertEqual(descriptor["commonRecordCount"], 4)
+        self.assertEqual(descriptor["canaryCount"], 2)
+        self.assertEqual(descriptor["format"], verifier.PATCH_FORMAT_V3)
+        self.assertEqual(sorted(descriptor["variants"]), ["a", "b", "c"])
+        for variant, entry in descriptor["variants"].items():
+            self.assertEqual(entry["targetSha256"], v3fx.GOLDEN_TARGETS[variant])
+            self.assertEqual(entry["recordSetSha256"], v3fx.GOLDEN_RECORD_SETS[variant])
+        self.assertEqual(
+            {variant: entry["recordCount"] for variant, entry in descriptor["variants"].items()},
+            {"a": 6, "b": 6, "c": 4},
+        )
+
+    def test_the_independent_inspector_and_the_converter_decoder_agree(self) -> None:
+        cases = golden_negative = v3fx.golden_negative_cases()
+        self.assertGreaterEqual(len(cases), 40)
+        for name, data, code in golden_negative:
+            with self.subTest(name=name):
+                with self.assertRaises(verifier.SrwfpFormatError) as raised:
+                    verifier.inspect_srwfp_v3(data)
+                self.assertTrue(str(raised.exception).startswith(code), (str(raised.exception), code))
+        group = v3fx.SyntheticGroup()
+        v1 = {v: convert.V1Payload(group.v1[v], v) for v in "abc"}
+        common, _ = convert.partition({v: v1[v].records for v in v1})
+        payload, _ = convert.encode_group(
+            v1["a"].image_size, v1["a"].source_sha256,
+            {v: (v1[v].target_sha256, v1[v].records) for v in v1}, convert.select_canaries(common, v1),
+        )
+        descriptor = verifier.inspect_srwfp_v3(payload)
+        decoded = convert.decode(payload)
+        for variant in "abc":
+            self.assertEqual(descriptor["variants"][variant]["recordSetSha256"], decoded.variant_record_set_sha256(variant))
+            self.assertEqual(descriptor["variants"][variant]["recordSetSha256"], group.pins[group.release_ids[variant]]["recordSetSha256"])
+
+    def test_mutation_campaign_never_escapes_the_error_type_and_stays_at_least_as_strict(self) -> None:
+        """Random damage: only SrwfpFormatError escapes, and the repository inspector accepts
+        nothing the converter's independent decoder rejects (it may only be stricter)."""
+        rng = random.Random(20260929)
+        group = v3fx.SyntheticGroup(variants="abc", seed=21, common_count=24)
+        v1 = {v: convert.V1Payload(group.v1[v], v) for v in "abc"}
+        common, _ = convert.partition({v: v1[v].records for v in v1})
+        synthetic, _ = convert.encode_group(
+            v1["a"].image_size, v1["a"].source_sha256,
+            {v: (v1[v].target_sha256, v1[v].records) for v in v1}, convert.select_canaries(common, v1),
+        )
+        accepted = rejected = 0
+        for base in (self.payload, synthetic):
+            header = convert.parse_header(base)
+            for iteration in range(300):
+                data = bytearray(base)
+                kind = iteration % 5
+                if kind == 0:  # damage anywhere in the file
+                    data[rng.randrange(len(data))] ^= 1 << rng.randrange(8)
+                elif kind == 1:  # damage the header fields (hash fields are opaque to inspection)
+                    data[rng.randrange(header["headerSize"])] = rng.randrange(256)
+                elif kind == 2:  # truncate
+                    del data[rng.randrange(len(data)):]
+                else:  # valid zlib around a damaged body
+                    body = bytearray(convert.inflate_body(base, header))
+                    for _ in range(1 + kind - 3):
+                        body[rng.randrange(len(body))] = rng.randrange(256)
+                    compressor = zlib.compressobj(9, 8, 15, 9)
+                    data = bytearray(base[:header["headerSize"]]) + compressor.compress(bytes(body)) + compressor.flush()
+                mutated = bytes(data)
+                try:
+                    convert.decode(mutated)
+                    converter_ok = True
+                except convert.V3Error:
+                    converter_ok = False
+                try:
+                    verifier.inspect_srwfp_v3(mutated)
+                    verifier_ok = True
+                except verifier.SrwfpFormatError:
+                    verifier_ok = False
+                self.assertTrue(converter_ok or not verifier_ok, (iteration, kind))
+                accepted += verifier_ok
+                rejected += not verifier_ok
+        self.assertGreater(rejected, 150)
+        self.assertGreater(accepted, 150, "damage to data bytes or opaque hash fields is invisible without the stock")
+
+    def test_descriptor_cache_rechecks_bytes_and_returns_private_copies(self) -> None:
+        with mock_patch.object(verifier, "inspect_srwfp_v3", wraps=verifier.inspect_srwfp_v3) as inspect:
+            first = verifier.inspect_srwfp_v3_cached(self.payload)
+            first["variants"]["a"]["targetSha256"] = "tampered"
+            second = verifier.inspect_srwfp_v3_cached(self.payload)
+            self.assertEqual(inspect.call_count, 1)
+            self.assertEqual(second["variants"]["a"]["targetSha256"], v3fx.GOLDEN_TARGETS["a"])
+            with self.assertRaises(verifier.SrwfpFormatError):
+                verifier.inspect_srwfp_v3_cached(self.payload + b"\0")
+            self.assertEqual(inspect.call_count, 2)
+
+    def test_formats_never_cross(self) -> None:
+        v1_patch, _, _ = make_patch(bytes(range(64)), [(2, b"\xf0\xf1")])
+        with self.assertRaisesRegex(verifier.SrwfpFormatError, "BAD_MAGIC"):
+            verifier.inspect_srwfp_v3(v1_patch)
+        with self.assertRaises(verifier.SrwfpFormatError):
+            verifier.inspect_srwfp(self.payload)
+        with self.assertRaises(verifier.SrwfpFormatError):
+            verifier.inspect_srwfp_v2(self.payload)
+
+    def test_canaries_must_be_the_generator_choice(self) -> None:
+        group = v3fx.SyntheticGroup()
+        v1 = {v: convert.V1Payload(group.v1[v], v) for v in "abc"}
+        common, unique = convert.partition({v: v1[v].records for v in v1})
+        eligible = [r for r in common if 16 <= r[1] <= 4096]
+        rule = [eligible[p] for p in convert.canary_positions(len(eligible))]
+        good = [(o, l, v3fx.fake_preimage(o, l)) for o, l, _ in rule]
+        self.assertEqual(len(verifier.inspect_srwfp_v3(v3_payload_from_records(common, unique, good))["variants"]), 3)
+        first_eight = [(o, l, v3fx.fake_preimage(o, l)) for o, l, _ in eligible[:8]]
+        with self.assertRaisesRegex(verifier.SrwfpFormatError, "generator selection rule"):
+            verifier.inspect_srwfp_v3(v3_payload_from_records(common, unique, first_eight))
+        too_few = good[:7]
+        with self.assertRaisesRegex(verifier.SrwfpFormatError, "generator selection rule"):
+            verifier.inspect_srwfp_v3(v3_payload_from_records(common, unique, too_few))
+        # a record of 4097 bytes is not an eligible canary even though it is a common record
+        long_record = next(r for r in common if r[1] == 4097)
+        with self.assertRaisesRegex(verifier.SrwfpFormatError, "BAD_CANARY_TABLE"):
+            verifier.inspect_srwfp_v3(v3_payload_from_records(common, unique, [(long_record[0], 4097, bytes(32))]))
+
+    def test_partition_must_be_canonical(self) -> None:
+        group = v3fx.SyntheticGroup()
+        v1 = {v: convert.V1Payload(group.v1[v], v) for v in "abc"}
+        common, unique = convert.partition({v: v1[v].records for v in v1})
+        eligible = [r for r in common if 16 <= r[1] <= 4096]
+        canaries = [(eligible[p][0], eligible[p][1], bytes(32)) for p in convert.canary_positions(len(eligible))]
+        canary_offsets = {c[0] for c in canaries}
+        movable = next(r for r in common if r[0] not in canary_offsets)
+        smaller = [r for r in common if r != movable]
+        # `movable` now lives in every variant section instead of in common
+        payload = v3_payload_from_records(smaller, {v: sorted(unique[v] + [movable]) for v in unique}, [
+            c for c in canaries
+        ])
+        with self.assertRaisesRegex(verifier.SrwfpFormatError, "NON_CANONICAL_PARTITION"):
+            verifier.inspect_srwfp_v3(payload)
+        # in only some of the variant sections it is a legitimate variant record
+        partial = {v: (sorted(unique[v] + [movable]) if v != "c" else unique[v]) for v in unique}
+        verifier.inspect_srwfp_v3(v3_payload_from_records(smaller, partial, canaries))
+
+    def test_download_capture_budget_boundary(self) -> None:
+        window = verifier.DOWNLOAD_CAPTURE_CHUNK_BYTES
+
+        def payload_with_windows(count: int) -> bytes:
+            # `count` common records, each alone in its own 1 MiB window, plus one variant-b record
+            common = [(2 * window * k, 16, bytes([1 + k % 200]) * 16) for k in range(count)]
+            canaries = [
+                (common[p][0], 16, bytes(32)) for p in convert.canary_positions(len(common))
+            ]
+            return v3_payload_from_records(common, {"a": [], "b": [(window * 2 * count + 8, 3, b"xyz")]}, canaries)
+
+        limit = verifier.MAX_DOWNLOAD_CAPTURE_BYTES // window
+        ok = verifier.inspect_srwfp_v3(payload_with_windows(limit - 1))  # + variant b's own window
+        self.assertEqual(ok["variants"]["b"]["capturedBytes"], limit * window)
+        self.assertEqual(ok["variants"]["a"]["capturedBytes"], (limit - 1) * window)
+        with self.assertRaisesRegex(verifier.SrwfpFormatError, "DOWNLOAD_CAPTURE_TOO_LARGE"):
+            verifier.inspect_srwfp_v3(payload_with_windows(limit + 1))
+
+
+class SyntheticV3ReleaseTests(unittest.TestCase):
+    """A converted synthetic font group must pass; every documented tampering must not."""
+
+    template: Path
+    group: Any
+    _tmp: tempfile.TemporaryDirectory
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.group = v3fx.SyntheticGroup()
+        cls.v1_root = Path(cls._tmp.name).resolve() / "v1"
+        cls.template = Path(cls._tmp.name).resolve() / "v3"
+        for root in (cls.v1_root, cls.template):
+            root.mkdir()
+            cls.group.write(root)
+        with cls.group.history():
+            code, out, err = v3fx.run_cli("install", "--root", str(cls.template), "--group", v3fx.GROUP)
+        assert code == 0, (out, err)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def setUp(self) -> None:
+        verifier.errors.clear()
+        history = self.group.history()
+        history.start()
+        self.addCleanup(history.stop)
+        self.addCleanup(verifier.errors.clear)
+        self.rid = {v: self.group.release_ids[v] for v in "abc"}
+        self.url = f"patches/{v3fx.GROUP}.v3.srwfp"
+
+    def fresh(self) -> Path:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name).resolve() / "repo"
+        shutil.copytree(self.template, root)
+        return root
+
+    def errors_for(self, root: Path) -> list[str]:
+        with verifier_root(root):
+            verifier.validate_index([path for path in root.rglob("*") if path.is_file()])
+            return list(verifier.errors)
+
+    @staticmethod
+    def edit_json(path: Path, mutate) -> None:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        mutate(data)
+        path.write_bytes(convert.dump_json(data))
+
+    def relink(self, root: Path, variants: str = "abc") -> None:
+        """Keep the hash chain (receipt -> manifest -> index) consistent after an edit."""
+        index_path = root / "manifest/releases.json"
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+        for variant in variants:
+            rid = self.rid[variant]
+            manifest_path = root / f"releases/{rid}.json"
+            self.edit_json(
+                manifest_path,
+                lambda m, r=rid: m["provenance"].__setitem__(
+                    "acceptanceReceiptSha256",
+                    hashlib.sha256((root / f"receipts/{r}.acceptance.json").read_bytes()).hexdigest(),
+                ),
+            )
+            for row in index["releases"]:
+                if row["id"] == rid:
+                    row["manifestSha256"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        index_path.write_bytes(convert.dump_json(index))
+
+    def assertRejected(self, root: Path, message: str) -> None:
+        errors = self.errors_for(root)
+        self.assertTrue(any(message in error for error in errors), (message, errors))
+
+    def test_converted_synthetic_group_is_clean(self) -> None:
+        self.assertEqual(self.errors_for(self.template), [])
+
+    def test_a_v1_group_is_rejected_by_the_font_variant_policy(self) -> None:
+        errors = self.errors_for(self.v1_root)
+        for variant in "abc":
+            self.assertTrue(any(f"release {self.rid[variant]}: an equal-size -a/-b/-c font variant may not use a v1" in e for e in errors), errors)
+
+    def test_v2_rows_and_non_font_rows_are_not_touched_by_the_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            for release_id, patch_format, expect_error in (
+                ("srwf-final-20260928-v0-2-a", verifier.PATCH_FORMAT_V2, False),
+                ("srwf-f-20260823-v0-3", verifier.PATCH_FORMAT_V1, False),
+                ("srwf-f-20261002-v1-0-c", verifier.PATCH_FORMAT_V1, True),
+            ):
+                write_json(root / f"releases/{release_id}.json", {"patch": {"format": patch_format}})
+                game = "srwf-final" if release_id.startswith("srwf-final") else "srwf-f"
+                with verifier_root(root):
+                    verifier.validate_v3_groups([{"id": release_id, "gameId": game}])
+                    self.assertEqual(bool(verifier.errors), expect_error, (release_id, verifier.errors))
+
+    def test_total_srwfp_budget(self) -> None:
+        root = self.fresh()
+        with mock_patch.object(verifier, "SRWFP_TOTAL_MAX", 1000):
+            self.assertRejected(root, "exceeding the 1000-byte repository budget")
+        with mock_patch.object(verifier, "SRWFP_TOTAL_MAX", (root / self.url).stat().st_size):
+            self.assertEqual(self.errors_for(root), [])
+        with mock_patch.object(verifier, "SRWFP_TOTAL_MAX", (root / self.url).stat().st_size - 1):
+            self.assertRejected(root, "repository budget")
+
+    def test_manifest_shape_and_url_rules(self) -> None:
+        cases = {
+            "keys differ (missing=['variant']": lambda m: m["patch"].pop("variant"),
+            "keys differ (missing=[], unexpected=['extra']": lambda m: m["patch"].__setitem__("extra", 1),
+            "patch variant must be the release id suffix 'a'": lambda m: m["patch"].__setitem__("variant", "b"),
+            f"patch URL must be {self.url}": lambda m: m["patch"].__setitem__("url", f"patches/{m['id']}.srwfp"),
+            "patch URL must be patches/srwf-f-20261001-v0-9.v3.srwfp": lambda m: m["patch"].__setitem__("url", "patches/other.v3.srwfp"),
+            "v3 target filename must end with -a.bin": lambda m: m["target"].__setitem__("filename", "SRWF-KOR-x.bin"),
+            "v3 CUE filename must end with -a.cue": lambda m: m["target"].__setitem__("cueFilename", "SRWF-KOR-x.cue"),
+            "v3 title must end with (a)": lambda m: m.__setitem__("title", "Synthetic font release"),
+            "v3 requires target size equal to source size": lambda m: m["target"].__setitem__("size", m["target"]["size"] + 2352),
+            "patch size is outside its hard limits": lambda m: m["patch"].__setitem__("size", 201),
+            "patch recordCount is outside its hard limits": lambda m: m["patch"].__setitem__("recordCount", 0),
+            "patch bodyUncompressedSize is outside its hard limits": lambda m: m["patch"].__setitem__("bodyUncompressedSize", 2),
+            "patch commonRecordCount is outside its hard limits": lambda m: m["patch"].__setitem__("commonRecordCount", 0),
+            "v3 variant must be a, b or c": lambda m: m["patch"].__setitem__("variant", "d"),
+            "v3 recordCount must be commonRecordCount plus at most": lambda m: m["patch"].__setitem__("recordCount", m["patch"]["commonRecordCount"] + 65_537),
+            "patch descriptor recordCount is": lambda m: m["patch"].__setitem__("recordCount", m["patch"]["recordCount"] + 1),
+            "patch descriptor commonRecordCount is": lambda m: m["patch"].__setitem__("commonRecordCount", m["patch"]["commonRecordCount"] + 1),
+            "patch descriptor bodyUncompressedSize is": lambda m: m["patch"].__setitem__("bodyUncompressedSize", m["patch"]["bodyUncompressedSize"] + 1),
+            "patch descriptor patchSize is": lambda m: m["patch"].__setitem__("size", m["patch"]["size"] + 1),
+            "keys differ (missing=[], unexpected=['commonRecordCount', 'variant']": lambda m: m["patch"].__setitem__(
+                "format", "srwf.sparse-byte-delta.v4"
+            ),
+        }
+        for message, mutate in cases.items():
+            with self.subTest(message=message):
+                root = self.fresh()
+                self.edit_json(root / f"releases/{self.rid['a']}.json", mutate)
+                self.relink(root, "a")
+                self.assertRejected(root, message)
+
+    def test_receipt_shape_pins_and_evidence_ceiling(self) -> None:
+        cases = {
+            "keys differ (missing=['patchFormat']": lambda r: r.pop("patchFormat"),
+            "keys differ (missing=['supersedes']": lambda r: r.pop("supersedes"),
+            "keys differ (missing=['variantId']": lambda r: r.pop("variantId"),
+            "keys differ (missing=[], unexpected=['extra']": lambda r: r.__setitem__("extra", 1),
+            f"patchFormat must be {verifier.PATCH_FORMAT_V3}": lambda r: r.__setitem__("patchFormat", "srwf.sparse-byte-delta.v1"),
+            "variantId must be the release id's -a/-b/-c suffix": lambda r: r.__setitem__("variantId", "b"),
+            "supersedes must name a different, earlier payload": lambda r: r["supersedes"].__setitem__("patchSha256", r["patchSha256"]),
+            "supersedes recordSetSha256 is invalid": lambda r: r["supersedes"].__setitem__("recordSetSha256", "xyz"),
+            "supersedes: keys differ": lambda r: r["supersedes"].pop("decisionAuthority"),
+            "supersedes does not match the pinned superseded history": lambda r: r["supersedes"].__setitem__("receiptSha256", "00" * 32),
+            "v3 record-set fingerprint differs from the accepted v1 result": lambda r: None,
+            "acceptedAt differs from the original acceptance": lambda r: r.__setitem__("acceptedAt", "2026-10-02T09:00:00+09:00"),
+            "the evidence ceiling (gates) must stay unchanged": lambda r: r["gates"].__setitem__("longPlayProgression", "PASS"),
+            "decisionAuthority must be the pinned v3 redistribution text": lambda r: r.__setitem__("decisionAuthority", "edited"),
+            "receipt targetSha256 differs from the v3 header target hash": lambda r: r.__setitem__("targetSha256", "00" * 32),
+            "patch hash does not match release manifest": lambda r: r.__setitem__("patchSha256", "00" * 32),
+        }
+        for message, mutate in cases.items():
+            with self.subTest(message=message):
+                root = self.fresh()
+                if message.startswith("v3 record-set fingerprint"):
+                    bad = {k: dict(v) for k, v in self.group.pins.items()}
+                    bad[self.rid["a"]]["recordSetSha256"] = "00" * 32
+                    with mock_patch.dict(verifier.V3_SUPERSEDED, bad, clear=True):
+                        self.assertRejected(root, message)
+                    continue
+                self.edit_json(root / f"receipts/{self.rid['a']}.acceptance.json", mutate)
+                self.relink(root, "a")
+                self.assertRejected(root, message)
+
+    def test_v1_or_v2_receipts_must_not_carry_the_v3_keys(self) -> None:
+        verifier.errors.clear()
+        receipt = {
+            "schema": "srwf-kor.acceptance-receipt.v1", "releaseId": "v5-r999", "state": "ACCEPTED",
+            "acceptedAt": "2026-08-09T12:34:56Z", "stockProfileId": verifier.STOCK_PROFILE["id"],
+            "sourceSha256": verifier.STOCK_PROFILE["sha256"], "targetSha256": "11" * 32, "patchSha256": "22" * 32,
+            "v5Commit": "33" * 20,
+            "gates": {"staticStructure": "PASS", "runtimeConsumption": "PASS", "visualLayout": "PASS", "longPlayProgression": "PASS"},
+            "decisionAuthority": "synthetic", "patchFormat": verifier.PATCH_FORMAT_V3,
+        }
+        args = dict(
+            release_id="v5-r999",
+            source={"profileId": verifier.STOCK_PROFILE["id"], "sha256": verifier.STOCK_PROFILE["sha256"]},
+            target={"sha256": "11" * 32}, provenance={"v5Commit": "33" * 20},
+        )
+        for patch_format in (verifier.PATCH_FORMAT_V1, verifier.PATCH_FORMAT_V2):
+            verifier.errors.clear()
+            verifier.validate_acceptance_receipt(receipt, patch={"sha256": "22" * 32, "format": patch_format}, **args)
+            self.assertTrue(any("unexpected=['patchFormat']" in e for e in verifier.errors), verifier.errors)
+
+    def test_group_membership_is_checked_both_ways(self) -> None:
+        # a payload variant without an ACCEPTED row
+        root = self.fresh()
+        index_path = root / "manifest/releases.json"
+        self.edit_json(index_path, lambda i: i.__setitem__("releases", [r for r in i["releases"] if r["id"] != self.rid["c"]]))
+        for path in (root / f"releases/{self.rid['c']}.json", root / f"receipts/{self.rid['c']}.acceptance.json"):
+            path.unlink()
+        self.assertRejected(root, "header variant 'c' has no ACCEPTED row")
+        # an ACCEPTED row whose variant the payload does not carry
+        group = v3fx.SyntheticGroup(variants="ab", seed=3, group="srwf-f-20261003-v1-0")
+        with tempfile.TemporaryDirectory() as directory, group.history():
+            two = Path(directory).resolve() / "repo"
+            two.mkdir()
+            group.write(two)
+            self.assertEqual(v3fx.run_cli("install", "--root", str(two), "--group", "srwf-f-20261003-v1-0")[0], 0)
+            self.assertEqual(self.errors_for(two), [])
+            extra_id = "srwf-f-20261003-v1-0-c"
+            for kind, suffix in (("releases", ".json"), ("receipts", ".acceptance.json")):
+                shutil.copy2(two / kind / f"srwf-f-20261003-v1-0-b{suffix}", two / kind / f"{extra_id}{suffix}")
+            self.edit_json(two / f"releases/{extra_id}.json", lambda m: (
+                m.__setitem__("id", extra_id), m["patch"].__setitem__("variant", "c"),
+                m["target"].__setitem__("filename", "SRWF-KOR-20261001-v0.9-c.bin"),
+                m["target"].__setitem__("cueFilename", "SRWF-KOR-20261001-v0.9-c.cue"),
+                m.__setitem__("title", "Synthetic font release (c)")))
+            self.edit_json(two / f"receipts/{extra_id}.acceptance.json", lambda r: (
+                r.__setitem__("releaseId", extra_id), r.__setitem__("variantId", "c")))
+            index = json.loads((two / "manifest/releases.json").read_text(encoding="utf-8"))
+            index["releases"].append({
+                "gameId": "srwf-f", "id": extra_id, "state": "ACCEPTED", "label": index["releases"][0]["label"],
+                "manifest": f"releases/{extra_id}.json", "manifestSha256": "0" * 64,
+            })
+            (two / "manifest/releases.json").write_bytes(convert.dump_json(index))
+            with mock_patch.dict(verifier.V3_SUPERSEDED, {**group.pins, extra_id: dict(group.pins["srwf-f-20261003-v1-0-b"])}, clear=True):
+                self.assertRejected(two, "ACCEPTED row variant 'c' is missing from the header")
+
+    def test_group_level_rules(self) -> None:
+        # rows must not mix v3 with another format
+        root = self.fresh()
+        v1_manifest = json.loads((self.v1_root / f"releases/{self.rid['c']}.json").read_text(encoding="utf-8"))
+        self.edit_json(root / f"releases/{self.rid['c']}.json", lambda m: m.__setitem__("patch", v1_manifest["patch"]))
+        self.relink(root, "c")
+        self.assertRejected(root, "v3 rows and non-v3 rows must not be mixed")
+        # a v3 row that is not part of the redistributed history is refused
+        root = self.fresh()
+        reduced = {k: v for k, v in self.group.pins.items() if k != self.rid["c"]}
+        with mock_patch.dict(verifier.V3_SUPERSEDED, reduced, clear=True):
+            self.assertRejected(root, f"release {self.rid['c']}: v3 is limited to the redistributed accepted releases")
+        # rows may not disagree on the shared payload fields
+        root = self.fresh()
+        self.edit_json(root / f"releases/{self.rid['b']}.json", lambda m: m["patch"].__setitem__("bodyUncompressedSize", m["patch"]["bodyUncompressedSize"] + 1))
+        self.relink(root, "b")
+        self.assertRejected(root, f"v3 payload {self.url}: rows disagree on patch bodyUncompressedSize")
+        # the payload URL is derived from the group id
+        root = self.fresh()
+        moved = "patches/srwf-f-20261001-v0-9-shared.v3.srwfp"
+        (root / self.url).rename(root / moved)
+        for variant in "abc":
+            self.edit_json(root / f"releases/{self.rid[variant]}.json", lambda m: m["patch"].__setitem__("url", moved))
+        self.relink(root)
+        self.assertRejected(root, f"v3 payload {moved}: URL must be patches/{v3fx.GROUP}.v3.srwfp")
+
+    def test_payload_file_rules(self) -> None:
+        root = self.fresh()
+        payload_path = root / self.url
+        data = payload_path.read_bytes()
+        flipped = bytearray(data)
+        flipped[-9] ^= 0x01
+        payload_path.write_bytes(bytes(flipped))
+        self.assertRejected(root, "malformed .srwfp payload")
+        payload_path.write_bytes(data + b"\0")
+        self.assertRejected(root, "BAD_ZLIB_BODY: not exactly one complete zlib stream")
+        payload_path.write_bytes(data[:-1])
+        self.assertRejected(root, "malformed .srwfp payload")
+        payload_path.unlink()
+        self.assertRejected(root, ".srwfp payload is missing")
+        root = self.fresh()
+        (root / f"patches/{self.rid['a']}.srwfp").write_bytes(self.group.v1["a"])
+        self.assertRejected(root, f"unaccepted or unindexed .srwfp payload is forbidden: patches/{self.rid['a']}.srwfp")
+
+    def test_a_payload_that_is_not_the_accepted_result_is_refused(self) -> None:
+        """Re-encoding a different record set (one changed byte) breaks the pinned fingerprint."""
+        root = self.fresh()
+        decoded = convert.decode((root / self.url).read_bytes())
+        header = decoded.header
+        common = decoded.common_records()
+        offset, length, data = common[0]
+        changed = [(offset, length, bytes([data[0] ^ 1]) + data[1:])] + common[1:]
+        unique = {v: decoded.unique_records(v) for v in "abc"}
+        targets = {v: (decoded.variant_target(v), []) for v in "abc"}
+        new_header, body, _ = convert.build_header_and_body(
+            header["imageSize"], header["sourceSha256"], targets, header["canaries"], common=changed, unique=unique
+        )
+        payload = new_header + convert.compress_body(body)
+        (root / self.url).write_bytes(payload)
+        digest = hashlib.sha256(payload).hexdigest()
+        for variant in "abc":
+            rid = self.rid[variant]
+            self.edit_json(root / f"releases/{rid}.json", lambda m: (m["patch"].__setitem__("sha256", digest), m["patch"].__setitem__("size", len(payload))))
+            self.edit_json(root / f"receipts/{rid}.acceptance.json", lambda r: r.__setitem__("patchSha256", digest))
+        self.relink(root)
+        self.assertRejected(root, "v3 record-set fingerprint differs from the accepted v1 result")
+
+
+def schema_errors(schema: dict[str, Any], value: Any, path: str = "$") -> list[str]:
+    """A small JSON Schema (2020-12 subset) checker for exactly the keywords our schemas use.
+
+    Enough to prove the oneOf / if-then / dependentRequired contracts behave, without a
+    third-party validator (the repository is dependency-free)."""
+    import re
+
+    errors: list[str] = []
+    types = {
+        "object": lambda v: isinstance(v, dict), "string": lambda v: isinstance(v, str),
+        "array": lambda v: isinstance(v, list), "null": lambda v: v is None,
+        "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
+    }
+    if "type" in schema:
+        wanted = schema["type"] if isinstance(schema["type"], list) else [schema["type"]]
+        if not any(types[name](value) for name in wanted):
+            return [f"{path}: type {wanted}"]
+    if "const" in schema and value != schema["const"]:
+        errors.append(f"{path}: const")
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{path}: enum")
+    if isinstance(value, str):
+        if "pattern" in schema and re.search(schema["pattern"], value) is None:
+            errors.append(f"{path}: pattern")
+        if "minLength" in schema and len(value) < schema["minLength"]:
+            errors.append(f"{path}: minLength")
+        if "maxLength" in schema and len(value) > schema["maxLength"]:
+            errors.append(f"{path}: maxLength")
+    if isinstance(value, int) and not isinstance(value, bool):
+        if "minimum" in schema and value < schema["minimum"]:
+            errors.append(f"{path}: minimum")
+        if "maximum" in schema and value > schema["maximum"]:
+            errors.append(f"{path}: maximum")
+        if "multipleOf" in schema and value % schema["multipleOf"]:
+            errors.append(f"{path}: multipleOf")
+    if isinstance(value, dict):
+        for key in schema.get("required", []):
+            if key not in value:
+                errors.append(f"{path}: required {key}")
+        properties = schema.get("properties", {})
+        if schema.get("additionalProperties") is False:
+            errors += [f"{path}: additional {key}" for key in value if key not in properties]
+        for key, sub in properties.items():
+            if key in value:
+                errors += schema_errors(sub, value[key], f"{path}.{key}")
+        for key, needed in schema.get("dependentRequired", {}).items():
+            if key in value:
+                errors += [f"{path}: {key} requires {name}" for name in needed if name not in value]
+    if "oneOf" in schema:
+        matches = [sub for sub in schema["oneOf"] if not schema_errors(sub, value, path)]
+        if len(matches) != 1:
+            errors.append(f"{path}: oneOf matched {len(matches)}")
+    for sub in schema.get("allOf", []):
+        if not schema_errors(sub["if"], value, path):
+            errors += schema_errors(sub["then"], value, path)
+    return errors
+
+
+class SchemaSemanticsTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.release = json.loads((PROJECT_ROOT / "schemas/release.schema.json").read_text(encoding="utf-8"))
+        cls.receipt = json.loads((PROJECT_ROOT / "schemas/acceptance-receipt.schema.json").read_text(encoding="utf-8"))
+        cls.descriptor = json.loads((PROJECT_ROOT / "schemas/patch-descriptor-v3.schema.json").read_text(encoding="utf-8"))
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.group = v3fx.SyntheticGroup()
+        cls.root = Path(cls._tmp.name).resolve() / "v3"
+        cls.root.mkdir()
+        cls.group.write(cls.root)
+        with cls.group.history():
+            assert v3fx.run_cli("install", "--root", str(cls.root), "--group", v3fx.GROUP)[0] == 0
+        cls.rid = cls.group.release_ids["b"]
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def manifest(self) -> dict[str, Any]:
+        return json.loads((self.root / f"releases/{self.rid}.json").read_text(encoding="utf-8"))
+
+    def receipt_doc(self) -> dict[str, Any]:
+        return json.loads((self.root / f"receipts/{self.rid}.acceptance.json").read_text(encoding="utf-8"))
+
+    def test_the_checker_itself_rejects_and_accepts(self) -> None:
+        self.assertEqual(schema_errors({"type": "object", "required": ["a"], "additionalProperties": False, "properties": {"a": {"type": "integer", "minimum": 2}}}, {"a": 2}), [])
+        self.assertTrue(schema_errors({"type": "object", "properties": {"a": {"type": "integer", "minimum": 2}}}, {"a": 1}))
+        self.assertTrue(schema_errors({"oneOf": [{"type": "string"}, {"type": "string", "pattern": "x"}]}, "x"))
+
+    def test_v1_v2_and_v3_manifests_and_receipts_satisfy_their_schemas(self) -> None:
+        self.assertEqual(schema_errors(self.release, self.manifest()), [])
+        self.assertEqual(schema_errors(self.receipt, self.receipt_doc()), [])
+        self.assertEqual(schema_errors(self.release, json.loads((self.group.files[f"releases/{self.rid}.json"]))), [])
+        self.assertEqual(schema_errors(self.receipt, json.loads((self.group.files[f"receipts/{self.rid}.acceptance.json"]))), [])
+        for path in sorted((PROJECT_ROOT / "releases").glob("*.json")):
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(schema_errors(self.release, manifest), [], path.name)
+        for path in sorted((PROJECT_ROOT / "receipts").glob("*.json")):
+            self.assertEqual(schema_errors(self.receipt, json.loads(path.read_text(encoding="utf-8"))), [], path.name)
+
+    def test_manifest_patch_object_is_a_closed_six_or_eight_key_choice(self) -> None:
+        def broken(mutate) -> list[str]:
+            manifest = self.manifest()
+            mutate(manifest)
+            return schema_errors(self.release, manifest)
+
+        cases = {
+            "v3 without variant": lambda m: m["patch"].pop("variant"),
+            "v3 without commonRecordCount": lambda m: m["patch"].pop("commonRecordCount"),
+            "v3 with an extra key": lambda m: m["patch"].__setitem__("extra", 1),
+            "v3 with a v1-style url": lambda m: m["patch"].__setitem__("url", "patches/srwf-f-20261001-v0-9-b.srwfp"),
+            "v3 variant d": lambda m: m["patch"].__setitem__("variant", "d"),
+            "v3 patch too small": lambda m: m["patch"].__setitem__("size", 201),
+            "v3 patch too large": lambda m: m["patch"].__setitem__("size", 50_331_649),
+            "v3 unequal target size": lambda m: m["target"].__setitem__("size", 578_512_032 + 2352),
+            "v1 format with eight keys": lambda m: m["patch"].__setitem__("format", "srwf.sparse-byte-delta.v1"),
+            "v3 format with six keys": lambda m: (m["patch"].pop("variant"), m["patch"].pop("commonRecordCount"), m["patch"].__setitem__("url", "patches/x.srwfp")),
+            "unknown format": lambda m: m["patch"].__setitem__("format", "srwf.sparse-byte-delta.v4"),
+        }
+        for name, mutate in cases.items():
+            with self.subTest(name=name):
+                self.assertTrue(broken(mutate), name)
+
+    def test_receipt_v3_keys_are_all_or_none_and_closed(self) -> None:
+        def broken(mutate) -> list[str]:
+            receipt = self.receipt_doc()
+            mutate(receipt)
+            return schema_errors(self.receipt, receipt)
+
+        cases = {
+            "patchFormat alone": lambda r: (r.pop("variantId"), r.pop("supersedes")),
+            "variantId alone": lambda r: (r.pop("patchFormat"), r.pop("supersedes")),
+            "supersedes alone": lambda r: (r.pop("patchFormat"), r.pop("variantId")),
+            "supersedes missing": lambda r: r.pop("supersedes"),
+            "supersedes with an extra key": lambda r: r["supersedes"].__setitem__("extra", "x"),
+            "supersedes missing recordSetSha256": lambda r: r["supersedes"].pop("recordSetSha256"),
+            "supersedes bad hash": lambda r: r["supersedes"].__setitem__("patchSha256", "zz"),
+            "patchFormat v1": lambda r: r.__setitem__("patchFormat", "srwf.sparse-byte-delta.v1"),
+            "variantId d": lambda r: r.__setitem__("variantId", "d"),
+            "unknown top-level key": lambda r: r.__setitem__("other", 1),
+        }
+        for name, mutate in cases.items():
+            with self.subTest(name=name):
+                self.assertTrue(broken(mutate), name)
+        old = json.loads(self.group.files[f"receipts/{self.rid}.acceptance.json"])
+        self.assertEqual(schema_errors(self.receipt, old), [], "the pre-v3 receipt form stays valid")
+
+    def test_descriptor_v3_has_exactly_the_eleven_keys(self) -> None:
+        descriptor = {
+            "patchSize": 22_152_354, "patchSha256": "a" * 64, "sourceSize": 578_512_032, "sourceSha256": "b" * 64,
+            "targetSize": 578_512_032, "targetSha256": "c" * 64, "recordCount": 1_330_782,
+            "bodyUncompressedSize": 39_438_740, "format": "srwf.sparse-byte-delta.v3", "variant": "a",
+            "commonRecordCount": 1_330_116,
+        }
+        self.assertEqual(schema_errors(self.descriptor, descriptor), [])
+        self.assertEqual(len(descriptor), 11)
+        for key in descriptor:
+            with self.subTest(missing=key):
+                self.assertTrue(schema_errors(self.descriptor, {k: v for k, v in descriptor.items() if k != key}))
+        self.assertTrue(schema_errors(self.descriptor, {**descriptor, "extra": 1}))
+        self.assertTrue(schema_errors(self.descriptor, {**descriptor, "format": "srwf.sparse-byte-delta.v2"}))
+        self.assertTrue(schema_errors(self.descriptor, {**descriptor, "variant": "d"}))
+        self.assertTrue(schema_errors(self.descriptor, {**descriptor, "patchSize": 201}))
+
+
+class V3RepositoryContractTests(unittest.TestCase):
+    def test_required_files_schemas_and_scripts_are_in_lockstep(self) -> None:
+        for name in (
+            "assets/patch-core-v3.mjs", "docs/PATCH_FORMAT_V3.md", "docs/V3_REDISTRIBUTION.md",
+            "schemas/patch-descriptor-v3.schema.json", "scripts/convert_to_v3.py", "tests/test_convert_to_v3.py",
+        ):
+            self.assertIn(name, verifier.REQUIRED_FILES)
+        package = json.loads((PROJECT_ROOT / "package.json").read_text(encoding="utf-8"))
+        self.assertEqual(package["scripts"], verifier.EXPECTED_PACKAGE_SCRIPTS)
+        for key in ("build", "test"):
+            self.assertIn("tests/test_verify_repo.py tests/test_convert_to_v3.py", package["scripts"][key])
+
+    def test_v3_schema_contract_detects_weakening(self) -> None:
+        def broken(mutate, file_name: str) -> list[str]:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                copy_schema_files(root)
+                path = root / "schemas" / file_name
+                document = json.loads(path.read_text(encoding="utf-8"))
+                mutate(document)
+                write_json(path, document)
+                with verifier_root(root):
+                    verifier.validate_schema_documents()
+                    return list(verifier.errors)
+
+        cases = {
+            "release: v3 patch keys weakened": (
+                lambda d: d["properties"]["patch"]["oneOf"][1]["properties"].__setitem__("variant", {"type": "string"}),
+                "release.schema.json",
+            ),
+            "release: oneOf collapsed": (
+                lambda d: d["properties"].__setitem__("patch", d["properties"]["patch"]["oneOf"][0]),
+                "release.schema.json",
+            ),
+            "release: v3 size rule dropped": (lambda d: d["allOf"].pop(), "release.schema.json"),
+            "release: v3 url pattern loosened": (
+                lambda d: d["properties"]["patch"]["oneOf"][1]["properties"]["url"].__setitem__("pattern", ".*"),
+                "release.schema.json",
+            ),
+            "receipt: dependentRequired removed": (lambda d: d.pop("dependentRequired"), "acceptance-receipt.schema.json"),
+            "receipt: supersedes opened": (
+                lambda d: d["properties"]["supersedes"].__setitem__("additionalProperties", True),
+                "acceptance-receipt.schema.json",
+            ),
+            "receipt: supersedes key dropped": (
+                lambda d: d["properties"]["supersedes"]["required"].remove("recordSetSha256"),
+                "acceptance-receipt.schema.json",
+            ),
+            "receipt: variantId widened": (
+                lambda d: d["properties"]["variantId"].__setitem__("enum", ["a", "b", "c", "d"]),
+                "acceptance-receipt.schema.json",
+            ),
+            "descriptor v3: minimum lowered": (
+                lambda d: d["properties"]["patchSize"].__setitem__("minimum", 1), "patch-descriptor-v3.schema.json"
+            ),
+            "descriptor v3: key removed": (
+                lambda d: (d["required"].remove("variant"), d["properties"].pop("variant")),
+                "patch-descriptor-v3.schema.json",
+            ),
+        }
+        for name, (mutate, file_name) in cases.items():
+            with self.subTest(name=name):
+                errors = broken(mutate, file_name)
+                self.assertTrue(any("out of sync" in e or "must be a closed" in e for e in errors), errors)
+
+    def test_real_schemas_pass_their_own_pins(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            copy_schema_files(root)
+            with verifier_root(root):
+                verifier.validate_schema_documents()
+                self.assertEqual(verifier.errors, [])
+
+    def test_superseded_history_is_complete_and_consistent(self) -> None:
+        groups = {}
+        for release_id, entry in verifier.V3_SUPERSEDED.items():
+            self.assertRegex(release_id, verifier.FONT_RELEASE_ID_PATTERN.pattern)
+            self.assertEqual(
+                set(entry),
+                {"acceptedAt", "receiptSha256", "patchSha256", "recordSetSha256", "targetSha256",
+                 "longPlayProgression", "decisionAuthority"},
+            )
+            for key in ("receiptSha256", "patchSha256", "recordSetSha256", "targetSha256"):
+                self.assertTrue(verifier.is_hex64(entry[key]), (release_id, key))
+            self.assertTrue(verifier.is_rfc3339_datetime(entry["acceptedAt"]))
+            self.assertEqual(entry["longPlayProgression"], "NOT_CLAIMED")
+            groups.setdefault(verifier.FONT_RELEASE_ID_PATTERN.fullmatch(release_id).group(1), []).append(release_id[-1])
+        self.assertEqual({g: sorted(v) for g, v in groups.items()}, {
+            "srwf-f-20260915-v0-4": ["a", "b", "c"], "srwf-f-20260928-v0-5": ["a", "b", "c"],
+        })
+        self.assertEqual(len({e["patchSha256"] for e in verifier.V3_SUPERSEDED.values()}), 6)
+        self.assertEqual(len({e["recordSetSha256"] for e in verifier.V3_SUPERSEDED.values()}), 6)
+        self.assertEqual(verifier.V3_SUPERSEDED_ANCHOR_COMMIT, "3cb5e690e7a8a629962719d80f909e7cc1dd6722")
 
 
 if __name__ == "__main__":

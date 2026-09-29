@@ -115,47 +115,105 @@
       }
     },
     "patch": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "format",
-        "url",
-        "size",
-        "sha256",
-        "recordCount",
-        "bodyUncompressedSize"
-      ],
-      "properties": {
-        "format": {
-          "enum": [
-            "srwf.sparse-byte-delta.v1",
-            "srwf.sparse-byte-delta.v2"
-          ]
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "format",
+            "url",
+            "size",
+            "sha256",
+            "recordCount",
+            "bodyUncompressedSize"
+          ],
+          "properties": {
+            "format": {
+              "enum": [
+                "srwf.sparse-byte-delta.v1",
+                "srwf.sparse-byte-delta.v2"
+              ]
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^patches/[a-z0-9][a-z0-9._-]{0,63}\\.srwfp$"
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 101,
+              "maximum": 83886080
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "recordCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000000
+            },
+            "bodyUncompressedSize": {
+              "type": "integer",
+              "minimum": 14,
+              "maximum": 134217728
+            }
+          }
         },
-        "url": {
-          "type": "string",
-          "pattern": "^patches/[a-z0-9][a-z0-9._-]{0,63}\\.srwfp$"
-        },
-        "size": {
-          "type": "integer",
-          "minimum": 101,
-          "maximum": 83886080
-        },
-        "sha256": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
-        },
-        "recordCount": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 2000000
-        },
-        "bodyUncompressedSize": {
-          "type": "integer",
-          "minimum": 14,
-          "maximum": 134217728
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "format",
+            "url",
+            "size",
+            "sha256",
+            "recordCount",
+            "bodyUncompressedSize",
+            "variant",
+            "commonRecordCount"
+          ],
+          "properties": {
+            "format": {
+              "const": "srwf.sparse-byte-delta.v3"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^patches/[a-z0-9][a-z0-9._-]{0,63}\\.v3\\.srwfp$"
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 202,
+              "maximum": 50331648
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "recordCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000000
+            },
+            "bodyUncompressedSize": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 100663296
+            },
+            "variant": {
+              "enum": [
+                "a",
+                "b",
+                "c"
+              ]
+            },
+            "commonRecordCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000000
+            }
+          }
         }
-      }
+      ]
     },
     "provenance": {
       "type": "object",
@@ -258,6 +316,39 @@
               },
               "bodyUncompressedSize": {
                 "minimum": 14
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "patch": {
+            "properties": {
+              "format": {
+                "const": "srwf.sparse-byte-delta.v3"
+              }
+            },
+            "required": [
+              "format"
+            ]
+          }
+        },
+        "required": [
+          "patch"
+        ]
+      },
+      "then": {
+        "properties": {
+          "target": {
+            "properties": {
+              "size": {
+                "enum": [
+                  578512032,
+                  520408224
+                ]
               }
             }
           }

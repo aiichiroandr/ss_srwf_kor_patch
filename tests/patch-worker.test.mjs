@@ -671,3 +671,32 @@ test('worker dispatches nine-key v2 descriptors to the growth engine and never c
     assert.equal(invalid.error.code, 'PATCH_DESCRIPTOR_INVALID', `descriptor ${index}`);
   }
 });
+
+test('v1 patch caching stays per release and RESET still drops it', { timeout: 10_000 }, async () => {
+  messageListener({ data: { type: 'RESET' } });
+  const fixture = workerFixture();
+  const patchUrl = new URL('/patches/per-release.srwfp', workerLocation).href;
+  let fetchCount = 0;
+  globalThis.fetch = async () => {
+    fetchCount += 1;
+    return new Response(fixture.patch, { status: 200 });
+  };
+  const prepare = (jobId, releaseKey) => dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId,
+    sourceFile: new Blob([fixture.source]),
+    releaseKey,
+    patchUrl,
+    descriptor: fixture.descriptor,
+  });
+  assert.equal((await prepare('cache-v1-1', 'release-a:x')).type, 'complete');
+  assert.equal((await prepare('cache-v1-2', 'release-a:x')).type, 'complete');
+  assert.equal(fetchCount, 1, 'the same release reuses its parsed patch');
+  // A different release id never borrows another release's cache entry, even for identical bytes.
+  assert.equal((await prepare('cache-v1-3', 'release-b:x')).type, 'complete');
+  assert.equal(fetchCount, 2);
+  // RESET drops a per-release entry (only shared v3 payloads survive it).
+  messageListener({ data: { type: 'RESET' } });
+  assert.equal((await prepare('cache-v1-4', 'release-b:x')).type, 'complete');
+  assert.equal(fetchCount, 3);
+});

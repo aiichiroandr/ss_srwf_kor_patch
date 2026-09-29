@@ -13,6 +13,10 @@
 `srwf-f-20260814-v0-1`의 manifest, acceptance receipt, payload는 공개 인덱스에서
 제외되며 검증기에 고정된 SHA-256의 바이트 불변 역사 자료로만 남습니다.
 
+F v0.4·v0.5의 글꼴 변형 a/b/c 여섯 릴리스는 버전마다 하나의 공유 v3 payload로 다시 실립니다. 릴리스 id, 결과
+이미지 해시, 영수증의 원래 증거와 `gates`는 그대로이며(새 runtime·콜드부트·장기 플레이 주장 없음), 이전 v1 payload와
+해시는 [`V3_REDISTRIBUTION.md`](V3_REDISTRIBUTION.md)에 고정되어 있습니다. 재인코딩한 payload의 원격 배포는 별도 요청이 필요합니다.
+
 게임 카탈로그의 `srwf-f`와 `srwf-final`은 모두 `HAS_ACCEPTED_RELEASE`입니다.
 F 완결편 v0.1은 r110 방어 이펙트 중복 수정을 포함한 공개판입니다. 정적 G541/v2
 재적용과 사본 상태 매트릭스를 기록했으며, 장시간 실플레이·전 경로·fresh coldboot
@@ -95,6 +99,14 @@ provenance identity, 결정 시각과 decision authority를 고정합니다. bui
 [`schemas/acceptance-receipt.schema.json`](../schemas/acceptance-receipt.schema.json)에
 정의되어 있습니다.
 
+공유 v3 payload로 재배포한 릴리스의 영수증은 같은 경로에서 **재발급**되며 위 열한 개 필드에
+`patchFormat`(`srwf.sparse-byte-delta.v3`), `variantId`(`a`/`b`/`c`), `supersedes`가 더해집니다.
+세 키는 전부 있거나 전부 없어야 하고(v1·v2 영수증은 세 키를 갖지 않습니다), `supersedes`는 닫힌 네 키
+`receiptSha256`(이전 영수증 파일의 SHA-256), `patchSha256`(이전 v1 payload), `recordSetSha256`(승인된 record 집합의
+지문, [`PATCH_FORMAT_V3.md`](PATCH_FORMAT_V3.md) 15.2절), `decisionAuthority`(이전 문구 그대로)입니다. 원래
+증거 필드는 바이트 단위로 그대로이고 `patchSha256`과 `decisionAuthority`만 재배포 결정으로 바뀝니다. 재발급 영수증은
+새 검수를 주장하지 않으며, 검증기가 `V3_SUPERSEDED` 표로 이전 이력·승인 시각·목표 해시·`gates`를 고정합니다.
+
 `v5Commit`은 provenance object format에 맞는 완전한 lowercase identity만
 허용합니다. Git 기반 빌드는 40자리 또는 64자리 commit id를 쓰고, 비-Git 기반
 F 완결편 빌드는 hash-pinned 원장 파일의 64자리 SHA-256을 씁니다. 공개 문서에서
@@ -108,6 +120,10 @@ F 완결편 빌드는 hash-pinned 원장 파일의 64자리 SHA-256을 씁니다
 2. `patches/<id>.srwfp` — 80 MiB 이하의 정규형 sparse patch. 결과 크기가 고정
    원본과 같으면 v1, 고정 원본보다 클 때만 v2입니다. v2에서 위치만 옮기는 원본
    바이트(밀려난 오디오 트랙 등)는 COPY로 참조하며 LITERAL로 싣지 않습니다.
+   같은 크기의 `-a/-b/-c` 글꼴 변형은 v1 행을 새로 만들 수 없고 버전마다 하나의 공유
+   `patches/<그룹>.v3.srwfp`(48 MiB 이하, [`PATCH_FORMAT_V3.md`](PATCH_FORMAT_V3.md))만 씁니다.
+   v3는 승인된 결과의 재배포 전용이라 `scripts/convert_to_v3.py`로만 만들고 손으로 고치지 않으며, 검증기의
+   `V3_SUPERSEDED`에 없는 릴리스는 v3로 올릴 수 없습니다.
 3. `releases/<id>.json` — source, target, patch, provenance 명세
 4. `manifest/releases.json`의 `ACCEPTED` index row
 5. `assets/app.mjs`의 `PATCHED_IMAGE_CUE_TRACKS` — target SHA-256에 결과 이미지에서
@@ -187,12 +203,49 @@ query, fragment, percent encoding, 빈 path segment와 `..` traversal은 허용�
 }
 ```
 
+공유 v3 payload를 쓰는 명세의 `patch`는 위 여섯 키에 `variant`(`a`/`b`/`c`, 릴리스 id 접미사와 같음)와
+`commonRecordCount`를 더한 **정확히 여덟 키**이고, `format`은 `srwf.sparse-byte-delta.v3`, `url`은 그룹의
+모든 행이 공유하는 `patches/<그룹>.v3.srwfp`, `size`·`sha256`·`bodyUncompressedSize`·`commonRecordCount`는 그룹 공통,
+`recordCount`는 그 변형이 적용하는 병합 record 수(공통 + 변형 고유)입니다. `target.size`는 고정 원본 크기와 같아야
+하고 `size`는 202 이상 48 MiB 이하입니다. payload 헤더의 변형 집합은 그 `url`을 가리키는 `ACCEPTED` 행의 집합과
+양방향으로 같아야 합니다.
+
+```jsonc
+"patch": {
+  "format": "srwf.sparse-byte-delta.v3",
+  "url": "patches/srwf-f-YYYYMMDD-version.v3.srwfp",
+  "size": 0,
+  "sha256": "<shared payload SHA-256>",
+  "recordCount": 0,
+  "bodyUncompressedSize": 0,
+  "variant": "a",
+  "commonRecordCount": 0
+}
+```
+
 실제 공개 값에서는 patch `size >= 101`, `recordCount >= 1`,
 `bodyUncompressedSize >= 45`여야 합니다. `format`이 `srwf.sparse-byte-delta.v2`인
 명세만 예외적으로 `target.size`가 고정 원본보다 크고 2352의 배수이며 증가량 64 MiB,
 333,000 섹터 이하여야 하고, `size >= 129`, `bodyUncompressedSize >= 14 ×
 recordCount`입니다([PATCH_FORMAT_V2.md](PATCH_FORMAT_V2.md)). 상세 schema는
 [`schemas/release.schema.json`](../schemas/release.schema.json)입니다.
+
+## v3 재배포 절차
+
+v3는 새 승인이 아니라 **이미 승인된 결과의 재배포**입니다. 절차와 제약은 다음과 같고 자세한 기록은
+[`V3_REDISTRIBUTION.md`](V3_REDISTRIBUTION.md)에 있습니다.
+
+1. 입력은 승인된 v1 payload 세 개와 그 영수증·명세·index입니다. 정품 이미지는 필요 없습니다. 생성기
+   (`python3 scripts/convert_to_v3.py install`)는 각 파일을 영수증·명세와 `V3_SUPERSEDED` 이력에 대조한 뒤에만
+   인코딩하고, 독립 디코더로 record 단위 동일성, `recordSetSha256`, 헤더의 원본·결과 해시, canary를 검증합니다.
+2. 영수증은 같은 경로에서 재발급하고(원래 증거 보존, `supersedes` 추가), 명세와 index의 해시 사슬을 갱신합니다.
+   `verify_repo.validate_index`가 실패하면 모든 파일을 되돌리며, 이전 v1 payload는 검증 뒤에만 지웁니다.
+3. 결과 이미지 해시, `gates`, 증거 범위는 넓히지 않습니다. 새 runtime·콜드부트·장기 플레이 주장을 더하지 않습니다.
+4. push·배포 전에 소유자가 자신의 정품 이미지로 `verify-stock`을 실행해 모든 변형의 결과 해시를 확인해야 하고, 재인코딩한
+   payload의 원격 배포는 사용자의 별도 요청이 필요합니다.
+5. 검증기는 같은 크기의 `-a/-b/-c` 글꼴 변형에 새 v1 행을 허용하지 않고(v2 성장 행은 허용), 저장소의 `.srwfp` 합계를
+   192 MiB로 제한합니다. 새 글꼴 그룹을 v3로 올리려면 새 승인 사슬과 함께 `V3_SUPERSEDED` 규칙을 넓히는 별도 변경이
+   필요합니다.
 
 ## 정적·개인정보 경계
 
@@ -232,9 +285,14 @@ npm test
 구조 검사는 실제 indexed payload의 header, 단일 zlib stream, record 정렬·범위·
 정규형과 manifest descriptor까지 포함합니다. v2 payload는 COPY·LITERAL의 원본 끝
 뒤 덮기 규칙과 COPY 상한까지 같은 방식으로 검사하고, COPY가 가리키는 원본 구간의
-SHA-256은 브라우저 적용기가 확인합니다. 원본 byte가 필요한 record
-preimage 및 모든 target byte의 실제 변경 여부는 브라우저 적용기가 exact stock
-원본을 읽은 뒤 별도로 fail-closed 검증합니다.
+SHA-256은 브라우저 적용기가 확인합니다. v3 payload는 `zlib.decompressobj`로 한 stream·정확한 크기·Adler-32
+위치를 확인하고, 모든 변형의 varint 정규형·병합 순서·겹침·맞닿음·다운로드 캡처 창을 검사하며, canary가 생성기
+규칙이 고른 공통 record인지, 공통 분할이 정규형인지(정규 재인코딩이 body와 같은지), 헤더의 변형 집합이 `ACCEPTED`
+행의 집합과 같은지, 변형별 `recordSetSha256`이 승인된 v1 값과 같은지까지 확인합니다. 원본 byte가 필요한 v1·v2의
+record preimage 및 모든 target byte의 실제 변경 여부는 브라우저 적용기가 exact stock 원본을 읽은 뒤 별도로
+fail-closed 검증합니다. v3에는 record별 preimage가 없으므로 브라우저 적용기가 원본 전체 SHA-256, canary span 해시,
+"모든 record byte는 원본 byte와 다름" 규칙, 변형별 결과 SHA-256을 그 자리에서 검증하고, 소유자의 정품 이미지 실행
+(`python3 scripts/convert_to_v3.py verify-stock --stock <이미지>`)이 모든 변형의 결과 해시를 확인합니다.
 
 설치된 pre-commit hook은 dependency 설치, `curl`, `wget`, `npx` 같은 네트워크
 동작 없이 저장소의 고정된 `npm test` 명령 전체를 실행합니다.
