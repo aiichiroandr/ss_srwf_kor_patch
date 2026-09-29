@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:srwf-kor:schema:patch-descriptor:v3",
+  "title": "Decoded SRWFP v3 shared multi-variant patch descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "patchSize",
+    "patchSha256",
+    "sourceSize",
+    "sourceSha256",
+    "targetSize",
+    "targetSha256",
+    "recordCount",
+    "bodyUncompressedSize",
+    "format",
+    "variant",
+    "commonRecordCount"
+  ],
+  "properties": {
+    "patchSize": {
+      "type": "integer",
+      "minimum": 202,
+      "maximum": 50331648
+    },
+    "patchSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sourceSize": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 783216000
+    },
+    "sourceSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "targetSize": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 783216000
+    },
+    "targetSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "recordCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000
+    },
+    "bodyUncompressedSize": {
+      "type": "integer",
+      "minimum": 3,
+      "maximum": 100663296
+    },
+    "format": {
+      "const": "srwf.sparse-byte-delta.v3"
+    },
+    "variant": {
+      "enum": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "commonRecordCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000
+    }
+  }
+}

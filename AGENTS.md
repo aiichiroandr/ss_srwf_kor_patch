@@ -8,6 +8,15 @@ it is not a candidate-testing area.
 
 The current local release targets are F G103 a/b/c as v0.5 and FIN r116 a/b/c as v0.2, accepted for local patch/download registration by the user's 2026-09-28 instruction. Defaults are `srwf-f-20260928-v0-5-a` and `srwf-final-20260928-v0-2-a`. Evidence ceiling: `docs/F_V05_FIN_V02_VALIDATION.md`; no fresh user coldboot, a/b individual gameplay, long-play or CD-R claim. Remote publication of this accepted six-release set is authorized by the user's subsequent instruction: “원격배포도해”.
 
+The six accepted F v0.4 (`srwf-f-20260915-v0-4-a/b/c`) and F v0.5
+(`srwf-f-20260928-v0-5-a/b/c`) releases are redistributed as one shared v3 payload
+per version (`docs/PATCH_FORMAT_V3.md`, record and history in
+`docs/V3_REDISTRIBUTION.md`). This is redistribution of the same accepted
+results: every release id, target SHA-256, gate and evidence ceiling above is
+unchanged, and it adds no new runtime, coldboot or long-play claim. Every remote
+publication authorized so far covers only the v1 payloads as of commit `3cb5e69`;
+pushing or deploying the re-encoded v3 payloads needs the user's separate request.
+
 The historical release state below is retained for earlier release context.
 
 The current repository state is `HAS_ACCEPTED_RELEASE`. The default indexed
@@ -37,10 +46,21 @@ release rows or publish a new row without another complete acceptance chain.
 - A public patch payload must be a sparse `.srwfp` file in the documented v1
   format, or — only when the accepted target image is larger than the pinned
   stock image — in the documented v2 format (`docs/PATCH_FORMAT_V2.md`). v1
-  rules are unchanged, and an equal-size target must stay v1. Full images and
-  aggregate undocumented deltas are forbidden.
+  rules are unchanged, and an equal-size target must stay v1, except that the
+  accepted `-a/-b/-c` font variants of one version share one documented v3
+  payload (`docs/PATCH_FORMAT_V3.md`); no new equal-size `-a/-b/-c` row may use
+  v1. Full images and aggregate undocumented deltas are forbidden.
+- A shared v3 payload only redistributes already-accepted results. Each variant
+  keeps its own release id, manifest and receipt (a superseding receipt that
+  keeps the original evidence and records what it supersedes), and the payload
+  may not carry a variant without an `ACCEPTED` row. It is built from the
+  accepted payloads by `scripts/convert_to_v3.py`, never hand-edited, and every
+  variant keeps its own target SHA-256. Before it is pushed or deployed, the
+  owner's stock run (`convert_to_v3.py verify-stock`) must have confirmed the
+  source SHA-256 and every variant's final SHA-256 against its accepted target.
 - Do not add a `.srwfp` payload before its explicit acceptance receipt, release
-  manifest, source/target hashes, and payload hash all agree.
+  manifest, source/target hashes, and payload hash all agree (for a shared v3
+  payload, for every variant it carries).
 - The accepted receipt is a release decision. A build receipt, identity pass,
   static pass, isolated runtime sample, or candidate registration is not a
   substitute.
@@ -63,7 +83,9 @@ release rows or publish a new row without another complete acceptance chain.
   profile whose whole-image SHA-256 is verified before patching.
 - Patch payloads must contain changed bytes plus bounded verification metadata
   (and, in v2 only, references to ranges of the user's own source), not a
-  complete game image.
+  complete game image. In v3 the changed bytes applied to any one variant stay
+  within the documented cap and every one of them must differ from the stock
+  byte at its offset.
 - In v2, original bytes that move unchanged (for example a displaced audio
   track) must be referenced from the user's own source with COPY records and
   must never be carried as literal bytes.
@@ -80,7 +102,10 @@ release rows or publish a new row without another complete acceptance chain.
   it or retain it outside the user's browser session.
 - Fail closed on an empty release index, an unknown stock hash, a manifest
   mismatch, a malformed patch, a record preimage mismatch, a COPY source
-  mismatch, an extension-coverage error, or a target hash mismatch.
+  mismatch, an extension-coverage error, a source hash mismatch, an unchanged
+  byte inside a record, a v3 variant, section or merge violation, or a target
+  hash mismatch. Nothing is committed or returned before both whole-image
+  hashes match.
 
 ## Changes and validation
 

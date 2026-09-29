@@ -261,7 +261,8 @@ canary가 없는 곳만 다른 원본은 전체 pass(약 6~13 s) 뒤 `SOURCE_HAS
 | 원본 전체 SHA-256, 변형 결과 전체 SHA-256 | ✓ | (원본이 있을 때) |
 | 정규 분할(common = 모든 변형의 교집합) | – | ✓ |
 | 정규 재인코딩 = 압축 해제한 body | – | ✓ |
-| canary 선택 규칙, canary 해시 = v1 preimage | – | ✓ |
+| canary 선택 규칙(offset·length) | – | ✓ |
+| canary 해시 = v1 preimage | – | 생성기(v1 원본이 있을 때: `install`, `verify --v1-git-rev`) |
 | 헤더 변형 집합 = 그 URL을 가리키는 ACCEPTED 행 집합 | – | ✓ |
 | 변형 tuple 집합의 `recordSetSha256` = 승인된 v1 값 | – | ✓ |
 
@@ -543,7 +544,7 @@ v1 payload와 v3 payload에서 각각 계산해 같아야 합니다. 결과 이�
 
 ## 16. 생성기 계약
 
-`scripts/build_font_variants_v3.py`(표준 라이브러리만, 네트워크 없음)는 다음을 지킵니다.
+`scripts/convert_to_v3.py`(표준 라이브러리만, 네트워크 없음. 하위 명령 `encode`·`verify`·`verify-stock`·`install`·`pins`)는 다음을 지킵니다.
 
 1. **입력**은 이미 승인된 그룹의 v1 payload 세 개와 그 영수증입니다. 각 파일의 SHA-256이 영수증의
    `patchSha256`과 같지 않으면 즉시 중단합니다. 원본·결과 이미지는 필요 없습니다.
@@ -561,14 +562,15 @@ v1 payload와 v3 payload에서 각각 계산해 같아야 합니다. 결과 이�
 6. 그룹 단위로 원자적입니다(모든 변형 또는 없음). 영수증·명세·인덱스를 15.1절 순서로 갱신하고
    `python3 scripts/verify_repo.py`가 실패하면 되돌립니다. 여섯 개의 이전 payload는 삭제하되 git 이력(`3cb5e69`)과
    `supersedes`가 고정합니다. 산출물을 손으로 고치지 않습니다.
-7. **소유자 stock 실행**(`--verify-stock`): 소유자가 자신의 정품 이미지로 독립 디코더와 실제 브라우저 엔진
+7. **소유자 stock 실행**(`convert_to_v3.py verify-stock --stock <이미지>`): 소유자가 자신의 정품 이미지로 독립 디코더와 실제 브라우저 엔진
    (`scripts/check_local_release_downloads.cjs`를 v0.4·v0.5 a/b/c에 맞게 일반화)을 돌려 원본 해시와 **모든 변형의**
    결과 해시가 승인된 `targetSha256`과 같음을 확인합니다. 무손실 검증(5)이 데이터 변환을 원본 없이 증명하므로 이
    실행은 출시할 **디코더·브라우저 구현**을 확인하는 것입니다. 통과 기록 없이 push·배포하지 않습니다.
 
 참조 구현(비규범): `encode_v3.py`(인코더), `decode_v3.py`(독립 엄격 디코더·`verify-stock`),
-`roundtrip_v3.py`(v1 대조), `selftest_v3.py`(골든 벡터와 실패 시험), `check_v3.mjs`(Node 교차 검증). 구현 시
-저장소의 `scripts/`로 옮깁니다.
+`roundtrip_v3.py`(v1 대조), `selftest_v3.py`(골든 벡터와 실패 시험), `check_v3.mjs`(Node 교차 검증). 이 코드는
+저장소의 `scripts/convert_to_v3.py`(인코더·독립 디코더·v1 대조·재발급·`verify-stock`·원자적 `install`)와
+`tests/test_convert_to_v3.py`로 옮겨졌습니다.
 
 ## 17. 클라이언트 요구: 변형 전환에서 다시 받지 않음
 
@@ -646,12 +648,12 @@ v1 payload와 v3 payload에서 각각 계산해 같아야 합니다. 결과 이�
 - `scripts/verify_repo.py`: 상수, 독립 `inspect_srwfp_v3`(Python `zlib.decompressobj`), 정규 재인코딩 대조, 변형별 병합·
   캡처 창·`recordSetSha256`, v3 명세·영수증 분기, 그룹 검증기(14절), `V3_SUPERSEDED` 표, 스키마 pin, `REQUIRED_FILES`,
   `patch-core-v3.mjs` 정규식 pin. 선택: v3 도입 후 새 `-a/-b/-c` v1 행 금지(v2는 허용)와 `.srwfp` 총량 예산.
-- `scripts/build_font_variants_v3.py`(신규), `scripts/check_local_release_downloads.cjs` 일반화,
+- `scripts/convert_to_v3.py`(신규), `scripts/check_local_release_downloads.cjs` 일반화,
   `register_g103_r116.py`·`prepare_next_release.py`·`finalize_local_release_ui.py`가 새 글꼴 그룹을 v3로 만든다는 문서화.
 - 테스트: `tests/patch-core-v3.test.mjs`(변형별 적용, chunk 경계 불변, 아래 모든 공격 종류, 상한 ±1, varint 정규형,
   int32 경계, 열한 키 descriptor), `tests/patch-worker-v3.test.mjs`(캐시 재사용, 기본 변형 없음, 원본 오류 시 초기화),
   다운로드 경로(커밋 전 Blob 없음, 캡처 상한), `tests/patch-memory.test.mjs`(v3 상한), `tests/frontend-contract.test.mjs`,
-  `tests/test_verify_repo.py`, `tests/test_build_font_variants_v3.py`, 그리고 부록 A의 골든 벡터를 JS와 Python이 모두 풀어
+  `tests/test_verify_repo.py`, `tests/test_convert_to_v3.py`, 그리고 부록 A의 골든 벡터를 JS와 Python이 모두 풀어
   같은 값이 나오는 교차 언어 테스트. `.srwfp` 파일은 검증기가 인덱스에 없는 것을 금지하므로 테스트 벡터는 인라인 hex/base64입니다.
 - `manifest/releases.json`: 여섯 행의 `manifestSha256`만.
 

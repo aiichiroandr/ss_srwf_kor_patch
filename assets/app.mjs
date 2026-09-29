@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260928-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20260929-1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,14 +7,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20260928-1";
+} from "./font-revisions.mjs?v=20260929-1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20260928-1";
+} from "./release-notes.mjs?v=20260929-1";
 
-const STATIC_ASSET_REVISION = "20260928-1";
+const STATIC_ASSET_REVISION = "20260929-1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -22,6 +22,7 @@ const INDEX_SCHEMA = "srwf-kor.public-release-index.v2";
 const RELEASE_SCHEMA = "srwf-kor.public-release.v1";
 const PATCH_FORMAT = "srwf.sparse-byte-delta.v1";
 const PATCH_FORMAT_V2 = "srwf.sparse-byte-delta.v2";
+const PATCH_FORMAT_V3 = "srwf.sparse-byte-delta.v3";
 const PROJECT_ID = "srwf-kor-v5";
 const ACCEPTED = "ACCEPTED";
 const NO_ACCEPTED_RELEASE = "NO_ACCEPTED_RELEASE";
@@ -35,18 +36,39 @@ const MIN_PATCH_BODY_BYTES = 45;
 const MAX_PATCH_BODY_BYTES = 128 * 1024 * 1024;
 const MAX_PATCH_RECORDS = 2_000_000;
 const MIN_RECORD_BODY_BYTES = 45;
+const MAX_V3_PATCH_BYTES = 48 * 1024 * 1024;
+const MAX_V3_PATCH_BODY_BYTES = 96 * 1024 * 1024;
+const MAX_V3_COMMON_RECORDS = 2_000_000;
+const MAX_V3_VARIANT_RECORDS = 65_536;
+const V1_PATCH_KEYS = Object.freeze(["format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"]);
+const V3_PATCH_KEYS = Object.freeze([...V1_PATCH_KEYS, "variant", "commonRecordCount"]);
 // 지원 형식 표. v1 행의 값은 기존 상수 그대로다. v2는 결과가 고정 원본보다 클 때만
-// 쓰며(크기가 같으면 v1), 최소 레코드가 LITERAL 14 B이고 헤더가 128 B다.
+// 쓰며(크기가 같으면 v1), 최소 레코드가 LITERAL 14 B이고 헤더가 128 B다. v3는 같은 버전의
+// 글꼴 변형 a/b/c가 payload 하나를 공유하며(같은 크기 전용) 상한이 형식마다 다르다.
 const SUPPORTED_PATCH_FORMATS = new Map([
   [PATCH_FORMAT, Object.freeze({
     minPatchBytes: MIN_PATCH_BYTES,
+    maxPatchBytes: MAX_PATCH_BYTES,
     minPatchBodyBytes: MIN_PATCH_BODY_BYTES,
+    maxPatchBodyBytes: MAX_PATCH_BODY_BYTES,
     minRecordBodyBytes: MIN_RECORD_BODY_BYTES,
+    maxRecords: MAX_PATCH_RECORDS,
   })],
   [PATCH_FORMAT_V2, Object.freeze({
     minPatchBytes: 129,
+    maxPatchBytes: MAX_PATCH_BYTES,
     minPatchBodyBytes: 14,
+    maxPatchBodyBytes: MAX_PATCH_BODY_BYTES,
     minRecordBodyBytes: 14,
+    maxRecords: MAX_PATCH_RECORDS,
+  })],
+  [PATCH_FORMAT_V3, Object.freeze({
+    minPatchBytes: 202,
+    maxPatchBytes: MAX_V3_PATCH_BYTES,
+    minPatchBodyBytes: 3,
+    maxPatchBodyBytes: MAX_V3_PATCH_BODY_BYTES,
+    minRecordBodyBytes: 3,
+    maxRecords: MAX_V3_COMMON_RECORDS,
   })],
 ]);
 const CD_SECTOR_BYTES = 2352;
@@ -787,9 +809,11 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
 
   requireExactOwnKeys(manifest.source, ["profileId", "size", "sha256"], "release source");
   requireExactOwnKeys(manifest.target, ["filename", "cueFilename", "size", "sha256"], "release target");
+  // 공유 v3 payload의 patch 객체만 여덟 키다. 그 밖의 형식(알 수 없는 형식 포함)은 여섯 키다.
+  const sharedFormat = manifest.patch?.format === PATCH_FORMAT_V3;
   requireExactOwnKeys(
     manifest.patch,
-    ["format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"],
+    sharedFormat ? V3_PATCH_KEYS : V1_PATCH_KEYS,
     "release patch",
   );
   requireExactOwnKeys(
@@ -831,19 +855,21 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
     throw new PatcherError("PATCH_FORMAT_UNSUPPORTED", "Unsupported patch format");
   }
   requireRelativeReference(manifest.patch.url, "patch URL");
-  if (manifest.patch.url !== expectedPatchReference(row.id)) {
+  if (manifest.patch.url !== expectedPatchReference(row.id, manifest.patch.format)) {
     throw new PatcherError("MANIFEST_INVALID", "Patch URL is not canonical");
   }
-  requireIntegerInRange(manifest.patch.size, formatRules.minPatchBytes, MAX_PATCH_BYTES, "patch size");
+  requireIntegerInRange(manifest.patch.size, formatRules.minPatchBytes, formatRules.maxPatchBytes, "patch size");
   requireSha256(manifest.patch.sha256, "patch SHA-256");
-  requireIntegerInRange(manifest.patch.recordCount, 1, MAX_PATCH_RECORDS, "patch record count");
+  requireIntegerInRange(manifest.patch.recordCount, 1, formatRules.maxRecords, "patch record count");
   requireIntegerInRange(
     manifest.patch.bodyUncompressedSize,
     formatRules.minPatchBodyBytes,
-    MAX_PATCH_BODY_BYTES,
+    formatRules.maxPatchBodyBytes,
     "patch body size",
   );
-  if (manifest.patch.bodyUncompressedSize < manifest.patch.recordCount * formatRules.minRecordBodyBytes) {
+  if (sharedFormat) {
+    requireSharedPatchIdentity(manifest, row);
+  } else if (manifest.patch.bodyUncompressedSize < manifest.patch.recordCount * formatRules.minRecordBodyBytes) {
     throw new PatcherError("MANIFEST_INVALID", "Patch body is too small for its declared non-empty records");
   }
   if (typeof manifest.provenance.v5Commit !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(manifest.provenance.v5Commit)) {
@@ -877,6 +903,9 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
       sha256: manifest.patch.sha256.toLowerCase(),
       recordCount: manifest.patch.recordCount,
       bodyUncompressedSize: manifest.patch.bodyUncompressedSize,
+      ...(sharedFormat
+        ? { variant: manifest.patch.variant, commonRecordCount: manifest.patch.commonRecordCount }
+        : {}),
     }),
     descriptor: Object.freeze({
       patchSize: manifest.patch.size,
@@ -887,11 +916,49 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
       targetSha256: manifest.target.sha256.toLowerCase(),
       recordCount: manifest.patch.recordCount,
       bodyUncompressedSize: manifest.patch.bodyUncompressedSize,
-      // v1 descriptor는 기존 8개 키 그대로다. v2만 format을 더해 9개 키가 되고,
-      // 워커는 이 모양으로 형식을 고른다.
+      // v1 descriptor는 기존 8개 키 그대로다. v2만 format을 더해 9개 키가 되고, v3는
+      // format, variant, commonRecordCount를 더해 11개 키가 된다. 워커는 v3를 format 값으로,
+      // 나머지를 이 모양으로 구분한다.
       ...(growthFormat ? { format: PATCH_FORMAT_V2 } : {}),
+      ...(sharedFormat
+        ? {
+          format: PATCH_FORMAT_V3,
+          variant: manifest.patch.variant,
+          commonRecordCount: manifest.patch.commonRecordCount,
+        }
+        : {}),
     }),
   });
+}
+
+// 공유 v3 payload 행의 추가 규칙(docs/PATCH_FORMAT_V3.md 14절): -a/-b/-c 행에서만 쓰고,
+// variant는 릴리스 id 접미사와 같으며 파일명·제목도 같은 변형을 가리킨다.
+function requireSharedPatchIdentity(manifest, row) {
+  const { revision } = fontReleaseIdentity(row);
+  if (revision === null) {
+    throw new PatcherError("MANIFEST_INVALID", "A shared v3 patch is only valid for a font-variant release");
+  }
+  const { patch, target, title } = manifest;
+  if (typeof patch.variant !== "string" || patch.variant !== revision) {
+    throw new PatcherError("MANIFEST_INVALID", "Patch variant must equal the release id suffix");
+  }
+  if (
+    !target.filename.endsWith(`-${revision}.bin`)
+    || !target.cueFilename.endsWith(`-${revision}.cue`)
+    || !title.endsWith(`(${revision})`)
+  ) {
+    throw new PatcherError("MANIFEST_INVALID", "Target names and title must name the patch variant");
+  }
+  requireIntegerInRange(patch.commonRecordCount, 1, MAX_V3_COMMON_RECORDS, "patch common record count");
+  requireIntegerInRange(
+    patch.recordCount,
+    patch.commonRecordCount,
+    Math.min(patch.commonRecordCount + MAX_V3_VARIANT_RECORDS, MAX_V3_COMMON_RECORDS),
+    "patch record count",
+  );
+  if (patch.bodyUncompressedSize < patch.commonRecordCount * 3) {
+    throw new PatcherError("MANIFEST_INVALID", "Patch body is too small for its declared common records");
+  }
 }
 
 function requireGrowthTargetSize(size, stockProfile) {
@@ -1925,6 +1992,7 @@ function handleOperationFailure(error, operation = state.operation) {
     "NON_DIFFERING_BYTE",
     "PREIMAGE_MISMATCH",
     "COPY_SOURCE_MISMATCH",
+    "SOURCE_CANARY_MISMATCH",
   ]).has(error?.code);
   const preparationLost = new Set([
     "PREPARED_SOURCE_MISSING",
@@ -2680,6 +2748,10 @@ function friendlyWorkerError(code, gameId) {
     NON_DIFFERING_BYTE: ["패치 데이터 정책 검증에 실패했습니다", "변경되지 않는 바이트가 패치 레코드에 포함되어 있어 작업을 차단했습니다."],
     PREIMAGE_MISMATCH: ["원본 부분 검증에 실패했습니다", "패치할 영역의 원본 데이터가 공개 명세와 달라 작업을 차단했습니다."],
     COPY_SOURCE_MISMATCH: ["원본 부분 검증에 실패했습니다", "위치만 옮겨 쓸 원본 구간의 데이터가 공개 명세와 달라 작업을 차단했습니다."],
+    SOURCE_CANARY_MISMATCH: ["지원하는 원본이 아닙니다", "원본의 일부 구간이 공개 명세와 달라 전체 검사를 기다리지 않고 작업을 중단했습니다. 수정하지 않은 정품 이미지인지 확인해 주세요."],
+    VARIANT_REQUIRED: ["글꼴 변형이 선택되지 않았습니다", "공유 패치 데이터를 어느 글꼴 변형(a/b/c)에 적용할지 정해지지 않아 작업을 차단했습니다."],
+    VARIANT_NOT_IN_PAYLOAD: ["선택한 글꼴 변형이 패치에 없습니다", "공유 패치 데이터에 선택한 글꼴 변형이 들어 있지 않아 작업을 차단했습니다."],
+    VARIANT_TARGET_MISMATCH: ["패치 명세와 데이터가 다릅니다", "선택한 글꼴 변형의 결과 SHA-256이 공개 릴리스 명세와 패치 본문에서 서로 달라 작업을 차단했습니다."],
     PATCH_FORMAT_MISMATCH: ["패치 형식이 명세와 다릅니다", "공개 릴리스 명세가 가리키는 패치 형식과 패치 데이터의 형식이 달라 작업을 차단했습니다."],
     DOWNLOAD_BLOB_SIZE_MISMATCH: ["다운로드 결과 검증에 실패했습니다", "조립한 BIN의 크기가 목표값과 달라 다운로드를 만들지 않았습니다."],
     DESCRIPTOR_MISMATCH: ["패치 명세와 데이터가 다릅니다", "공개 릴리스 명세와 패치 본문이 일치하지 않아 작업을 차단했습니다."],
@@ -2737,6 +2809,20 @@ function friendlyWorkerError(code, gameId) {
     "LITERAL_INSIDE_SOURCE",
     "COPY_SOURCE_OUT_OF_RANGE",
     "EXTENSION_GAP",
+    // srwf.sparse-byte-delta.v3 구조 오류
+    "BAD_VARIANT_COUNT",
+    "BAD_VARIANT_ID",
+    "VARIANT_TARGET_NOT_DISTINCT",
+    "BAD_RECORD_COUNT",
+    "CHANGED_BYTES_TOO_LARGE",
+    "INDEX_SIZE_INVALID",
+    "TRUNCATED_VARINT",
+    "VARINT_TOO_LONG",
+    "NON_CANONICAL_VARINT",
+    "VARINT_OUT_OF_RANGE",
+    "TRAILING_INDEX_DATA",
+    "BAD_CANARY_TABLE",
+    "CANARY_NOT_COMMON_RECORD",
   ]);
   const internalFailureCodes = new Set([
     "INTERNAL_RECORD_STATE",
@@ -2770,7 +2856,12 @@ function expectedManifestReference(releaseId) {
   return `releases/${releaseId}.json`;
 }
 
-function expectedPatchReference(releaseId) {
+function expectedPatchReference(releaseId, format = PATCH_FORMAT) {
+  if (format === PATCH_FORMAT_V3) {
+    // 공유 payload는 그룹(릴리스 id에서 -a/-b/-c를 뺀 값)마다 하나이며 모든 변형 행이 가리킨다.
+    const group = /^(srwf-(?:f|final)-\d{8}-v\d+(?:-\d+)+)-[abc]$/.exec(releaseId)?.[1];
+    return group === undefined ? null : `patches/${group}.v3.srwfp`;
+  }
   return `patches/${releaseId}.srwfp`;
 }
 

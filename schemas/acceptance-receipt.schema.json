@@ -88,6 +88,60 @@
       "minLength": 1,
       "maxLength": 160,
       "pattern": "\\S"
+    },
+    "patchFormat": {
+      "const": "srwf.sparse-byte-delta.v3"
+    },
+    "variantId": {
+      "enum": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "supersedes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receiptSha256",
+        "patchSha256",
+        "recordSetSha256",
+        "decisionAuthority"
+      ],
+      "properties": {
+        "receiptSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "patchSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "recordSetSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "decisionAuthority": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "\\S"
+        }
+      }
     }
+  },
+  "dependentRequired": {
+    "patchFormat": [
+      "variantId",
+      "supersedes"
+    ],
+    "variantId": [
+      "patchFormat",
+      "supersedes"
+    ],
+    "supersedes": [
+      "patchFormat",
+      "variantId"
+    ]
   }
 }

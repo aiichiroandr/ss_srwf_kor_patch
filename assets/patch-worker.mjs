@@ -3,18 +3,31 @@ import {
   applyPatchToWritable,
   buildVerifiedPatchedBlob,
   parsePatch,
-} from "./patch-core.mjs?v=20260928-1";
+} from "./patch-core.mjs?v=20260929-1";
 import {
   PATCH_FORMAT_V2,
   PATCH_V2_LIMITS,
   applyPatchV2ToWritable,
   buildVerifiedPatchedBlobV2,
   parsePatchV2,
-} from "./patch-core-v2.mjs?v=20260928-1";
-import { sha256Hex } from "./sha256.mjs?v=20260928-1";
+} from "./patch-core-v2.mjs?v=20260929-1";
+import {
+  PATCH_FORMAT_V3,
+  PATCH_V3_DESCRIPTOR_KEYS,
+  PATCH_V3_LIMITS,
+  PATCH_V3_MIN_PATCH_BYTES,
+  applyPatchV3ToWritable,
+  buildVerifiedPatchedBlobV3,
+  parsePatchV3,
+  selectVariantV3,
+} from "./patch-core-v3.mjs?v=20260929-1";
+import { sha256Hex } from "./sha256.mjs?v=20260929-1";
 
 let activeJob = null;
 let preparedSource = null;
+// 파싱한 패치의 단일 슬롯. v1·v2는 릴리스 단위(RESET이 비운다), v3는 공유 payload 단위
+// (payload SHA-256이 키이며 RESET이 유지한다). 변형 a/b/c를 바꿔도 다시 받거나 다시
+// 파싱하지 않고, 한 번에 하나의 payload 그룹만 보관한다.
 let patchCache = null;
 const DESCRIPTOR_KEYS = Object.freeze([
   "patchSize",
@@ -28,8 +41,20 @@ const DESCRIPTOR_KEYS = Object.freeze([
 ]);
 const V2_DESCRIPTOR_KEYS = Object.freeze([...DESCRIPTOR_KEYS, "format"]);
 const PATCH_FORMAT_V1 = "srwf.sparse-byte-delta.v1";
-// descriptor 모양으로 형식을 고른다: 키 8개 = v1(기존 규칙 그대로),
-// v1 키 8개 + format = v2. 패치 본문 magic이 이와 다르면 추측하지 않고 멈춘다.
+// v3 payload 수준 지문: 변형과 무관한 descriptor 항목만 넣는다. variant, targetSha256,
+// recordCount는 selectVariantV3가 적용할 때마다 다시 고정한다.
+const V3_PAYLOAD_FINGERPRINT_KEYS = Object.freeze([
+  "format",
+  "patchSize",
+  "patchSha256",
+  "sourceSize",
+  "sourceSha256",
+  "targetSize",
+  "bodyUncompressedSize",
+  "commonRecordCount",
+]);
+// descriptor의 format이 v3면 v3(열한 키, 키 개수로 추측하지 않는다). 아니면 기존 규칙:
+// 키 8개 = v1, v1 키 8개 + format = v2. 패치 본문 magic이 이와 다르면 추측하지 않고 멈춘다.
 const PATCH_ENGINES = new Map([
   [PATCH_FORMAT_V1, Object.freeze({
     magic: "SRWFKP1\0",
@@ -42,6 +67,19 @@ const PATCH_ENGINES = new Map([
     parse: parsePatchV2,
     applyToWritable: applyPatchV2ToWritable,
     buildDownload: buildVerifiedPatchedBlobV2,
+  })],
+  [PATCH_FORMAT_V3, Object.freeze({
+    magic: "SRWFKP3\0",
+    parse: parsePatchV3,
+    // 공유 payload에서 변형을 고르는 단계. 준비할 때 한 번, 적용할 때마다 다시 부른다.
+    select: (parsedPatch, descriptor) => selectVariantV3(parsedPatch, {
+      variant: descriptor.variant,
+      targetSha256: descriptor.targetSha256,
+      recordCount: descriptor.recordCount,
+    }),
+    sharedPayload: true,
+    applyToWritable: applyPatchV3ToWritable,
+    buildDownload: buildVerifiedPatchedBlobV3,
   })],
 ]);
 const SAFE_IMAGE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
@@ -63,7 +101,10 @@ self.addEventListener("message", (event) => {
   if (message.type === "RESET") {
     activeJob?.controller.abort(createAbortError());
     preparedSource = null;
-    patchCache = null;
+    // 공유 v3 payload는 내용 주소(payload SHA-256)로만 재사용되며 원본 상태가 아니므로 남긴다.
+    if (patchCache?.kind !== "payload") {
+      patchCache = null;
+    }
     return;
   }
 
@@ -128,6 +169,9 @@ async function prepareSource(message, signal) {
     signal,
   );
   throwIfAborted(signal);
+  // 공유 payload는 파싱 직후 변형을 한 번 골라 보아, 잘못된 변형·해시·record 수를
+  // 원본을 읽기 전에 거부한다. 적용할 때마다 다시 고른다.
+  selectForApplication(parsedPatch, message.descriptor);
 
   const preparationToken = createToken();
   preparedSource = {
@@ -148,6 +192,8 @@ async function prepareSource(message, signal) {
 
 async function writePatchedImage(message, signal) {
   const context = requirePreparedApplication(message);
+  // 변형 선택 오류는 출력 파일을 열기 전에 낸다(열린 writable을 남기지 않는다).
+  const subject = selectForApplication(context.parsedPatch, context.descriptor);
   const rawWritable = await createOutputWritable(message.outputHandle, signal);
   await applyPreparedPatch(
     message,
@@ -155,12 +201,15 @@ async function writePatchedImage(message, signal) {
     context,
     rawWritable,
     "APPLY_PATCH",
+    undefined,
+    subject,
   );
 }
 
 async function buildPatchedDownload(message, signal) {
   const context = requirePreparedApplication(message);
   const names = validateDownloadOutputNames(message);
+  const subject = selectForApplication(context.parsedPatch, context.descriptor);
 
   postPhase(message.jobId, "source-apply");
   let result;
@@ -171,7 +220,7 @@ async function buildPatchedDownload(message, signal) {
     // complete source hash, every record preimage, and the target hash match.
     result = await patchEngineFor(context.descriptor).buildDownload(
       context.sourceFile,
-      context.parsedPatch,
+      subject,
       {
         signal,
         onProgress: createProgressReporter(
@@ -250,6 +299,7 @@ async function applyPreparedPatch(
   writable,
   operation,
   outputNames,
+  subject = context.parsedPatch,
 ) {
 
   postPhase(message.jobId, "source-apply");
@@ -260,7 +310,7 @@ async function applyPreparedPatch(
     result = await patchEngineFor(context.descriptor).applyToWritable(
       context.sourceFile,
       writable,
-      context.parsedPatch,
+      subject,
       {
         signal,
         onProgress: createProgressReporter(
@@ -324,8 +374,14 @@ async function loadParsedPatch(releaseKey, patchUrl, descriptor, jobId, signal) 
     throw new WorkerPatcherError("EXTERNAL_URL_REJECTED", "Patch URL must be same-origin");
   }
 
-  const cacheKey = `${releaseKey}:${descriptor.patchSha256}`;
-  if (patchCache?.key === cacheKey) {
+  const sharedPayload = patchEngineFor(descriptor).sharedPayload === true;
+  const cacheKind = sharedPayload ? "payload" : "release";
+  // 공유 payload는 payload SHA-256이 키라서 같은 payload를 쓰는 다른 변형(a/b/c)이
+  // 같은 항목을 재사용한다. v1·v2는 기존처럼 릴리스 단위 키다.
+  const cacheKey = sharedPayload
+    ? descriptor.patchSha256.toLowerCase()
+    : `${releaseKey}:${descriptor.patchSha256}`;
+  if (patchCache?.kind === cacheKind && patchCache.key === cacheKey) {
     if (
       patchCache.patchUrl !== resolvedUrl.href
       || patchCache.descriptorFingerprint !== descriptorFingerprint(descriptor)
@@ -336,6 +392,11 @@ async function loadParsedPatch(releaseKey, patchUrl, descriptor, jobId, signal) 
       );
     }
     return patchCache.parsedPatch;
+  }
+  if (sharedPayload) {
+    // 한 번에 하나의 payload 그룹만 보관한다: 새 payload를 받기 전에 이전 그룹을 놓아
+    // 두 그룹이 동시에 메모리에 올라가지 않게 한다.
+    patchCache = null;
   }
 
   postPhase(jobId, "patch-download");
@@ -397,6 +458,7 @@ async function loadParsedPatch(releaseKey, patchUrl, descriptor, jobId, signal) 
   throwIfAborted(signal);
 
   patchCache = {
+    kind: cacheKind,
     key: cacheKey,
     patchUrl: resolvedUrl.href,
     descriptorFingerprint: descriptorFingerprint(descriptor),
@@ -576,6 +638,7 @@ function isSourceAuthenticationError(error) {
     "NON_DIFFERING_BYTE",
     "PREIMAGE_MISMATCH",
     "COPY_SOURCE_MISMATCH",
+    "SOURCE_CANARY_MISMATCH",
   ]).has(error?.code);
 }
 
@@ -593,8 +656,81 @@ function isV2Descriptor(descriptor) {
     && hasExactDescriptorKeys(descriptor, V2_DESCRIPTOR_KEYS);
 }
 
+function isV3Descriptor(descriptor) {
+  return Boolean(descriptor)
+    && typeof descriptor === "object"
+    && !Array.isArray(descriptor)
+    && descriptor.format === PATCH_FORMAT_V3;
+}
+
 function patchEngineFor(descriptor) {
+  if (isV3Descriptor(descriptor)) {
+    return PATCH_ENGINES.get(PATCH_FORMAT_V3);
+  }
   return PATCH_ENGINES.get(isV2Descriptor(descriptor) ? PATCH_FORMAT_V2 : PATCH_FORMAT_V1);
+}
+
+// 변형 선택이 있는 엔진(v3)은 파싱한 payload에서 이 릴리스의 변형을 골라 적용 대상을
+// 돌려준다. 그 밖의 엔진은 파싱한 패치가 곧 적용 대상이다.
+function selectForApplication(parsedPatch, descriptor) {
+  const engine = patchEngineFor(descriptor);
+  return typeof engine.select === "function" ? engine.select(parsedPatch, descriptor) : parsedPatch;
+}
+
+function validateDescriptorV3(descriptor) {
+  if (!hasExactDescriptorKeys(descriptor, PATCH_V3_DESCRIPTOR_KEYS)) {
+    throw new WorkerPatcherError(
+      "PATCH_DESCRIPTOR_INVALID",
+      "Patch descriptor must contain exactly the eleven documented v3 keys",
+    );
+  }
+  const limits = PATCH_V3_LIMITS;
+  for (const key of ["patchSize", "sourceSize", "targetSize"]) {
+    if (!Number.isSafeInteger(descriptor[key]) || descriptor[key] <= 0) {
+      throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", `${key} must be a positive safe integer`);
+    }
+  }
+  if (descriptor.patchSize < PATCH_V3_MIN_PATCH_BYTES) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "patchSize is smaller than the v3 format minimum");
+  }
+  if (descriptor.patchSize > limits.maxPatchBytes) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "patchSize exceeds the v3 parser safety cap");
+  }
+  if (descriptor.sourceSize !== descriptor.targetSize) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "Source and target sizes must match");
+  }
+  if (descriptor.sourceSize > limits.maxImageBytes) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "sourceSize exceeds the v3 image cap");
+  }
+  if (!Number.isSafeInteger(descriptor.commonRecordCount)
+    || descriptor.commonRecordCount < 1
+    || descriptor.commonRecordCount > limits.maxCommonRecords) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "commonRecordCount is outside the v3 limits");
+  }
+  if (!Number.isSafeInteger(descriptor.recordCount)
+    || descriptor.recordCount < descriptor.commonRecordCount
+    || descriptor.recordCount > descriptor.commonRecordCount + limits.maxVariantRecords
+    || descriptor.recordCount > limits.maxMergedRecords) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "recordCount is outside the v3 limits");
+  }
+  if (!Number.isSafeInteger(descriptor.bodyUncompressedSize)
+    || descriptor.bodyUncompressedSize < descriptor.commonRecordCount * 3) {
+    throw new WorkerPatcherError(
+      "PATCH_DESCRIPTOR_INVALID",
+      "bodyUncompressedSize is too small for the declared records",
+    );
+  }
+  if (descriptor.bodyUncompressedSize > limits.maxBodyUncompressedBytes) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "bodyUncompressedSize exceeds the v3 safety cap");
+  }
+  if (typeof descriptor.variant !== "string" || !/^[a-c]$/.test(descriptor.variant)) {
+    throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "variant must be a, b, or c");
+  }
+  for (const key of ["patchSha256", "sourceSha256", "targetSha256"]) {
+    if (typeof descriptor[key] !== "string" || !/^[0-9a-f]{64}$/i.test(descriptor[key])) {
+      throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", `${key} must be a SHA-256 digest`);
+    }
+  }
 }
 
 function validateDescriptorV2(descriptor) {
@@ -644,6 +780,10 @@ function validateDescriptorV2(descriptor) {
 function validateDescriptor(descriptor) {
   if (!descriptor || typeof descriptor !== "object" || Array.isArray(descriptor)) {
     throw new WorkerPatcherError("PATCH_DESCRIPTOR_INVALID", "Patch descriptor is missing");
+  }
+  if (isV3Descriptor(descriptor)) {
+    validateDescriptorV3(descriptor);
+    return;
   }
   if (isV2Descriptor(descriptor)) {
     validateDescriptorV2(descriptor);
@@ -698,7 +838,12 @@ function validateDescriptor(descriptor) {
 }
 
 function descriptorFingerprint(descriptor) {
-  const keys = isV2Descriptor(descriptor) ? V2_DESCRIPTOR_KEYS : DESCRIPTOR_KEYS;
+  let keys;
+  if (isV3Descriptor(descriptor)) {
+    keys = V3_PAYLOAD_FINGERPRINT_KEYS;
+  } else {
+    keys = isV2Descriptor(descriptor) ? V2_DESCRIPTOR_KEYS : DESCRIPTOR_KEYS;
+  }
   return keys.map((key) => `${key}=${descriptor[key]}`).join("\n");
 }
 

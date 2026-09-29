@@ -354,16 +354,19 @@ test("public page exposes the legal and accessibility contracts", async () => {
 });
 
 test("static entry assets share an explicit cache revision", async () => {
-  const [html, appSource, workerSource, v2Source] = await Promise.all([
+  const [html, appSource, workerSource, v2Source, v3Source] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/patch-core-v3.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260928-1";
-  // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
+  const revision = "20260929-1";
+  // v2·v3 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
+  assert.match(workerSource, new RegExp(`patch-core-v3\\.mjs\\?v=${revision}`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
+  assert.match(v3Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -1553,7 +1556,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260928-1$/);
+    assert.match(image.src, /\?v=20260929-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1899,8 +1902,11 @@ test("runtime accepts v2 manifests only for larger sector-aligned targets and ke
     [{ patch: { bodyUncompressedSize: 13 } }, "MANIFEST_INVALID"],
     [{ patch: { recordCount: 100_000, bodyUncompressedSize: 1_399_999 } }, "MANIFEST_INVALID"],
     [{ patch: { recordCount: 2_000_001 } }, "MANIFEST_INVALID"],
-    [{ patch: { format: "srwf.sparse-byte-delta.v3" } }, "MANIFEST_INVALID"],
-    [{ target: { size: FINAL_STOCK_PROFILE.size }, patch: { format: "srwf.sparse-byte-delta.v3" } }, "PATCH_FORMAT_UNSUPPORTED"],
+    [{ patch: { format: "srwf.sparse-byte-delta.v4" } }, "MANIFEST_INVALID"],
+    // 알 수 없는 형식은 여섯 키 객체에서 형식 미지원으로 멈춘다.
+    [{ target: { size: FINAL_STOCK_PROFILE.size }, patch: { format: "srwf.sparse-byte-delta.v4" } }, "PATCH_FORMAT_UNSUPPORTED"],
+    // v3는 여덟 키 patch 객체와 -a/-b/-c 행이 필요하므로 여섯 키 v3 객체는 형식 이전에 거부한다.
+    [{ target: { size: FINAL_STOCK_PROFILE.size }, patch: { format: "srwf.sparse-byte-delta.v3" } }, "MANIFEST_INVALID"],
   ];
   for (const [overrides, code] of rejected) {
     assert.throws(
@@ -1918,6 +1924,307 @@ test("runtime accepts v2 manifests only for larger sector-aligned targets and ke
   const v1Growth = makeFinalReleaseManifest();
   v1Growth.target = { ...v1Growth.target, size: G541_TARGET_SIZE };
   assert.throws(() => normalizeFinalManifest(v1Growth), (error) => error?.code === "MANIFEST_INVALID");
+});
+
+const PATCH_FORMAT_V3 = "srwf.sparse-byte-delta.v3";
+const V3_GROUP_ID = "srwf-f-20260928-v0-5";
+// docs/PATCH_FORMAT_V3.md 14절의 F v0.5 공유 payload 예시(합성 명세가 아니라 참조 인코더의 실제 값).
+const V3_SHARED = Object.freeze({
+  url: `patches/${V3_GROUP_ID}.v3.srwfp`,
+  size: 22152354,
+  sha256: "5fdc0b2549ff505e3ed5d29805e593d13df93a23df9c781c117752ab8dccf0cb",
+  bodyUncompressedSize: 39438740,
+  commonRecordCount: 1330116,
+});
+const V3_VARIANTS = Object.freeze({
+  a: { recordCount: 1330782, targetSha256: "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9" },
+  b: { recordCount: 1330773, targetSha256: "85b9cbf349c421d621f3a6e6819d94f9ee1405137430046469562a2176e798a3" },
+  c: { recordCount: 1330842, targetSha256: "75555116f784115e7104c593fd990491ae182b9493d9f159201e17b3e3d88202" },
+});
+
+function makeV3Row(variant = "a", overrides = {}) {
+  const id = `${V3_GROUP_ID}-${variant}`;
+  return makeReleaseRow({
+    gameId: "srwf-f",
+    id,
+    label: "2026.09.28 · v0.5",
+    manifest: `releases/${id}.json`,
+    manifestSha256: "a".repeat(64),
+    ...overrides,
+  });
+}
+
+function makeV3Manifest(variant = "a", { patch = {}, target = {}, ...overrides } = {}) {
+  const id = `${V3_GROUP_ID}-${variant}`;
+  return makeReleaseManifest({
+    id,
+    version: "v0.5",
+    title: `세가 새턴 슈퍼로봇대전 F 한글 패치 — 2026.09.28 v0.5 (${variant})`,
+    publishedAt: "2026-09-28T22:04:20+09:00",
+    target: {
+      filename: `SRWF-KOR-20260928-v0.5-${variant}.bin`,
+      cueFilename: `SRWF-KOR-20260928-v0.5-${variant}.cue`,
+      size: STOCK_PROFILE.size,
+      sha256: V3_VARIANTS[variant].targetSha256,
+      ...target,
+    },
+    patch: {
+      format: PATCH_FORMAT_V3,
+      url: V3_SHARED.url,
+      size: V3_SHARED.size,
+      sha256: V3_SHARED.sha256,
+      recordCount: V3_VARIANTS[variant].recordCount,
+      bodyUncompressedSize: V3_SHARED.bodyUncompressedSize,
+      variant,
+      commonRecordCount: V3_SHARED.commonRecordCount,
+      ...patch,
+    },
+    provenance: {
+      v5Commit: "ea1076d778df77815a4ac448ac2a21ec3d7ace8b",
+      buildReceiptSha256: "6b6cc021545364f06b109fa31cfbe50d68bad573745da6cb54bba2d2dbdf3932",
+      acceptanceReceiptSha256: "9038b28d38d75d0367fd94e21304a0110143603b7ec52e61e6c94d9c7369ad3f",
+    },
+    ...overrides,
+  });
+}
+
+const normalizeV3 = (manifest, variant = "a", rowOverrides = {}) => __testHooks.normalizeReleaseManifest(
+  manifest,
+  makeV3Row(variant, rowOverrides),
+  new URL(`../releases/${V3_GROUP_ID}-${variant}.json`, import.meta.url),
+  stockProfiles,
+);
+
+test("runtime accepts the eight-key v3 patch object for -a/-b/-c rows and builds the eleven-key descriptor", () => {
+  for (const variant of ["a", "b", "c"]) {
+    const normalized = normalizeV3(makeV3Manifest(variant), variant);
+    assert.equal(normalized.patch.format, PATCH_FORMAT_V3);
+    assert.equal(normalized.patch.variant, variant);
+    assert.equal(normalized.patch.commonRecordCount, V3_SHARED.commonRecordCount);
+    assert.equal(normalized.patch.recordCount, V3_VARIANTS[variant].recordCount);
+    assert.match(normalized.patch.url, new RegExp(`/patches/${V3_GROUP_ID}\\.v3\\.srwfp$`));
+    assert.deepEqual(Object.keys(normalized.descriptor), [
+      "patchSize",
+      "patchSha256",
+      "sourceSize",
+      "sourceSha256",
+      "targetSize",
+      "targetSha256",
+      "recordCount",
+      "bodyUncompressedSize",
+      "format",
+      "variant",
+      "commonRecordCount",
+    ]);
+    assert.deepEqual({ ...normalized.descriptor }, {
+      patchSize: V3_SHARED.size,
+      patchSha256: V3_SHARED.sha256,
+      sourceSize: STOCK_PROFILE.size,
+      sourceSha256: STOCK_PROFILE.sha256,
+      targetSize: STOCK_PROFILE.size,
+      targetSha256: V3_VARIANTS[variant].targetSha256,
+      recordCount: V3_VARIANTS[variant].recordCount,
+      bodyUncompressedSize: V3_SHARED.bodyUncompressedSize,
+      format: PATCH_FORMAT_V3,
+      variant,
+      commonRecordCount: V3_SHARED.commonRecordCount,
+    });
+    assert.ok(Object.isFrozen(normalized.descriptor));
+    assert.ok(Object.isFrozen(normalized.patch));
+    // All three rows point at the same payload, so the worker's payload cache can be shared.
+    assert.equal(normalized.patch.sha256, V3_SHARED.sha256);
+  }
+  const urls = new Set(["a", "b", "c"].map((variant) => normalizeV3(makeV3Manifest(variant), variant).patch.url));
+  assert.equal(urls.size, 1);
+
+  // v1 rows keep the eight-key descriptor; nothing about v3 leaks into them.
+  const v1 = normalizeManifest(makeReleaseManifest());
+  assert.equal(Object.keys(v1.descriptor).length, 8);
+  assert.equal(Object.hasOwn(v1.patch, "variant"), false);
+  assert.equal(Object.keys(v1.patch).length, 6);
+});
+
+test("runtime rejects malformed v3 manifests: key sets, variant identity, URL, limits", () => {
+  const codeOf = (fn) => {
+    try {
+      fn();
+    } catch (error) {
+      return error?.code ?? error?.message;
+    }
+    return null;
+  };
+  const invalid = (manifest, variant = "a", expected = "MANIFEST_INVALID", rowOverrides = {}) => assert.equal(
+    codeOf(() => normalizeV3(manifest, variant, rowOverrides)),
+    expected,
+    JSON.stringify(manifest.patch),
+  );
+
+  // The patch object is exactly eight keys for v3 and six for everything else.
+  const base = makeV3Manifest("a");
+  for (const key of ["variant", "commonRecordCount", "url", "recordCount"]) {
+    const patch = { ...base.patch };
+    delete patch[key];
+    invalid({ ...base, patch });
+  }
+  invalid({ ...base, patch: { ...base.patch, extra: 1 } });
+  invalid({ ...base, patch: { ...base.patch, [Symbol("extra")]: 1 } });
+  const sixKeys = { ...base.patch };
+  delete sixKeys.variant;
+  delete sixKeys.commonRecordCount;
+  invalid({ ...base, patch: sixKeys });
+  invalid({ ...base, patch: { ...base.patch, format: "srwf.sparse-byte-delta.v1" } });
+  invalid({ ...base, patch: { ...base.patch, format: "srwf.sparse-byte-delta.v2" } });
+  invalid({ ...base, patch: { ...sixKeys, format: "srwf.sparse-byte-delta.v4" } }, "a", "PATCH_FORMAT_UNSUPPORTED");
+  invalid({ ...base, patch: { ...base.patch, format: "srwf.sparse-byte-delta.v4" } });
+  invalid({ ...base, patch: null });
+  invalid({ ...base, patch: "patches/x" });
+
+  // The variant must be the release id suffix, and the names must agree.
+  for (const variant of ["b", "c", "d", "A", "", 1, null]) {
+    invalid(makeV3Manifest("a", { patch: { variant } }));
+  }
+  invalid(makeV3Manifest("b", { patch: { variant: "a" } }), "b");
+  invalid(makeV3Manifest("a", { target: { filename: "SRWF-KOR-20260928-v0.5-b.bin" } }));
+  invalid(makeV3Manifest("a", { target: { cueFilename: "SRWF-KOR-20260928-v0.5-b.cue" } }));
+  invalid(makeV3Manifest("a", { target: { filename: "SRWF-KOR-20260928-v0.5.bin" } }));
+  invalid(makeV3Manifest("a", { title: "세가 새턴 슈퍼로봇대전 F 한글 패치 — 2026.09.28 v0.5 (b)" }));
+  invalid(makeV3Manifest("a", { title: "세가 새턴 슈퍼로봇대전 F 한글 패치 — 2026.09.28 v0.5" }));
+  // -a/-b/-c rows only, of the row's own game.
+  invalid(makeV3Manifest("a", { id: "v5-r001" }), "a", "MANIFEST_INVALID", { id: "v5-r001", manifest: "releases/v5-r001.json" });
+  // (A Final row cannot carry the F stock profile at all: the pinned-profile check fires first.)
+  invalid(makeV3Manifest("a"), "a", "SOURCE_PROFILE_MISMATCH", { gameId: "srwf-final" });
+
+  // Target size stays the pinned stock size (v3 is an equal-size format).
+  invalid(makeV3Manifest("a", { target: { size: STOCK_PROFILE.size + 2352 } }));
+  invalid(makeV3Manifest("a", { target: { size: STOCK_PROFILE.size - 1 } }));
+
+  // The shared URL is canonical: <group>.v3.srwfp under patches/, same for the whole group.
+  for (const url of [
+    `patches/${V3_GROUP_ID}-a.srwfp`,
+    `patches/${V3_GROUP_ID}.srwfp`,
+    `patches/${V3_GROUP_ID}-a.v3.srwfp`,
+    "patches/srwf-f-20260915-v0-4.v3.srwfp",
+    `patches/${V3_GROUP_ID}.v3.SRWFP`,
+    `releases/${V3_GROUP_ID}.v3.srwfp`,
+  ]) {
+    invalid(makeV3Manifest("a", { patch: { url } }));
+  }
+  for (const url of [`/patches/${V3_GROUP_ID}.v3.srwfp`, `../patches/${V3_GROUP_ID}.v3.srwfp`, `https://example.test/patches/${V3_GROUP_ID}.v3.srwfp`, `patches/${V3_GROUP_ID}.v3.srwfp?x=1`, `patches\\${V3_GROUP_ID}.v3.srwfp`]) {
+    invalid(makeV3Manifest("a", { patch: { url } }), "a", "EXTERNAL_URL_REJECTED");
+  }
+
+  // v3 limits: 202 B .. 48 MiB payload, 96 MiB body, common 1..2,000,000, variant delta 0..65,536.
+  const v3Limits = [
+    [{ size: 201 }, false], [{ size: 202 }, true], [{ size: 48 * 1024 * 1024 }, true], [{ size: 48 * 1024 * 1024 + 1 }, false],
+    [{ size: 80 * 1024 * 1024 }, false],
+    [{ bodyUncompressedSize: 96 * 1024 * 1024 }, true], [{ bodyUncompressedSize: 96 * 1024 * 1024 + 1 }, false],
+    [{ bodyUncompressedSize: V3_SHARED.commonRecordCount * 3 }, true], [{ bodyUncompressedSize: V3_SHARED.commonRecordCount * 3 - 1 }, false],
+    [{ commonRecordCount: 0 }, false], [{ commonRecordCount: -1 }, false], [{ commonRecordCount: 1.5 }, false],
+    [{ commonRecordCount: 2_000_001 }, false],
+    [{ commonRecordCount: 2_000_000, recordCount: 2_000_000, bodyUncompressedSize: 6_000_000 }, true],
+    [{ recordCount: V3_SHARED.commonRecordCount }, true], [{ recordCount: V3_SHARED.commonRecordCount - 1 }, false],
+    [{ recordCount: V3_SHARED.commonRecordCount + 65_536 }, true], [{ recordCount: V3_SHARED.commonRecordCount + 65_537 }, false],
+    [{ recordCount: 0 }, false], [{ recordCount: 2_000_001 }, false],
+    [{ sha256: "c".repeat(63) }, false], [{ sha256: "C".repeat(64) }, false],
+  ];
+  for (const [patch, accepted] of v3Limits) {
+    const code = codeOf(() => normalizeV3(makeV3Manifest("a", { patch }), "a"));
+    assert.equal(code === null, accepted, `${JSON.stringify(patch)} -> ${code}`);
+  }
+});
+
+test("expectedPatchReference names the shared v3 payload by group and keeps v1 and v2 per release", () => {
+  assert.equal(__testHooks.expectedPatchReference("srwf-f-20260928-v0-5-a"), "patches/srwf-f-20260928-v0-5-a.srwfp");
+  assert.equal(__testHooks.expectedPatchReference("srwf-f-20260928-v0-5-a", "srwf.sparse-byte-delta.v1"), "patches/srwf-f-20260928-v0-5-a.srwfp");
+  assert.equal(__testHooks.expectedPatchReference("srwf-final-20260928-v0-2-a", "srwf.sparse-byte-delta.v2"), "patches/srwf-final-20260928-v0-2-a.srwfp");
+  for (const variant of ["a", "b", "c"]) {
+    assert.equal(
+      __testHooks.expectedPatchReference(`srwf-f-20260928-v0-5-${variant}`, PATCH_FORMAT_V3),
+      "patches/srwf-f-20260928-v0-5.v3.srwfp",
+    );
+    assert.equal(
+      __testHooks.expectedPatchReference(`srwf-f-20260915-v0-4-${variant}`, PATCH_FORMAT_V3),
+      "patches/srwf-f-20260915-v0-4.v3.srwfp",
+    );
+  }
+  for (const releaseId of ["v5-r001", "srwf-f-20260823-v0-3", "srwf-f-20260928-v0-5-d", "srwf-f-20260928-v0-5-ab", "other-20260928-v0-5-a"]) {
+    assert.equal(__testHooks.expectedPatchReference(releaseId, PATCH_FORMAT_V3), null, releaseId);
+  }
+});
+
+test("all seventeen new v3 error codes have Korean copy, and no v3 code falls back to the generic message", () => {
+  const generic = __testHooks.friendlyWorkerError("NO_SUCH_CODE");
+  const structural = [
+    "BAD_VARIANT_COUNT",
+    "BAD_VARIANT_ID",
+    "VARIANT_TARGET_NOT_DISTINCT",
+    "BAD_RECORD_COUNT",
+    "CHANGED_BYTES_TOO_LARGE",
+    "INDEX_SIZE_INVALID",
+    "TRUNCATED_VARINT",
+    "VARINT_TOO_LONG",
+    "NON_CANONICAL_VARINT",
+    "VARINT_OUT_OF_RANGE",
+    "TRAILING_INDEX_DATA",
+    "BAD_CANARY_TABLE",
+    "CANARY_NOT_COMMON_RECORD",
+  ];
+  for (const code of structural) {
+    const copy = __testHooks.friendlyWorkerError(code);
+    assert.equal(copy.title, "패치 데이터 형식이 올바르지 않습니다", code);
+    assert.equal(copy.message, "공개 패치의 구조를 안전하게 확인하지 못해 작업을 차단했습니다.", code);
+  }
+  assert.deepEqual(__testHooks.friendlyWorkerError("SOURCE_CANARY_MISMATCH"), {
+    title: "지원하는 원본이 아닙니다",
+    message: "원본의 일부 구간이 공개 명세와 달라 전체 검사를 기다리지 않고 작업을 중단했습니다. 수정하지 않은 정품 이미지인지 확인해 주세요.",
+  });
+  assert.deepEqual(__testHooks.friendlyWorkerError("VARIANT_REQUIRED"), {
+    title: "글꼴 변형이 선택되지 않았습니다",
+    message: "공유 패치 데이터를 어느 글꼴 변형(a/b/c)에 적용할지 정해지지 않아 작업을 차단했습니다.",
+  });
+  assert.deepEqual(__testHooks.friendlyWorkerError("VARIANT_NOT_IN_PAYLOAD"), {
+    title: "선택한 글꼴 변형이 패치에 없습니다",
+    message: "공유 패치 데이터에 선택한 글꼴 변형이 들어 있지 않아 작업을 차단했습니다.",
+  });
+  assert.deepEqual(__testHooks.friendlyWorkerError("VARIANT_TARGET_MISMATCH"), {
+    title: "패치 명세와 데이터가 다릅니다",
+    message: "선택한 글꼴 변형의 결과 SHA-256이 공개 릴리스 명세와 패치 본문에서 서로 달라 작업을 차단했습니다.",
+  });
+  const everyNewCode = [...structural, "SOURCE_CANARY_MISMATCH", "VARIANT_REQUIRED", "VARIANT_NOT_IN_PAYLOAD", "VARIANT_TARGET_MISMATCH"];
+  assert.equal(everyNewCode.length, 17);
+  for (const code of everyNewCode) {
+    assert.notDeepEqual(__testHooks.friendlyWorkerError(code), generic, code);
+  }
+});
+
+test("every code that the v3 core can raise maps to specific Korean copy", async () => {
+  const [coreSource, appSource] = await Promise.all([
+    readFile(new URL("../assets/patch-core-v3.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
+  ]);
+  const generic = __testHooks.friendlyWorkerError("NO_SUCH_CODE");
+  const raised = new Set([...coreSource.matchAll(/fail\(\s*'([A-Z_]+)'/g)].map((match) => match[1]));
+  // The shared download-capture machinery keeps its v1 behaviour: its budget guards are
+  // programming-error guards that no accepted release can reach (all six use 44 MiB of 64 MiB).
+  // Every other code the core raises must have specific copy or the documented structural copy.
+  const internal = new Set([
+    "INTERNAL_RECORD_STATE",
+    "DOWNLOAD_CAPTURE_WINDOW_INVALID",
+    "DOWNLOAD_CAPTURE_LIMIT_INVALID",
+    "DOWNLOAD_CAPTURE_TOO_LARGE",
+  ]);
+  for (const code of raised) {
+    if (internal.has(code)) {
+      continue;
+    }
+    assert.notDeepEqual(__testHooks.friendlyWorkerError(code), generic, `${code} would show the generic fallback`);
+  }
+  assert.ok(raised.has("SOURCE_CANARY_MISMATCH") && raised.has("BAD_CANARY_TABLE"));
+  // The source-authentication set that revokes the prepared source lists the canary code in the page.
+  const revokes = appSource.match(/const sourceMismatch = new Set\(\[([\s\S]*?)\]\)\.has\(error\?\.code\);/)?.[1] ?? "";
+  for (const code of ["SOURCE_SIZE_MISMATCH", "SOURCE_HASH_MISMATCH", "NON_DIFFERING_BYTE", "PREIMAGE_MISMATCH", "COPY_SOURCE_MISMATCH", "SOURCE_CANARY_MISMATCH"]) {
+    assert.match(revokes, new RegExp(`"${code}"`), code);
+  }
 });
 
 test("new BIN size copy follows the selected release target size", () => {
@@ -2147,7 +2454,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260928-1$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260929-1$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2156,7 +2463,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260928-1$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260929-1$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",
@@ -2192,6 +2499,77 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(requests.length, requestCount);
     assert.equal(element("fontSelect").value, "b");
   } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a shared v3 font group loads each variant's own manifest and blocks a lying variant", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalConsoleError = console.error;
+  const encoder = new TextEncoder();
+  const documents = new Map();
+  const rows = [];
+  const bytesFor = (variant, manifest = makeV3Manifest(variant)) => encoder.encode(JSON.stringify(manifest));
+  for (const variant of ["a", "b", "c"]) {
+    const bytes = bytesFor(variant);
+    const id = `${V3_GROUP_ID}-${variant}`;
+    documents.set(`releases/${id}.json`, bytes);
+    rows.push(makeV3Row(variant, { manifestSha256: createHash("sha256").update(bytes).digest("hex") }));
+  }
+  const finalBytes = encoder.encode(JSON.stringify(makeFinalReleaseManifest()));
+  documents.set(`releases/${FINAL_RELEASE_ID}.json`, finalBytes);
+  rows.push(makeFinalReleaseRow({ manifestSha256: createHash("sha256").update(finalBytes).digest("hex") }));
+  const games = [
+    { id: "srwf-f", label: "슈퍼로봇대전 F", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: `${V3_GROUP_ID}-a` },
+    { id: "srwf-final", label: "슈퍼로봇대전 F 완결편", status: "HAS_ACCEPTED_RELEASE", defaultReleaseId: FINAL_RELEASE_ID },
+  ];
+  documents.set("manifest/releases.json", encoder.encode(JSON.stringify({
+    $schema: "../schemas/releases.schema.json", schema: "srwf-kor.public-release-index.v2",
+    project: { id: "srwf-kor-v5", status: "HAS_ACCEPTED_RELEASE" }, games,
+    stock_profiles: [{ ...STOCK_PROFILE }, { ...FINAL_STOCK_PROFILE }], releases: rows,
+  })));
+  const requests = [];
+  globalThis.fetch = async (url) => {
+    const path = [...documents.keys()].find((key) => String(url).endsWith(key));
+    assert.ok(path, `unexpected request: ${url}`);
+    requests.push(path);
+    const bytes = documents.get(path);
+    return { ok: true, status: 200, headers: { get: () => String(bytes.byteLength) },
+      arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+  };
+  try {
+    const fresh = await import(`../assets/app.mjs?v3-font-selection=${Date.now()}`);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(element("fontSelect").value, "a");
+    assert.equal(element("targetName").textContent, "SRWF-KOR-20260928-v0.5-a.bin");
+    assert.equal(element("releaseState").textContent, "ACCEPTED");
+    assert.equal(element("errorPanel").hidden, true);
+    assert.equal(element("releaseSelect").children.length, 1, "the three variants are one version entry");
+    for (const revision of ["b", "c", "a"]) {
+      element("fontSelect").value = revision;
+      await fresh.__testHooks.handleFontChange();
+      assert.equal(element("targetName").textContent, `SRWF-KOR-20260928-v0.5-${revision}.bin`);
+      assert.equal(requests.at(-1), `releases/${V3_GROUP_ID}-${revision}.json`);
+      assert.equal(element("releaseState").textContent, "ACCEPTED");
+      assert.equal(element("errorPanel").hidden, true);
+    }
+
+    // A manifest that claims another variant than its release id is refused, not loaded.
+    const lying = bytesFor("b", makeV3Manifest("b", { patch: { variant: "a" } }));
+    documents.set(`releases/${V3_GROUP_ID}-b.json`, lying);
+    const index = JSON.parse(new TextDecoder().decode(documents.get("manifest/releases.json")));
+    index.releases.find((row) => row.id === `${V3_GROUP_ID}-b`).manifestSha256 = createHash("sha256").update(lying).digest("hex");
+    documents.set("manifest/releases.json", encoder.encode(JSON.stringify(index)));
+    const reloaded = await import(`../assets/app.mjs?v3-lying-variant=${Date.now()}`);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(element("targetName").textContent, "SRWF-KOR-20260928-v0.5-a.bin");
+    console.error = () => {};
+    element("fontSelect").value = "b";
+    await reloaded.__testHooks.handleFontChange();
+    assert.equal(element("releaseState").textContent, "차단됨");
+    assert.equal(element("errorPanel").hidden, false);
+  } finally {
+    console.error = originalConsoleError;
     globalThis.fetch = originalFetch;
   }
 });

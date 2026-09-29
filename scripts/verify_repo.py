@@ -84,6 +84,104 @@ CD_SECTOR_BYTES = 2_352
 V2_TARGET_SECTOR_MAX = 333_000  # 74분 CD-R
 V2_TARGET_SIZE_MAX = CD_SECTOR_BYTES * V2_TARGET_SECTOR_MAX
 V2_PATCH_MIN = PATCH_V2_HEADER_SIZE + 1
+# srwf.sparse-byte-delta.v3: 같은 버전 -a/-b/-c 글꼴 변형이 공유하는 하나의 payload
+# (docs/PATCH_FORMAT_V3.md). 같은 크기 전용이며 v1·v2 상수는 그대로다.
+PATCH_FORMAT_V3 = "srwf.sparse-byte-delta.v3"
+PATCH_V3_MAGIC = b"SRWFKP3\0"
+V3_FIXED_HEADER_SIZE = 72
+V3_CANARY_ENTRY_SIZE = 40
+V3_VARIANT_ENTRY_SIZE = 41
+V3_MIN_ZLIB_BYTES = 8
+V3_PATCH_MAX = 48 * 1024 * 1024
+V3_PATCH_MIN = V3_FIXED_HEADER_SIZE + V3_CANARY_ENTRY_SIZE + 2 * V3_VARIANT_ENTRY_SIZE + V3_MIN_ZLIB_BYTES
+V3_BODY_MAX = 96 * 1024 * 1024
+V3_IMAGE_MAX = 783_216_000  # 333,000 sectors x 2,352 bytes
+V3_COMMON_RECORD_MAX = 2_000_000
+V3_VARIANT_RECORD_MAX = 65_536
+V3_MERGED_RECORD_MAX = 2_000_000
+V3_CHANGED_BYTES_MAX = 64 * 1024 * 1024
+V3_CANARY_COUNT_MAX = 8
+V3_CANARY_LENGTH_MIN = 16
+V3_CANARY_LENGTH_MAX = 4_096
+V3_GAP_VARINT_MAX_BYTES = 5
+V3_LEN_VARINT_MAX_BYTES = 4
+V3_LEN_CODE_MAX = 67_108_863
+V3_VARIANT_IDS = ("a", "b", "c")
+# .srwfp 전체 예산. 작업 트리(Pages가 올리는 것)가 다시 수백 MB로 부풀지 않게 한다.
+SRWFP_TOTAL_MAX = 192 * 1024 * 1024
+
+# v3 재배포 이력. 여섯 개 릴리스는 3cb5e69 시점의 v1 payload로 이미 승인되었고, 같은 결과를
+# 버전마다 하나의 공유 v3 payload로 다시 싣는다. 아래 표는 그 이전 이력(영수증·payload 해시,
+# 승인된 record 집합의 지문, 승인 시각, 목표 해시, 이전 결정 문구)을 고정해 재발급 영수증이
+# 원래 증거를 조용히 다시 쓰지 못하게 한다. 새 -a/-b/-c 그룹은 이 표에 없으면 v3로 올릴 수 없다.
+V3_SUPERSEDED_ANCHOR_COMMIT = "3cb5e690e7a8a629962719d80f909e7cc1dd6722"
+V3_REDISTRIBUTION_DECISION_AUTHORITY = (
+    "사용자 2026-09-29 지시: 기능·정확도 유지, 낭비 용량 제거. 동일 승인 결과의 v3 공용 payload 재배포이며 신규 검수·승인 주장 없음. 원 근거는 supersedes."
+)
+_V3_PRIOR_DECISION_AUTHORITY_0 = (
+    "사용자 2026-09-28 지시: G103/r116 abc 로컬 패치·다운로드 목록 등록. 기존 복사 상태 검증 범위로 수용. 신규 콜드부트·a/b 개별 플레이·장기 진행·CD-R 검수는 주장하지 않음. 원격 배포 제외."
+)
+_V3_PRIOR_DECISION_AUTHORITY_1 = (
+    "사용자 G93 a/b/c v0.4 공개 지시. a 콜드부트·1/9/10기 실측, b/c 공통 수정 동일성으로 근거 재사용. b/c 개별 부팅·저장/로드·장기진행 미검수. docs/F_V04_VALIDATION.md."
+)
+V3_SUPERSEDED: dict[str, dict[str, str]] = {
+    "srwf-f-20260928-v0-5-a": {
+        "acceptedAt": "2026-09-28T22:04:20+09:00",
+        "receiptSha256": "6241ba3f5c04aa98209222130cbd008b5afa44b5e734201a08ac5e4ebb52de78",
+        "patchSha256": "a309a7951effdbde05d5bd4c853eb41ccd8a5b00bb2be8a57df380734f28df59",
+        "recordSetSha256": "6a76996aa051966c5e58e7881c370daa99a6e3ec23b468b8c45fdf61125e098f",
+        "targetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",
+        "longPlayProgression": "NOT_CLAIMED",
+        "decisionAuthority": _V3_PRIOR_DECISION_AUTHORITY_0,
+    },
+    "srwf-f-20260928-v0-5-b": {
+        "acceptedAt": "2026-09-28T22:04:20+09:00",
+        "receiptSha256": "b21f2d8979e54eabefe75a77d0d42b7eb15231c71594784306d70c43c0ef6d56",
+        "patchSha256": "0a49422528c142bd24cbbf975fdcfb4f09f059069e5025e48e81ad8efae70345",
+        "recordSetSha256": "745eea13ea71c641fee1ef9cf710fe1d63035b3c50002b572b74b0169c7073d3",
+        "targetSha256": "85b9cbf349c421d621f3a6e6819d94f9ee1405137430046469562a2176e798a3",
+        "longPlayProgression": "NOT_CLAIMED",
+        "decisionAuthority": _V3_PRIOR_DECISION_AUTHORITY_0,
+    },
+    "srwf-f-20260928-v0-5-c": {
+        "acceptedAt": "2026-09-28T22:04:20+09:00",
+        "receiptSha256": "08b0cf5db0aa1e669dfc4c6a4a4db8b9a5ba988a9cd86372b34a90113d102bf3",
+        "patchSha256": "9981ea581a400807fbc6dc6c935dba39f18615f0223ded23c4675ed7f5d78f1d",
+        "recordSetSha256": "bd73b53ad9e320da95c585d9b616a40df98e492de10473b1207f3e73097966bb",
+        "targetSha256": "75555116f784115e7104c593fd990491ae182b9493d9f159201e17b3e3d88202",
+        "longPlayProgression": "NOT_CLAIMED",
+        "decisionAuthority": _V3_PRIOR_DECISION_AUTHORITY_0,
+    },
+    "srwf-f-20260915-v0-4-a": {
+        "acceptedAt": "2026-09-15T13:27:46+09:00",
+        "receiptSha256": "8de9609f460d7696d1d2e6c1c58a3ba31464140d2c7b5497c5a304459366d017",
+        "patchSha256": "f31ffbd24da40bc4355fa14878d0d24d80887e4ea2a6d88409099c9568ded0de",
+        "recordSetSha256": "53761d693ea140c94d43a58ad4ecb7f860fbe91c3e102e1e96fd8ae9f9246870",
+        "targetSha256": "f3292551e827ac66d4406a2994350342d9084a5d24a121a70185029fba574a3e",
+        "longPlayProgression": "NOT_CLAIMED",
+        "decisionAuthority": _V3_PRIOR_DECISION_AUTHORITY_1,
+    },
+    "srwf-f-20260915-v0-4-b": {
+        "acceptedAt": "2026-09-15T13:27:46+09:00",
+        "receiptSha256": "84a436ca53a06ca93551e0ad678aa663832f908502a8cc7bdad0755869f05e91",
+        "patchSha256": "d6fcea57763bad838b1cfc73fedec75e485ffd541fb9783de7e37a0186f6c920",
+        "recordSetSha256": "4e3af45347418d1a4c3f321b52c900688c424c1aaef1eb42934b4490b056fe8b",
+        "targetSha256": "fe713fcab98279f8f6ffe6da45c145bcf75ab70ebe7361e733b71559b94f8589",
+        "longPlayProgression": "NOT_CLAIMED",
+        "decisionAuthority": _V3_PRIOR_DECISION_AUTHORITY_1,
+    },
+    "srwf-f-20260915-v0-4-c": {
+        "acceptedAt": "2026-09-15T13:27:46+09:00",
+        "receiptSha256": "5f2a993d021751ea93fce4e0b8811b1f7892fc4fb6d84571a5469064a159635a",
+        "patchSha256": "71bac68e81558b2d4ef24f16408e11a058c23140d1cfb57b77a05fa6be1db94a",
+        "recordSetSha256": "604c9c44ebfe82afe9e1e8413d8c3f2cb0cce89938de7ac73c7b5effb4dab854",
+        "targetSha256": "5489ed4e2d980a0010ecffba3801621b88cf20d7aa317811eddcd37eff13fe5f",
+        "longPlayProgression": "NOT_CLAIMED",
+        "decisionAuthority": _V3_PRIOR_DECISION_AUTHORITY_1,
+    },
+}
+V3_RECEIPT_EXTRA_KEYS = ("patchFormat", "variantId", "supersedes")
+V3_SUPERSEDES_KEYS = ("receiptSha256", "patchSha256", "recordSetSha256", "decisionAuthority")
 JSON_SCHEMA_DRAFT = "https://json-schema.org/draft/2020-12/schema"
 HEX64_PATTERN = r"^[0-9a-f]{64}$"
 ID_PATTERN = r"^[a-z0-9][a-z0-9._-]{0,63}$"
@@ -91,6 +189,7 @@ COMMIT_PATTERN = r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
 VERSION_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$"
 MANIFEST_REFERENCE_PATTERN = r"^releases/[a-z0-9][a-z0-9._-]{0,63}\.json$"
 PATCH_REFERENCE_PATTERN = r"^patches/[a-z0-9][a-z0-9._-]{0,63}\.srwfp$"
+PATCH_V3_REFERENCE_PATTERN = r"^patches/[a-z0-9][a-z0-9._-]{0,63}\.v3\.srwfp$"
 
 REQUIRED_FILES = {
     ".gitattributes",
@@ -104,26 +203,32 @@ REQUIRED_FILES = {
     "assets/app.mjs",
     "assets/patch-core.mjs",
     "assets/patch-core-v2.mjs",
+    "assets/patch-core-v3.mjs",
     "assets/patch-worker.mjs",
     "assets/release-notes.mjs",
     "assets/sha256.mjs",
     "assets/style.css",
     "docs/PATCH_FORMAT.md",
     "docs/PATCH_FORMAT_V2.md",
+    "docs/PATCH_FORMAT_V3.md",
+    "docs/V3_REDISTRIBUTION.md",
     "docs/RELEASE_POLICY.md",
     "manifest/releases.json",
     "schemas/acceptance-receipt.schema.json",
     "schemas/patch-descriptor.schema.json",
     "schemas/patch-descriptor-v2.schema.json",
+    "schemas/patch-descriptor-v3.schema.json",
     "schemas/release.schema.json",
     "schemas/releases.schema.json",
     "scripts/verify_repo.py",
+    "scripts/convert_to_v3.py",
     ".githooks/pre-commit",
     "tests/frontend-contract.test.mjs",
     "tests/patch-core.test.mjs",
     "tests/patch-core-v2.test.mjs",
     "tests/patch-worker.test.mjs",
     "tests/test_verify_repo.py",
+    "tests/test_convert_to_v3.py",
 }
 
 FORBIDDEN_SUFFIXES = {
@@ -268,12 +373,13 @@ REQUIRED_IGNORE_LINES = {
 EXPECTED_PACKAGE_SCRIPTS = {
     "build": (
         "python3 scripts/verify_repo.py && node --test && "
-        "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_verify_repo.py"
+        "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest "
+        "tests/test_verify_repo.py tests/test_convert_to_v3.py"
     ),
     "verify": "python3 scripts/verify_repo.py",
     "test": (
-        "node --test && PYTHONDONTWRITEBYTECODE=1 "
-        "python3 -m unittest tests/test_verify_repo.py && python3 scripts/verify_repo.py"
+        "node --test && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest "
+        "tests/test_verify_repo.py tests/test_convert_to_v3.py && python3 scripts/verify_repo.py"
     ),
 }
 EXPECTED_PRE_COMMIT_LINES = [
@@ -1008,6 +1114,394 @@ def inspect_srwfp_v2_cached(data: bytes) -> dict[str, int | str]:
     return dict(_PATCH_V2_DESCRIPTOR_CACHE[key])
 
 
+# ---------------------------------------------------------------------------
+# srwf.sparse-byte-delta.v3 (docs/PATCH_FORMAT_V3.md): one shared payload for
+# the accepted -a/-b/-c font variants of one version. Everything below is
+# independent of the v1/v2 inspectors and of scripts/convert_to_v3.py.
+# ---------------------------------------------------------------------------
+
+
+def _v3_fail(code: str, detail: str = "") -> None:
+    raise SrwfpFormatError(f"{code}: {detail}" if detail else code)
+
+
+def _v3_inflate_body(compressed: bytes | memoryview, body_size: int) -> bytes:
+    """One RFC 1950 stream: CMF 0x78, no dictionary, exact size, Adler-32 is the file tail."""
+    if len(compressed) < V3_MIN_ZLIB_BYTES:
+        _v3_fail("TRUNCATED_HEADER", "zlib stream is shorter than its minimum")
+    if (
+        compressed[0] != 0x78
+        or ((compressed[0] << 8) | compressed[1]) % 31 != 0
+        or compressed[1] & 0x20
+    ):
+        _v3_fail("BAD_ZLIB_BODY", "zlib header must be CMF 0x78, FCHECK valid, FDICT clear")
+    decompressor = zlib.decompressobj(zlib.MAX_WBITS)
+    try:
+        body = decompressor.decompress(compressed, body_size + 1)
+    except zlib.error as exc:
+        _v3_fail("BAD_ZLIB_BODY", str(exc))
+    if len(body) > body_size:
+        _v3_fail("BODY_SIZE_MISMATCH", "inflated output exceeds the declared size")
+    if not decompressor.eof or decompressor.unused_data or decompressor.unconsumed_tail:
+        _v3_fail("BAD_ZLIB_BODY", "not exactly one complete zlib stream")
+    if len(body) != body_size:
+        _v3_fail("BODY_SIZE_MISMATCH", "inflated output is shorter than the declared size")
+    if bytes(compressed[-4:]) != struct.pack(">I", zlib.adler32(body)):
+        _v3_fail("BAD_ZLIB_BODY", "Adler-32 of the body is not the last 4 bytes")
+    return body
+
+
+def _v3_leb128(value: int) -> bytes:
+    out = bytearray()
+    while True:
+        low = value & 0x7F
+        value >>= 7
+        if value:
+            out.append(low | 0x80)
+        else:
+            out.append(low)
+            return bytes(out)
+
+
+def _v3_read_varint(
+    buffer: bytes, position: int, end: int, max_bytes: int, max_value: int
+) -> tuple[int, int]:
+    """Canonical unsigned LEB128, bounded in bytes and value."""
+    value = 0
+    multiplier = 1
+    used = 0
+    while True:
+        if position >= end:
+            _v3_fail("TRUNCATED_VARINT")
+        byte = buffer[position]
+        position += 1
+        used += 1
+        if used > max_bytes:
+            _v3_fail("VARINT_TOO_LONG")
+        value += (byte & 0x7F) * multiplier
+        if not byte & 0x80:
+            if used > 1 and byte == 0:
+                _v3_fail("NON_CANONICAL_VARINT")
+            break
+        multiplier *= 128
+    if value > max_value:
+        _v3_fail("VARINT_OUT_OF_RANGE")
+    return value, position
+
+
+def _v3_canary_rule(common_offsets: list[int], common_lengths: list[int]) -> list[tuple[int, int]]:
+    """Generator rule (spec section 8): C = min(8, |E|), canary i = E[floor(i * |E| / C)]."""
+    eligible = [
+        (offset, length)
+        for offset, length in zip(common_offsets, common_lengths)
+        if V3_CANARY_LENGTH_MIN <= length <= V3_CANARY_LENGTH_MAX
+    ]
+    count = min(V3_CANARY_COUNT_MAX, len(eligible))
+    return [eligible[(index * len(eligible)) // count] for index in range(count)]
+
+
+def inspect_srwfp_v3(data: bytes) -> dict[str, Any]:
+    """Strictly parse a shared SRWFKP3 payload with the public browser limits.
+
+    Everything that needs no stock image is enforced here, for every variant it
+    carries: header arithmetic before inflating, one exact zlib stream, canonical
+    varints, merge order/overlap/abutment, download capture budget, canaries equal
+    to common records chosen by the generator rule, the canonical common/variant
+    partition, and the canonical re-encode of the body. It also returns each
+    variant's record-set fingerprint. Stock-dependent checks stay in the applier.
+    """
+    patch_size = len(data)
+    if patch_size > V3_PATCH_MAX:
+        _v3_fail("PATCH_TOO_LARGE", f"patch exceeds the {V3_PATCH_MAX}-byte cap")
+    if patch_size < V3_FIXED_HEADER_SIZE:
+        _v3_fail("TRUNCATED_HEADER")
+    if data[:8] != PATCH_V3_MAGIC:
+        _v3_fail("BAD_MAGIC", "patch magic is not SRWFKP3\\0")
+    image_size, body_size = struct.unpack_from(">QQ", data, 8)
+    source_sha256 = bytes(data[24:56])
+    variant_count, common_count, common_data, canary_count = struct.unpack_from(">IIII", data, 56)
+
+    if not 1 <= image_size <= V3_IMAGE_MAX:
+        _v3_fail("BAD_SIZE", "imageSize")
+    if body_size > V3_BODY_MAX:
+        _v3_fail("BODY_TOO_LARGE")
+    if variant_count not in (2, 3):
+        _v3_fail("BAD_VARIANT_COUNT")
+    if not 1 <= canary_count <= V3_CANARY_COUNT_MAX:
+        _v3_fail("BAD_CANARY_TABLE", "canaryCount")
+    header_size = (
+        V3_FIXED_HEADER_SIZE
+        + V3_CANARY_ENTRY_SIZE * canary_count
+        + V3_VARIANT_ENTRY_SIZE * variant_count
+    )
+    if patch_size < header_size + V3_MIN_ZLIB_BYTES:
+        _v3_fail("TRUNCATED_HEADER")
+    if common_count < 1:
+        _v3_fail("BAD_RECORD_COUNT", "commonRecordCount")
+    if common_count > V3_COMMON_RECORD_MAX:
+        _v3_fail("TOO_MANY_RECORDS")
+    if canary_count > common_count:
+        _v3_fail("BAD_CANARY_TABLE", "more canaries than common records")
+
+    canaries: list[tuple[int, int, bytes]] = []
+    position = V3_FIXED_HEADER_SIZE
+    previous_end = 0
+    for _ in range(canary_count):
+        offset, length = struct.unpack_from(">II", data, position)
+        digest = bytes(data[position + 8:position + 40])
+        if (
+            not V3_CANARY_LENGTH_MIN <= length <= V3_CANARY_LENGTH_MAX
+            or offset < previous_end
+            or offset + length > image_size
+        ):
+            _v3_fail("BAD_CANARY_TABLE", f"canary at {offset}")
+        canaries.append((offset, length, digest))
+        previous_end = offset + length
+        position += V3_CANARY_ENTRY_SIZE
+
+    variants: list[dict[str, Any]] = []
+    previous_id = 0
+    for _ in range(variant_count):
+        variant_byte = data[position]
+        if not 0x61 <= variant_byte <= 0x63 or variant_byte <= previous_id:
+            _v3_fail("BAD_VARIANT_ID")
+        previous_id = variant_byte
+        unique_count, unique_data = struct.unpack_from(">II", data, position + 33)
+        variants.append({
+            "id": chr(variant_byte),
+            "target": bytes(data[position + 1:position + 33]),
+            "count": unique_count,
+            "data": unique_data,
+        })
+        position += V3_VARIANT_ENTRY_SIZE
+    targets = [variant["target"] for variant in variants]
+    if len(set(targets)) != len(targets) or source_sha256 in targets:
+        _v3_fail("VARIANT_TARGET_NOT_DISTINCT")
+
+    sets: list[dict[str, Any]] = [{"id": None, "count": common_count, "data": common_data}, *variants]
+    total_records = 0
+    total_data = 0
+    for section in sets:
+        if section["id"] is not None and section["count"] > V3_VARIANT_RECORD_MAX:
+            _v3_fail("TOO_MANY_RECORDS")
+        if section["count"] > section["data"]:
+            _v3_fail("RECORD_BYTES_MISMATCH", "fewer data bytes than records")
+        total_records += section["count"]
+        total_data += section["data"]
+    for variant in variants:
+        if common_count + variant["count"] > V3_MERGED_RECORD_MAX:
+            _v3_fail("TOO_MANY_RECORDS")
+        if common_data + variant["data"] > V3_CHANGED_BYTES_MAX:
+            _v3_fail("CHANGED_BYTES_TOO_LARGE")
+    if body_size < total_data:
+        _v3_fail("BODY_SIZE_MISMATCH")
+    index_bytes = body_size - total_data
+    if (
+        index_bytes < 2 * total_records
+        or index_bytes > (V3_GAP_VARINT_MAX_BYTES + V3_LEN_VARINT_MAX_BYTES) * total_records
+    ):
+        _v3_fail("INDEX_SIZE_INVALID")
+
+    body = _v3_inflate_body(memoryview(data)[header_size:], body_size)
+
+    parsed: list[dict[str, Any]] = []
+    cursor = 0
+    max_gap = image_size - 1
+    max_length_code = min(image_size - 1, V3_LEN_CODE_MAX)
+    for section in sets:
+        count = section["count"]
+        gaps = [0] * count
+        for index in range(count):
+            gaps[index], cursor = _v3_read_varint(
+                body, cursor, index_bytes, V3_GAP_VARINT_MAX_BYTES, max_gap
+            )
+        offsets = [0] * count
+        lengths = [0] * count
+        total_length = 0
+        previous_end_offset = -1
+        for index in range(count):
+            code, cursor = _v3_read_varint(
+                body, cursor, index_bytes, V3_LEN_VARINT_MAX_BYTES, max_length_code
+            )
+            length = code + 1
+            offset = gaps[index] if index == 0 else previous_end_offset + 1 + gaps[index]
+            if offset + length > image_size:
+                _v3_fail("RECORD_OUT_OF_RANGE")
+            offsets[index] = offset
+            lengths[index] = length
+            previous_end_offset = offset + length
+            total_length += length
+        if total_length != section["data"]:
+            _v3_fail("RECORD_BYTES_MISMATCH", "sum of record lengths != dataBytes")
+        parsed.append({"id": section["id"], "offsets": offsets, "lengths": lengths})
+    if cursor != index_bytes:
+        _v3_fail("TRAILING_INDEX_DATA")
+    data_position = index_bytes
+    for section in parsed:
+        section["data0"] = data_position
+        data_position += sum(section["lengths"])
+    if data_position != len(body):
+        _v3_fail("BODY_SIZE_MISMATCH", "data area does not end at the body end")
+
+    common = parsed[0]
+    common_offsets: list[int] = common["offsets"]
+    common_lengths: list[int] = common["lengths"]
+
+    # Every canary is exactly one common record, and the generator rule picked it.
+    common_position = 0
+    for offset, length, _digest in canaries:
+        while common_position < common_count and common_offsets[common_position] < offset:
+            common_position += 1
+        if (
+            common_position >= common_count
+            or common_offsets[common_position] != offset
+            or common_lengths[common_position] != length
+        ):
+            _v3_fail("CANARY_NOT_COMMON_RECORD", f"offset {offset}")
+    if [(offset, length) for offset, length, _ in canaries] != _v3_canary_rule(
+        common_offsets, common_lengths
+    ):
+        _v3_fail("BAD_CANARY_TABLE", "canaries do not follow the generator selection rule")
+
+    body_view = memoryview(body)
+    result_variants: dict[str, dict[str, Any]] = {}
+    for variant, section in zip(variants, parsed[1:]):
+        vo: list[int] = section["offsets"]
+        vl: list[int] = section["lengths"]
+        i = j = 0
+        nc, nv = len(common_offsets), len(vo)
+        common_data_position = common["data0"]
+        variant_data_position = section["data0"]
+        previous_end_offset = -1
+        digest = hashlib.sha256()
+        capture_start: int | None = None
+        capture_end: int | None = None
+        captured = 0
+        first = True
+        while i < nc or j < nv:
+            if j >= nv or (i < nc and common_offsets[i] < vo[j]):
+                offset, length = common_offsets[i], common_lengths[i]
+                data_at = common_data_position
+                common_data_position += length
+                i += 1
+            else:
+                offset, length = vo[j], vl[j]
+                data_at = variant_data_position
+                variant_data_position += length
+                j += 1
+            if not first:
+                if offset < previous_end_offset:
+                    _v3_fail("OVERLAPPING_RECORD", f"variant {variant['id']} at {offset}")
+                if offset == previous_end_offset:
+                    _v3_fail("NON_MAXIMAL_RECORDS", f"variant {variant['id']} at {offset}")
+            first = False
+            end = offset + length
+            digest.update(struct.pack(">QI", offset, length))
+            digest.update(body_view[data_at:data_at + length])
+            window_start = offset // DOWNLOAD_CAPTURE_CHUNK_BYTES * DOWNLOAD_CAPTURE_CHUNK_BYTES
+            window_end = min(
+                image_size,
+                ((end + DOWNLOAD_CAPTURE_CHUNK_BYTES - 1) // DOWNLOAD_CAPTURE_CHUNK_BYTES)
+                * DOWNLOAD_CAPTURE_CHUNK_BYTES,
+            )
+            if capture_start is None or capture_end is None:
+                capture_start, capture_end = window_start, window_end
+            elif window_start <= capture_end:
+                capture_end = max(capture_end, window_end)
+            else:
+                captured += capture_end - capture_start
+                if captured > MAX_DOWNLOAD_CAPTURE_BYTES:
+                    _v3_fail(
+                        "DOWNLOAD_CAPTURE_TOO_LARGE",
+                        f"sparse download requires more than {MAX_DOWNLOAD_CAPTURE_BYTES} captured bytes",
+                    )
+                capture_start, capture_end = window_start, window_end
+            previous_end_offset = end
+        if capture_start is not None and capture_end is not None:
+            captured += capture_end - capture_start
+            if captured > MAX_DOWNLOAD_CAPTURE_BYTES:
+                _v3_fail(
+                    "DOWNLOAD_CAPTURE_TOO_LARGE",
+                    f"sparse download requires more than {MAX_DOWNLOAD_CAPTURE_BYTES} captured bytes",
+                )
+        result_variants[variant["id"]] = {
+            "targetSha256": variant["target"].hex(),
+            "uniqueRecordCount": nv,
+            "recordCount": nc + nv,
+            "dataBytes": variant["data"],
+            "recordSetSha256": digest.hexdigest(),
+            "capturedBytes": captured,
+        }
+
+    # Canonical partition: `common` is exactly the set of records every variant has,
+    # so no record may sit in every variant section at once. Sections are at most
+    # 65,536 records, so this check is cheap.
+    full_sections: dict[str, set[tuple[int, int, bytes]]] = {}
+    for variant, section in zip(variants, parsed[1:]):
+        vo = section["offsets"]
+        vl = section["lengths"]
+        running = section["data0"]
+        records: set[tuple[int, int, bytes]] = set()
+        for index in range(len(vo)):
+            records.add((vo[index], vl[index], bytes(body_view[running:running + vl[index]])))
+            running += vl[index]
+        full_sections[variant["id"]] = records
+    shared_by_all = set.intersection(*full_sections.values())
+    if shared_by_all:
+        _v3_fail(
+            "NON_CANONICAL_PARTITION",
+            f"{len(shared_by_all)} record(s) are in every variant section and must be common",
+        )
+
+    # Canonical re-encode: index area rebuilt from the decoded sections equals the body's.
+    index_area = bytearray()
+    for section in parsed:
+        offsets = section["offsets"]
+        lengths = section["lengths"]
+        previous = -1
+        gap_column = bytearray()
+        length_column = bytearray()
+        for offset, length in zip(offsets, lengths):
+            gap_column += _v3_leb128(offset if previous < 0 else offset - previous - 1)
+            length_column += _v3_leb128(length - 1)
+            previous = offset + length
+        index_area += gap_column + length_column
+    if bytes(index_area) != bytes(body_view[:index_bytes]):
+        _v3_fail("NON_CANONICAL_PARTITION", "canonical re-encode differs from the inflated body")
+
+    return {
+        "patchSize": patch_size,
+        "patchSha256": hashlib.sha256(data).hexdigest(),
+        "sourceSize": image_size,
+        "sourceSha256": source_sha256.hex(),
+        "targetSize": image_size,
+        "bodyUncompressedSize": body_size,
+        "commonRecordCount": common_count,
+        "commonDataBytes": common_data,
+        "canaryCount": canary_count,
+        "format": PATCH_FORMAT_V3,
+        "variants": result_variants,
+    }
+
+
+# 큰 payload 바이트는 보관하지 않고 작은 descriptor만 남긴다(v1·v2와 같은 방식).
+_PATCH_V3_DESCRIPTOR_CACHE: dict[tuple, dict[str, Any]] = {}
+
+
+def inspect_srwfp_v3_cached(data: bytes) -> dict[str, Any]:
+    key = (
+        hashlib.sha256(data).digest(), V3_PATCH_MAX, V3_BODY_MAX, V3_IMAGE_MAX,
+        V3_COMMON_RECORD_MAX, V3_VARIANT_RECORD_MAX, V3_MERGED_RECORD_MAX,
+        V3_CHANGED_BYTES_MAX, MAX_DOWNLOAD_CAPTURE_BYTES, DOWNLOAD_CAPTURE_CHUNK_BYTES,
+    )
+    if key not in _PATCH_V3_DESCRIPTOR_CACHE:
+        actual = inspect_srwfp_v3(data)
+        if len(_PATCH_V3_DESCRIPTOR_CACHE) >= 16:
+            _PATCH_V3_DESCRIPTOR_CACHE.pop(next(iter(_PATCH_V3_DESCRIPTOR_CACHE)))
+        _PATCH_V3_DESCRIPTOR_CACHE[key] = actual
+    return json.loads(json.dumps(_PATCH_V3_DESCRIPTOR_CACHE[key]))
+
+
 def is_v2_growth_target_size(size: Any, source_profile: dict[str, Any] | None) -> bool:
     """A v2 target must be larger than the pinned stock, sector-aligned and bounded."""
     if source_profile is None or isinstance(size, bool) or not isinstance(size, int):
@@ -1042,12 +1536,30 @@ def require_srwfp_descriptor(
         "bodyUncompressedSize": patch.get("bodyUncompressedSize"),
     }
     growth_format = patch.get("format") == PATCH_FORMAT_V2
+    shared_format = patch.get("format") == PATCH_FORMAT_V3
     if growth_format:
         expected["format"] = PATCH_FORMAT_V2
+    if shared_format:
+        expected["format"] = PATCH_FORMAT_V3
+        expected["variant"] = patch.get("variant")
+        expected["commonRecordCount"] = patch.get("commonRecordCount")
     try:
         with path.open("rb") as handle:
-            data = handle.read(PATCH_MAX + 1)
-        actual = inspect_srwfp_v2_cached(data) if growth_format else inspect_srwfp_cached(data)
+            data = handle.read((V3_PATCH_MAX if shared_format else PATCH_MAX) + 1)
+        if shared_format:
+            shared = inspect_srwfp_v3_cached(data)
+            entry = shared["variants"].get(patch.get("variant"))
+            if entry is None:
+                complain(f"{context}: variant {patch.get('variant')!r} is not carried by the shared v3 payload")
+                return
+            actual = {
+                **{key: value for key, value in shared.items() if key != "variants"},
+                "targetSha256": entry["targetSha256"],
+                "recordCount": entry["recordCount"],
+                "variant": patch.get("variant"),
+            }
+        else:
+            actual = inspect_srwfp_v2_cached(data) if growth_format else inspect_srwfp_cached(data)
     except (OSError, SrwfpFormatError) as exc:
         complain(f"{context}: malformed .srwfp payload: {exc}")
         return
@@ -1346,6 +1858,7 @@ def schema_object_properties(
     context: str,
     *,
     allowed_metadata: set[str] | None = None,
+    optional: set[str] | None = None,
 ) -> dict[str, Any]:
     if not isinstance(value, dict):
         complain(f"{context}: must be an object schema")
@@ -1365,7 +1878,7 @@ def schema_object_properties(
     ):
         complain(f"{context}: required keys are out of sync")
     properties = value.get("properties")
-    if not isinstance(properties, dict) or set(properties) != required:
+    if not isinstance(properties, dict) or set(properties) != required | (optional or set()):
         complain(f"{context}: property keys are out of sync")
         return {}
     return properties
@@ -1382,6 +1895,7 @@ def validate_schema_documents() -> None:
         ROOT / "schemas/release.schema.json",
         ROOT / "schemas/patch-descriptor.schema.json",
         ROOT / "schemas/patch-descriptor-v2.schema.json",
+        ROOT / "schemas/patch-descriptor-v3.schema.json",
         ROOT / "schemas/acceptance-receipt.schema.json",
     ]
     documents: dict[str, dict[str, Any]] = {}
@@ -1619,24 +2133,46 @@ def validate_schema_documents() -> None:
     }.items():
         expect_schema_fragment(target_props.get(key), expected, f"public release target {key}")
 
-    patch_props = schema_object_properties(
-        release_props.get("patch"),
-        {"format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"},
-        "public release patch",
-    )
-    for key, expected in {
-        "format": {"enum": [PATCH_FORMAT_V1, PATCH_FORMAT_V2]},
-        "url": {"type": "string", "pattern": PATCH_REFERENCE_PATTERN},
-        "size": {"type": "integer", "minimum": 101, "maximum": PATCH_MAX},
-        "sha256": {"type": "string", "pattern": HEX64_PATTERN},
-        "recordCount": {"type": "integer", "minimum": 1, "maximum": RECORD_MAX},
-        "bodyUncompressedSize": {
-            "type": "integer",
-            "minimum": V2_MIN_RECORD_BYTES[V2_KIND_LITERAL],
-            "maximum": BODY_MAX,
+    expected_patch_v12 = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"],
+        "properties": {
+            "format": {"enum": [PATCH_FORMAT_V1, PATCH_FORMAT_V2]},
+            "url": {"type": "string", "pattern": PATCH_REFERENCE_PATTERN},
+            "size": {"type": "integer", "minimum": 101, "maximum": PATCH_MAX},
+            "sha256": {"type": "string", "pattern": HEX64_PATTERN},
+            "recordCount": {"type": "integer", "minimum": 1, "maximum": RECORD_MAX},
+            "bodyUncompressedSize": {
+                "type": "integer",
+                "minimum": V2_MIN_RECORD_BYTES[V2_KIND_LITERAL],
+                "maximum": BODY_MAX,
+            },
         },
-    }.items():
-        expect_schema_fragment(patch_props.get(key), expected, f"public release patch {key}")
+    }
+    expected_patch_v3 = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize",
+            "variant", "commonRecordCount",
+        ],
+        "properties": {
+            "format": {"const": PATCH_FORMAT_V3},
+            "url": {"type": "string", "pattern": PATCH_V3_REFERENCE_PATTERN},
+            "size": {"type": "integer", "minimum": V3_PATCH_MIN, "maximum": V3_PATCH_MAX},
+            "sha256": {"type": "string", "pattern": HEX64_PATTERN},
+            "recordCount": {"type": "integer", "minimum": 1, "maximum": V3_MERGED_RECORD_MAX},
+            "bodyUncompressedSize": {"type": "integer", "minimum": 3, "maximum": V3_BODY_MAX},
+            "variant": {"enum": list(V3_VARIANT_IDS)},
+            "commonRecordCount": {"type": "integer", "minimum": 1, "maximum": V3_COMMON_RECORD_MAX},
+        },
+    }
+    expect_schema_fragment(
+        release_props.get("patch"),
+        {"oneOf": [expected_patch_v12, expected_patch_v3]},
+        "public release patch variants",
+    )
 
     def format_condition(value: str) -> dict[str, Any]:
         return {
@@ -1688,6 +2224,22 @@ def validate_schema_documents() -> None:
                             },
                         }
                     },
+                }
+            },
+        },
+        {
+            "if": format_condition(PATCH_FORMAT_V3),
+            "then": {
+                "properties": {
+                    "target": {
+                        "properties": {
+                            "size": {
+                                "enum": [
+                                    profile["size"] for profile in STOCK_PROFILES_BY_GAME.values()
+                                ]
+                            }
+                        }
+                    }
                 }
             },
         },
@@ -1769,6 +2321,35 @@ def validate_schema_documents() -> None:
             descriptor_v2_props.get(key), expected, f"patch descriptor v2 {key}"
         )
 
+    descriptor_v3_schema = documents.get("patch-descriptor-v3.schema.json", {})
+    expect_schema_fragment(
+        descriptor_v3_schema.get("$id"),
+        "urn:srwf-kor:schema:patch-descriptor:v3",
+        "schemas/patch-descriptor-v3.schema.json $id",
+    )
+    descriptor_v3_props = schema_object_properties(
+        descriptor_v3_schema,
+        descriptor_keys | {"format", "variant", "commonRecordCount"},
+        "schemas/patch-descriptor-v3.schema.json root",
+        allowed_metadata={"$schema", "$id", "title"},
+    )
+    for key, expected in {
+        "patchSize": {"type": "integer", "minimum": V3_PATCH_MIN, "maximum": V3_PATCH_MAX},
+        "patchSha256": {"type": "string", "pattern": HEX64_PATTERN},
+        "sourceSize": {"type": "integer", "minimum": 1, "maximum": V3_IMAGE_MAX},
+        "sourceSha256": {"type": "string", "pattern": HEX64_PATTERN},
+        "targetSize": {"type": "integer", "minimum": 1, "maximum": V3_IMAGE_MAX},
+        "targetSha256": {"type": "string", "pattern": HEX64_PATTERN},
+        "recordCount": {"type": "integer", "minimum": 1, "maximum": V3_MERGED_RECORD_MAX},
+        "bodyUncompressedSize": {"type": "integer", "minimum": 3, "maximum": V3_BODY_MAX},
+        "format": {"const": PATCH_FORMAT_V3},
+        "variant": {"enum": list(V3_VARIANT_IDS)},
+        "commonRecordCount": {"type": "integer", "minimum": 1, "maximum": V3_COMMON_RECORD_MAX},
+    }.items():
+        expect_schema_fragment(
+            descriptor_v3_props.get(key), expected, f"patch descriptor v3 {key}"
+        )
+
     receipt_schema = documents.get("acceptance-receipt.schema.json", {})
     expect_schema_fragment(
         receipt_schema.get("$id"),
@@ -1784,7 +2365,8 @@ def validate_schema_documents() -> None:
         receipt_schema,
         receipt_keys,
         "schemas/acceptance-receipt.schema.json root",
-        allowed_metadata={"$schema", "$id", "title"},
+        allowed_metadata={"$schema", "$id", "title", "dependentRequired"},
+        optional=set(V3_RECEIPT_EXTRA_KEYS),
     )
     for key, expected in {
         "schema": {"const": "srwf-kor.acceptance-receipt.v1"},
@@ -1805,6 +2387,35 @@ def validate_schema_documents() -> None:
         },
     }.items():
         expect_schema_fragment(receipt_props.get(key), expected, f"acceptance receipt {key}")
+    expect_schema_fragment(
+        receipt_props.get("patchFormat"), {"const": PATCH_FORMAT_V3}, "acceptance receipt patchFormat"
+    )
+    expect_schema_fragment(
+        receipt_props.get("variantId"), {"enum": list(V3_VARIANT_IDS)}, "acceptance receipt variantId"
+    )
+    supersedes_props = schema_object_properties(
+        receipt_props.get("supersedes"), set(V3_SUPERSEDES_KEYS), "acceptance receipt supersedes"
+    )
+    for key in ("receiptSha256", "patchSha256", "recordSetSha256"):
+        expect_schema_fragment(
+            supersedes_props.get(key),
+            {"type": "string", "pattern": HEX64_PATTERN},
+            f"acceptance receipt supersedes {key}",
+        )
+    expect_schema_fragment(
+        supersedes_props.get("decisionAuthority"),
+        {"type": "string", "minLength": 1, "maxLength": 160, "pattern": r"\S"},
+        "acceptance receipt supersedes decisionAuthority",
+    )
+    expect_schema_fragment(
+        receipt_schema.get("dependentRequired"),
+        {
+            "patchFormat": ["variantId", "supersedes"],
+            "variantId": ["patchFormat", "supersedes"],
+            "supersedes": ["patchFormat", "variantId"],
+        },
+        "acceptance receipt v3 all-or-none keys",
+    )
     gate_keys = {"staticStructure", "runtimeConsumption", "visualLayout", "longPlayProgression"}
     gate_props = schema_object_properties(receipt_props.get("gates"), gate_keys, "acceptance receipt gates")
     for key in gate_keys - {"longPlayProgression"}:
@@ -1839,6 +2450,33 @@ def validate_schema_documents() -> None:
         ):
             if re.search(pattern, core_v2_text) is None:
                 complain(f"assets/patch-core-v2.mjs: {label}")
+    core_v3_path = ROOT / "assets/patch-core-v3.mjs"
+    if core_v3_path.is_file():
+        core_v3_text = core_v3_path.read_text(encoding="utf-8")
+        for pattern, label in (
+            (r"PATCH_FORMAT_V3 = ['\"]srwf\.sparse-byte-delta\.v3['\"]", "PATCH_FORMAT_V3 must name the v3 format"),
+            (r"PATCH_V3_MIN_PATCH_BYTES = 202\b", "the minimum patch size must be the 202-byte header plus zlib floor"),
+            (r"maxPatchBytes:\s*48 \* 1024 \* 1024\b", "maxPatchBytes must match the 48 MiB file cap"),
+            (
+                r"maxBodyUncompressedBytes:\s*96 \* 1024 \* 1024\b",
+                "maxBodyUncompressedBytes must match the 96 MiB body cap",
+            ),
+            (r"maxImageBytes:\s*783_?216_?000\b", "maxImageBytes must match the 333,000-sector image cap"),
+            (r"minVariants:\s*2\b", "minVariants must match the 2-variant minimum"),
+            (r"maxVariants:\s*3\b", "maxVariants must match the 3-variant maximum"),
+            (r"maxCommonRecords:\s*2_?000_?000\b", "maxCommonRecords must match the 2,000,000 cap"),
+            (r"maxVariantRecords:\s*65_?536\b", "maxVariantRecords must match the 65,536 cap"),
+            (r"maxMergedRecords:\s*2_?000_?000\b", "maxMergedRecords must match the 2,000,000 cap"),
+            (r"maxChangedBytes:\s*64 \* 1024 \* 1024\b", "maxChangedBytes must match the 64 MiB cap"),
+            (r"maxCanaries:\s*8\b", "maxCanaries must match the 8-canary cap"),
+            (r"minCanaryBytes:\s*16\b", "minCanaryBytes must match the 16-byte canary minimum"),
+            (r"maxCanaryBytes:\s*4096\b", "maxCanaryBytes must match the 4096-byte canary maximum"),
+            (r"maxGapVarintBytes:\s*5\b", "maxGapVarintBytes must match the 5-byte gap varint cap"),
+            (r"maxLenVarintBytes:\s*4\b", "maxLenVarintBytes must match the 4-byte length varint cap"),
+            (r"maxLenCode:\s*67_?108_?863\b", "maxLenCode must match the 2^26 - 1 length-code cap"),
+        ):
+            if re.search(pattern, core_v3_text) is None:
+                complain(f"assets/patch-core-v3.mjs: {label}")
 
 
 def validate_acceptance_receipt(
@@ -1856,6 +2494,11 @@ def validate_acceptance_receipt(
         "sourceSha256", "targetSha256", "patchSha256", "v5Commit", "gates",
         "decisionAuthority",
     }
+    # A v3 release re-issues its receipt with three more keys, all or none (the receipt
+    # of a v1/v2 release must not carry them).
+    shared_v3 = isinstance(patch, dict) and patch.get("format") == PATCH_FORMAT_V3
+    if shared_v3:
+        required = required | set(V3_RECEIPT_EXTRA_KEYS)
     if not exact_keys(receipt, required, context):
         return
     assert isinstance(receipt, dict)
@@ -1879,6 +2522,22 @@ def validate_acceptance_receipt(
         complain(f"{context}: v5Commit is invalid")
     if not is_bounded_string(receipt.get("decisionAuthority"), maximum=160):
         complain(f"{context}: decisionAuthority must be 1-160 non-blank characters")
+    if shared_v3:
+        if receipt.get("patchFormat") != PATCH_FORMAT_V3:
+            complain(f"{context}: patchFormat must be {PATCH_FORMAT_V3}")
+        identity = FONT_RELEASE_ID_PATTERN.fullmatch(release_id)
+        if identity is None or receipt.get("variantId") != identity.group(2):
+            complain(f"{context}: variantId must be the release id's -a/-b/-c suffix")
+        supersedes = receipt.get("supersedes")
+        if exact_keys(supersedes, set(V3_SUPERSEDES_KEYS), f"{context} supersedes"):
+            assert isinstance(supersedes, dict)
+            for key in ("receiptSha256", "patchSha256", "recordSetSha256"):
+                if not is_hex64(supersedes.get(key)):
+                    complain(f"{context}: supersedes {key} is invalid")
+            if not is_bounded_string(supersedes.get("decisionAuthority"), maximum=160):
+                complain(f"{context}: supersedes decisionAuthority must be 1-160 non-blank characters")
+            if supersedes.get("patchSha256") == receipt.get("patchSha256"):
+                complain(f"{context}: supersedes must name a different, earlier payload")
 
     gates = receipt.get("gates")
     expected_required_gates = {
@@ -1998,28 +2657,58 @@ def validate_release_manifest(
 
     patch = manifest.get("patch")
     patch_ref: str | None = None
-    if exact_keys(patch, {"format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"}, f"release {release_id} patch"):
+    shared_format = isinstance(patch, dict) and patch.get("format") == PATCH_FORMAT_V3
+    patch_keys = {"format", "url", "size", "sha256", "recordCount", "bodyUncompressedSize"}
+    if shared_format:
+        patch_keys = patch_keys | {"variant", "commonRecordCount"}
+    if exact_keys(patch, patch_keys, f"release {release_id} patch"):
         assert isinstance(patch, dict)
         patch_ref = patch.get("url") if isinstance(patch.get("url"), str) else None
         growth_format = patch.get("format") == PATCH_FORMAT_V2
-        if patch.get("format") != PATCH_FORMAT_V1 and not growth_format:
+        if patch.get("format") not in {PATCH_FORMAT_V1, PATCH_FORMAT_V2, PATCH_FORMAT_V3}:
             complain(f"release {release_id}: unsupported patch format")
-        expected_patch = f"patches/{release_id}.srwfp"
+        if shared_format:
+            identity = FONT_RELEASE_ID_PATTERN.fullmatch(release_id)
+            if identity is None:
+                complain(f"release {release_id}: a shared v3 payload needs a -a/-b/-c release id")
+                expected_patch = ""
+            else:
+                expected_patch = f"patches/{identity.group(1)}.v3.srwfp"
+                variant = identity.group(2)
+                if patch.get("variant") != variant:
+                    complain(f"release {release_id}: patch variant must be the release id suffix {variant!r}")
+                if isinstance(target, dict):
+                    if not str(target.get("filename", "")).endswith(f"-{variant}.bin"):
+                        complain(f"release {release_id}: v3 target filename must end with -{variant}.bin")
+                    if not str(target.get("cueFilename", "")).endswith(f"-{variant}.cue"):
+                        complain(f"release {release_id}: v3 CUE filename must end with -{variant}.cue")
+                if not str(manifest.get("title", "")).endswith(f"({variant})"):
+                    complain(f"release {release_id}: v3 title must end with ({variant})")
+            if isinstance(target, dict) and isinstance(source, dict) and target.get("size") != source.get("size"):
+                complain(f"release {release_id}: v3 requires target size equal to source size")
+        else:
+            expected_patch = f"patches/{release_id}.srwfp"
         if patch_ref != expected_patch or not is_safe_relative(patch_ref, prefix="patches/", suffix=".srwfp"):
             complain(f"release {release_id}: patch URL must be {expected_patch}")
-        limits = (
-            (
+        if shared_format:
+            limits = (
+                ("size", V3_PATCH_MIN, V3_PATCH_MAX),
+                ("recordCount", 1, V3_MERGED_RECORD_MAX),
+                ("bodyUncompressedSize", 3, V3_BODY_MAX),
+                ("commonRecordCount", 1, V3_COMMON_RECORD_MAX),
+            )
+        elif growth_format:
+            limits = (
                 ("size", V2_PATCH_MIN, PATCH_MAX),
                 ("recordCount", 1, RECORD_MAX),
                 ("bodyUncompressedSize", V2_MIN_RECORD_BYTES[V2_KIND_LITERAL], BODY_MAX),
             )
-            if growth_format
-            else (
+        else:
+            limits = (
                 ("size", 101, PATCH_MAX),
                 ("recordCount", 1, RECORD_MAX),
                 ("bodyUncompressedSize", 45, BODY_MAX),
             )
-        )
         for key, minimum, maximum in limits:
             value = patch.get(key)
             if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
@@ -2033,6 +2722,22 @@ def validate_release_manifest(
                 and body_size < record_count * V2_MIN_RECORD_BYTES[V2_KIND_LITERAL]
             ):
                 complain(f"release {release_id}: v2 patch body is too small for its records")
+        if shared_format:
+            common_count = patch.get("commonRecordCount")
+            record_count = patch.get("recordCount")
+            body_size = patch.get("bodyUncompressedSize")
+            if isinstance(common_count, int) and not isinstance(common_count, bool):
+                if isinstance(record_count, int) and not (
+                    common_count <= record_count <= common_count + V3_VARIANT_RECORD_MAX
+                ):
+                    complain(
+                        f"release {release_id}: v3 recordCount must be commonRecordCount plus at most "
+                        f"{V3_VARIANT_RECORD_MAX} variant records"
+                    )
+                if isinstance(body_size, int) and body_size < 3 * common_count:
+                    complain(f"release {release_id}: v3 patch body is too small for its common records")
+            if patch.get("variant") not in V3_VARIANT_IDS:
+                complain(f"release {release_id}: v3 variant must be a, b or c")
         if not is_hex64(patch.get("sha256")):
             complain(f"release {release_id}: patch SHA-256 is invalid")
         if patch_ref and is_safe_relative(patch_ref, prefix="patches/", suffix=".srwfp"):
@@ -2100,6 +2805,152 @@ def validate_font_release_groups(releases: list[Any]) -> None:
             complain(f"manifest/releases.json: font release group {group_id} mixes a legacy id or repeats a font")
         if len({row.get("label") for row in rows}) > 1:
             complain(f"manifest/releases.json: font release group {group_id} must share one label")
+
+
+def load_json_quiet(path: Path) -> Any | None:
+    """Read JSON that another check already reports on; never adds an error itself."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+
+
+def validate_v3_groups(releases: list[Any]) -> None:
+    """Cross-row rules of the shared v3 payload and the equal-size font-variant policy.
+
+    * Policy: an equal-size -a/-b/-c font variant may only ship in a shared v3 payload;
+      a new v1 row for one is forbidden (v2 growth rows stay legal).
+    * A v3 payload is shared by exactly the rows that point at it: the header's variant
+      set and the ACCEPTED rows of that URL must be the same set, both ways.
+    * The payload only redistributes the results pinned in V3_SUPERSEDED: each receipt
+      keeps its original evidence and its `supersedes` block, and the record-set
+      fingerprint decoded from the v3 payload equals the accepted v1 one.
+    """
+    rows: list[dict[str, Any]] = []
+    for row in releases:
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+            continue
+        release_id = row["id"]
+        manifest = load_json_quiet(ROOT / f"releases/{release_id}.json")
+        patch = manifest.get("patch") if isinstance(manifest, dict) else None
+        if not isinstance(patch, dict):
+            continue
+        group_id, revision = font_release_identity(row)
+        rows.append({
+            "row": row, "id": release_id, "manifest": manifest, "patch": patch,
+            "format": patch.get("format"), "group": (row.get("gameId"), group_id),
+            "revision": revision,
+        })
+
+    for info in rows:
+        if info["format"] == PATCH_FORMAT_V1 and info["revision"] is not None:
+            complain(
+                f"release {info['id']}: an equal-size -a/-b/-c font variant may not use a v1 payload; "
+                "the accepted variants of one version share one v3 payload (docs/PATCH_FORMAT_V3.md)"
+            )
+
+    by_font_group: dict[tuple[Any, str], list[dict[str, Any]]] = {}
+    by_url: dict[str, list[dict[str, Any]]] = {}
+    for info in rows:
+        by_font_group.setdefault(info["group"], []).append(info)
+        if info["format"] == PATCH_FORMAT_V3:
+            by_url.setdefault(str(info["patch"].get("url")), []).append(info)
+            if info["revision"] is None:
+                complain(f"release {info['id']}: a shared v3 payload is only valid for -a/-b/-c font releases")
+            if info["id"] not in V3_SUPERSEDED:
+                complain(
+                    f"release {info['id']}: v3 is limited to the redistributed accepted releases "
+                    "(V3_SUPERSEDED); a new payload needs its own acceptance chain"
+                )
+    for (_, group_id), members in by_font_group.items():
+        formats = {member["format"] for member in members}
+        if PATCH_FORMAT_V3 in formats and formats != {PATCH_FORMAT_V3}:
+            complain(f"font release group {group_id}: v3 rows and non-v3 rows must not be mixed")
+
+    for url, members in by_url.items():
+        groups = {member["group"] for member in members}
+        if len(groups) != 1:
+            complain(f"v3 payload {url}: rows from different releases share one payload")
+            continue
+        group_id = next(iter(groups))[1]
+        if url != f"patches/{group_id}.v3.srwfp":
+            complain(f"v3 payload {url}: URL must be patches/{group_id}.v3.srwfp")
+        if not 2 <= len(members) <= 3:
+            complain(f"v3 payload {url}: a shared payload needs 2 or 3 variant rows, found {len(members)}")
+        for key in ("format", "size", "sha256", "bodyUncompressedSize", "commonRecordCount"):
+            if len({repr(member["patch"].get(key)) for member in members}) != 1:
+                complain(f"v3 payload {url}: rows disagree on patch {key}")
+        revisions = [member["revision"] for member in members]
+        if len(set(revisions)) != len(revisions):
+            complain(f"v3 payload {url}: two rows carry the same variant")
+
+        patch_path = ROOT / url
+        try:
+            with patch_path.open("rb") as handle:
+                payload = inspect_srwfp_v3_cached(handle.read(V3_PATCH_MAX + 1))
+        except (OSError, SrwfpFormatError):
+            continue  # reported by the per-row descriptor check
+        header_variants = set(payload["variants"])
+        row_variants = {revision for revision in revisions if revision is not None}
+        for variant in sorted(header_variants - row_variants):
+            complain(f"v3 payload {url}: header variant {variant!r} has no ACCEPTED row")
+        for variant in sorted(row_variants - header_variants):
+            complain(f"v3 payload {url}: ACCEPTED row variant {variant!r} is missing from the header")
+
+        for member in members:
+            release_id = member["id"]
+            entry = payload["variants"].get(member["revision"])
+            if entry is None:
+                continue
+            manifest_target = member["manifest"].get("target")
+            receipt = load_json_quiet(ROOT / f"receipts/{release_id}.acceptance.json")
+            if not isinstance(receipt, dict) or not isinstance(manifest_target, dict):
+                continue
+            for label, value in (
+                ("manifest target.sha256", manifest_target.get("sha256")),
+                ("receipt targetSha256", receipt.get("targetSha256")),
+            ):
+                if value != entry["targetSha256"]:
+                    complain(f"release {release_id}: {label} differs from the v3 header target hash")
+            pinned = V3_SUPERSEDED.get(release_id)
+            if pinned is None:
+                continue
+            supersedes = receipt.get("supersedes")
+            expected_supersedes = {
+                "receiptSha256": pinned["receiptSha256"],
+                "patchSha256": pinned["patchSha256"],
+                "recordSetSha256": pinned["recordSetSha256"],
+                "decisionAuthority": pinned["decisionAuthority"],
+            }
+            if supersedes != expected_supersedes:
+                complain(f"release {release_id}: supersedes does not match the pinned superseded history")
+            if entry["recordSetSha256"] != pinned["recordSetSha256"]:
+                complain(
+                    f"release {release_id}: v3 record-set fingerprint differs from the accepted v1 result"
+                )
+            if receipt.get("acceptedAt") != pinned["acceptedAt"]:
+                complain(f"release {release_id}: acceptedAt differs from the original acceptance")
+            if receipt.get("targetSha256") != pinned["targetSha256"]:
+                complain(f"release {release_id}: target hash differs from the original acceptance")
+            gates = receipt.get("gates")
+            if not isinstance(gates, dict) or gates.get("longPlayProgression") != pinned["longPlayProgression"]:
+                complain(f"release {release_id}: the evidence ceiling (gates) must stay unchanged")
+            if receipt.get("decisionAuthority") != V3_REDISTRIBUTION_DECISION_AUTHORITY:
+                complain(f"release {release_id}: decisionAuthority must be the pinned v3 redistribution text")
+
+
+def validate_srwfp_budget(files: list[Path]) -> None:
+    total = 0
+    for path in files:
+        if path.suffix.lower() == ".srwfp" and not path.is_symlink():
+            try:
+                total += path.stat().st_size
+            except OSError as exc:
+                complain(f"cannot inspect .srwfp payload {relative(path)}: {exc}")
+    if total > SRWFP_TOTAL_MAX:
+        complain(
+            f".srwfp payloads total {total} bytes, exceeding the {SRWFP_TOTAL_MAX}-byte repository budget"
+        )
 
 
 def validate_index(files: list[Path]) -> None:
@@ -2245,6 +3096,8 @@ def validate_index(files: list[Path]) -> None:
             referenced_receipts.add(receipt_ref)
 
     validate_font_release_groups(releases)
+    validate_v3_groups(releases)
+    validate_srwfp_budget(files)
 
     for game_id, game in games_by_id.items():
         game_release_ids = release_ids_by_game.get(game_id, set())
