@@ -360,10 +360,10 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20261005-1";
+  const revision = "20261005-2";
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
-  assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
-  assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
+  assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=20261005-1`));
+  assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=20261005-1'`));
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -372,8 +372,8 @@ test("static entry assets share an explicit cache revision", async () => {
   assert.match(appSource, new RegExp(`font-revisions\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`STATIC_ASSET_REVISION = "${revision}"`));
   assert.match(appSource, /patch-worker\.mjs\?v=\$\{STATIC_ASSET_REVISION\}/);
-  assert.match(workerSource, new RegExp(`patch-core\\.mjs\\?v=${revision}`));
-  assert.match(workerSource, new RegExp(`sha256\\.mjs\\?v=${revision}`));
+  assert.match(workerSource, new RegExp(`patch-core\\.mjs\\?v=20261005-1`));
+  assert.match(workerSource, new RegExp(`sha256\\.mjs\\?v=20261005-1`));
   assert.match(appSource, /imageUrl\.searchParams\.set\("v", STATIC_ASSET_REVISION\)/);
 });
 
@@ -1554,7 +1554,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20261005-1$/);
+    assert.match(image.src, /\?v=20261005-2$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1562,6 +1562,27 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   assert.equal(dialog.classList.contains("is-summary-only"), true);
   assert.equal(findDescendants(list, (node) => node.tagName === "ARTICLE").length, 0);
   assert.equal(findDescendants(list, (node) => node.tagName === "IMG").length, 0);
+});
+
+test("FIN v0.3 images expand accessibly without duplicate descriptions", async () => {
+  const { getPatchNotesForRelease } = await import("../assets/release-notes.mjs");
+  __testHooks.clearPatchNotes();
+  __testHooks.renderPatchNotesForRelease("srwf-final-20261005-v0-3-c");
+  __testHooks.openPatchNotes();
+  const list = element("patchNotesList");
+  const images = findDescendants(list, (node) => node.tagName === "IMG");
+  assert.equal(images.length, 6);
+  for (const image of images) {
+    assert.equal(image.parentNode.tagName, "BUTTON");
+    assert.equal(image.parentNode.getAttribute("aria-controls"), "patchImageDialog");
+    assert.equal(image.parentNode.getAttribute("aria-haspopup"), "dialog");
+  }
+  assert.equal(findDescendants(list, (node) => node.className === "patch-note-description").length, 0);
+  const summary = getPatchNotesForRelease("srwf-final-20261005-v0-3-c").summary;
+  assert.match(summary, /수정 전 오류 사례/);
+  assert.match(summary, /분신 같은 회피 특수기는 이름만 표시됩니다/);
+  assert.doesNotMatch(summary, /0은 이름만|표시할 수치가 0이면/);
+  __testHooks.closePatchNotes();
 });
 
 test("hotfix patch notes open as compact summaries without rendering preserved comparison images", async () => {
@@ -2148,7 +2169,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-1$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-2$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2157,7 +2178,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-1$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-2$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",
