@@ -1,0 +1,111 @@
+{
+  "releaseId": "srwf-final-20261005-v0-3-b",
+  "version": "v0.3",
+  "font": "Galmuri11",
+  "descriptor": {
+    "patchSize": 3715976,
+    "patchSha256": "fe3c70d0524a9e386489106b97bf556cf29c2101fc59c8db838959a4aae8cd9b",
+    "sourceSize": 520408224,
+    "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+    "targetSize": 521680656,
+    "targetSha256": "9d22ab0ac45e2f8a3728c18825ddd2ea96035704a2ef56b291e077e93e885e23",
+    "recordCount": 85094,
+    "bodyUncompressedSize": 7195902,
+    "format": "srwf.sparse-byte-delta.v2"
+  },
+  "stats": {
+    "records": {
+      "total": 85094,
+      "replace": 85093,
+      "copy": 1,
+      "literal": 0
+    },
+    "bytes": {
+      "replace": 3366664,
+      "copy": 3880800,
+      "literal": 0,
+      "preimage_sha": 2722976
+    },
+    "copies": [
+      {
+        "target_offset": 517799856,
+        "length": 3880800,
+        "source_offset": 516527424,
+        "source_sha256": "f10169c2768f2a5b4cd91391c11368d0d53fe5414b5df9afdb22fc140a38f7ca"
+      }
+    ],
+    "zlib": {
+      "level": 9,
+      "wbits": 15,
+      "memLevel": 8,
+      "strategy": "Z_DEFAULT_STRATEGY",
+      "runtime": "1.2.12",
+      "compiled": "1.2.12"
+    }
+  },
+  "verification": {
+    "verdict": "PASS",
+    "size": 521680656,
+    "sha256": "9d22ab0ac45e2f8a3728c18825ddd2ea96035704a2ef56b291e077e93e885e23",
+    "byte_exact_vs_projection": true,
+    "descriptor": {
+      "patchSize": 3715976,
+      "patchSha256": "fe3c70d0524a9e386489106b97bf556cf29c2101fc59c8db838959a4aae8cd9b",
+      "sourceSize": 520408224,
+      "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+      "targetSize": 521680656,
+      "targetSha256": "9d22ab0ac45e2f8a3728c18825ddd2ea96035704a2ef56b291e077e93e885e23",
+      "recordCount": 85094,
+      "bodyUncompressedSize": 7195902,
+      "format": "srwf.sparse-byte-delta.v2"
+    },
+    "records": {
+      "replace": 85093,
+      "copy": 1,
+      "literal": 0,
+      "total": 85094
+    },
+    "copyBytes": 3880800,
+    "literalBytes": 0,
+    "captureWindows": 3,
+    "capturedBytes": 10485760,
+    "copies": [
+      {
+        "target_offset": 517799856,
+        "length": 3880800,
+        "source_offset": 516527424,
+        "source_sha256": "f10169c2768f2a5b4cd91391c11368d0d53fe5414b5df9afdb22fc140a38f7ca"
+      }
+    ],
+    "bodyUncompressedSize": 7195902
+  },
+  "display": {
+    "actual_cases": 9,
+    "numeric_gap_px": 4,
+    "separate_no_state_font_boot": true
+  },
+  "full34": {
+    "changed_payloads": [
+      "EXEC",
+      "SCEDATA"
+    ],
+    "preserved_font_payloads": [
+      "EXEC",
+      "TSR",
+      "EFFECT"
+    ],
+    "BTSR": "byte-identical abc baseline"
+  },
+  "exportReceipt": {
+    "transactionId": "64b45b20-85c7-4ddb-9d78-442ee4729d0c",
+    "receiptFileSha256": "583d7f01f0245e3573200b61c79e2e01de3bea8db3dc8cc3d930dc7a267b3794",
+    "grantId": "FIN-V03-PUBLIC-SPARSE-AB-20261005-01",
+    "state": "COMMITTED_CONSUMED",
+    "appliedReceiptLint": "PASS"
+  },
+  "mediaReceipt": {
+    "transactionId": "ab16c5b9-be08-4038-9e14-a7d5e876d4da",
+    "receiptSha256": "10383fe4938e704a3e633840d1974e3595062eae249ea6ce30c2ec0779f908a4"
+  },
+  "evidenceCeiling": "Representative actual display and per-font no-state boot only; audio, all-scenario, long-play, CD-R and user R7 not verified"
+}

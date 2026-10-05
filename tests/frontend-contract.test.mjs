@@ -360,7 +360,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20261005-4";
+  const revision = "20261005-5";
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=20261005-1`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=20261005-1'`));
@@ -933,6 +933,8 @@ test("each game points at its accepted default while withdrawn history stays uni
   assert.deepEqual(
     finalReleases.map((entry) => entry.id),
     [
+      "srwf-final-20261005-v0-3-a",
+      "srwf-final-20261005-v0-3-b",
       "srwf-final-20261005-v0-3-c",
       "srwf-final-20260928-v0-2-a",
       "srwf-final-20260928-v0-2-b",
@@ -1554,7 +1556,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20261005-4$/);
+    assert.match(image.src, /\?v=20261005-5$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1566,8 +1568,10 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
 
 test("FIN v0.3 images expand accessibly without duplicate descriptions", async () => {
   const { getPatchNotesForRelease } = await import("../assets/release-notes.mjs");
+  for (const lane of "abc") {
+  const id = `srwf-final-20261005-v0-3-${lane}`;
   __testHooks.clearPatchNotes();
-  __testHooks.renderPatchNotesForRelease("srwf-final-20261005-v0-3-c");
+  __testHooks.renderPatchNotesForRelease(id);
   __testHooks.openPatchNotes();
   const list = element("patchNotesList");
   const images = findDescendants(list, (node) => node.tagName === "IMG");
@@ -1578,12 +1582,13 @@ test("FIN v0.3 images expand accessibly without duplicate descriptions", async (
     assert.equal(image.parentNode.getAttribute("aria-haspopup"), "dialog");
   }
   assert.equal(findDescendants(list, (node) => node.className === "patch-note-description").length, 0);
-  const summary = getPatchNotesForRelease("srwf-final-20261005-v0-3-c").summary;
+  const summary = getPatchNotesForRelease(id).summary;
   assert.doesNotMatch(summary, /사진 안내|이미지를 누르면/);
-  assert.match(getPatchNotesForRelease("srwf-final-20261005-v0-3-c").items[0].asIsLabel, /수정 전/);
+  assert.match(getPatchNotesForRelease(id).items[0].asIsLabel, /수정 전/);
   assert.match(summary, /분신 같은 회피 특수기는 이름만 표시됩니다/);
   assert.doesNotMatch(summary, /0은 이름만|표시할 수치가 0이면/);
   __testHooks.closePatchNotes();
+  }
 });
 
 test("hotfix patch notes open as compact summaries without rendering preserved comparison images", async () => {
@@ -2170,7 +2175,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-4$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-5$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2179,7 +2184,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-4$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-5$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",
