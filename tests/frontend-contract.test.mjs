@@ -360,7 +360,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20261005-6";
+  const revision = "20261005-7";
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=20261005-1`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=20261005-1'`));
@@ -1556,7 +1556,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20261005-6$/);
+    assert.match(image.src, /\?v=20261005-7$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1590,7 +1590,8 @@ test("FIN v0.3 images expand accessibly without duplicate descriptions", async (
   assert.match(summary, /78화 「파이널 오퍼레이션」 DC 루트/);
   assert.match(summary, /74화 「거짓 협정」: 아군 출격 시 모함 위치/);
   assert.match(summary, /해당 분기의 출격 결과에는 영향이 없습니다/);
-  assert.match(summary, /63화 「결전, 제2 신도쿄시」/);
+  assert.match(summary, /62화 「결전, 제2 신도쿄시」 후반 맵/);
+  assert.doesNotMatch(summary, /63화 「결전, 제2 신도쿄시」/);
   assert.doesNotMatch(summary, /레이 강제 배치|조건 사각형|이벤트 조건 영역/);
   assert.doesNotMatch(summary, /0은 이름만|표시할 수치가 0이면/);
   __testHooks.closePatchNotes();
@@ -2181,7 +2182,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-6$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-7$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2190,7 +2191,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-6$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-7$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",
