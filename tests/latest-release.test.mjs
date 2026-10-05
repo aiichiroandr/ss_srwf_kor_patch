@@ -7,7 +7,7 @@ test('latest local F/FIN rows pin all fonts, acceptance, shortcut, and BGM table
  const index=JSON.parse(await readFile(new URL('../manifest/releases.json',import.meta.url)));
  const app=await readFile(new URL('../assets/app.mjs',import.meta.url),'utf8');
  for(const [game,version] of [['srwf-f','v0-5'],['srwf-final','v0-2']]){
-  assert.equal(index.games.find(x=>x.id===game).defaultReleaseId,`${game}-20260928-${version}-a`);
+  assert.equal(index.games.find(x=>x.id===game).defaultReleaseId,game==='srwf-final'?'srwf-final-20261005-v0-3-c':`${game}-20260928-${version}-a`);
   for(const lane of 'abc'){
    const id=`${game}-20260928-${version}-${lane}`,row=index.releases.find(x=>x.id===id);assert.equal(row.state,'ACCEPTED');
    const bytes=await readFile(new URL('../'+row.manifest,import.meta.url));assert.equal(createHash('sha256').update(bytes).digest('hex'),row.manifestSha256);

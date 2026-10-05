@@ -360,7 +360,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20260928-1";
+  const revision = "20261005-1";
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
@@ -929,10 +929,11 @@ test("each game points at its accepted default while withdrawn history stays uni
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
   assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");
-  assert.equal(finalGame.defaultReleaseId, "srwf-final-20260928-v0-2-a");
+  assert.equal(finalGame.defaultReleaseId, "srwf-final-20261005-v0-3-c");
   assert.deepEqual(
     finalReleases.map((entry) => entry.id),
     [
+      "srwf-final-20261005-v0-3-c",
       "srwf-final-20260928-v0-2-a",
       "srwf-final-20260928-v0-2-b",
       "srwf-final-20260928-v0-2-c",
@@ -1378,7 +1379,7 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
     for (const item of notes.items) {
       assert.deepEqual(
         Object.keys(item).sort(),
-        ["asIs", "description", "evidenceType", "id", "title", "toBe"],
+        ["asIs", "asIsLabel", "description", "evidenceType", "id", "title", "toBe", "toBeLabel"],
       );
       assert.match(item.id, /^[a-z0-9][a-z0-9-]*$/);
       assert.ok(item.title.trim().length > 0);
@@ -1553,7 +1554,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20260928-1$/);
+    assert.match(image.src, /\?v=20261005-1$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -2147,7 +2148,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20260928-1$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-1$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2156,7 +2157,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20260928-1$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-1$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",

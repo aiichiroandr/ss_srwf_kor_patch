@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-final-20261005-v0-3-c",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-10-05T02:57:06.688049+00:00",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+  "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+  "targetSha256": "0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d",
+  "patchSha256": "f35cf3b4ec5d9da5dd864b86b42e993dd7c1648065d37f3717b4513829bfa87c",
+  "v5Commit": "084fed02ba4834ab5ff48b8c3e697f58b5fd4555ff1c17309c02a8d1817d03ff",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "NOT_CLAIMED"
+  },
+  "decisionAuthority": "사용자 2026-10-05 완결편 v0.3 동적4px c Mona12 공개 배포·실제 검수 이미지 게시 승인. 선별 복사 상태·콜드부트 진단 수용; 전체·장기 진행·CD-R·사용자 R7 미검증."
+}

@@ -16,7 +16,7 @@
       "id": "srwf-final",
       "label": "슈퍼로봇대전 F 완결편",
       "status": "HAS_ACCEPTED_RELEASE",
-      "defaultReleaseId": "srwf-final-20260928-v0-2-a"
+      "defaultReleaseId": "srwf-final-20261005-v0-3-c"
     }
   ],
   "stock_profiles": [
@@ -46,6 +46,14 @@
     }
   ],
   "releases": [
+    {
+      "gameId": "srwf-final",
+      "id": "srwf-final-20261005-v0-3-c",
+      "state": "ACCEPTED",
+      "label": "2026.10.05 · v0.3",
+      "manifest": "releases/srwf-final-20261005-v0-3-c.json",
+      "manifestSha256": "c543e42d16f86c4c8d7e2b9a6ac491c9ee7d0093e855b1593292a7f124d36180"
+    },
     {
       "gameId": "srwf-final",
       "id": "srwf-final-20260928-v0-2-a",
