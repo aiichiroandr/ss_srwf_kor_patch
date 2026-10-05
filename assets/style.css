@@ -3511,6 +3511,7 @@ html.is-patch-notes-open, html.is-patch-image-open { overflow: hidden; }
 .patch-image-stage img { display: block; width: max(100%, var(--patch-image-width, 100%)); height: auto; max-width: none; max-height: none; image-rendering: pixelated; }
 
 .patch-note-body { display: contents; }
+.patch-note-dialog.is-scrollable-notes { container-type: size; --patch-note-image-max-height: max(140px, calc(100cqh - 170px)); }
 .patch-note-dialog.is-scrollable-notes .patch-note-dialog-shell { grid-template-rows: auto minmax(0, 1fr); }
 .patch-note-dialog.is-scrollable-notes .patch-note-body {
   display: block;
@@ -3521,21 +3522,42 @@ html.is-patch-notes-open, html.is-patch-image-open { overflow: hidden; }
 .patch-note-dialog.is-scrollable-notes .patch-note-list {
   display: grid;
   grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  grid-template-rows: max-content;
   align-items: start;
+  gap: 19px;
+  scroll-padding-inline: 19px;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
 }
 .patch-note-dialog.is-scrollable-notes .patch-note-card {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 0;
   overflow: visible;
 }
 .patch-note-dialog.is-scrollable-notes .patch-note-card-heading { margin-bottom: 10px; }
 .patch-note-dialog.is-scrollable-notes .patch-note-comparison { grid-template-columns: minmax(0, 1fr); }
 .patch-note-dialog.is-scrollable-notes .patch-note-figure { display: block; }
 .patch-note-dialog.is-scrollable-notes .patch-note-image-button { display: block; height: auto; }
-.patch-note-dialog.is-scrollable-notes .patch-note-figure img { height: auto; }
+.patch-note-dialog.is-scrollable-notes .patch-note-figure img {
+  width: min(100%, calc(var(--patch-note-image-max-height) * var(--patch-note-image-ratio, 1)));
+  height: auto;
+  margin-inline: auto;
+}
+@media (min-width: 740px) {
+  .patch-note-dialog.is-scrollable-notes .patch-note-comparison {
+    grid-template-columns: minmax(0, var(--patch-note-as-is-fr, 1fr)) minmax(0, var(--patch-note-to-be-fr, 1fr));
+    align-items: start;
+  }
+}
+@media (max-width: 620px) {
+  .patch-note-dialog.is-scrollable-notes .patch-note-list { gap: 12px; scroll-padding-inline: 12px; }
+}
+.patch-note-navigation { display: flex; gap: 6px; margin-left: auto; }
+.patch-note-navigation[hidden] { display: none; }
+.patch-note-navigation button { width: 36px; min-height: 38px; justify-content: center; padding: 0; font-size: 24px; }
+.patch-note-navigation button:disabled { opacity: 0.3; cursor: default; }
 .patch-note-dialog.is-image-viewing .patch-note-body { overflow: hidden; }
 .patch-image-header h2 { flex: 1; }
 .patch-image-zoom {
