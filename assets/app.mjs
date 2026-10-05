@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20261005-5";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20261005-6";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,14 +7,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261005-5";
+} from "./font-revisions.mjs?v=20261005-6";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261005-5";
+} from "./release-notes.mjs?v=20261005-6";
 
-const STATIC_ASSET_REVISION = "20261005-5";
+const STATIC_ASSET_REVISION = "20261005-6";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -121,6 +121,9 @@ const elements = {
   patchNotesSummary: byId("patchNotesSummary"),
   patchNotesBody: byId("patchNotesBody"),
   patchNotesList: byId("patchNotesList"),
+  patchNotesNavigation: byId("patchNotesNavigation"),
+  patchNotesPrevious: byId("patchNotesPrevious"),
+  patchNotesNext: byId("patchNotesNext"),
   patchNotesFooter: byId("patchNotesFooter"),
   patchNotesClose: byId("patchNotesClose"),
   patchImageDialog: byId("patchImageDialog"),
@@ -220,8 +223,20 @@ elements.gameSelect.addEventListener("change", handleGameChange);
 elements.releaseSelect.addEventListener("change", handleReleaseChange);
 elements.fontSelect.addEventListener("change", handleFontChange);
 let patchImageSession = null;
+let patchNotesSlideIndex = 0;
+let patchNotesCarouselWidth = 0;
 
 elements.patchNotesToggle.addEventListener("click", openPatchNotes);
+elements.patchNotesPrevious.addEventListener("click", () => movePatchNotesSlide(-1));
+elements.patchNotesNext.addEventListener("click", () => movePatchNotesSlide(1));
+elements.patchNotesList.addEventListener("scroll", () => syncPatchNotesCarousel(), { passive: true });
+if (typeof ResizeObserver === "function") {
+  const carouselResize = new ResizeObserver(() => syncPatchNotesCarousel());
+  carouselResize.observe(elements.patchNotesBody);
+  carouselResize.observe(elements.patchNotesList);
+}
+window.addEventListener("resize", () => syncPatchNotesCarousel(true));
+
 elements.patchNotesClose.addEventListener("click", () => closePatchNotes({ restoreFocus: true }));
 elements.patchNotesDialog.addEventListener("close", handlePatchNotesDialogClosed);
 elements.patchImageClose.addEventListener("click", closePatchImage);
@@ -2198,6 +2213,7 @@ function openPatchNotes() {
   } else {
     elements.patchNotesDialog.setAttribute("open", "");
   }
+  syncPatchNotesCarousel(true);
   announce(summaryOnly
     ? `${notes.version} 패치노트 요약을 열었습니다.`
     : `${notes.version} 패치노트 ${notes.items.length}건을 열었습니다.`);
@@ -2205,11 +2221,45 @@ function openPatchNotes() {
 
 function setPatchNotesPresentation(summaryOnly, releaseId) {
   const scrollable = /^srwf-final-20261005-v0-3-[abc]$/.test(releaseId);
+  elements.patchNotesNavigation.hidden = !scrollable;
+  if (!scrollable) elements.patchNotesList.style?.removeProperty?.("height");
+  patchNotesSlideIndex = 0;
+  patchNotesCarouselWidth = 0;
   elements.patchNotesDialog.classList.toggle("is-scrollable-notes", scrollable);
   elements.patchNotesDialog.classList.toggle("is-summary-only", summaryOnly);
   elements.patchNotesKicker.hidden = summaryOnly || scrollable;
   elements.patchNotesList.hidden = summaryOnly;
   elements.patchNotesFooter.hidden = summaryOnly || scrollable;
+}
+
+function syncPatchNotesCarousel(align = false) {
+  const list = elements.patchNotesList;
+  if (!/^srwf-final-20261005-v0-3-[abc]$/.test(state.patchNotesReleaseId)
+    || !elements.patchNotesDialog.open || !list.clientWidth) return;
+  const cards = [...list.children];
+  if (!cards.length) return;
+  const offsets = cards.map((card) => card.offsetLeft - cards[0].offsetLeft);
+  const resized = patchNotesCarouselWidth && Math.abs(list.clientWidth - patchNotesCarouselWidth) > 1;
+  patchNotesSlideIndex = Math.min(patchNotesSlideIndex, cards.length - 1);
+  if (align || resized) list.scrollLeft = offsets[patchNotesSlideIndex];
+  else patchNotesSlideIndex = offsets.reduce((best, left, index) =>
+    Math.abs(left - list.scrollLeft) < Math.abs(offsets[best] - list.scrollLeft) ? index : best, 0);
+  patchNotesCarouselWidth = list.clientWidth;
+  const padding = getComputedStyle(list);
+  const height = cards[patchNotesSlideIndex].getBoundingClientRect().height
+    + parseFloat(padding.paddingTop) + parseFloat(padding.paddingBottom)
+    + list.offsetHeight - list.clientHeight;
+  if (Math.abs(parseFloat(list.style.height || "0") - height) > 1) list.style.height = `${height}px`;
+  elements.patchNotesPrevious.disabled = patchNotesSlideIndex === 0;
+  elements.patchNotesNext.disabled = patchNotesSlideIndex === cards.length - 1;
+  if (patchImageSession) elements.patchNotesBody.scrollTop = patchImageSession.bodyTop;
+}
+
+function movePatchNotesSlide(direction) {
+  syncPatchNotesCarousel();
+  const cards = [...elements.patchNotesList.children];
+  const index = Math.max(0, Math.min(cards.length - 1, patchNotesSlideIndex + direction));
+  elements.patchNotesList.scrollTo({ left: cards[index].offsetLeft - cards[0].offsetLeft, behavior: "smooth" });
 }
 
 function createPatchNoteCard(note, index) {
@@ -2234,6 +2284,8 @@ function createPatchNoteCard(note, index) {
 
   const comparison = document.createElement("div");
   comparison.className = "patch-note-comparison";
+  comparison.style?.setProperty?.("--patch-note-as-is-fr", `${note.asIs.width / note.asIs.height}fr`);
+  comparison.style?.setProperty?.("--patch-note-to-be-fr", `${note.toBe.width / note.toBe.height}fr`);
   if (
     note.asIs.width / note.asIs.height >= 4
     && note.toBe.width / note.toBe.height >= 4
@@ -2258,6 +2310,7 @@ function createPatchNoteCard(note, index) {
 function createPatchNoteFigure(label, asset) {
   const figure = document.createElement("figure");
   figure.className = "patch-note-figure";
+  figure.style?.setProperty?.("--patch-note-image-ratio", String(asset.width / asset.height));
   const caption = document.createElement("figcaption");
   caption.textContent = label;
   const image = document.createElement("img");
@@ -2313,6 +2366,8 @@ function openPatchImage(asset, label, opener) {
     top: elements.patchNotesList.scrollTop,
     summaryTop: elements.patchNotesSummary.scrollTop,
     bodyTop: elements.patchNotesBody.scrollTop,
+    slideIndex: patchNotesSlideIndex,
+    carouselWidth: elements.patchNotesList.clientWidth,
     nativeWidth: asset.width,
     zoomed: false,
   };
@@ -2370,7 +2425,9 @@ function finishPatchImageClose() {
   document.documentElement.classList.toggle("is-patch-image-open", session.rootLocked);
   elements.patchNotesDialog.classList.remove("is-image-viewing");
   elements.patchNotesDialog.inert = session.notesInert;
-  elements.patchNotesList.scrollLeft = session.left;
+  patchNotesSlideIndex = session.slideIndex;
+  syncPatchNotesCarousel(true);
+  if (elements.patchNotesList.clientWidth === session.carouselWidth) elements.patchNotesList.scrollLeft = session.left;
   elements.patchNotesList.scrollTop = session.top;
   elements.patchNotesSummary.scrollTop = session.summaryTop;
   elements.patchNotesBody.scrollTop = session.bodyTop;
