@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20261005-2";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20261005-3";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,14 +7,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261005-2";
+} from "./font-revisions.mjs?v=20261005-3";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261005-2";
+} from "./release-notes.mjs?v=20261005-3";
 
-const STATIC_ASSET_REVISION = "20261005-2";
+const STATIC_ASSET_REVISION = "20261005-3";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -119,12 +119,14 @@ const elements = {
   patchNotesKicker: byId("patchNotesKicker"),
   patchNotesHeading: byId("patchNotesHeading"),
   patchNotesSummary: byId("patchNotesSummary"),
+  patchNotesBody: byId("patchNotesBody"),
   patchNotesList: byId("patchNotesList"),
   patchNotesFooter: byId("patchNotesFooter"),
   patchNotesClose: byId("patchNotesClose"),
   patchImageDialog: byId("patchImageDialog"),
   patchImageHeading: byId("patchImageHeading"),
   patchImageClose: byId("patchImageClose"),
+  patchImageZoom: byId("patchImageZoom"),
   patchImageStage: byId("patchImageStage"),
   patchImageContent: byId("patchImageContent"),
   sourceProfile: byId("sourceProfile"),
@@ -223,31 +225,20 @@ elements.patchNotesToggle.addEventListener("click", openPatchNotes);
 elements.patchNotesClose.addEventListener("click", () => closePatchNotes({ restoreFocus: true }));
 elements.patchNotesDialog.addEventListener("close", handlePatchNotesDialogClosed);
 elements.patchImageClose.addEventListener("click", closePatchImage);
+elements.patchImageZoom.addEventListener("click", togglePatchImageZoom);
 elements.patchImageDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   closePatchImage();
 });
 elements.patchImageDialog.addEventListener("close", finishPatchImageClose);
 elements.patchImageDialog.addEventListener("click", (event) => {
-  if (event.target === elements.patchImageDialog || event.target === elements.patchImageStage) {
-    closePatchImage();
-  } else if (event.target === elements.patchImageContent) {
-    // The img box fills the stage; only its contain-fitted pixels count as image.
-    const image = elements.patchImageContent;
-    const box = image.getBoundingClientRect();
-    const scale = Math.min(box.width / image.naturalWidth, box.height / image.naturalHeight);
-    const width = image.naturalWidth * scale;
-    const height = image.naturalHeight * scale;
-    const left = box.left + (box.width - width) / 2;
-    const top = box.top + (box.height - height) / 2;
-    if (!image.naturalWidth || event.clientX < left || event.clientX > left + width
-      || event.clientY < top || event.clientY > top + height) closePatchImage();
-  }
+  if (event.target === elements.patchImageDialog || event.target === elements.patchImageStage) closePatchImage();
 });
 elements.sourceButton.addEventListener("click", chooseSource);
 elements.patchButton.addEventListener("click", applyPatch);
 elements.cancelButton.addEventListener("click", cancelCurrentOperation);
 elements.cueButton.addEventListener("click", saveCueFile);
+window.addEventListener("resize", updatePatchImageWidth);
 window.addEventListener("beforeunload", warnWhileBusy);
 window.addEventListener("pagehide", handlePageHide);
 
@@ -2118,7 +2109,7 @@ function renderPatchNotesForRelease(releaseId) {
   }
 
   const summaryOnly = isSummaryOnlyPatchNotesRelease(releaseId);
-  setPatchNotesPresentation(summaryOnly);
+  setPatchNotesPresentation(summaryOnly, releaseId);
   state.patchNotesReleaseId = releaseId;
   elements.patchNotesVersion.textContent = notes.version;
   elements.patchNotesCount.textContent = summaryOnly ? "요약 · 열기" : `${notes.items.length}건 · 열기`;
@@ -2167,7 +2158,7 @@ function hasSafePatchNoteImages(note) {
 
 function clearPatchNotes() {
   closePatchNotes();
-  setPatchNotesPresentation(false);
+  setPatchNotesPresentation(false, null);
   state.patchNotesReleaseId = null;
   state.renderedPatchNotesReleaseId = null;
   elements.patchNotesToggle.disabled = true;
@@ -2187,7 +2178,7 @@ function openPatchNotes() {
   }
 
   const summaryOnly = isSummaryOnlyPatchNotesRelease(releaseId);
-  setPatchNotesPresentation(summaryOnly);
+  setPatchNotesPresentation(summaryOnly, releaseId);
   if (!summaryOnly && state.renderedPatchNotesReleaseId !== releaseId) {
     const fragment = document.createDocumentFragment();
     notes.items.forEach((note, index) => fragment.append(createPatchNoteCard(note, index)));
@@ -2198,6 +2189,7 @@ function openPatchNotes() {
     state.renderedPatchNotesReleaseId = releaseId;
   }
 
+  document.documentElement?.classList?.add("is-patch-notes-open");
   elements.patchNotesToggle.setAttribute("aria-expanded", "true");
   if (typeof elements.patchNotesDialog.showModal === "function") {
     elements.patchNotesDialog.showModal();
@@ -2209,11 +2201,13 @@ function openPatchNotes() {
     : `${notes.version} 패치노트 ${notes.items.length}건을 열었습니다.`);
 }
 
-function setPatchNotesPresentation(summaryOnly) {
+function setPatchNotesPresentation(summaryOnly, releaseId) {
+  const scrollable = releaseId === "srwf-final-20261005-v0-3-c";
+  elements.patchNotesDialog.classList.toggle("is-scrollable-notes", scrollable);
   elements.patchNotesDialog.classList.toggle("is-summary-only", summaryOnly);
-  elements.patchNotesKicker.hidden = summaryOnly;
+  elements.patchNotesKicker.hidden = summaryOnly || scrollable;
   elements.patchNotesList.hidden = summaryOnly;
-  elements.patchNotesFooter.hidden = summaryOnly;
+  elements.patchNotesFooter.hidden = summaryOnly || scrollable;
 }
 
 function createPatchNoteCard(note, index) {
@@ -2233,7 +2227,8 @@ function createPatchNoteCard(note, index) {
     : note.evidenceType === "included-reference"
       ? "공개 릴리스 반영 · 기능 화면 참고"
       : "RAM 변조 참고 시안 · 릴리스 통과 증거 아님";
-  headingRow.append(heading, evidence);
+  headingRow.append(heading);
+  if (state.patchNotesReleaseId !== "srwf-final-20261005-v0-3-c") headingRow.append(evidence);
 
   const comparison = document.createElement("div");
   comparison.className = "patch-note-comparison";
@@ -2286,6 +2281,7 @@ function createPatchNoteFigure(label, asset) {
 
 function closePatchNotes({ restoreFocus = false } = {}) {
   closePatchImage();
+  document.documentElement?.classList?.remove("is-patch-notes-open");
   if (elements.patchNotesDialog.open && typeof elements.patchNotesDialog.close === "function") {
     elements.patchNotesDialog.close();
   } else {
@@ -2299,6 +2295,7 @@ function closePatchNotes({ restoreFocus = false } = {}) {
 
 function handlePatchNotesDialogClosed() {
   closePatchImage();
+  document.documentElement?.classList?.remove("is-patch-notes-open");
   elements.patchNotesToggle.setAttribute("aria-expanded", "false");
 }
 
@@ -2313,17 +2310,49 @@ function openPatchImage(asset, label, opener) {
     left: elements.patchNotesList.scrollLeft,
     top: elements.patchNotesList.scrollTop,
     summaryTop: elements.patchNotesSummary.scrollTop,
+    bodyTop: elements.patchNotesBody.scrollTop,
+    nativeWidth: asset.width,
+    zoomed: false,
   };
   const url = new URL(asset.src, SITE_ROOT_URL);
   url.searchParams.set("v", STATIC_ASSET_REVISION);
   elements.patchImageContent.src = url.href;
   elements.patchImageContent.alt = asset.alt;
+  elements.patchImageContent.style.setProperty("--patch-image-width", `${asset.width}px`);
+  elements.patchImageZoom.textContent = "＋";
+  elements.patchImageZoom.setAttribute("aria-pressed", "false");
+  elements.patchImageZoom.setAttribute("aria-label", "이미지 확대");
+  elements.patchImageStage.scrollLeft = 0;
+  elements.patchImageStage.scrollTop = 0;
   elements.patchImageHeading.textContent = label;
   document.documentElement.classList.add("is-patch-image-open");
   elements.patchNotesDialog.classList.add("is-image-viewing");
   elements.patchNotesDialog.inert = true;
   elements.patchImageDialog.showModal();
+  updatePatchImageWidth();
   elements.patchImageClose.focus({ preventScroll: true });
+}
+
+function updatePatchImageWidth() {
+  const session = patchImageSession;
+  if (!session) return;
+  const width = Math.max(session.nativeWidth, elements.patchImageStage.clientWidth) * (session.zoomed ? 2 : 1);
+  elements.patchImageContent.style.setProperty("--patch-image-width", `${width}px`);
+}
+
+function togglePatchImageZoom() {
+  const session = patchImageSession;
+  if (!session) return;
+  const stage = elements.patchImageStage;
+  const centerX = (stage.scrollLeft + stage.clientWidth / 2) / stage.scrollWidth;
+  const centerY = (stage.scrollTop + stage.clientHeight / 2) / stage.scrollHeight;
+  session.zoomed = !session.zoomed;
+  updatePatchImageWidth();
+  elements.patchImageZoom.textContent = session.zoomed ? "−" : "＋";
+  elements.patchImageZoom.setAttribute("aria-pressed", String(session.zoomed));
+  elements.patchImageZoom.setAttribute("aria-label", session.zoomed ? "이미지 축소" : "이미지 확대");
+  stage.scrollLeft = centerX * stage.scrollWidth - stage.clientWidth / 2;
+  stage.scrollTop = centerY * stage.scrollHeight - stage.clientHeight / 2;
 }
 
 function closePatchImage() {
@@ -2342,6 +2371,7 @@ function finishPatchImageClose() {
   elements.patchNotesList.scrollLeft = session.left;
   elements.patchNotesList.scrollTop = session.top;
   elements.patchNotesSummary.scrollTop = session.summaryTop;
+  elements.patchNotesBody.scrollTop = session.bodyTop;
   elements.patchImageContent.removeAttribute("src");
   if (elements.patchNotesDialog.open && session.opener?.isConnected) session.opener.focus({ preventScroll: true });
 }
