@@ -3519,9 +3519,12 @@ html.is-patch-notes-open, html.is-patch-image-open { overflow: hidden; }
   overscroll-behavior: contain;
 }
 .patch-note-dialog.is-scrollable-notes .patch-note-list {
-  display: block;
-  overflow: visible;
-  scroll-snap-type: none;
+  display: grid;
+  grid-auto-flow: column;
+  align-items: start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
 }
 .patch-note-dialog.is-scrollable-notes .patch-note-card {
   display: block;
