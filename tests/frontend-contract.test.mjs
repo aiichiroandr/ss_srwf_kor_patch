@@ -360,7 +360,7 @@ test("static entry assets share an explicit cache revision", async () => {
     readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
     readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
   ]);
-  const revision = "20261005-2";
+  const revision = "20261005-3";
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
   assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=20261005-1`));
   assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=20261005-1'`));
@@ -1554,7 +1554,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20261005-2$/);
+    assert.match(image.src, /\?v=20261005-3$/);
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1579,7 +1579,8 @@ test("FIN v0.3 images expand accessibly without duplicate descriptions", async (
   }
   assert.equal(findDescendants(list, (node) => node.className === "patch-note-description").length, 0);
   const summary = getPatchNotesForRelease("srwf-final-20261005-v0-3-c").summary;
-  assert.match(summary, /수정 전 오류 사례/);
+  assert.doesNotMatch(summary, /사진 안내|이미지를 누르면/);
+  assert.match(getPatchNotesForRelease("srwf-final-20261005-v0-3-c").items[0].asIsLabel, /수정 전/);
   assert.match(summary, /분신 같은 회피 특수기는 이름만 표시됩니다/);
   assert.doesNotMatch(summary, /0은 이름만|표시할 수치가 0이면/);
   __testHooks.closePatchNotes();
@@ -2169,7 +2170,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-2$/,
+      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-3$/,
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2178,7 +2179,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-2$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-3$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",

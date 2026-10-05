@@ -1,4 +1,4 @@
-import { NEXT_RELEASE_NOTES } from "./next-release-notes.mjs?v=20261005-2";
+import { NEXT_RELEASE_NOTES } from "./next-release-notes.mjs?v=20261005-3";
 const image = (src, alt, width, height) => Object.freeze({ src, alt, width, height });
 
 const item = ({ id, title, description, evidenceType, asIs, toBe, asIsLabel, toBeLabel }) => Object.freeze({
@@ -70,7 +70,6 @@ export const PATCH_NOTES = Object.freeze({
     "3. 특수기능 이름·숫자 배치 개선\n- 배리어·크리티컬처럼 숫자가 함께 표시되는 효과는 문구와 숫자 사이 간격을 조정했습니다. 분신 같은 회피 특수기는 이름만 표시됩니다.\n- 숫자가 함께 표시되는 효과는 실제 글자 폭 뒤에 4px 여백을 두고 전체 묶음을 가운데 정렬합니다.",
     "4. 시나리오 명령 5곳 복원\n- 레이 강제 배치 위치 2곳, 가자D 증원 EN·장갑·한계 개조값 2곳(5/5/5), 이벤트 조건 영역 1곳을 원판 값으로 복원했습니다. 자연 플레이의 최종 배치·증원·분기 결과는 미검증입니다.",
     "5. 확인 범위\n- c Mona12만 공개합니다. 선별 실행 진단과 데이터 검사를 완료했으며 전체 시나리오·장기 진행·모든 전투 연출·CD-R 검증은 포함하지 않습니다. 천지인 RAM 시험과 Claude AT B6 시험은 이 버전에 포함되지 않았습니다.",
-    "사진 안내\n- 신지와 부활 사진은 수정 전 오류 사례입니다. 특수기능 이미지는 최종본의 통제 상태 검수 캡처이며 자연 전투 발동 기록은 아닙니다. 이미지를 누르면 확대해서 볼 수 있습니다.",
   ].join("\n\n"), [
     item({id:"fin03-shinji",title:"신지 초기 기체 오류 사례",description:"두 화면 모두 수정 전 같은 실행의 실제 캡처입니다. 에바 3호기에 신지가 잘못 배정된 목록과 상세이며 수정 후 비교로 표시하지 않습니다. 최종본은 별도 진단에서 신지 레벨 20과 에바 초호기 ID 233을 확인했습니다.",evidenceType:"included-reference",asIsLabel:"수정 전 · 목록",toBeLabel:"수정 전 · 기체 상세",asIs:image("assets/patch-notes/fin-v0-3-shinji-eva3-1.png","수정 전 에바3호기·신지 유닛 목록",330,240),toBe:image("assets/patch-notes/fin-v0-3-shinji-eva3-2.png","같은 수정 전 실행의 에바3호기 기체 상세",330,240)}),
     item({id:"fin03-revive",title:"부활 목록 암전 오류 사례",description:"수정 전 시라의 부활 선택 메뉴와 같은 진단에서 목록을 열다가 암전한 실제 캡처입니다. 수정 후 화면을 대신하는 자료가 아닙니다. 크리스도 같은 목록 표시 코드를 사용하며 최종본의 선별 진단에서 부활 완료·지도 복귀를 확인했습니다.",evidenceType:"included-reference",asIsLabel:"수정 전 · 부활 선택",toBeLabel:"수정 전 · 암전",asIs:image("assets/patch-notes/fin-v0-3-revive-spirit.png","수정 전 시라 부활 선택",330,240),toBe:image("assets/patch-notes/fin-v0-3-revive-black.png","수정 전 부활 목록 암전 실제 캡처",330,240)}),
