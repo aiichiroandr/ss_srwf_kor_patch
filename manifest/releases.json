@@ -48,6 +48,22 @@
   "releases": [
     {
       "gameId": "srwf-final",
+      "id": "srwf-final-20261005-v0-3-a",
+      "state": "ACCEPTED",
+      "label": "2026.10.05 · v0.3",
+      "manifest": "releases/srwf-final-20261005-v0-3-a.json",
+      "manifestSha256": "666f3a10c604ac491d3b5d4842b81898041ede894d17b02c61c2917f84b874ef"
+    },
+    {
+      "gameId": "srwf-final",
+      "id": "srwf-final-20261005-v0-3-b",
+      "state": "ACCEPTED",
+      "label": "2026.10.05 · v0.3",
+      "manifest": "releases/srwf-final-20261005-v0-3-b.json",
+      "manifestSha256": "3af3a6cba219fb8047bc29492d6ee5cefc0813685fdf56814eb8b7495f8d34b1"
+    },
+    {
+      "gameId": "srwf-final",
       "id": "srwf-final-20261005-v0-3-c",
       "state": "ACCEPTED",
       "label": "2026.10.05 · v0.3",

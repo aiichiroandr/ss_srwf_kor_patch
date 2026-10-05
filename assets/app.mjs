@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20261005-4";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20261005-5";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,14 +7,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261005-4";
+} from "./font-revisions.mjs?v=20261005-5";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261005-4";
+} from "./release-notes.mjs?v=20261005-5";
 
-const STATIC_ASSET_REVISION = "20261005-4";
+const STATIC_ASSET_REVISION = "20261005-5";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -1614,6 +1614,8 @@ const PATCHED_IMAGE_CUE_TRACKS = new Map([
   ["b882fec4d79b866bc5ff162fdf460e0eedf5b7b31033f7048f8cce9f3ffe357c", Object.freeze(["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 MODE2/2352", "INDEX 00 17:03:64", "INDEX 01 17:06:64", "TRACK 03 AUDIO", "INDEX 00 48:55:28", "INDEX 01 48:57:28"])],
   ["7a80036d11f66b0afd1110b5e34b1b673228ad5ac9350d6967e2f36716ed43e2", Object.freeze(["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 MODE2/2352", "INDEX 00 17:03:64", "INDEX 01 17:06:64", "TRACK 03 AUDIO", "INDEX 00 48:55:28", "INDEX 01 48:57:28"])],
   ["118450235e03d664241d926e2f02f87438670074d51827a953c0be1132d0b547", Object.freeze(["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 MODE2/2352", "INDEX 00 17:03:64", "INDEX 01 17:06:64", "TRACK 03 AUDIO", "INDEX 00 48:55:28", "INDEX 01 48:57:28"])],
+  ["fd8df11fc7a933cea000d40695325fb290900c72b64f8b316e18b06afee8d73e", Object.freeze(["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 MODE2/2352", "INDEX 00 17:03:64", "INDEX 01 17:06:64", "TRACK 03 AUDIO", "INDEX 00 48:55:28", "INDEX 01 48:57:28"])],
+  ["9d22ab0ac45e2f8a3728c18825ddd2ea96035704a2ef56b291e077e93e885e23", Object.freeze(["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 MODE2/2352", "INDEX 00 17:03:64", "INDEX 01 17:06:64", "TRACK 03 AUDIO", "INDEX 00 48:55:28", "INDEX 01 48:57:28"])],
   ["0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d", Object.freeze(["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 MODE2/2352", "INDEX 00 17:03:64", "INDEX 01 17:06:64", "TRACK 03 AUDIO", "INDEX 00 48:55:28", "INDEX 01 48:57:28"])],
   ["f3292551e827ac66d4406a2994350342d9084a5d24a121a70185029fba574a3e", F_V04_CUE_TRACKS],
   ["fe713fcab98279f8f6ffe6da45c145bcf75ab70ebe7361e733b71559b94f8589", F_V04_CUE_TRACKS],
@@ -2202,7 +2204,7 @@ function openPatchNotes() {
 }
 
 function setPatchNotesPresentation(summaryOnly, releaseId) {
-  const scrollable = releaseId === "srwf-final-20261005-v0-3-c";
+  const scrollable = /^srwf-final-20261005-v0-3-[abc]$/.test(releaseId);
   elements.patchNotesDialog.classList.toggle("is-scrollable-notes", scrollable);
   elements.patchNotesDialog.classList.toggle("is-summary-only", summaryOnly);
   elements.patchNotesKicker.hidden = summaryOnly || scrollable;
@@ -2228,7 +2230,7 @@ function createPatchNoteCard(note, index) {
       ? "공개 릴리스 반영 · 기능 화면 참고"
       : "RAM 변조 참고 시안 · 릴리스 통과 증거 아님";
   headingRow.append(heading);
-  if (state.patchNotesReleaseId !== "srwf-final-20261005-v0-3-c") headingRow.append(evidence);
+  if (!/^srwf-final-20261005-v0-3-[abc]$/.test(state.patchNotesReleaseId)) headingRow.append(evidence);
 
   const comparison = document.createElement("div");
   comparison.className = "patch-note-comparison";
@@ -2249,7 +2251,7 @@ function createPatchNoteCard(note, index) {
   description.textContent = note.description;
   card.append(headingRow, comparison);
   // FIN v0.3 explains scope and source distinctions in the note body above.
-  if (state.patchNotesReleaseId !== "srwf-final-20261005-v0-3-c") card.append(description);
+  if (!/^srwf-final-20261005-v0-3-[abc]$/.test(state.patchNotesReleaseId)) card.append(description);
   return card;
 }
 

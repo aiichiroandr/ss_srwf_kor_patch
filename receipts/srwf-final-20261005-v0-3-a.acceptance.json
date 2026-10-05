@@ -1,0 +1,18 @@
+{
+  "schema": "srwf-kor.acceptance-receipt.v1",
+  "releaseId": "srwf-final-20261005-v0-3-a",
+  "state": "ACCEPTED",
+  "acceptedAt": "2026-10-05T06:28:17.515128+00:00",
+  "stockProfileId": "saturn-jp-stock-track01-mode1-2352-ff7192ab",
+  "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+  "targetSha256": "fd8df11fc7a933cea000d40695325fb290900c72b64f8b316e18b06afee8d73e",
+  "patchSha256": "8df497a949f8f6f45c2b14a55cdbcf24b76a40afb46d736e6905675cee0da7ab",
+  "v5Commit": "084fed02ba4834ab5ff48b8c3e697f58b5fd4555ff1c17309c02a8d1817d03ff",
+  "gates": {
+    "staticStructure": "PASS",
+    "runtimeConsumption": "PASS",
+    "visualLayout": "PASS",
+    "longPlayProgression": "NOT_CLAIMED"
+  },
+  "decisionAuthority": "사용자 2026-10-05 완결편 v0.3 DOS thin·갈무리11 공개 복원·정확한 전용 등록·기존 사이트 원격 배포 승인. 실제 표시 18건과 별도 no-state 글꼴 확인; 음성·전체 시나리오·장기 진행·CD-R·사용자 R7 미검증."
+}
