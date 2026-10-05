@@ -1,0 +1,96 @@
+{
+  "descriptor": {
+    "bodyUncompressedSize": 7197902,
+    "format": "srwf.sparse-byte-delta.v2",
+    "patchSha256": "f35cf3b4ec5d9da5dd864b86b42e993dd7c1648065d37f3717b4513829bfa87c",
+    "patchSize": 3718378,
+    "recordCount": 85136,
+    "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+    "sourceSize": 520408224,
+    "targetSha256": "0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d",
+    "targetSize": 521680656
+  },
+  "evidenceCeiling": "52 copied-state display diagnostics; selected Chris/Shinji rechecks; natural activation, uninterrupted repeated combat, fresh user coldboot, long play and CD-R not claimed",
+  "font": "c Mona12",
+  "methods": {
+    "layout.py": "97bc5994f4f425c5e8cd6bf0a5f255b805430d3af2c6ee966bd4134f9de7218b",
+    "srwfp2.py": "e330c3b824f08a26ed40e77b6f706e9609f110754a60652ca41adbf2c9697f42",
+    "verify_srwfp2.py": "59a097c59ca2af1e2a23e67567d03b406156d0c7e455a462a5b4072f4d8970b1",
+    "fin_build_public_disc.py": "b3ecd2493300ac9de937519621b574f1c3983fbd0db022afa8f347dc8faaa15e",
+    "export_patch.py": "f7838b49b0fb6484303841fa187096de59da92a1cb865b5456242bf996a59827"
+  },
+  "releaseId": "srwf-final-20261005-v0-3-c",
+  "stats": {
+    "bytes": {
+      "copy": 3880800,
+      "literal": 0,
+      "preimage_sha": 2724320,
+      "replace": 3366774
+    },
+    "copies": [
+      {
+        "length": 3880800,
+        "source_offset": 516527424,
+        "source_sha256": "f10169c2768f2a5b4cd91391c11368d0d53fe5414b5df9afdb22fc140a38f7ca",
+        "target_offset": 517799856
+      }
+    ],
+    "records": {
+      "copy": 1,
+      "literal": 0,
+      "replace": 85135,
+      "total": 85136
+    },
+    "zlib": {
+      "compiled": "1.2.12",
+      "level": 9,
+      "memLevel": 8,
+      "runtime": "1.2.12",
+      "strategy": "Z_DEFAULT_STRATEGY",
+      "wbits": 15
+    }
+  },
+  "verification": {
+    "bodyUncompressedSize": 7197902,
+    "byte_exact_vs_projection": true,
+    "captureWindows": 3,
+    "capturedBytes": 10485760,
+    "copies": [
+      {
+        "length": 3880800,
+        "source_offset": 516527424,
+        "source_sha256": "f10169c2768f2a5b4cd91391c11368d0d53fe5414b5df9afdb22fc140a38f7ca",
+        "target_offset": 517799856
+      }
+    ],
+    "copyBytes": 3880800,
+    "descriptor": {
+      "bodyUncompressedSize": 7197902,
+      "format": "srwf.sparse-byte-delta.v2",
+      "patchSha256": "f35cf3b4ec5d9da5dd864b86b42e993dd7c1648065d37f3717b4513829bfa87c",
+      "patchSize": 3718378,
+      "recordCount": 85136,
+      "sourceSha256": "ff7192abc112d5c969a0e236f5061fc6853234eedc350525c46c0548c57dfbdb",
+      "sourceSize": 520408224,
+      "targetSha256": "0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d",
+      "targetSize": 521680656
+    },
+    "literalBytes": 0,
+    "records": {
+      "copy": 1,
+      "literal": 0,
+      "replace": 85135,
+      "total": 85136
+    },
+    "sha256": "0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d",
+    "size": 521680656,
+    "verdict": "PASS"
+  },
+  "version": "v0.3",
+  "exportReceipt": {
+    "transactionId": "8e33bff1-7b9b-4a56-b84a-ae2dfe5cc219",
+    "receiptId": "23e8c962-fffa-48c4-854a-6af4941f4c24",
+    "receiptSha256": "88411e0f3befa9a49dc5b77289d8e82cde2fb8f673ec6f9e75bdf264411ff852",
+    "immutableOriginalBuildEvidenceSha256": "df4e78d5e922bc5ed919dd850a52a735faf97d9c40628c8ac59e8496f9a0c711"
+  }
+}

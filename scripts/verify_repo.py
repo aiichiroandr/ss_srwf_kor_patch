@@ -147,6 +147,13 @@ PNG_DIMENSION_MAX = 32_768
 # Binary UI assets are publication decisions, not extension-based exceptions.
 # Add only a reviewed canonical repository path and its exact lowercase SHA-256.
 PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
+    "assets/patch-notes/fin-v0-3-shinji-eva3-1.png": "b0014ceb37bd581493cb0c18075f8939d555324bb35085e3ea33fa417d93bfcf",
+    "assets/patch-notes/fin-v0-3-shinji-eva3-2.png": "8772da25e2528c98e8e280958f02872efd0a1d51399ce0ca43f5bdcd8ba5026f",
+    "assets/patch-notes/fin-v0-3-revive-spirit.png": "ba7a7b1cc57b61bff3b6e65c528989046ccd98e2efe829468f50f24f6cd05bd8",
+    "assets/patch-notes/fin-v0-3-revive-black.png": "091e40d8662f472d68f4e9b5384dedf7bf484f9859b64c2cc39690b6235658ba",
+    "assets/patch-notes/fin-v0-3-btsr-ten.png": "f85a17a39815175c30d81c1e606535a91819be3a9d4448a4dfeff96109dbbfd9",
+    "assets/patch-notes/fin-v0-3-btsr-boundaries.png": "12d5a2c4cf89f2cfdcf27e3ef0a869cc9da13ac3e540a58287af3dd7519a69e6",
+
     "assets/patch-notes/v0-1-disconnect-after.png": "c1ed3d24b63532af079a437e056c486c7fd0a3ff1cc22b8c3104f6b3af14f6d9",
     "assets/patch-notes/v0-1-disconnect-before.png": "a77e308c7401114628cd643f5edd9f116ead6a9ef947125915d49baac32fbd2e",
     "assets/patch-notes/v0-1-parts-after.png": "fc783e6ab9f790f0ac0a9a02a6f5465fe9a8d21db26fbb0ca2d013769a19d260",
