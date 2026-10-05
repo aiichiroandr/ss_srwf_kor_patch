@@ -1,5 +1,5 @@
 import { sha256Hex } from "./sha256.mjs";
-import { normalizeSourceDirectory } from "./disc-source.mjs?v=20261005-1";
+import { normalizeSourceDirectory } from "./disc-source.mjs?v=20261005-2";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -7,14 +7,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261005-1";
+} from "./font-revisions.mjs?v=20261005-2";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261005-1";
+} from "./release-notes.mjs?v=20261005-2";
 
-const STATIC_ASSET_REVISION = "20261005-1";
+const STATIC_ASSET_REVISION = "20261005-2";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -122,6 +122,11 @@ const elements = {
   patchNotesList: byId("patchNotesList"),
   patchNotesFooter: byId("patchNotesFooter"),
   patchNotesClose: byId("patchNotesClose"),
+  patchImageDialog: byId("patchImageDialog"),
+  patchImageHeading: byId("patchImageHeading"),
+  patchImageClose: byId("patchImageClose"),
+  patchImageStage: byId("patchImageStage"),
+  patchImageContent: byId("patchImageContent"),
   sourceProfile: byId("sourceProfile"),
   targetName: byId("targetName"),
   publishedAt: byId("publishedAt"),
@@ -212,9 +217,33 @@ const state = {
 elements.gameSelect.addEventListener("change", handleGameChange);
 elements.releaseSelect.addEventListener("change", handleReleaseChange);
 elements.fontSelect.addEventListener("change", handleFontChange);
+let patchImageSession = null;
+
 elements.patchNotesToggle.addEventListener("click", openPatchNotes);
 elements.patchNotesClose.addEventListener("click", () => closePatchNotes({ restoreFocus: true }));
 elements.patchNotesDialog.addEventListener("close", handlePatchNotesDialogClosed);
+elements.patchImageClose.addEventListener("click", closePatchImage);
+elements.patchImageDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closePatchImage();
+});
+elements.patchImageDialog.addEventListener("close", finishPatchImageClose);
+elements.patchImageDialog.addEventListener("click", (event) => {
+  if (event.target === elements.patchImageDialog || event.target === elements.patchImageStage) {
+    closePatchImage();
+  } else if (event.target === elements.patchImageContent) {
+    // The img box fills the stage; only its contain-fitted pixels count as image.
+    const image = elements.patchImageContent;
+    const box = image.getBoundingClientRect();
+    const scale = Math.min(box.width / image.naturalWidth, box.height / image.naturalHeight);
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
+    const left = box.left + (box.width - width) / 2;
+    const top = box.top + (box.height - height) / 2;
+    if (!image.naturalWidth || event.clientX < left || event.clientX > left + width
+      || event.clientY < top || event.clientY > top + height) closePatchImage();
+  }
+});
 elements.sourceButton.addEventListener("click", chooseSource);
 elements.patchButton.addEventListener("click", applyPatch);
 elements.cancelButton.addEventListener("click", cancelCurrentOperation);
@@ -2223,7 +2252,9 @@ function createPatchNoteCard(note, index) {
   const description = document.createElement("p");
   description.className = "patch-note-description";
   description.textContent = note.description;
-  card.append(headingRow, comparison, description);
+  card.append(headingRow, comparison);
+  // FIN v0.3 explains scope and source distinctions in the note body above.
+  if (state.patchNotesReleaseId !== "srwf-final-20261005-v0-3-c") card.append(description);
   return card;
 }
 
@@ -2241,11 +2272,20 @@ function createPatchNoteFigure(label, asset) {
   image.height = asset.height;
   image.loading = "lazy";
   image.decoding = "async";
-  figure.append(caption, image);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "patch-note-image-button";
+  button.setAttribute("aria-label", `${asset.alt} · 확대 보기`);
+  button.setAttribute("aria-haspopup", "dialog");
+  button.setAttribute("aria-controls", "patchImageDialog");
+  button.addEventListener("click", () => openPatchImage(asset, label, button));
+  button.append(image);
+  figure.append(caption, button);
   return figure;
 }
 
 function closePatchNotes({ restoreFocus = false } = {}) {
+  closePatchImage();
   if (elements.patchNotesDialog.open && typeof elements.patchNotesDialog.close === "function") {
     elements.patchNotesDialog.close();
   } else {
@@ -2258,7 +2298,52 @@ function closePatchNotes({ restoreFocus = false } = {}) {
 }
 
 function handlePatchNotesDialogClosed() {
+  closePatchImage();
   elements.patchNotesToggle.setAttribute("aria-expanded", "false");
+}
+
+
+function openPatchImage(asset, label, opener) {
+  if (!elements.patchNotesDialog.open || !isSafePatchNoteAssetPath(asset.src)) return;
+  if (elements.patchImageDialog.open) closePatchImage();
+  patchImageSession = {
+    opener,
+    rootLocked: document.documentElement.classList.contains("is-patch-image-open"),
+    notesInert: elements.patchNotesDialog.inert,
+    left: elements.patchNotesList.scrollLeft,
+    top: elements.patchNotesList.scrollTop,
+    summaryTop: elements.patchNotesSummary.scrollTop,
+  };
+  const url = new URL(asset.src, SITE_ROOT_URL);
+  url.searchParams.set("v", STATIC_ASSET_REVISION);
+  elements.patchImageContent.src = url.href;
+  elements.patchImageContent.alt = asset.alt;
+  elements.patchImageHeading.textContent = label;
+  document.documentElement.classList.add("is-patch-image-open");
+  elements.patchNotesDialog.classList.add("is-image-viewing");
+  elements.patchNotesDialog.inert = true;
+  elements.patchImageDialog.showModal();
+  elements.patchImageClose.focus({ preventScroll: true });
+}
+
+function closePatchImage() {
+  if (elements.patchImageDialog.open) elements.patchImageDialog.close();
+  finishPatchImageClose();
+}
+
+function finishPatchImageClose() {
+  if (elements.patchImageDialog.open) return;
+  const session = patchImageSession;
+  if (!session) return;
+  patchImageSession = null;
+  document.documentElement.classList.toggle("is-patch-image-open", session.rootLocked);
+  elements.patchNotesDialog.classList.remove("is-image-viewing");
+  elements.patchNotesDialog.inert = session.notesInert;
+  elements.patchNotesList.scrollLeft = session.left;
+  elements.patchNotesList.scrollTop = session.top;
+  elements.patchNotesSummary.scrollTop = session.summaryTop;
+  elements.patchImageContent.removeAttribute("src");
+  if (elements.patchNotesDialog.open && session.opener?.isConnected) session.opener.focus({ preventScroll: true });
 }
 
 async function discardUncommittedOutput() {

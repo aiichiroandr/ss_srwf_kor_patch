@@ -15,8 +15,8 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 정품 디스크 이미지로 새 한글 패치 BIN/CUE를 만드는 웹 패처"
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20261005-1">
-    <script type="module" src="assets/app.mjs?v=20261005-1"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20261005-2">
+    <script type="module" src="assets/app.mjs?v=20261005-2"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -272,6 +272,16 @@
           <span>좌우로 넘겨 비교하세요.</span>
           <span>기능 화면 참고 표시는 같은 변경을 확인한 선행 검증 화면입니다.</span>
         </footer>
+      </div>
+    </dialog>
+
+    <dialog class="patch-image-dialog" id="patchImageDialog" aria-labelledby="patchImageHeading" aria-modal="true">
+      <header class="patch-image-header">
+        <h2 id="patchImageHeading">이미지 확대</h2>
+        <button class="patch-note-close" type="button" id="patchImageClose" autofocus aria-label="확대 이미지 닫기">닫기 <span aria-hidden="true">×</span></button>
+      </header>
+      <div class="patch-image-stage" id="patchImageStage">
+        <img id="patchImageContent" alt="" decoding="async">
       </div>
     </dialog>
 
