@@ -1,7 +1,7 @@
 // RG01 is a separate wire domain. A syntactic tag never authenticates a map.
-import {ownData,readDenseList} from './editor-own.mjs?v=20261011-public5';
-import {Sha256} from './sha256.mjs?v=20261011-public5';
-import {immutableBytesHash} from './editor-provenance.mjs?v=20261011-public5';
+import {ownData,readDenseList} from './editor-own.mjs?v=20261011-public6';
+import {Sha256} from './sha256.mjs?v=20261011-public6';
+import {immutableBytesHash} from './editor-provenance.mjs?v=20261011-public6';
 export const REGION_RULE_TAG=0x10000000;
 const KEYS=['gameId','physicalIndex','scenarioSlots','mapIndex','mapPhysicalIndex','mapSlots','width','height','identity'];
 const fail=m=>{const e=new Error(m);e.code='EDITOR_OBJECTIVE_INVALID';throw e;};

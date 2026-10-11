@@ -747,3 +747,28 @@ test('worker checks the whole source image when the page asks, for both formats,
   assert.equal(wrongSize.error.code, 'SOURCE_SIZE_MISMATCH');
   assert.equal(shortSource.streamCalls, 0);
 });
+
+
+test('cached patch responses remain subject to the pinned hash before source reads', async () => {
+  const fixture = workerFixture();
+  const corrupted = fixture.patch.slice();
+  corrupted[corrupted.length - 1] ^= 1;
+  let requestOptions;
+  globalThis.fetch = async (_url, options) => {
+    requestOptions = options;
+    return new Response(corrupted, {status: 200});
+  };
+  const sourceFile = new CountingBlob([fixture.source]);
+  const result = await dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId: 'prepare-corrupted-browser-cache',
+    sourceFile,
+    releaseKey: `cached-response-check:${fixture.descriptor.patchSha256}`,
+    patchUrl: '/patches/cached-response-check.srwfp',
+    descriptor: fixture.descriptor,
+  });
+  assert.equal(requestOptions.cache, 'default');
+  assert.equal(result.type, 'error');
+  assert.equal(result.error.code, 'PATCH_HASH_MISMATCH');
+  assert.equal(sourceFile.streamCalls, 0);
+});

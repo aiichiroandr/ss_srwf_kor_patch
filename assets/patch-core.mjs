@@ -1,4 +1,4 @@
-import { Sha256, sha256Hex } from './sha256.mjs';
+import { Sha256, sha256Hex } from './sha256.mjs?v=20261011-public6';
 
 export { Sha256, sha256Hex };
 
@@ -260,18 +260,20 @@ class DeflateBitReader {
     this.bitOffset = 0;
   }
 
+  peek(count) {
+    const position = this.bitOffset >>> 3;
+    const shift = this.bitOffset & 7;
+    const word = this.bytes[position] | (this.bytes[position + 1] << 8) | (this.bytes[position + 2] << 16);
+    return (word >>> shift) & ((1 << count) - 1);
+  }
+
   read(count) {
     if (this.bitOffset + count > this.bytes.byteLength * 8) {
       fail('BAD_ZLIB_BODY', 'DEFLATE payload is truncated');
     }
-    let value = 0;
-    for (let index = 0; index < count; index += 1) {
-      const absoluteBit = this.bitOffset + index;
-      const bit = (this.bytes[absoluteBit >>> 3] >>> (absoluteBit & 7)) & 1;
-      value |= bit << index;
-    }
+    const value = this.peek(count);
     this.bitOffset += count;
-    return value >>> 0;
+    return value;
   }
 
   alignToByte() {
@@ -329,28 +331,34 @@ function buildHuffman(lengths, label) {
     nextCode[length] = code;
   }
 
-  const tables = Array.from({ length: maximumLength + 1 }, () => new Map());
+  // Maximum DEFLATE length is 15: one bounded table has at most 32768 Uint16 entries (64 KiB).
+  // Bits 0..8 hold the symbol; bits 9..12 hold its real code length. Zero denotes an unassigned code.
+  const table = new Uint16Array(1 << maximumLength);
   for (let symbol = 0; symbol < lengths.length; symbol += 1) {
     const length = lengths[symbol];
     if (length !== 0) {
       const transmittedCode = reverseBits(nextCode[length], length);
-      tables[length].set(transmittedCode, symbol);
+      const entry = (length << 9) | symbol;
+      for (let index = transmittedCode; index < table.length; index += 1 << length) table[index] = entry;
       nextCode[length] += 1;
     }
   }
-  return { label, maximumLength, tables };
+  return { label, maximumLength, table };
 }
 
 function decodeHuffman(reader, huffman) {
-  let code = 0;
-  for (let length = 1; length <= huffman.maximumLength; length += 1) {
-    code |= reader.read(1) << (length - 1);
-    const symbol = huffman.tables[length].get(code);
-    if (symbol !== undefined) {
-      return symbol;
-    }
+  const entry = huffman.table[reader.peek(huffman.maximumLength)];
+  const length = entry >>> 9;
+  if (length === 0) {
+    fail('BAD_ZLIB_BODY', `${huffman.label} contains an invalid code`);
   }
-  fail('BAD_ZLIB_BODY', `${huffman.label} contains an invalid code`);
+  // Peeking may zero-pad missing lookahead bits, but consumption must fit the actual payload.
+  // This permits a short end-of-block code without accepting truncated long codes.
+  if (reader.bitOffset + length > reader.bytes.byteLength * 8) {
+    fail('BAD_ZLIB_BODY', 'DEFLATE payload is truncated');
+  }
+  reader.bitOffset += length;
+  return entry & 511;
 }
 
 function fixedHuffmanTables() {
@@ -579,7 +587,7 @@ function parseRecords(body, header) {
       return {
         offset: readSafeU64(view, start, 'Record offset'),
         length,
-        preimageSha256: hexFromBytes(body.subarray(start + 12, start + 44)),
+        preimageDigest: body.subarray(start + 12, start + 44),
         targetBytes: body.subarray(start + RECORD_HEADER_SIZE, start + RECORD_HEADER_SIZE + length),
       };
     },
@@ -660,7 +668,7 @@ export async function parsePatch(value, descriptor) {
       records ??= Object.freeze(Array.from(internalRecords, (record) => Object.freeze({
         offset: record.offset,
         length: record.length,
-        preimageSha256: record.preimageSha256,
+        preimageSha256: hexFromBytes(record.preimageDigest),
       })));
       return records;
     },
@@ -821,8 +829,8 @@ function createSourceAuthenticator(parsedPatch, internals) {
         }
 
         if (intersectionEnd === recordEnd) {
-          const actualPreimage = spanHasher.hex();
-          if (actualPreimage !== record.preimageSha256) {
+          const actualPreimage = spanHasher.digest();
+          if (!actualPreimage.every((byte, index) => byte === record.preimageDigest[index])) {
             fail('PREIMAGE_MISMATCH', `Source preimage does not match record ${recordIndex}`);
           }
           spanHasher = null;
