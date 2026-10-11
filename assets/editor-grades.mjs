@@ -9,7 +9,7 @@
 // 공 육 해 우), which is NOT the data order. The stored value stays an integer; letters are only a view.
 // Evidence for each letter and percentage is recorded in docs/EDITOR_FACTS.md (section "terrain grades").
 
-import { ownEntry } from "./editor-own.mjs?v=20261011-public13";
+import { ownEntry } from "./editor-own.mjs?v=20261012-battle1";
 
 export const TERRAIN_DATA_ORDER = Object.freeze(["ground", "sea", "air", "space"]);
 export const TERRAIN_SCREEN_ORDER = Object.freeze(["air", "ground", "sea", "space"]);

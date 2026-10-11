@@ -1,5 +1,5 @@
-import { TERRAIN_FIELDS, TERRAIN_LABELS, terrainValueAllowed } from "./editor-terrain.mjs?v=20261011-public13";
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public13';
+import { TERRAIN_FIELDS, TERRAIN_LABELS, terrainValueAllowed } from "./editor-terrain.mjs?v=20261012-battle1";
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261012-battle1';
 
 export function createTerrainEditor(host) {
   const panel = document.getElementById("terrainEditorPanel");
@@ -22,7 +22,7 @@ export function createTerrainEditor(host) {
     selector.disabled = !host.canEdit() || !host.rows().length;
     for (const [field, input] of controls) {
       input.disabled = !writable;
-      input.classList.toggle("is-modified", current[field] !== current.original[field]);
+      input.classList.toggle("is-modified", Boolean(current && current[field] !== current.original[field]));
     }
     reset.disabled = !writable || !TERRAIN_FIELDS.some(field => current[field] !== current.original[field] || controls.get(field)?.value !== String(current[field]));
   }

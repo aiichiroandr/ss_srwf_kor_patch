@@ -18,3 +18,15 @@ test('terrain controls cannot mutate a busy session and special tabs keep generi
  for(const id of ['unitEditorPanel','pilotEditorPanel','weaponEditorPanel','rewardEditorPanel'])assert.equal($(id).hidden,true);
  assert.equal($('terrainEditorPanel').hidden,false);$('rewardTabButton').click();assert.equal($('terrainEditorPanel').hidden,true);
 });
+test('clearing a loaded editor removes terrain controls before synchronizing the empty session',()=>{
+ setup();assert.equal($('terrainFields').querySelectorAll('input').length,4);
+ const messages=[];hooks.state.editorWorker={postMessage:message=>messages.push(message),terminate(){}};
+ assert.doesNotThrow(()=>hooks.clearEditorState());
+ assert.equal(hooks.state.editorSessionToken,null);
+ assert.equal(hooks.state.editorWorker,null);
+ assert.equal($('terrainFields').children.length,0);
+ assert.equal($('terrainTileExamples').children.length,0);
+ assert.equal($('terrainSelector').disabled,true);
+ assert.equal($('terrainReset').disabled,true);
+ assert.deepEqual(messages.map(message=>message.type),['RESET']);
+});

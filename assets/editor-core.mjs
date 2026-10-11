@@ -1,30 +1,30 @@
-import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261011-public13';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public13';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public13';
-import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261011-public13";
-import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261011-public13";
-import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261011-public13";
-import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261011-public13";
-import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261011-public13";
-import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261011-public13";
-import { Sha256 } from "./sha256.mjs?v=20261011-public13";
-import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261011-public13";
-import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261011-public13";
-import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261011-public13";
-import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261011-public13";
-import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261011-public13";
-import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261011-public13";
-import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261011-public13";
-import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261011-public13";
-import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261011-public13";
-import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261011-public13";
-import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261011-public13";
-import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261011-public13";
-import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261011-public13";
-import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261011-public13";
-import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261011-public13";
-import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261011-public13";
-import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261011-public13";
+import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261012-battle1';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-battle1';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-battle1';
+import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261012-battle1";
+import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261012-battle1";
+import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261012-battle1";
+import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261012-battle1";
+import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261012-battle1";
+import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261012-battle1";
+import { Sha256 } from "./sha256.mjs?v=20261012-battle1";
+import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261012-battle1";
+import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261012-battle1";
+import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261012-battle1";
+import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261012-battle1";
+import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261012-battle1";
+import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261012-battle1";
+import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261012-battle1";
+import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261012-battle1";
+import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261012-battle1";
+import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261012-battle1";
+import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261012-battle1";
+import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261012-battle1";
+import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261012-battle1";
+import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261012-battle1";
+import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261012-battle1";
+import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261012-battle1";
+import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261012-battle1";
 
 const SECTOR_SIZE = 2352;
 const SECTOR_USER_OFFSET = 16;
@@ -2129,6 +2129,176 @@ export async function previewEditorRecord(session, kind, recordIndex, { signal }
   return Object.freeze({ kind, recordIndex, image, imageSource: referenceIndex === null ? "record" : "reference" });
 }
 
+// Battle pictures are read only, and stay owned by the authenticated session.
+// No decoded pixels, catalog or additional file is added to an export receipt.
+const BATTLE_FILE_NAMES = new Set([
+  'C_ROBOT.BIN', 'EFFECT.BIN', 'E_SPR.BIN', 'E_BNK.BIN', 'E_PAL.BIN',
+  'E_SC.BIN', 'D_ANIME.BIN', 'TSR_OBJ.BIN', 'BTSR.BIN', '0',
+]);
+const BATTLE_MODES = new Set(['attack', 'hit', 'evade', 'defense', 'destroyed']);
+const battleSessionCache = new WeakMap();
+const MAX_BATTLE_PIXEL_BYTES = 16 * 1024 * 1024;
+
+function battleChoices(plan) {
+  return Object.fromEntries(['defenseOptions', 'evadeOptions'].map(key => {
+    const rows = Array.isArray(plan[key]) ? plan[key] : [];
+    const choices = rows.filter(item => typeof item?.id === 'string'
+      && /^[a-z][a-z0-9-]{0,39}$/.test(item.id) && typeof item.label === 'string'
+      && item.label.length > 0 && item.label.length <= 80)
+      .filter((item, index, values) => values.findIndex(other => other.id === item.id) === index)
+      .slice(0, 16).map(({ id, label }) => Object.freeze({ id, label }));
+    return [key, Object.freeze(choices)];
+  }));
+}
+
+function battleCache(session) {
+  if (!session || typeof session.sessionToken !== 'string' || !session.sourceBlob
+    || !Array.isArray(session.root) || !session.descriptor
+    || !['srwf-f', 'srwf-final'].includes(session.descriptor.gameId)) {
+    fail('EDITOR_SESSION_MISSING', 'The authenticated editor session is no longer available.');
+  }
+  let cache = battleSessionCache.get(session);
+  if (!cache) {
+    cache = { files: new Map(), bytes: new Map(), rows: null };
+    battleSessionCache.set(session, cache);
+  }
+  return cache;
+}
+
+async function readBattleFile(session, fileName, signal) {
+  if (!BATTLE_FILE_NAMES.has(fileName)) fail('EDITOR_PREVIEW_INVALID', 'Unknown battle picture file.');
+  const cache = battleCache(session);
+  checkAbort(signal);
+  if (cache.bytes.has(fileName)) return cache.bytes.get(fileName);
+  let file = cache.files.get(fileName);
+  if (!file) {
+    if (fileName === 'C_ROBOT.BIN') file = session.mediaFiles?.robot;
+    if (!file) {
+      const files = await locateIsoFiles(session.sourceBlob, signal, [fileName]);
+      file = files[fileName.replace(/\.BIN$/, '').toLowerCase()];
+    }
+    cache.files.set(fileName, file);
+  }
+  const header = new Uint8Array(await session.sourceBlob.slice(file.extentLba * SECTOR_SIZE,
+    file.extentLba * SECTOR_SIZE + 16).arrayBuffer());
+  checkAbort(signal);
+  const bytes = await readCdUserExtent(session.sourceBlob, file.extentLba, file.byteLength,
+    { mode: header[15], signal, checksum: true });
+  checkAbort(signal);
+  cache.bytes.set(fileName, bytes);
+  return bytes;
+}
+
+export async function catalogEditorBattleAssets(session, request, { signal } = {}) {
+  battleCache(session);
+  const fileName = ownData(request, 'fileName');
+  if (!BATTLE_FILE_NAMES.has(fileName) || ['0', 'TSR_OBJ.BIN', 'BTSR.BIN', 'E_PAL.BIN', 'E_SC.BIN'].includes(fileName)) {
+    fail('EDITOR_PREVIEW_INVALID', 'Unknown battle picture catalog.');
+  }
+  const { inspectBattleAssetFile } = await import('./editor-battle-assets.mjs?v=20261012-battle1');
+  const bytes = await readBattleFile(session, fileName, signal);
+  checkAbort(signal);
+  return inspectBattleAssetFile(bytes, { fileName, cursor: ownData(request, 'cursor') ?? 0,
+    pageSize: ownData(request, 'pageSize') ?? 16 });
+}
+
+export async function previewEditorBattleAsset(session, request, { signal } = {}) {
+  battleCache(session);
+  const fileName = ownData(request, 'fileName'), assetKey = ownData(request, 'assetKey');
+  if (!BATTLE_FILE_NAMES.has(fileName) || ['0', 'TSR_OBJ.BIN', 'BTSR.BIN', 'E_PAL.BIN', 'E_SC.BIN'].includes(fileName)
+    || typeof assetKey !== 'string'
+    || assetKey.length > 160 || !assetKey.startsWith(`battle1:${fileName}:`)) {
+    fail('EDITOR_PREVIEW_INVALID', 'Invalid battle picture identity.');
+  }
+  const { decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261012-battle1');
+  const bytes = await readBattleFile(session, fileName, signal);
+  checkAbort(signal);
+  const image = decodeBattleAsset(bytes, assetKey);
+  checkAbort(signal);
+  return Object.freeze({ ...image, assetKey, fileName });
+}
+
+export async function previewEditorBattle(session, request, { signal } = {}) {
+  const cache = battleCache(session), gameId = session.descriptor.gameId;
+  const weaponIndex = ownData(request, 'weaponIndex'), unitIndex = ownData(request, 'unitIndex');
+  const mode = ownData(request, 'mode'), defenseId = ownData(request, 'defenseId');
+  if (!Number.isSafeInteger(weaponIndex) || weaponIndex < 1
+    || !Number.isSafeInteger(unitIndex) || unitIndex < 1 || !BATTLE_MODES.has(mode)
+    || defenseId !== undefined && (typeof defenseId !== 'string' || !/^[a-z][a-z0-9-]{0,39}$/.test(defenseId))) {
+    fail('EDITOR_PREVIEW_INVALID', 'Invalid battle preview selection.');
+  }
+  checkAbort(signal);
+  if (!cache.rows) cache.rows = buildEditorRows(session.root, session.decoded, gameId);
+  const weapon = cache.rows.weapons.find(row => row.recordIndex === weaponIndex);
+  const unit = cache.rows.units.find(row => row.recordIndex === unitIndex);
+  if (!weapon || !unit || !(weapon.owners ?? []).some(owner => owner.unit === unitIndex)) {
+    fail('EDITOR_PREVIEW_INVALID', 'The selected unit does not have a verified link to this weapon.');
+  }
+  const { resolveBattleAssetPlan } = await import('./editor-battle-mapping.mjs?v=20261012-battle1');
+  const plan = await resolveBattleAssetPlan({ gameId, weapon, unit, mode, defenseId,
+    decodedTsr: session.decoded, root: session.root,
+    readFile: fileName => readBattleFile(session, fileName, signal) });
+  checkAbort(signal);
+  const identity = { gameId, weaponIndex, unitIndex, mode, ...(defenseId === undefined ? {} : { defenseId }) };
+  if (!plan || !['ready', 'unmapped', 'unsupported', 'empty'].includes(plan.status)) {
+    fail('EDITOR_PREVIEW_INVALID', 'The battle picture mapping is invalid.');
+  }
+  const choices = battleChoices(plan);
+  if (plan.status !== 'ready') return Object.freeze({ ...plan, ...identity, ...choices, assets: Object.freeze([]) });
+  if (!Array.isArray(plan.assets) || !plan.assets.length || plan.assets.length > 64) {
+    fail('EDITOR_PREVIEW_INVALID', 'The battle picture mapping exceeds its inspection limit.');
+  }
+  const { inspectBattleAssetRecord, decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261012-battle1');
+  const assets = [], diagnostics = [], seen = new Set(), diagnosed = new Set();
+  let pixelBytes = 0;
+  for (const reference of plan.assets) {
+    checkAbort(signal);
+    const fileName = ownData(reference, 'fileName');
+    if (!Number.isSafeInteger(reference.recordOffset) || reference.recordOffset < 0
+      || !Number.isSafeInteger(reference.recordEnd) || reference.recordEnd <= reference.recordOffset
+      || reference.subIndex !== undefined && (!Number.isSafeInteger(reference.subIndex)
+        || reference.subIndex < 0 || reference.subIndex > 4095)) {
+      fail('EDITOR_PREVIEW_INVALID', 'The battle picture mapping has invalid record boundaries.');
+    }
+    const bytes = await readBattleFile(session, fileName, signal);
+    let cursor = 0, page, pages = 0;
+    do {
+      checkAbort(signal);
+      page = inspectBattleAssetRecord(bytes, { fileName, recordOffset: reference.recordOffset,
+        recordEnd: reference.recordEnd, cursor, pageSize: 48 });
+      for (const diagnostic of page.diagnostics ?? []) {
+        if (Number.isSafeInteger(reference.subIndex) && Number.isSafeInteger(diagnostic.subIndex)
+          && diagnostic.subIndex !== reference.subIndex) continue;
+        const key = `${fileName}:${diagnostic.recordOffset}:${diagnostic.subIndex}:${diagnostic.code}`;
+        if (diagnosed.has(key) || diagnostics.length >= 64) continue;
+        diagnosed.add(key);
+        diagnostics.push(Object.freeze({ fileName, ...diagnostic }));
+      }
+      for (const entry of page.assets) {
+        if (entry.recordOffset !== reference.recordOffset) continue;
+        if (Number.isSafeInteger(reference.subIndex) && entry.subIndex !== reference.subIndex) continue;
+        if (seen.has(entry.assetKey)) continue;
+        const image = decodeBattleAsset(bytes, entry.assetKey);
+        pixelBytes += image.pixels.byteLength;
+        if (pixelBytes > MAX_BATTLE_PIXEL_BYTES || assets.length >= 128) {
+          fail('EDITOR_PREVIEW_INVALID', 'The battle pictures exceed their memory limit.');
+        }
+        seen.add(entry.assetKey);
+        assets.push(Object.freeze({ ...image, assetKey: entry.assetKey, fileName,
+          recordIndex: reference.recordIndex ?? null, subIndex: entry.subIndex, role: reference.role ?? null }));
+      }
+      cursor = page.nextCursor;
+      if (++pages > 4096) fail('EDITOR_PREVIEW_INVALID', 'The battle picture catalog exceeds its inspection limit.');
+    } while (page.hasMore);
+  }
+  checkAbort(signal);
+  return Object.freeze({ ...identity, ...choices, status: assets.length ? 'ready' : diagnostics.length ? 'unsupported' : 'empty',
+    assets: Object.freeze(assets), diagnostics: Object.freeze(diagnostics),
+    message: assets.length ? `${plan.message ?? ''}${diagnostics.length ? ' · 일부 그림 형식 미지원' : ''}`
+      : diagnostics.length ? '연결된 그림 형식은 아직 지원하지 않습니다.' : '연결된 그림 자료를 읽지 못했습니다.',
+    evidence: plan.evidence ?? null });
+}
+
 // The request lists of the three writers are read the same way: an array with exactly one entry per authenticated
 // record, every index present as an own data property. A sparse array (a hole is skipped by forEach and every), a
 // non-array, a list of the wrong length and a list that would only be completed by the prototype chain are all refused
@@ -2834,7 +3004,7 @@ async function createProfile(trust, session, options = {}) {
   rawMasks.push([file.recordLba * SECTOR_SIZE + MODE1_EDC_OFFSET, SECTOR_SIZE - MODE1_EDC_OFFSET, 255]);
   rawMasks.sort((a, b) => a[0] - b[0]);
   const scenario = session.scenario;
-  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261011-public13') : null;
+  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261012-battle1') : null;
   const completeRawMasks = scenario ? scenarioModule.mergeFullByteMasks([...rawMasks,
     ...scenarioModule.scenarioRawMasks(scenario.files, scenario.inspected)]) : rawMasks;
   const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId);
@@ -3239,7 +3409,7 @@ function scenarioFileIdentity(files) {
 }
 
 async function inspectDiscScenario(trust, blob, actualHash, gameId, files, units, pilots, signal) {
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public13');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261012-battle1');
   const identity = scenarioFileIdentity(files), target = ownEntry(trust.targets, actualHash);
   let scenarioLayout;
   if (target) scenarioLayout = target.kind === 'stock' ? 'stock' : 'latest';
@@ -3728,7 +3898,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   if (session.scenario && (deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || mapEdits.length)) {
     const current = session.scenario, gameId = session.descriptor.gameId;
     const [{ repackScenarioDeployments }, { repackMapTiles }] = await Promise.all([
-      import('./editor-deployments.mjs?v=20261011-public13'), import('./editor-map-archive.mjs?v=20261011-public13'),
+      import('./editor-deployments.mjs?v=20261012-battle1'), import('./editor-map-archive.mjs?v=20261012-battle1'),
     ]);
     [scenarioChange, mapChange] = await Promise.all([
       deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length ? repackScenarioDeployments(current.scenarioBytes, gameId, current.inspected.maps, current.tables,
@@ -3773,7 +3943,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
     outputBlob = result.outputBlob; changedSectors.push(...result.changedSectors);
   }
   bytesChanged += new Set(changedSectors).size * SECTOR_SIZE;
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public13');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261012-battle1');
   const checked = inspectScenarioScopes({ gameId: session.descriptor.gameId,
     scenarioBytes: scenarioChange?.bytes ?? current.scenarioBytes, mapBytes: mapChange?.bytes ?? current.mapBytes,
     bankBytes: current.bankBytes, tables: current.tables, sectorMode: current.inspected.scope.scenario.sectorMode,

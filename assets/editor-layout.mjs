@@ -24,7 +24,7 @@ const DEFINITIONS = {
     ['성장', ['.pilot-growth-grid label']], ['지형', ['.pilot-terrain-panel']],
   ],
   weapon: [
-    ['무기 수치', ['.weapon-scope-note']],
+    ['무기 그림', ['.weapon-preview-panel', '.weapon-scope-note']],
     ...['attack','hit','critical','minRange','maxRange','energy','ammo','requiredMorale','requiredSkill'].map(field => ['무기 수치', [`.weapon-detail-grid label:has([data-editor-field="${field}"])`]]),
     ['무기 지형', ['.weapon-terrain-panel']], ['사용 기체', ['.weapon-owner-panel']],
   ],
@@ -85,7 +85,7 @@ export function createEditorLayout(type, panel, form, onSelect) {
       rows = [['portrait','points'], ['combat','combat'], ['mental','mental'], ['skills','skills'], ['growth','growth'], ['terrain','terrain']];
       columns = 'minmax(88px, 26%) minmax(0, 1fr)';
     } else {
-      rows = [['note'],['detail'],['terrain'],['owners']]; columns = 'minmax(0, 1fr)';
+      rows = [['note'],['preview'],['detail'],['terrain'],['owners']]; columns = 'minmax(0, 1fr)';
     }
     rows = rows.filter(row => row.some(area => present.has(area))).map(row => row.map(area => present.has(area) ? area : '.'));
     if (type === 'unit' && !present.has('image')) { rows = rows.map(row => [row.find(area => area !== '.')]); columns = 'minmax(0, 1fr)'; }

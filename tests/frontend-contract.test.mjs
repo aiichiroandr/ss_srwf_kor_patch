@@ -28,6 +28,7 @@ class FakeClassList {
 
 class FakeElement {
   constructor({ status = null, tagName = "div" } = {}) {
+    this.ownerDocument = globalThis.document;
     this.attributes = new Map();
     this.children = [];
     this.classList = new FakeClassList();
@@ -62,6 +63,14 @@ class FakeElement {
   close() {
     this.open = false;
     this.removeAttribute("open");
+  }
+
+  closest(selector) {
+    for (let node = this; node; node = node.parentNode) {
+      if (selector.startsWith('.') && node.classList.contains(selector.slice(1))) return node;
+      if (node.tagName === selector.toUpperCase()) return node;
+    }
+    return null;
   }
 
   focus() {}
@@ -345,7 +354,7 @@ const WIZARD_STEP_COPY = /\bSTEP(?:\s*[123])?\b(?!\s*=)/i;
 // 배포 자산의 캐시 개정판은 하나뿐이다. 이 상수를 고쳐야만 고정값이 함께
 // 움직이도록 한 곳에만 적는다. 여러 시험이 각자 literal 을 들고 있으면
 // 개정판을 올릴 때 일부만 따라가서 모듈이 두 번 적재된다.
-const STATIC_ASSET_REVISION = "20261011-public13";
+const STATIC_ASSET_REVISION = "20261012-battle1";
 
 test("public page exposes the legal and accessibility contracts", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
