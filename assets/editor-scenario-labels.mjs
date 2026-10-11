@@ -1,4 +1,4 @@
-import { bindCompletionScenarioTitleHints, completionTitleHintText } from './editor-scenario-completion-title-hints.mjs?v=20261011-public12';
+import { bindCompletionScenarioTitleHints, completionTitleHintText } from './editor-scenario-completion-title-hints.mjs?v=20261011-public13';
 // Read-only labels. Selector numbers, physical bodies and displayed episode
 // numbers are different coordinates; this module never derives an episode.
 const TITLE_CELLS = Object.freeze({ 'srwf-f': 74, 'srwf-final': 192 });

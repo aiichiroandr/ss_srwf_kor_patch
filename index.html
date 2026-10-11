@@ -15,10 +15,10 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 디스크 이미지를 기기 안에서 검증하고, 한글화 또는 게임 데이터 편집 후 BIN/CUE로 저장합니다."
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20261011-public12">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261011-public12">
-    <script type="module" src="assets/app.mjs?v=20261011-public12"></script>
-    <script type="module" src="assets/user-guide.mjs?v=20261011-public12"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20261011-public13">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261011-public13">
+    <script type="module" src="assets/app.mjs?v=20261011-public13"></script>
+    <script type="module" src="assets/user-guide.mjs?v=20261011-public13"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -647,6 +647,14 @@
                   <div class="record-actions"><p class="record-count" id="pilotListCount"></p><button class="record-tool" id="pilotBulkButton" type="button" aria-haspopup="dialog" aria-controls="editorSearchDialog" disabled>일괄 편집</button></div>
                 </aside>
                 <div class="game-screen-shell">
+                  <section class="pilot-hero-links game-panel" id="pilotHeroLinks" aria-labelledby="pilotHeroLinksTitle" hidden>
+                    <div class="pilot-hero-links-header">
+                      <h4 id="pilotHeroLinksTitle">주인공 원본 편집</h4>
+                      <button type="button" class="record-tool" id="pilotHeroReturnButton" aria-label="주인공 자리로 돌아가기" hidden>자리로</button>
+                    </div>
+                    <div class="pilot-hero-targets" id="pilotHeroTargets"></div>
+                    <p class="pilot-hero-links-note" id="pilotHeroLinksNote"></p>
+                  </section>
                   <div class="editor-game-screen pilot-game-screen" id="pilotStatsForm">
                     <figure class="editor-visual is-portrait game-panel pilot-portrait-panel" data-editor-section="main" id="pilotPreview" aria-live="polite">
                       <canvas id="pilotPreviewImage" width="40" height="40" aria-label="선택한 파일럿의 실제 얼굴 이미지"></canvas>

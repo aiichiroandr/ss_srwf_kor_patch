@@ -20,14 +20,14 @@
 // still has the `from` value, is a conflict when it has another value, is already done when it has the `to` value, and is
 // skipped (with a reason) when the session could not take it: a record that does not exist or is read-only, a structural
 // unit ability (editor-locks.mjs), a terrain grade the writer refuses, a skill list the record cannot hold.
-import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261011-public12';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261011-public12';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public12';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public12';
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261011-public12";
-import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261011-public12";
-import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261011-public12";
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public12";
+import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261011-public13';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261011-public13';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public13';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public13';
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261011-public13";
+import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261011-public13";
+import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261011-public13";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public13";
 import {
   DEFAULT_CONSUMER_LIMIT,
   countConsumers,
@@ -39,10 +39,10 @@ import {
   skillRequest,
   spiritRequest, spiritCatalog, isSpiritLocked,
   pilotPairRequirement, syncPilotExpansionBudget,
-} from "./editor-skill-list.mjs?v=20261011-public12";
+} from "./editor-skill-list.mjs?v=20261011-public13";
 
-import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261011-public12";
-import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261011-public12";
+import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261011-public13";
+import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261011-public13";
 
 export const PRESET_FORMAT = "srwf.editor-preset";
 export const PRESET_VERSION = 1;
@@ -136,7 +136,9 @@ export function diffEditorRows(kind, rows, { fields = PRESET_FIELDS[kind], nameO
     if (["deployment", "event", "objective", "reinforcement", "map"].includes(kind) && row?.editable === false) continue;
     const original = row?.original;
     if (!original) continue;
-    const changed = fields
+    // A head-less learning table has no numeric pilot header. Its parsed
+    // prefix bytes remain present for unchanged writer echoes, never edits.
+    const changed = kind === "pilot" && row.statsValid === false ? [] : fields
       .filter((field) => isFieldValueInBounds(kind, field, original[field]) && isFieldValueInBounds(kind, field, row[field]) && row[field] !== original[field])
       .map((field) => Object.freeze({ field, from: original[field], to: row[field] }));
     let skills = null;
@@ -573,12 +575,14 @@ function planEntry(kind, entry, row, isAlias, gameId, unitCount, globalObjective
   }
   if (entry.spirits) items.push({ kind, recordIndex: entry.recordIndex, name: entry.name, field: "spirits",
     from: entry.spirits.from, to: entry.spirits.to, current: null, status: null, reason: null });
+  const listOnlyPilot = kind === "pilot" && row?.recordKind === "hero-list-template" && row.statsValid === false;
   const recordReason = !row ? (isAlias ? "alias" : "missing")
-    : row.editable === false || row.statsValid === false ? "read-only" : null;
+    : row.editable === false || row.statsValid === false && !listOnlyPilot ? "read-only" : null;
   if (recordReason) return items.map((item) => skipItem(item, recordReason));
   for (const item of items) {
     if (item.field === "skills") planSkills(item, row, gameId);
     else if (item.field === "spirits") planSpirits(item, row);
+    else if (row.statsValid === false) skipItem(item, "read-only");
     else planField(kind, item, row, gameId,unitCount,objectiveContext);
   }
   if (kind === "unit") guardUnitAbilities(items, row);

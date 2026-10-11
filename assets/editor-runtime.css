@@ -1210,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261011-public12');
+  --frame: url('./runtime-panel-frame.svg?v=20261011-public13');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -2239,6 +2239,79 @@ body[data-view="editor"] .editor-region {
     "portrait combat points"
     "mental mental skills"
     "growth growth terrain";
+}
+
+.pilot-hero-links {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0 0 6px;
+  padding: 10px;
+  color: var(--ed-text);
+  font: 500 var(--ed-label) / 1.3 "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+
+.pilot-hero-links[hidden], .pilot-game-screen[hidden] { display: none !important; }
+
+.pilot-hero-links-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pilot-hero-links h4 { margin: 0; white-space: nowrap; }
+.pilot-hero-links-header .record-tool { min-height: 36px; white-space: nowrap; }
+.pilot-hero-targets { display: grid; gap: 10px; }
+.pilot-hero-targets:empty { display: none; }
+.pilot-hero-targets > .pilot-hero-target { margin-top: 8px; }
+.pilot-hero-target-group { min-width: 0; }
+.pilot-hero-target-group h4 { margin: 10px 0 6px; color: #a6d7e2; }
+.pilot-hero-target-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.pilot-hero-target-grid > :only-child { grid-column: 1 / -1; }
+.pilot-hero-target {
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 6px;
+  border: 1px solid #4c878f;
+  background: #04151e;
+  color: #eef4e6;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pilot-hero-target:hover, .pilot-hero-target:focus-visible { border-color: #a1e166; background: #13341f; }
+.pilot-hero-target:disabled { color: #82918d; cursor: not-allowed; }
+.pilot-hero-links-note { margin: 8px 0 0; color: #a7b6ae; white-space: nowrap; }
+.pilot-hero-links-note:empty { display: none; }
+.pilot-hero-links[data-source] { display: flex; flex-direction: row; align-items: center; gap: 6px; padding: 6px; }
+.pilot-hero-links[data-source] .pilot-hero-links-header,
+.pilot-hero-links[data-source] .pilot-hero-targets { display: contents; }
+.pilot-hero-links[data-source] h4 { flex: 1 1 auto; }
+.pilot-hero-links[data-source] .pilot-hero-target { order: 2; min-height: 36px; margin: 0; }
+.pilot-hero-links[data-source] #pilotHeroReturnButton { order: 3; }
+.pilot-hero-links[data-source] .pilot-hero-links-note { display: none; }
+.editor-data-panel[data-hero-view="slot"] .editor-page-switch [data-editor-page]:not([data-editor-page="list"]) { display: none; }
+.pilot-game-screen[data-hero-source="list"] :is(.pilot-portrait-panel, .pilot-points-panel, .pilot-combat-panel, .pilot-growth-panel, .pilot-terrain-panel),
+.pilot-game-screen[data-hero-source="head"] :is(.pilot-portrait-panel, .pilot-mental-panel, .pilot-special-panel) { display: none !important; }
+.pilot-game-screen[data-hero-source="head"] {
+  grid-template-areas: "combat combat points" "growth growth terrain";
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.pilot-game-screen[data-hero-source="list"] {
+  grid-template-areas: "mental mental skills";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+@container (max-width: 559px) {
+  .pilot-game-screen[data-hero-source="head"] {
+    grid-template-areas: "points" "combat" "growth" "terrain";
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pilot-game-screen[data-hero-source="list"] {
+    grid-template-areas: "mental" "skills";
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .pilot-portrait-panel { grid-area: portrait; }

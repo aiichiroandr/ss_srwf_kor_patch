@@ -1,8 +1,8 @@
 // Conditions inspect the current editor rows. Bulk edits use the preset planner's writer-domain checks;
 // no second binary writer and no game data. Unit/pilot and weapon grade encodings remain distinct.
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds } from "./editor-fields.mjs?v=20261011-public12";
-import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261011-public12";
-import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261011-public12";
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds } from "./editor-fields.mjs?v=20261011-public13";
+import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261011-public13";
+import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261011-public13";
 
 const TYPES = ["unit", "pilot", "weapon"];
 const TABLES = { unit: "units", pilot: "pilots", weapon: "weapons" };
@@ -28,7 +28,10 @@ export const filterField = (kind, key) => filterFields(kind).find(field => field
 export const gradeChoices = kind => kind === "weapon" ? WEAPON_GRADE_CHOICES : GRADE_CHOICES;
 export const gradeText = (kind, value) => kind === "weapon" ? weaponGradeLabel(value) : gradeLabel(value);
 export function filterValue(kind, row, key, isModified = () => false) {
-  if (!row || row.statsValid === false && key !== "modified") return null;
+  if (!row) return null;
+  const heroMembership = kind === "pilot" && row.recordKind === "hero-list-template"
+    && ["ability", "spirit"].includes(key);
+  if (row.statsValid === false && key !== "modified" && !heroMembership) return null;
   if (key === "modified") return Boolean(isModified(kind, row));
   if (TERRAIN.includes(key) && kind === "weapon") {
     return Number.isInteger(row.terrain) && row.terrain >= 0 && row.terrain <= 255 ? splitWeaponTerrain(row.terrain)[key] : null;

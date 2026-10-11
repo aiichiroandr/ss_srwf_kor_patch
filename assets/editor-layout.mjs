@@ -37,7 +37,16 @@ export function createEditorLayout(type, panel, form, onSelect) {
   const originals = new WeakMap(), containerOriginals = new WeakMap();
   function refreshGroups() {
     groups = DEFINITIONS[type].flatMap(([label, selectors], definitionIndex) => {
-      const found = selectors.flatMap(selector => [...form.querySelectorAll(selector)]);
+      if (type === 'pilot' && form.dataset.heroSource) {
+        const listGroup = label === '정신' || label === '특수';
+        if (form.dataset.heroSource === 'list' ? !listGroup : listGroup) return [];
+      }
+      const found = selectors.flatMap(selector => [...form.querySelectorAll(selector)]).filter(node => {
+        if (type !== 'pilot' || !form.dataset.heroSource) return true;
+        if (form.dataset.heroSource === 'head' && node.matches('.pilot-portrait-panel')) return false;
+        const listPanel = node.closest('.pilot-mental-panel, .pilot-special-panel');
+        return form.dataset.heroSource === 'list' ? Boolean(listPanel) : !listPanel;
+      });
       if (selectors.length === 1 && /(?:label|\.unit-special-row|\.pilot-mental-slot|\.pilot-runtime-skill)$/.test(selectors[0])) {
         const fallback = label === '특수' ? type === 'unit' ? '.unit-info-panel' : '.pilot-special-panel' : '.pilot-mental-panel';
         return found.length ? found.map((node, nodeIndex) => ({id: `${definitionIndex}:${nodeIndex}`, label, nodes: [node]})) : [{id: `${definitionIndex}:0`, label, nodes: [form.querySelector(fallback)].filter(Boolean)}];
@@ -65,6 +74,10 @@ export function createEditorLayout(type, panel, form, onSelect) {
     if (type === 'unit') {
       rows = [['image','vitals'], ['core','core'], ['abilities','abilities'], ['terrain','terrain'], ['weapons','weapons']];
       columns = 'minmax(100px, 26%) minmax(0, 1fr)';
+    } else if (type === 'pilot' && form.dataset.heroSource === 'head') {
+      rows = width >= 560 ? [['combat','combat','points'], ['growth','growth','terrain']]
+        : [['points'], ['combat'], ['growth'], ['terrain']];
+      columns = width >= 560 ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)';
     } else if (type === 'pilot' && width >= 560) {
       rows = [['portrait','combat','points'], ['mental','mental','skills'], ['growth','growth','terrain']];
       columns = 'minmax(88px, 20%) minmax(0, 1.4fr) minmax(0, 1fr)';

@@ -1,6 +1,6 @@
 // Shared, bounded root-8 and purpose-text evidence. Reading a byte pattern
 // does not authorize a write; callers must authenticate the canonical body.
-import { F_NAME_MAP, FINAL_NAME_MAP } from './editor-name-map.mjs?v=20261011-public12';
+import { F_NAME_MAP, FINAL_NAME_MAP } from './editor-name-map.mjs?v=20261011-public13';
 export const OBJECTIVE_RAM_CAPACITY = Object.freeze({ 'srwf-f':0x8000, 'srwf-final':0x9000 });
 const CAPACITY=OBJECTIVE_RAM_CAPACITY;
 const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
