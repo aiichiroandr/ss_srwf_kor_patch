@@ -280,6 +280,39 @@ WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST: dict[str, str] = {
         "86c7843f7984e79f75836e641184a1735d4591ef57ebcec27996ce9954e95c09"
     ),
 }
+# Retiring artifacts changes their public availability, never their historical
+# hashes or the ACCEPTED publication/canonical patch gates. The archive is local
+# verification metadata; the verifier never contacts Drive.
+RELEASE_ARCHIVE_PATH = "docs/RELEASE_ARCHIVE_20261011.json"
+RELEASE_ARCHIVE_SOURCE_COMMIT = "8346a78c417f019ece70bfa3fd502d676ba26999"
+RELEASE_ARCHIVE_SHA256: str | None = "90034ed2b166b02a568d99123daf8e3657db4d8297858bd31f68e925f7b25770"
+RETAINED_RELEASE_FAMILIES = frozenset({
+    "srwf-f-20260928-v0-5", "srwf-f-20260915-v0-4",
+    "srwf-final-20261005-v0-3", "srwf-final-20260928-v0-2",
+})
+RETAINED_RELEASE_IDS = frozenset(
+    f"{family}-{font}" for family in RETAINED_RELEASE_FAMILIES for font in "abc"
+)
+ARCHIVED_RELEASE_IDS = frozenset({
+    "srwf-f-20260814-v0-1", "srwf-f-20260814-v0-1-1",
+    "srwf-f-20260815-v0-1-2", "srwf-f-20260821-v0-2",
+    "srwf-f-20260823-v0-3", "srwf-final-20260814-v0-1",
+    "srwf-final-20260921-v0-1-a", "srwf-final-20260921-v0-1-b",
+    "srwf-final-20260921-v0-1-c",
+})
+ARCHIVED_WITHDRAWN_IDS = frozenset({
+    "srwf-f-20260814-v0-1", "srwf-f-20260821-v0-2", "srwf-final-20260814-v0-1",
+})
+
+
+def archived_artifact_paths(release_id: str) -> set[str]:
+    return {f"releases/{release_id}.json", f"receipts/{release_id}.acceptance.json",
+            f"patches/{release_id}.srwfp"}
+
+
+ARCHIVED_ARTIFACT_PATHS = frozenset(
+    path for release_id in ARCHIVED_RELEASE_IDS for path in archived_artifact_paths(release_id)
+)
 ACTIVE_WEB_SUFFIXES = {
     ".html", ".htm", ".shtml", ".xhtml", ".xht", ".svg",
     ".xml", ".xsl", ".xslt",
@@ -2148,6 +2181,26 @@ def validate_font_release_groups(releases: list[Any]) -> None:
             complain(f"manifest/releases.json: font release group {group_id} must share one label")
 
 
+def validate_retained_release_families(releases: list[Any], games: list[Any]) -> None:
+    """Apply the reviewed two-family policy only to the archive-backed public catalog."""
+    ids = [row.get("id") for row in releases if isinstance(row, dict)]
+    if len(ids) != 12 or any(not isinstance(value, str) for value in ids) or set(ids) != RETAINED_RELEASE_IDS:
+        complain("manifest/releases.json: archive retention requires exactly the 12 retained release ids")
+    for game_id in GAME_DEFINITIONS:
+        groups: dict[str, list[str | None]] = {}
+        for row in releases:
+            if isinstance(row, dict) and row.get("gameId") == game_id and isinstance(row.get("id"), str):
+                family, font = font_release_identity(row)
+                groups.setdefault(family, []).append(font)
+        if len(groups) != 2 or any(sorted(fonts, key=str) != ["a", "b", "c"] for fonts in groups.values()):
+            complain(f"manifest/releases.json: {game_id} must retain two complete a/b/c version families")
+        expected_latest = "srwf-f-20260928-v0-5" if game_id == "srwf-f" else "srwf-final-20261005-v0-3"
+        game = next((row for row in games if isinstance(row, dict) and row.get("id") == game_id), {})
+        default = game.get("defaultReleaseId")
+        if not isinstance(default, str) or default.removesuffix("-a").removesuffix("-b").removesuffix("-c") != expected_latest:
+            complain(f"manifest/releases.json: {game_id} default must use its retained latest family")
+
+
 def validate_index(files: list[Path]) -> None:
     index = load_json(INDEX_PATH)
     required = {"$schema", "schema", "project", "games", "stock_profiles", "releases"}
@@ -2245,6 +2298,9 @@ def validate_index(files: list[Path]) -> None:
     if not isinstance(releases, list):
         complain("manifest/releases.json: releases must be an array")
         return
+    archive_enabled = any(relative(path) == RELEASE_ARCHIVE_PATH for path in files)
+    if archive_enabled:
+        validate_retained_release_families(releases, games if isinstance(games, list) else [])
     status = index.get("project", {}).get("status") if isinstance(index.get("project"), dict) else None
     if status == "NO_ACCEPTED_RELEASE" and releases:
         complain("NO_ACCEPTED_RELEASE requires an empty releases array")
@@ -2282,6 +2338,9 @@ def validate_index(files: list[Path]) -> None:
             ids.add(row["id"])
             if game_id in release_ids_by_game:
                 release_ids_by_game[game_id].add(row["id"])
+        if archive_enabled and row.get("id") in ARCHIVED_RELEASE_IDS:
+            complain(f"archived release must not be indexed: {row['id']}")
+            continue
         manifest_ref, patch_ref, receipt_ref = validate_release_manifest(row, stock_profiles_by_id)
         if manifest_ref:
             referenced_manifests.add(manifest_ref)
@@ -2354,6 +2413,9 @@ def validate_index(files: list[Path]) -> None:
 
 def validate_withdrawn_release_artifacts(files: list[Path]) -> None:
     present = {relative(path): path for path in files}
+    if RELEASE_ARCHIVE_PATH in present or RELEASE_ARCHIVE_SHA256 is not None:
+        validate_release_archive(files)
+        return
     for name, expected_sha256 in WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST.items():
         path = present.get(name)
         if path is None:
@@ -2362,6 +2424,131 @@ def validate_withdrawn_release_artifacts(files: list[Path]) -> None:
             complain(f"withdrawn historical artifact is not a regular file: {name}")
         elif sha256_file(path) != expected_sha256:
             complain(f"withdrawn historical artifact hash mismatch: {name}")
+
+
+def validate_release_archive(files: list[Path]) -> None:
+    """Prove local archive metadata covers every removed artifact without network I/O."""
+    present = {relative(path): path for path in files}
+    path = present.get(RELEASE_ARCHIVE_PATH)
+    if path is None or path.is_symlink() or not path.is_file():
+        complain("release archive: verified archive metadata is missing or not a regular file")
+        return
+    if not isinstance(RELEASE_ARCHIVE_SHA256, str) or sha256_file(path) != RELEASE_ARCHIVE_SHA256:
+        complain("release archive: metadata SHA-256 is not the verified pinned receipt")
+    archive = load_json(path)
+    if not exact_keys(archive, {"schema", "sourceCommit", "retainedReleaseIds", "archivedReleases", "backup"}, "release archive"):
+        return
+    assert isinstance(archive, dict)
+    if archive.get("schema") != "srwf-kor.release-archive.v1" or archive.get("sourceCommit") != RELEASE_ARCHIVE_SOURCE_COMMIT:
+        complain("release archive: schema or source commit is not pinned")
+    retained = archive.get("retainedReleaseIds")
+    if not isinstance(retained, list) or len(retained) != 12 or any(not isinstance(value, str) for value in retained) or set(retained) != RETAINED_RELEASE_IDS:
+        complain("release archive: retained release ids are not the reviewed 12 releases")
+    records = archive.get("archivedReleases")
+    if not isinstance(records, list) or len(records) != 9:
+        complain("release archive: exactly the nine archived release records are required")
+        records = []
+    artifact_keys: set[tuple[str, int, str]] = set()
+    release_ids: list[str] = []
+    for number, record in enumerate(records):
+        label = f"release archive record {number}"
+        if not exact_keys(record, {"id", "gameId", "previousState", "artifacts"}, label):
+            continue
+        assert isinstance(record, dict)
+        release_id = record.get("id")
+        if not isinstance(release_id, str) or release_id not in ARCHIVED_RELEASE_IDS:
+            complain(f"{label}: release id is not an archived release")
+            continue
+        release_ids.append(release_id)
+        game_id = "srwf-final" if release_id.startswith("srwf-final-") else "srwf-f"
+        expected_state = "WITHDRAWN" if release_id in ARCHIVED_WITHDRAWN_IDS else "INDEXED_ACCEPTED"
+        if record.get("gameId") != game_id or record.get("previousState") != expected_state:
+            complain(f"{label}: game or previous state does not match the historical decision")
+        artifacts = record.get("artifacts")
+        if not isinstance(artifacts, list) or len(artifacts) != 3:
+            complain(f"{label}: the original artifact triplet is required")
+            continue
+        names: list[str] = []
+        for artifact in artifacts:
+            if not exact_keys(artifact, {"path", "bytes", "sha256"}, f"{label} artifact"):
+                continue
+            assert isinstance(artifact, dict)
+            name, size, digest = artifact.get("path"), artifact.get("bytes"), artifact.get("sha256")
+            if not isinstance(name, str) or name not in archived_artifact_paths(release_id):
+                complain(f"{label}: artifact path does not match its release")
+                continue
+            names.append(name)
+            if type(size) is not int or not 1 <= size <= PATCH_MAX or not isinstance(digest, str) or not HEX64.fullmatch(digest):
+                complain(f"{label}: artifact length or SHA-256 is invalid")
+                continue
+            original = WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST.get(name)
+            if original is not None and digest != original:
+                complain(f"{label}: original withdrawn artifact SHA-256 changed")
+            artifact_keys.add((name, size, digest))
+        if len(names) != 3 or set(names) != archived_artifact_paths(release_id):
+            complain(f"{label}: artifact paths must be the exact triplet without duplicates")
+    if len(release_ids) != 9 or set(release_ids) != ARCHIVED_RELEASE_IDS:
+        complain("release archive: archived ids are missing, duplicated, or unreviewed")
+
+    backup = archive.get("backup")
+    verified_entries: set[tuple[str, int, str]] = set()
+    if exact_keys(backup, {"folderUrl", "archiveFiles"}, "release archive backup"):
+        assert isinstance(backup, dict)
+        folder = backup.get("folderUrl")
+        if not isinstance(folder, str) or not re.fullmatch(r"https://drive\.google\.com/drive/folders/[A-Za-z0-9_-]+(?:\?usp=[A-Za-z0-9_-]+)?", folder):
+            complain("release archive backup: folder URL is not a Drive folder")
+        containers = backup.get("archiveFiles")
+        if not isinstance(containers, list) or not 1 <= len(containers) <= 16:
+            complain("release archive backup: 1-16 verified archive files are required")
+            containers = []
+        file_ids: set[str] = set()
+        for number, container in enumerate(containers):
+            label = f"release archive backup file {number}"
+            if not exact_keys(container, {"fileId", "fileName", "bytes", "sha256", "md5", "url", "readbackVerified", "entries"}, label):
+                continue
+            assert isinstance(container, dict)
+            file_id = container.get("fileId")
+            url = container.get("url")
+            if not isinstance(file_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{8,200}", file_id) or file_id in file_ids:
+                complain(f"{label}: file id is invalid or duplicated")
+            else:
+                file_ids.add(file_id)
+            if not isinstance(url, str) or not re.fullmatch(r"https://drive\.google\.com/file/d/" + re.escape(str(file_id)) + r"/view(?:\?usp=[A-Za-z0-9_-]+)?", url):
+                complain(f"{label}: URL does not identify the archived Drive file")
+            filename = container.get("fileName")
+            if not isinstance(filename, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,199}\.zip", filename):
+                complain(f"{label}: file name must be a plain ZIP name")
+            if type(container.get("bytes")) is not int or not 1 <= container["bytes"] <= JS_SAFE_INTEGER_MAX:
+                complain(f"{label}: archive length is invalid")
+            if not isinstance(container.get("sha256"), str) or not HEX64.fullmatch(container["sha256"]):
+                complain(f"{label}: archive SHA-256 is invalid")
+            if not isinstance(container.get("md5"), str) or not re.fullmatch(r"[a-f0-9]{32}", container["md5"]):
+                complain(f"{label}: archive MD5 is invalid")
+            if container.get("readbackVerified") is not True:
+                complain(f"{label}: Drive readback verification must be true")
+            entries = container.get("entries")
+            if not isinstance(entries, list) or not 1 <= len(entries) <= 4096:
+                complain(f"{label}: verified archive entries are missing")
+                continue
+            names = set()
+            for entry in entries:
+                if not exact_keys(entry, {"path", "bytes", "sha256"}, f"{label} entry"):
+                    continue
+                assert isinstance(entry, dict)
+                name, size, digest = entry.get("path"), entry.get("bytes"), entry.get("sha256")
+                if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*", name) or any(part in {".", ".."} for part in name.split("/")) or name in names or PurePosixPath(name).suffix not in {".srwfp", ".json", ".md"}:
+                    complain(f"{label}: entry path is unsafe, duplicated, or not bounded release metadata")
+                    continue
+                names.add(name)
+                if type(size) is not int or not 1 <= size <= PATCH_MAX or not isinstance(digest, str) or not HEX64.fullmatch(digest):
+                    complain(f"{label}: entry length or SHA-256 is invalid")
+                    continue
+                if container.get("readbackVerified") is True:
+                    verified_entries.add((name, size, digest))
+    for name, _, _ in sorted(artifact_keys - verified_entries):
+        complain(f"release archive: removed artifact lacks exact verified backup entry: {name}")
+    for name in sorted(ARCHIVED_ARTIFACT_PATHS & present.keys()):
+        complain(f"archived release artifact must not be reintroduced: {name}")
 
 
 class ActiveMarkupInspector(HTMLParser):

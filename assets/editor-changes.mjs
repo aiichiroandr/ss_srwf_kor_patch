@@ -1,5 +1,5 @@
-import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261011-public9';
-import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public9';
+import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261011-public10';
+import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public10';
 // The change list of the editor and its preset file: the button at the bottom of the editor (the change count) opens a
 // dialog that lists every changed record grouped by unit, pilot and weapon; an entry jumps to that record and field. The
 // footer saves the changes as a preset file (.json) and loads one: a loaded file is checked, judged against the open
@@ -12,8 +12,8 @@ import {
   gradeLabel,
   splitWeaponTerrain,
   weaponGradeLabel,
-} from "./editor-grades.mjs?v=20261011-public9";
-import { skillDiff } from "./editor-skill-list.mjs?v=20261011-public9";
+} from "./editor-grades.mjs?v=20261011-public10";
+import { skillDiff } from "./editor-skill-list.mjs?v=20261011-public10";
 import {
   PresetError,
   applyPreset,
@@ -25,7 +25,7 @@ import {
   presetChangeCount,
   presetFileName,
   serializePreset,
-} from "./editor-preset.mjs?v=20261011-public9";
+} from "./editor-preset.mjs?v=20261011-public10";
 
 export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"]);
 const KIND_HEADINGS = Object.freeze({ unit: "기체", pilot: "파일럿", weapon: "무기", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 증원", map: "맵 타일" });

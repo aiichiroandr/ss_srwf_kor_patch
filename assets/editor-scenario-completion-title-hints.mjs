@@ -1,5 +1,5 @@
-import { ownData, readDenseList } from './editor-own.mjs?v=20261011-public9';
-import { COMPLETION_TITLE_HINT_BINDINGS } from './editor-scenario-completion-title-bindings.mjs?v=20261011-public9';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261011-public10';
+import { COMPLETION_TITLE_HINT_BINDINGS } from './editor-scenario-completion-title-bindings.mjs?v=20261011-public10';
 const freeze = Object.freeze;
 const SOURCE = 'source-local-completion-title';
 const KNOWN_GAMES = freeze(['srwf-f', 'srwf-final']);
