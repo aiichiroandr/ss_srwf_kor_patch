@@ -15,10 +15,10 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 디스크 이미지를 기기 안에서 검증하고, 한글화 또는 게임 데이터 편집 후 BIN/CUE로 저장합니다."
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20261011-public4">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261011-public4">
-    <script type="module" src="assets/app.mjs?v=20261011-public4"></script>
-    <script type="module" src="assets/user-guide.mjs?v=20261011-public4"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20261011-public5">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261011-public5">
+    <script type="module" src="assets/app.mjs?v=20261011-public5"></script>
+    <script type="module" src="assets/user-guide.mjs?v=20261011-public5"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -836,7 +836,7 @@
       <div class="pilot-skill-dialog-shell">
         <header class="pilot-skill-dialog-header">
           <div>
-            <span>특수능력 추가·삭제</span>
+            <span>특수능력 · 습득 설정</span>
             <h2 id="pilotSkillDialogTitle">파일럿 특수능력 편집</h2>
           </div>
           <button class="pilot-skill-dialog-close" id="pilotSkillDialogClose" type="button">닫기</button>
@@ -845,14 +845,27 @@
         <div class="pilot-skill-status" id="pilotSkillStatus" role="status" aria-live="polite"></div>
         <p class="pilot-skill-warning" id="pilotSkillWarning" role="alert" hidden></p>
         <div class="pilot-skill-schedule" id="pilotSkillSchedule" role="list" aria-label="현재 특수능력 목록"></div>
+        <nav class="pilot-skill-pager" id="pilotSkillPager" aria-label="특수능력 습득표 페이지" hidden>
+          <button id="pilotSkillPrevious" type="button" aria-label="습득표 이전 페이지">이전</button>
+          <span id="pilotSkillPagePosition" role="status" aria-live="polite"></span>
+          <button id="pilotSkillNext" type="button" aria-label="습득표 다음 페이지">다음</button>
+        </nav>
+        <div class="pilot-skill-add-target" id="pilotSkillAddTarget" hidden>
+          <span id="pilotSkillReplaceTitle"></span>
+          <button id="pilotSkillReplaceCancel" type="button" data-skill-replace-cancel>교체 취소</button>
+        </div>
         <div class="pilot-skill-add" id="pilotSkillAdd" role="group" aria-label="특수능력 추가">
           <label class="pilot-skill-add-choice">
             <span>능력</span>
             <select id="pilotSkillAddSelect" aria-label="추가할 특수능력"></select>
           </label>
+          <label class="pilot-skill-add-rank" id="pilotSkillAddRankField" hidden>
+            <span>단계</span>
+            <select id="pilotSkillAddRank" aria-label="새 특수능력의 능력 단계"></select>
+          </label>
           <label class="pilot-skill-add-level">
             <span>습득 Lv</span>
-            <input id="pilotSkillAddLevel" type="number" min="1" max="99" step="1" value="1" inputmode="numeric" aria-label="새 특수능력의 습득 레벨 (1~99)">
+            <input id="pilotSkillAddLevel" type="number" min="1" max="99" step="1" value="1" inputmode="numeric" aria-label="새 특수능력의 습득 파일럿 레벨 (1~99)">
           </label>
           <button class="pilot-skill-add-button" id="pilotSkillAddButton" type="button" data-skill-add>추가</button>
         </div>
@@ -861,8 +874,9 @@
           <button class="pilot-skill-revert" id="pilotSkillRevertButton" type="button" data-skill-revert>원래 목록으로 되돌리기</button>
         </div>
         <details class="pilot-skill-dialog-footnote"><summary>편집 규칙</summary>
-          저장하면 이 목록 전체가 파일럿 기록의 원래 자리 안에 다시 쓰입니다. 같은 계열(뉴타입·강화인간 같은 단계 능력)은
-          낮은 단계부터 저장되며, 파일럿 한 명이 동시에 쓰는 능력은 계열마다 하나씩 모두 4가지까지입니다.
+          처음부터 뉴타입 9단계를 원하면 능력은 뉴타입, 단계는 9, 습득 Lv는 1인 항목 하나만 설정하세요.
+          점차 성장시키려면 단계별 습득 시점을 추가하세요. 각 시점은 저장 공간을 하나씩 쓰며 정신커맨드와 공간을 공유합니다.
+          같은 계열은 습득한 가장 높은 단계만 적용되고, 동시에 적용되는 능력 종류는 최대 4가지입니다.
         </details>
       </div>
     </dialog>

@@ -18,6 +18,7 @@ import { PILOT_LADDER_FAMILIES, pilotSkillFamily } from "../assets/editor-facts.
 import { createEditorWorker } from "../assets/editor-worker.mjs";
 import * as skillList from "../assets/editor-skill-list.mjs";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
+import { choosePilotSkill, indexedSkillRows, assertSkillStatus, offeredPilotSkillIds } from "./helpers/pilot-skill-controls.mjs";
 import { F_GAME, GAME, descriptorFor, makeBase } from "./helpers/synthetic-game.mjs";
 import { mulberry32 } from "./helpers/synthetic-iso.mjs";
 import { CELL, skillTable } from "./helpers/synthetic-pilots.mjs";
@@ -118,7 +119,7 @@ const pilotRow = (recordIndex) => state.editorPilots.find((row) => row.recordInd
 const pairsOf = (row) => row.specialAbilities.map(({ id, level }) => ({ id, level }));
 const listOfView = (view, recordIndex) => pairsOf(view.pilots.find((row) => row.recordIndex === recordIndex));
 const listOfSpirits = (view, recordIndex) => view.pilots.find((row) => row.recordIndex === recordIndex).spirits.map(({ id, level }) => ({ id, level }));
-const skillRows = () => byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-row");
+const skillRows = () => indexedSkillRows(byId);
 const skillNames = () => skillRows().map((row) => row.querySelector(".pilot-skill-name").children[0].textContent);
 
 function openDialog(recordIndex) {
@@ -128,12 +129,7 @@ function openDialog(recordIndex) {
 }
 
 function chooseSkill(id, level) {
-  const select = byId("pilotSkillAddSelect");
-  select.value = String(id);
-  select.dispatchEvent({ type: "change", target: select });
-  const box = byId("pilotSkillAddLevel");
-  box.value = String(level);
-  box.dispatchEvent({ type: "input", target: box });
+  choosePilotSkill(byId, state.editorGameId, id, level);
 }
 
 function addSkill(id, level) {
@@ -178,17 +174,17 @@ test("add, remove and swap through the dialog reach the disc exactly as the dial
   // add: the placeholder pilot gets one skill
   openDialog(CELL.PLACEHOLDER);
   assert.equal(byId("pilotSkillScheduleButton").textContent, "추가·삭제");
-  assert.equal(byId("pilotSkillStatus").textContent, "사용 0/1 · 빈자리 1 · 계열 0/4");
+  assertSkillStatus(byId, 0, 1, 1, 0, 4);
   addSkill(41, 7);
   assert.deepEqual(pairsOf(pilotRow(CELL.PLACEHOLDER)), [{ id: 41, level: 7 }]);
-  assert.equal(byId("pilotSkillStatus").textContent, "사용 1/1 · 빈자리 0 · 계열 1/4");
+  assertSkillStatus(byId, 1, 1, 0, 1, 4);
   chooseSkill(42, 1);
   assert.equal(byId("pilotSkillAddButton").disabled, true, "no room left");
   byId("pilotSkillDialogClose").click();
 
   // swap: shield rank 2 out, a single skill in (the pilot has no free slot but the removal makes one)
   openDialog(CELL.FULL);
-  assert.equal(byId("pilotSkillStatus").textContent, "사용 3/3 · 빈자리 0 · 계열 1/4");
+  assertSkillStatus(byId, 3, 3, 0, 1, 4);
   removeSkill(65);
   addSkill(78, 40);
   assert.deepEqual(pairsOf(pilotRow(CELL.FULL)), [{ id: 64, level: 1 }, { id: 66, level: 35 }, { id: 78, level: 40 }]);
@@ -260,7 +256,7 @@ test("add, remove and swap through the dialog reach the disc exactly as the dial
   for (const type of ["pilot", "weapon"]) hooks.renderRecordList(type);
   openDialog(CELL.PLACEHOLDER);
   assert.equal(skillNames().length, 1);
-  assert.equal(byId("pilotSkillStatus").textContent, "사용 1/1 · 빈자리 0 · 계열 1/4");
+  assertSkillStatus(byId, 1, 1, 0, 1, 4);
   byId("pilotSkillDialogClose").click();
 });
 
@@ -281,6 +277,72 @@ test("untouched rows travel through the page and back as an exact echo: nothing 
   for (const edit of pilotEditsOf(worker)) {
     assert.deepEqual(edit.specialAbilities, pairsOf(pilotRow(edit.recordIndex)), `pilot ${edit.recordIndex} sends the list it has`);
   }
+});
+
+test("a full learning list can replace one entry with Newtype rank 9 at pilot level 1 and save exactly that one milestone", async () => {
+  for (const gameId of [GAME, F_GAME]) {
+    const { base, worker } = await openPage(gameId);
+    openDialog(CELL.FULL);
+    const before = pairsOf(pilotRow(CELL.FULL));
+    assertSkillStatus(byId, 3, 3, 0, 1);
+    assert.equal(byId("pilotSkillAdd").hidden, true, "a full record has no visible unused add form");
+    skillRows()[1].querySelector("button[data-skill-replace]").click();
+    assert.equal(byId("pilotSkillAddTarget").hidden, false, "the selected learning entry is named as the replacement target");
+    assert.equal(byId("pilotSkillAdd").hidden, false, "replacement exposes the family, rank and acquisition controls without requiring space");
+    byId("pilotSkillReplaceCancel").click();
+    assert.equal(byId("pilotSkillAddTarget").hidden, true);
+    assert.equal(byId("pilotSkillAdd").hidden, true, "cancelling returns the full record to its compact layout");
+    assert.deepEqual(pairsOf(pilotRow(CELL.FULL)), before, "cancelling a replacement leaves the full list unchanged");
+
+    skillRows()[1].querySelector("button[data-skill-replace]").click();
+    chooseSkill(41, 1);
+    assert.equal(byId("pilotSkillAddButton").disabled, false, "replacement needs no additional record space");
+    assert.equal(byId("pilotSkillAddButton").textContent, "교체 적용");
+    byId("pilotSkillAddButton").click();
+    const expected = [{ id: 64, level: 1 }, { id: 41, level: 1 }, { id: 66, level: 35 }];
+    assert.deepEqual(pairsOf(pilotRow(CELL.FULL)), expected);
+    assertSkillStatus(byId, 3, 3, 0, 2);
+    assert.equal(byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-group").length, 2, "shield milestones and the single Newtype milestone have separate group headings");
+    assert.equal(pilotRow(CELL.FULL).specialAbilities.filter((entry) => pilotSkillFamily(gameId, entry.id) === "newtype").length, 1,
+      "rank 9 does not create rank 1 through rank 8 entries");
+    byId("pilotSkillDialogClose").click();
+
+    const done = await exportThroughPage(worker);
+    assert.equal(done.type, "EXPORT_COMPLETE", done.error ? `${done.error.code} ${JSON.stringify(done.error.details)}` : "");
+    assert.deepEqual(pilotEditsOf(worker).find((edit) => edit.recordIndex === CELL.FULL).specialAbilities, expected);
+    const reopened = await base.full.inspectPatchedImage(done.result.outputBlob, descriptorFor(base.disc, { gameId, imageKind: "local" }));
+    assert.deepEqual(listOfView(reopened.view, CELL.FULL), expected, "the exported disc contains the one Newtype rank-9/level-1 pair");
+    assert.deepEqual(listOfSpirits(reopened.view, CELL.FULL), listOfSpirits(base.opened.view, CELL.FULL), "the six spirit commands retain their own slots and learning levels");
+    assert.deepEqual(reopened.view.pilots.filter((row) => row.recordIndex !== CELL.FULL), base.opened.view.pilots.filter((row) => row.recordIndex !== CELL.FULL),
+      "every other pilot, including flag-gated entries, is unchanged");
+  }
+});
+
+test("rank editing in a full group keeps stored learning levels and refuses a rank another milestone already uses", async () => {
+  await openPage(GAME);
+  openDialog(CELL.FULL);
+  const before = pairsOf(pilotRow(CELL.FULL));
+  const rank = skillRows()[0].querySelector("select[data-skill-rank]");
+  assert.ok(rank, "a rank family is editable directly on its learning milestone");
+  assert.equal(rank.options.some((option) => option.value === "66" && !option.disabled), false, "a held rank cannot be selected a second time");
+  rank.value = "66";
+  rank.dispatchEvent({ type: "change", target: rank });
+  assert.deepEqual(pairsOf(pilotRow(CELL.FULL)), before, "even a forced duplicate choice cannot change the list");
+  rank.value = "68";
+  rank.dispatchEvent({ type: "change", target: rank });
+  assert.deepEqual(pairsOf(pilotRow(CELL.FULL)), [{ id: 65, level: 18 }, { id: 66, level: 35 }, { id: 68, level: 1 }],
+    "changing rank retains that milestone's acquisition level while the shared ladder is saved in ascending rank order");
+  assertSkillStatus(byId, 3, 3, 0, 1);
+  byId("pilotSkillDialogClose").click();
+
+  openDialog(CELL.FLAGGED);
+  for (const row of skillRows().filter((element) => ["1", "2"].includes(element.dataset.skillIndex))) {
+    assert.equal(row.querySelector("input[data-skill-level]").disabled, true);
+    assert.equal(row.querySelector("button[data-skill-replace]").disabled, true, "flag-gated milestones cannot be converted into a different skill");
+    assert.equal(row.querySelector("button[data-skill-remove]").disabled, true);
+  }
+  assert.deepEqual(pairsOf(pilotRow(CELL.FLAGGED)), [{ id: 60, level: 10 }, { id: 82, level: 175 }, { id: 83, level: 176 }]);
+  byId("pilotSkillDialogClose").click();
 });
 
 // ---- refusals: the worker's tokens become the page's Korean sentence ----------------------------------------------------------
@@ -523,7 +585,7 @@ test("an F disc offers ids 33..81 only and locks the record that holds Final-onl
   byId("pilotSkillDialogClose").click();
   hooks.selectEditorRecord("pilot", CELL.PLACEHOLDER);
   hooks.openPilotSkillDialog();
-  const offered = [...byId("pilotSkillAddSelect").options].map((option) => option.value).filter((value) => value !== "").map(Number);
+  const offered = offeredPilotSkillIds(byId);
   assert.deepEqual(offered, Array.from({ length: 49 }, (_, index) => 33 + index));
   byId("pilotSkillDialogClose").click();
 });
@@ -552,8 +614,7 @@ test("spirit commands chosen, re-levelled, deleted and added in the page's slots
   hooks.selectEditorRecord("pilot", CELL.SHORT);
   slot(0).querySelector("button[data-spirit-remove]").click();
   hooks.openPilotSkillDialog();
-  change(byId("pilotSkillAddSelect"), 78);
-  change(byId("pilotSkillAddLevel"), 3, "input");
+  chooseSkill(78, 3);
   byId("pilotSkillAddButton").click();
   byId("pilotSkillDialogClose").click();
   const expected = new Map([CELL.FULL, CELL.PLACEHOLDER, CELL.SHORT].map((cell) => [cell, { spirits: spiritsOf(pilotRow(cell)), skills: pairsOf(pilotRow(cell)) }]));

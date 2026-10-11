@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
+import { choosePilotSkill } from "./helpers/pilot-skill-controls.mjs";
 
 // The six spirit command slots of the pilot page: what choosing, re-levelling, adding and deleting do to the edited row, what
 // the export request carries and how the change count follows. Behaviour only; layout is measured in a real browser.
@@ -168,8 +169,7 @@ test("the shared room: a deleted spirit command lets the skill dialog add a skil
   const row = open(7);
   hooks.openPilotSkillDialog();
   const chooseSkill = (id) => {
-    change(byId("pilotSkillAddSelect"), id);
-    type(byId("pilotSkillAddLevel"), 3);
+    choosePilotSkill(byId, state.editorGameId, id, 3);
   };
   chooseSkill(78);
   assert.equal(byId("pilotSkillAddButton").disabled, true, "no room for a skill");

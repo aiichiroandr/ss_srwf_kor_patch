@@ -14,7 +14,7 @@
 // The writer refuses (and the dialog therefore never offers): a list longer than the capacity, more than the limit of
 // distinct slot consumers (a ladder family counts once, every other skill once each), a repeated id, a new or changed
 // level outside 1..99, and any change of a level-100-and-up entry other than keeping or deleting it.
-import { PILOT_LADDER_FAMILIES, pilotSkillFamily } from "./editor-facts.mjs?v=20261011-public4";
+import { PILOT_LADDER_FAMILIES, pilotSkillFamily, pilotSkillLevel } from "./editor-facts.mjs?v=20261011-public5";
 
 export const SKILL_LEVEL_MIN = 1;
 export const SKILL_LEVEL_MAX = 99;
@@ -86,6 +86,56 @@ export function availableSkills(row, list = row.specialAbilities ?? []) {
   return skillCatalog(row).filter((entry) => !held.has(entry.id));
 }
 
+// Only the five verified ladders are grouped as one named ability. Other ids remain individual choices, including F's
+// unused specific-support ids: sharing a runtime consumer key does not make them an editable rank ladder.
+function skillGroupInfo(gameId, entry) {
+  const familyId = pilotSkillFamily(gameId, entry.id);
+  const ranked = PILOT_LADDER_FAMILIES.includes(familyId);
+  const rank = ranked ? pilotSkillLevel(gameId, entry.id) : null;
+  const name = String(entry.name ?? "").normalize("NFKC").trim();
+  return {
+    key: ranked ? `family-${familyId}` : `id-${entry.id}`,
+    familyId,
+    ranked,
+    rank,
+    name: ranked ? name.replace(/\s*(?:lv\.?|l|레벨)\s*[1-9]\s*$/i, "").trim() : name,
+  };
+}
+
+// The held growth entries, grouped for display only. `index` always refers to the unsorted list in hand, so choosing a
+// rank or acquisition level in a visually grouped row edits the correct stored pair even when other skills separate it.
+export function skillGroups(gameId, list) {
+  const groups = new Map();
+  list.forEach((entry, index) => {
+    const { rank, ...info } = skillGroupInfo(gameId, entry);
+    if (!groups.has(info.key)) groups.set(info.key, { ...info, entries: [] });
+    const group = groups.get(info.key);
+    if (!group.name && info.name) group.name = info.name;
+    group.entries.push({ entry, index, rank });
+  });
+  for (const group of groups.values()) {
+    if (group.ranked) group.entries.sort((left, right) => left.rank - right.rank || left.index - right.index);
+  }
+  return [...groups.values()];
+}
+
+// A family selector plus its remaining rank choices. Adding excludes every held id; replacing includes the selected
+// pair's own id but still excludes ids another pair uses. Empty families are omitted rather than offering a duplicate.
+export function groupedSkillCatalog(row, gameId, list = row.specialAbilities ?? [], { excludeIndex = null } = {}) {
+  const held = new Set(list.filter((_, index) => index !== excludeIndex).map((entry) => entry.id));
+  const groups = new Map();
+  for (const choice of skillCatalog(row)) {
+    if (held.has(choice.id)) continue;
+    const { rank, ...info } = skillGroupInfo(gameId, choice);
+    if (!groups.has(info.key)) groups.set(info.key, { ...info, choices: [] });
+    const group = groups.get(info.key);
+    if (!group.name && info.name) group.name = info.name;
+    group.choices.push({ ...choice, rank });
+  }
+  for (const group of groups.values()) group.choices.sort((left, right) => left.id - right.id);
+  return [...groups.values()];
+}
+
 // Within a ladder family the game registers skills in list order and a lower rank behind a higher one does not replace
 // it, so every ladder is kept in ascending rank. Entries keep the positions their ladder already holds; only the
 // entries of one ladder trade places. Other skills stay where they are. Ranks follow the ids (nine consecutive ids). The
@@ -125,6 +175,35 @@ export function addSkill(row, gameId, id, level, list = row.specialAbilities ?? 
     id, level, name: choice?.name ?? "", familyId: choice?.familyId ?? null, rank: choice?.rank ?? null, unresolved: Boolean(choice?.unresolved),
   };
   return orderLadders(gameId, [...list, entry]);
+}
+
+// Replacing a learning entry needs no free pair, but its new id must still belong to this row's catalog and leave no
+// duplicate or fifth active ability family. An event-gated pair stays untouched; an odd stored level may be kept for
+// the same id, but is not copied to a newly selected id because the writer accepts new pairs only at levels 1..99.
+export function skillReplaceBlock(row, gameId, index, id, list = row.specialAbilities ?? []) {
+  const summary = skillSummary(row, gameId, list);
+  if (!summary.editable) return "read-only";
+  if (!Number.isInteger(index) || !list[index]) return "missing";
+  const entry = list[index];
+  if (isFlagGated(entry)) return "event-gated";
+  if (!Number.isInteger(id) || !skillCatalog(row).some((choice) => choice.id === id)) return "no-choice";
+  if (entry.id === id) return null;
+  if (list.some((candidate, position) => position !== index && candidate.id === id)) return "held";
+  if (!isValidLevel(entry.level)) return "level";
+  if (summary.count > summary.capacity) return "capacity";
+  const next = list.map((candidate, position) => position === index ? { ...candidate, id } : candidate);
+  if (countConsumers(gameId, next) > summary.limit) return "consumers";
+  return null;
+}
+
+export function replaceSkill(row, gameId, index, id, list = row.specialAbilities ?? []) {
+  if (skillReplaceBlock(row, gameId, index, id, list) !== null || list[index].id === id) return list;
+  const choice = skillCatalog(row).find((candidate) => candidate.id === id);
+  const entry = {
+    id, level: list[index].level, name: choice.name ?? "", familyId: pilotSkillFamily(gameId, id),
+    rank: pilotSkillLevel(gameId, id), unresolved: Boolean(choice.unresolved), eventFlag: null,
+  };
+  return orderLadders(gameId, list.map((candidate, position) => position === index ? entry : candidate));
 }
 
 // Deleting leaves the other entries in order. An event-flag entry is locked: the dialog neither changes nor deletes it

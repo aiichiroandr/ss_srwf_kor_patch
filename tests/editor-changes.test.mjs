@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
+import { choosePilotSkill } from "./helpers/pilot-skill-controls.mjs";
 import { diffEditorRows, parsePreset, serializePreset, buildPreset, PRESET_MAX_BYTES } from "../assets/editor-preset.mjs";
 
 const document = installFakeDom();
@@ -97,8 +98,7 @@ function addSkill(recordIndex, id, level) {
   hooks.selectEditorTab("pilot");
   hooks.selectEditorRecord("pilot", recordIndex);
   hooks.openPilotSkillDialog();
-  byId("pilotSkillAddSelect").value = String(id);
-  byId("pilotSkillAddLevel").value = String(level);
+  choosePilotSkill(byId, state.editorGameId, id, level);
   hooks.addPilotSkillFromDialog();
   byId("pilotSkillDialog").close();
 }
