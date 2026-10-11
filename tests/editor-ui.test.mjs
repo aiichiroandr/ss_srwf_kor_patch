@@ -1109,6 +1109,82 @@ test("a refused skill edit is explained in Korean with the numbers the worker fo
 
 // ---- image fitting ----------------------------------------------------------------------------------------------------
 
+test("runtime hero slots clear the previous portrait, send no preview request and ignore late responses", () => {
+  resetState();
+  const image = byId("pilotPreviewImage"), caption = byId("pilotPreviewCaption");
+  const previousContext = image.getContext, previousImageData = globalThis.ImageData;
+  const previousComputedStyle = globalThis.getComputedStyle;
+  const previousWorker = state.editorWorker, previousToken = state.editorSessionToken;
+  const posts = [];
+  let clears = 0, draws = 0;
+  image.getContext = () => ({ clearRect() { clears += 1; }, putImageData() { draws += 1; } });
+  globalThis.ImageData = class {
+    constructor(pixels, width, height) { this.data = pixels; this.width = width; this.height = height; }
+  };
+  globalThis.getComputedStyle = () => ({ paddingLeft: "0", paddingRight: "0", paddingTop: "0", paddingBottom: "0" });
+  const picture = { width: 2, height: 1, pixels: new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 255, 255]) };
+  const complete = request => hooks.handleEditorWorkerMessage({ data: {
+    ...request, type: "PREVIEW_COMPLETE", image: picture, imageSource: "record",
+  } });
+  try {
+    const view = makeView();
+    view.pilots = [
+      pilotRow(1, "일반 파일럿", { faceId: 10, imageIndex: 10, imageStatus: "source-reference" }),
+      ...[302, 303].map(recordIndex => pilotRow(recordIndex, "자리표시 숫자열", {
+        recordKind: "hero-slot", role: "hero-slot", editable: false, readOnlyReason: "runtime-assembled",
+        faceId: 95, imageIndex: null, referenceImageIndex: null, imageStatus: "runtime-assembled",
+      })),
+    ];
+    hooks.installEditorRows(view);
+    state.editorWorker = { postMessage(message) { posts.push(message); } };
+    state.editorSessionToken = "portrait-session";
+    for (const hero of [302, 303]) {
+      hooks.selectEditorRecord("pilot", 1);
+      const request = posts.at(-1);
+      assert.equal(request.type, "PREVIEW");
+      assert.equal(request.recordIndex, 1);
+      complete(request);
+      assert.equal(image.hidden, false);
+      assert.match(image.getAttribute("aria-label"), /일반 파일럿.*실제 게임 이미지/);
+      const beforePosts = posts.length, beforeDraws = draws;
+      hooks.selectEditorRecord("pilot", hero);
+      const afterHeroClears = clears;
+      assert.equal(posts.length, beforePosts, "runtime slots never ask the worker for their stored FACE");
+      assert.equal(state.editorPreviewRequests.pilot, null);
+      assert.equal(image.hidden, true);
+      assert.equal(image.getAttribute("aria-label"), null);
+      assert.equal(caption.hidden, false);
+      assert.equal(caption.textContent, "게임에서 결정");
+      assert.match(caption.title, /다시|조립|주인공/);
+      complete(request);
+      hooks.handleEditorWorkerMessage({ data: { ...request, type: "PREVIEW_ERROR", error: "late response" } });
+      assert.equal(clears, afterHeroClears, "late results cannot replace the slot's empty preview state");
+      assert.equal(draws, beforeDraws);
+      assert.equal(image.hidden, true);
+      assert.equal(caption.textContent, "게임에서 결정");
+      assert.equal(state.editorPilots.find(row => row.recordIndex === hero).faceId, 95, "the raw face diagnostic stays unchanged");
+    }
+    hooks.selectEditorRecord("pilot", 1);
+    const request = posts.at(-1);
+    complete(request);
+    assert.equal(image.hidden, false, "an ordinary pilot still renders after both runtime slots");
+    hooks.selectEditorRecord("pilot", 1);
+    hooks.handleEditorWorkerMessage({ data: { ...posts.at(-1), type: "PREVIEW_COMPLETE", image: null, imageSource: "record" } });
+    assert.equal(image.hidden, true, "an empty provider result never retains the previous portrait");
+    assert.match(caption.textContent, /일반 파일럿.*지정된 그림이 없습니다/);
+    assert.equal(caption.hidden, false);
+  } finally {
+    image.getContext = previousContext;
+    if (previousImageData === undefined) delete globalThis.ImageData;
+    else globalThis.ImageData = previousImageData;
+    if (previousComputedStyle === undefined) delete globalThis.getComputedStyle;
+    else globalThis.getComputedStyle = previousComputedStyle;
+    state.editorWorker = previousWorker;
+    state.editorSessionToken = previousToken;
+    resetState();
+  }
+});
+
 test("a portrait fills its cell: whole pixels from three times up, the exact fraction below so it grows with the screen", () => {
   assert.equal(hooks.fitImageScale(100, 100, 40, 40), 2.5, "2.5 fits: the exact fraction");
   assert.equal(hooks.fitImageScale(200, 100, 40, 40), 2.5, "the smaller side decides");

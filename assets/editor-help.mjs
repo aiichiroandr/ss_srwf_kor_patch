@@ -9,9 +9,9 @@
 import {
   CUT_CHANCE_TABLE, FACT_BADGE_LABELS, GAME_IDS, SHIELD_CHANCE_TABLE, badgeLabel, factFor, factHelpText, factOrUnknown,
   pilotLadderId, skillChancePercent, weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public11";
-import { ownEntry } from "./editor-own.mjs?v=20261011-public11";
-import { GRADE_PERCENT, WEAPON_GRADE_PERCENT } from "./editor-grades.mjs?v=20261011-public11";
+} from "./editor-facts.mjs?v=20261011-public12";
+import { ownEntry } from "./editor-own.mjs?v=20261011-public12";
+import { GRADE_PERCENT, WEAPON_GRADE_PERCENT } from "./editor-grades.mjs?v=20261011-public12";
 
 const GAME_LABEL = Object.freeze({ 'srwf-f': 'F', 'srwf-final': '완결편' });
 const EMPTY_SLOT = '이 슬롯에는 특수능력을 넣지 않습니다.';

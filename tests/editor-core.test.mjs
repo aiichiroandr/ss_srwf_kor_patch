@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { inspectPatchedImage } from '../assets/editor-core.mjs';
+import { skillTable } from './helpers/synthetic-pilots.mjs';
+import { GLYPHS, pilotWorld } from './helpers/synthetic-tsr.mjs';
 
 const targetSha256 = 'a'.repeat(64);
 
@@ -84,6 +86,41 @@ test('preview follows original stored references and rejects zero/out-of-range i
   assert.equal(resolveEditorImageIndex(imageRecordRoot('pilot', [49,85]), 'pilot', 1, 'srwf-final'), 341);
   assert.throws(() => resolveEditorImageIndex(imageRecordRoot('unit', [48,67,0,63]), 'unit', 2), e => e.code === 'EDITOR_PREVIEW_INVALID');
 });
+
+for (const gameId of ['srwf-f', 'srwf-final']) {
+  test(`${gameId}: runtime hero slots suppress stored faces without reading media or changing pilot bytes`, async () => {
+    const { applyImageReferences, pilotRows, previewEditorRecord, resolveEditorImageIndex } = await import('../assets/editor-core.mjs');
+    const { segments, decoded } = pilotWorld(skillTable());
+    const before = decoded.slice();
+    const rows = pilotRows(segments, decoded, [], GLYPHS, GLYPHS, gameId);
+    const heroes = [302, 303].map(id => rows.find(row => row.recordIndex === id));
+    assert.ok(heroes.every(row => row.recordKind === 'hero-slot' && !row.editable && row.faceId > 0),
+      'the fixture has real heads and nonzero stored face numbers in both runtime slots');
+    const storedFaces = heroes.map(row => row.faceId);
+    applyImageReferences(heroes, segments, 'pilot', gameId);
+    assert.deepEqual(heroes.map(row => [row.imageIndex, row.referenceImageIndex, row.imageStatus]),
+      [[null, null, 'runtime-assembled'], [null, null, 'runtime-assembled']]);
+    const blob = new Blob([new Uint8Array(2352)], { type: 'application/octet-stream' });
+    let mediaReads = 0;
+    Object.defineProperty(blob, 'slice', { value: () => { mediaReads += 1; throw new Error('hero portrait media must not be read'); } });
+    const session = {
+      sessionToken: 'synthetic-hero-preview', root: segments, descriptor: { gameId }, sourceBlob: blob,
+      mediaFiles: { face: { extentLba: 0, byteLength: 8 } },
+    };
+    for (const row of heroes) {
+      assert.equal(resolveEditorImageIndex(segments, 'pilot', row.recordIndex, gameId), null);
+      assert.deepEqual(await previewEditorRecord(session, 'pilot', row.recordIndex),
+        { kind: 'pilot', recordIndex: row.recordIndex, image: null });
+    }
+    assert.equal(mediaReads, 0);
+    assert.deepEqual(heroes.map(row => row.faceId), storedFaces, 'stored FACE diagnostics are preserved');
+    assert.deepEqual(decoded, before, 'preview policy never rewrites the authenticated pilot table');
+    assert.equal(resolveEditorImageIndex(segments, 'pilot', 2, gameId), 2, 'ordinary pilots keep their own face');
+    assert.equal(resolveEditorImageIndex(segments, 'pilot', 308, gameId), null, 'a headless template remains faceless');
+    assert.throws(() => resolveEditorImageIndex(imageRecordRoot('pilot', [0x30, 95]), 'pilot', 302, gameId),
+      error => error.code === 'EDITOR_PREVIEW_INVALID', 'a missing runtime slot is still an invalid record identity');
+  });
+}
 
 test('unit abilities use viewer ID/value pairs and preserve all surrounding bytes', async () => {
   const { readUnitAbilities, writeUnitAbilities } = await import('../assets/editor-core.mjs');
