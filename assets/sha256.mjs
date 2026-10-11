@@ -60,6 +60,7 @@ export class Sha256 {
   constructor() {
     this._state = new Uint32Array(INITIAL_STATE);
     this._block = new Uint8Array(64);
+    this._blockView = new DataView(this._block.buffer);
     this._words = new Uint32Array(64);
     this._blockLength = 0;
     this._bytesHashed = 0n;
@@ -84,13 +85,16 @@ export class Sha256 {
       position += copied;
 
       if (this._blockLength === 64) {
-        this._compress(this._block, 0);
+        this._compress(this._blockView, 0);
         this._blockLength = 0;
       }
     }
 
+    // Reuse one view for the whole chunk, rather than allocating a view for
+    // every 64-byte block of a several-hundred-megabyte disc image.
+    const inputView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     while (position + 64 <= bytes.byteLength) {
-      this._compress(bytes, position);
+      this._compress(inputView, position);
       position += 64;
     }
 
@@ -118,7 +122,7 @@ export class Sha256 {
     view.setUint32(paddedLength - 4, Number(bitLength & 0xffffffffn), false);
 
     for (let position = 0; position < paddedLength; position += 64) {
-      this._compress(padded, position);
+      this._compress(view, position);
     }
 
     const result = new Uint8Array(32);
@@ -136,12 +140,11 @@ export class Sha256 {
     return bytesToHex(this.digest());
   }
 
-  _compress(bytes, offset) {
+  _compress(view, offset) {
     const words = this._words;
-    const view = new DataView(bytes.buffer, bytes.byteOffset + offset, 64);
 
     for (let index = 0; index < 16; index += 1) {
-      words[index] = view.getUint32(index * 4, false);
+      words[index] = view.getUint32(offset + index * 4, false);
     }
     for (let index = 16; index < 64; index += 1) {
       const word15 = words[index - 15];

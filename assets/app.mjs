@@ -1,9 +1,9 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public1';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public1';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public1";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public1";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public1";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public1";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public2';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public2';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public2";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public2";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public2";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public2";
 import {
   canStep,
   filterRecords,
@@ -12,7 +12,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public1";
+} from "./editor-list.mjs?v=20261011-public2";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -23,7 +23,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public1";
+} from "./editor-grades.mjs?v=20261011-public2";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -54,27 +54,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public1";
+} from "./editor-skill-list.mjs?v=20261011-public2";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public1";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public1";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public1";
+} from "./editor-facts.mjs?v=20261011-public2";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public2";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public2";
 import { sha256Hex, Sha256 } from "./sha256.mjs";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public1";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public1";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public1";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public1";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public1";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public1";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public1";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public1";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public1";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public1";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public2";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public2";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public2";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public2";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public2";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public2";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public2";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public2";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public2";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public2";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -82,14 +82,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public1";
+} from "./font-revisions.mjs?v=20261011-public2";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public1";
+} from "./release-notes.mjs?v=20261011-public2";
 
-const STATIC_ASSET_REVISION = "20261011-public1";
+const STATIC_ASSET_REVISION = "20261011-public2";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -1802,8 +1802,17 @@ function prepareWorkflow(destination) {
 function syncModeUi() {
   const loaded = Boolean(state.editorSessionToken);
   const stock = Boolean(state.workflowStockSelection);
+  // Folder structure identifies an original-image candidate before its whole
+  // hash and editor tables are ready. Show the settings now; only the language
+  // preference can change until inspection authenticates the image.
+  const pendingStock = state.editorBusy && state.editorOperation === "INSPECT"
+    && state.editorInspectContext?.origin === "native"
+    && Boolean(state.editorInspectContext.plan?.stock);
+  const stockChoices = (loaded && stock) || pendingStock;
+  const setupGameId = pendingStock ? state.editorInspectContext.release?.gameId
+    : loaded ? state.editorGameId : null;
   // Only a verified original can change the patch settings. Derived images keep their existing base.
-  const skipPatchSettings = loaded && !stock;
+  const skipPatchSettings = loaded && !stock && !pendingStock;
   const stage = state.workflowStage;
   const screenShown = loaded && stage === "editor";
   if (editorScreenShown && !screenShown) saveEditorScroll();
@@ -1817,8 +1826,8 @@ function syncModeUi() {
   const errorHost = screenShown ? elements.editorFeedback : byId("workflowSaveFeedback");
   if (elements.editorError.parentNode !== errorHost) errorHost.append(elements.editorError);
   elements.releaseRegion.hidden = screenShown || stage === "save" || skipPatchSettings;
-  elements.workflowPatchHeading.textContent = loaded
-    ? `2. ${state.editorGameId === "srwf-final" ? "F완결편" : "F"} 한글 패치 설정`
+  elements.workflowPatchHeading.textContent = setupGameId
+    ? `2. ${setupGameId === "srwf-final" ? "F완결편" : "F"} 한글 패치 설정`
     : "2. 한글 패치 설정";
   elements.workflowEditorHeading.textContent = `${skipPatchSettings ? 2 : 3}. 게임 데이터 편집`;
   elements.workflowSaveHeading.textContent = `${skipPatchSettings ? 3 : 4}. BIN/CUE 저장`;
@@ -1846,23 +1855,24 @@ function syncModeUi() {
   const busy = anyJobBusy();
   const korean = elements.languageKorean.checked;
   const editable = !stock || !korean || selectedReleaseEditable();
-  elements.workflowPatchState.textContent = !loaded ? "파일 대기" : busy ? "준비 중" : stock ? "선택됨" : "감지됨";
-  elements.workflowPatchState.className = loaded ? "zone-state is-complete" : "zone-state";
-  elements.workflowEditorFacts.hidden = !loaded;
+  elements.workflowPatchState.textContent = pendingStock ? "원본 확인 중" : !loaded ? "파일 대기" : busy ? "준비 중" : stock ? "선택됨" : "감지됨";
+  elements.workflowPatchState.className = pendingStock ? "zone-state is-working" : loaded ? "zone-state is-complete" : "zone-state";
+  elements.workflowEditorFacts.hidden = !loaded || pendingStock;
   for (const [element, rows] of [[elements.workflowUnitCount, state.editorUnits], [elements.workflowPilotCount, state.editorPilots], [elements.workflowWeaponCount, state.editorWeapons]]) {
     element.textContent = `${rows.filter(row => row.editable && !row.readOnlyReason).length.toLocaleString()}개`;
   }
-  elements.workflowLanguage.hidden = loaded && !stock;
-  elements.releaseRegion.dataset.patchChoices = String(loaded && stock && korean);
-  for (const radio of [elements.languageKorean, elements.languageOriginal]) radio.disabled = !loaded || !stock || busy;
-  if (loaded && !stock) {
+  elements.workflowLanguage.hidden = loaded && !stock && !pendingStock;
+  elements.releaseRegion.dataset.patchChoices = String(stockChoices && korean);
+  for (const radio of [elements.languageKorean, elements.languageOriginal]) radio.disabled = !stockChoices || (busy && !pendingStock);
+  if (loaded && !stock && !pendingStock) {
     elements.languageOriginal.checked = state.workflowBaseKind === "stock";
     elements.languageKorean.checked = state.workflowBaseKind !== "stock";
   }
-  elements.workflowLanguageNote.textContent = !loaded ? "폴더를 고른 뒤 적용 여부를 선택하세요."
+  elements.workflowLanguageNote.textContent = pendingStock ? "원본 확인 중 · 적용 여부를 미리 선택하세요."
+    : !loaded ? "폴더를 고른 뒤 적용 여부를 선택하세요."
     : stock ? (korean ? editable ? "선택한 한글 패치를 적용한 뒤 편집하거나 바로 저장합니다." : "이전 승인 버전은 편집 없이 패치만 저장할 수 있습니다." : "한글 패치 없이 게임 데이터만 편집합니다.")
     : "이 파일의 언어와 기존 변경값을 유지합니다. 한글화 여부를 바꾸려면 정품 원본을 다시 여세요.";
-  elements.workflowOpenEditor.textContent = state.editorGameId === "srwf-final" ? "F완결편 에디터 열기" : "F 에디터 열기";
+  elements.workflowOpenEditor.textContent = setupGameId === "srwf-final" ? "F완결편 에디터 열기" : "F 에디터 열기";
   elements.workflowOpenEditor.disabled = !loaded || busy || !editable;
   elements.workflowSkipEditor.disabled = !loaded || busy;
   elements.workflowSaveButton.disabled = !loaded || busy || state.editorDownloadUrls.length > 0;
@@ -2065,7 +2075,7 @@ const EDITOR_STAGES = Object.freeze({
   prepare: { title: "한글패치 데이터를 준비하고 있습니다", detail: "이 사이트에 공개된 패치 데이터의 크기와 SHA-256을 확인합니다." },
   build: { title: "원본을 확인하며 한글패치를 적용하고 있습니다", detail: "전체 SHA-256과 바뀌는 구간을 한 번의 읽기로 확인하며 편집용 결과를 메모리에 만듭니다." },
   verify: { title: "적용 결과를 확인하고 있습니다", detail: "결과 전체의 크기와 SHA-256이 공개 명세와 같은지 확인합니다." },
-  inspect: { title: "편집 데이터를 읽고 있습니다", detail: "기체·파일럿·무기 표를 읽어 편집 화면을 준비합니다." },
+  inspect: { title: "편집 데이터 읽는 중", detail: "기체·파일럿·무기 표를 읽어 편집 화면을 준비합니다." },
 });
 
 // 폴더를 고른 뒤 시작하는 확인·준비 작업의 처음과 끝. 시작하면 에디터 폴더 카드가 "확인 중"이 된다.
@@ -4007,8 +4017,13 @@ function dropEditorSession() {
 // 편집 작업 스레드의 INSPECT 단계 문구. 처음에는 전체 해시를 읽고, 개인 수정본이면 바뀐 범위를 따로 확인한다.
 const INSPECT_STAGES = Object.freeze({
   "target-hash": {
-    title: "패치본을 확인하고 있습니다",
-    detail: "전체 SHA-256을 읽어 공개 패치와 같은지, 내가 수정한 파일인지 확인합니다.",
+    title: "게임 파일 확인 중",
+    detail: "전체 SHA-256으로 정품 원본·패치본·개인 편집본을 구분합니다.",
+  },
+  "editor-data": EDITOR_STAGES.inspect,
+  "scenario-data": {
+    title: "맵 데이터 확인 중",
+    detail: "편집할 데이터의 구조와 디스크 오류 여부를 확인합니다.",
   },
   "custom-provenance": {
     title: "수정한 파일의 변경 범위를 확인하고 있습니다",
@@ -4233,11 +4248,10 @@ function updateEditorProgress(message) {
     : 0;
   const percent = Math.min(100, Math.floor((processed * 100) / total));
   if (state.editorOperation === "INSPECT" && state.editorInspectContext) {
-    // 정품 원본에서 만든 결과는 이미 전체 해시를 확인했으므로 패치본의 해시 확인 문구를 쓰지 않는다.
-    const stage = state.editorInspectContext.origin !== "stock" && Object.hasOwn(INSPECT_STAGES, message.phase)
+    const stage = Object.hasOwn(INSPECT_STAGES, message.phase)
       ? INSPECT_STAGES[message.phase]
       : EDITOR_STAGES.inspect;
-    showEditorProgress({ ...stage, percent });
+    showEditorProgress({ ...stage, percent: message.indeterminate === true ? null : percent });
     return;
   }
   elements.editorProgressPercent.textContent = `${percent}%`;
@@ -8727,6 +8741,7 @@ export const __testHooks = Object.freeze({
   countEditorChanges,
   installEditorRows,
   beginEditorInspection,
+  updateEditorProgress,
   prepareEditorRows,
   rebuildEditorRowIndex,
   renderRecordList,

@@ -326,7 +326,7 @@ const WIZARD_STEP_COPY = /\bSTEP(?:\s*[123])?\b(?!\s*=)/i;
 // 배포 자산의 캐시 개정판은 하나뿐이다. 이 상수를 고쳐야만 고정값이 함께
 // 움직이도록 한 곳에만 적는다. 여러 시험이 각자 literal 을 들고 있으면
 // 개정판을 올릴 때 일부만 따라가서 모듈이 두 번 적재된다.
-const STATIC_ASSET_REVISION = "20261011-public1";
+const STATIC_ASSET_REVISION = "20261011-public2";
 
 test("public page exposes the legal and accessibility contracts", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
@@ -4133,6 +4133,89 @@ test("unsaved edits are asked about once, and only when the editor would really 
   assert.equal(__testHooks.discardNeedsConfirmation({ ...base, hasSession: false }), false);
   assert.equal(__testHooks.discardNeedsConfirmation({ ...base, changeCount: 0 }), false);
   assert.equal(__testHooks.discardNeedsConfirmation({ ...base, exportedRevision: 5 }), false);
+});
+
+test("original folder settings appear before inspection completes, without unlocking file actions", () => {
+  const { state, syncModeUi } = __testHooks;
+  const keys = ["editorSessionToken", "editorBusy", "editorOperation", "editorInspectContext", "workflowStockSelection", "workflowStage", "editorGameId", "workflowBaseKind", "editorProvenance"];
+  const saved = Object.fromEntries(keys.map(key => [key, state[key]]));
+  const language = [element("languageKorean").checked, element("languageOriginal").checked];
+  try {
+    state.editorSessionToken = null;
+    state.editorBusy = true;
+    state.editorOperation = "INSPECT";
+    state.workflowStockSelection = null;
+    state.workflowStage = "setup";
+    element("languageKorean").checked = true;
+    element("languageOriginal").checked = false;
+    for (const [gameId, label] of [["srwf-f", "F"], ["srwf-final", "F완결편"]]) {
+      state.editorInspectContext = { origin: "native", release: { gameId }, plan: { stock: {} } };
+      syncModeUi();
+      assert.equal(element("releaseRegion").hidden, false);
+      assert.equal(element("releaseRegion").dataset.patchChoices, "true");
+      assert.equal(element("release-heading").textContent, `2. ${label} 한글 패치 설정`);
+      assert.equal(element("workflowPatchState").textContent, "원본 확인 중");
+      assert.equal(element("languageKorean").disabled, false);
+      assert.equal(element("languageOriginal").disabled, false);
+      for (const id of ["workflowOpenEditor", "workflowSkipEditor", "workflowSaveButton"]) assert.equal(element(id).disabled, true, `${id} requires authenticated data`);
+    }
+    element("languageKorean").checked = false;
+    element("languageOriginal").checked = true;
+    syncModeUi();
+    assert.equal(element("releaseRegion").dataset.patchChoices, "false");
+    assert.equal(element("languageOriginal").checked, true);
+    // Authentication completing must preserve the preference selected during
+    // the read. Until that point no source was claimed to be verified.
+    state.editorSessionToken = "authenticated-stock";
+    state.editorGameId = "srwf-final";
+    state.workflowBaseKind = "stock";
+    state.editorProvenance = "stock";
+    state.workflowStockSelection = {};
+    state.editorBusy = false;
+    state.editorOperation = null;
+    state.editorInspectContext = null;
+    syncModeUi();
+    assert.equal(element("languageOriginal").checked, true);
+    assert.equal(element("releaseRegion").dataset.patchChoices, "false");
+    // A failed initial inspect loses the provisional settings and cannot enable
+    // patching, editing, or saving a file that never passed identity checks.
+    state.editorSessionToken = null;
+    state.workflowStockSelection = null;
+    syncModeUi();
+    assert.equal(element("languageOriginal").disabled, true);
+    assert.equal(element("workflowOpenEditor").disabled, true);
+    assert.equal(element("workflowSaveButton").disabled, true);
+  } finally {
+    Object.assign(state, saved);
+    [element("languageKorean").checked, element("languageOriginal").checked] = language;
+    syncModeUi();
+  }
+});
+
+test("stock inspection identifies the file neutrally and leaves 100% for the data-reading stage", () => {
+  const { state, updateEditorProgress } = __testHooks;
+  const saved = { operation: state.editorOperation, context: state.editorInspectContext };
+  try {
+    state.editorOperation = "INSPECT";
+    state.editorInspectContext = { origin: "native" };
+    updateEditorProgress({ phase: "target-hash", processed: 100, total: 100 });
+    assert.equal(element("progressTitle").textContent, "게임 파일 확인 중");
+    assert.match(element("progressDetail").textContent, /정품 원본/);
+    assert.equal(element("progressPercent").textContent, "100%");
+    updateEditorProgress({ phase: "editor-data", indeterminate: true });
+    assert.equal(element("progressTitle").textContent, "편집 데이터 읽는 중");
+    assert.equal(element("progressPercent").textContent, "진행 중");
+    assert.equal(element("progressBar").hasAttribute("value"), false);
+    updateEditorProgress({ phase: "scenario-data", indeterminate: true });
+    assert.equal(element("progressTitle").textContent, "맵 데이터 확인 중");
+    assert.equal(element("progressPercent").textContent, "진행 중");
+  } finally {
+    state.editorOperation = saved.operation;
+    state.editorInspectContext = saved.context;
+    element("progressPanel").hidden = true;
+    element("progressPanel").setAttribute("aria-busy", "false");
+    element("cancelButton").hidden = true;
+  }
 });
 
 test("an editor folder card that fails is left looking failed, not checked and not still being checked", () => {
