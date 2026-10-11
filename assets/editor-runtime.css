@@ -1210,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261011-public2');
+  --frame: url('./runtime-panel-frame.svg?v=20261011-public3');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -3993,13 +3993,15 @@ body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidd
 .scenario-view-pager[hidden] { display: none; }
 @media (max-width: 759px) {
   .scenario-toolbar { flex-wrap: wrap; gap: 4px; }
-  #scenarioSelector, #scenarioEventSelector { flex: 1 1 calc(50% - 4px); width: 0; }
+  #scenarioSelector { flex: 1 1 100%; width: 100%; }
+  #scenarioEventSelector { flex: 1 1 120px; min-width: 120px; width: 0; }
+  .scenario-toolbar select { padding-inline: 3px; }
+  #scenarioMapSelector { flex: 0 0 82px; }
+  #scenarioPlaneSelector { flex-basis: 72px; }
   .scenario-workarea { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
   .scenario-inspector { border-left: 0; border-top: 1px solid #26778a; padding: 6px; }
   .scenario-position input { width: 62px; }
   .scenario-tools button { min-height: 34px; }
-  .editor-scenario-panel[data-compact="true"] #scenarioSelector,
-  .editor-scenario-panel[data-compact="true"] #scenarioEventSelector { flex: 1 1 calc(50% - 2px); width: 0; }
   .editor-scenario-panel[data-compact="true"] .scenario-toolbar { gap: 3px; padding: 4px; }
   .editor-scenario-panel[data-compact="true"] .scenario-toolbar select, .editor-scenario-panel[data-compact="true"] .scenario-toolbar summary { height: 34px; min-height: 34px; font-size: 11px; }
   .editor-scenario-panel[data-paged="true"] .scenario-workarea { display: flex; flex-direction: column; }
@@ -4007,18 +4009,12 @@ body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidd
   .editor-scenario-panel[data-paged="true"][data-page="fields"] .scenario-map-area { display: none; }
   .editor-scenario-panel[data-paged="true"] .scenario-map-area { flex: 1; }
   .editor-scenario-panel[data-paged="true"] .scenario-inspector { border-top: 0; }
-  .editor-scenario-panel[data-paged="true"] .scenario-toolbar { flex-wrap: nowrap; }
-  .editor-scenario-panel[data-paged="true"] #scenarioSelector, .editor-scenario-panel[data-paged="true"] #scenarioEventSelector { flex: 1 1 0; }
-  /* Two selector names need their own row before the measured view buttons.
-     At 320px this keeps both the source number and shared count readable. */
-  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] .scenario-toolbar { flex-wrap: wrap; }
-  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] #scenarioSelector,
-  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] #scenarioEventSelector { flex: 1 1 calc(50% - 2px); }
+  /* The complete scenario name owns a row in every tool and page. Event,
+     resource and view controls use the next row without clipping the title. */
   .editor-scenario-panel[data-paged="true"][data-tool="deployment"] .scenario-view-pager { flex: 1; }
   .editor-scenario-panel[data-paged="true"][data-tool="deployment"] .scenario-view-pager button { flex: 1; }
   .editor-scenario-panel[data-paged="true"][data-tool="deployment"] #scenarioMapSelector,
   .editor-scenario-panel[data-paged="true"][data-tool="deployment"] #scenarioPlaneSelector,
-  .editor-scenario-panel[data-paged="true"][data-tool="tile"] #scenarioSelector,
   .editor-scenario-panel[data-paged="true"][data-tool="tile"] #scenarioEventSelector { display: none; }
 }
 .scenario-edit-group { display: grid; gap: 6px; min-width: 0; }
@@ -4027,8 +4023,6 @@ body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidd
 .scenario-fields-pager[hidden] { display: none; }
 .scenario-fields-pager button { min-width: 20px; padding-inline: 3px; }
 .editor-scenario-panel[data-compact="true"] .scenario-inspector { gap: 4px; padding: 4px; }
-.editor-scenario-panel[data-compact="true"] .scenario-inspector:has(#scenarioStatus:not(:empty)) .scenario-tools > button { display: none; }
-.editor-scenario-panel[data-compact="true"] .scenario-inspector:has(#scenarioStatus:not(:empty)) .scenario-tools:has(.scenario-fields-pager[hidden]) { display: none; }
 .editor-scenario-panel[data-compact="true"] #scenarioStatus:not(:empty) { order: -1; min-height: 28px; display: flex; align-items: center; }
 .editor-scenario-panel[data-compact="true"] .scenario-inspector button, .editor-scenario-panel[data-compact="true"] .scenario-inspector input, .editor-scenario-panel[data-compact="true"] .scenario-inspector select { min-height: 28px; height: 28px; font-size: 11px; }
 .editor-scenario-panel[data-compact="true"] .scenario-edit-group, .editor-scenario-panel[data-compact="true"] #scenarioDeploymentFields, .editor-scenario-panel[data-compact="true"] #scenarioTileFields { gap: 4px; }

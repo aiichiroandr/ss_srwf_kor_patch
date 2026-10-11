@@ -1,12 +1,12 @@
-import { packMeasuredGroups } from './editor-layout.mjs?v=20261011-public2';
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public2';
-import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261011-public2';
-import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption } from './editor-scenario-labels.mjs?v=20261011-public2';
-import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public2';
-import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public2';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261011-public2';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public2';
-import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261011-public2';
+import { packMeasuredGroups } from './editor-layout.mjs?v=20261011-public3';
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public3';
+import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261011-public3';
+import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption, sortScenarioSelections } from './editor-scenario-labels.mjs?v=20261011-public3';
+import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public3';
+import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public3';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261011-public3';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public3';
+import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261011-public3';
 const eventRuleControls=[1,2,3].map(n=>({field:`eventRule${n}`,prefix:`scenarioEventRule${n}`}));
 const eventCriteriaIds=['scenarioEventPhaseGroup','scenarioEventPhase','scenarioEventPhaseHint','scenarioEventCriteriaChoice','scenarioEventJoin','scenarioEventAdd','scenarioEventCriteriaReset',...eventRuleControls.flatMap(({prefix})=>['Group','Comparison','Value','Remove'].map(suffix=>prefix+suffix))];
 const ruleControls = ['Victory','Defeat'].flatMap(outcome => [1,2,3].map(n => ({field:`${outcome.toLowerCase()}Rule${n}`,prefix:`scenario${outcome}Rule${n}`})));
@@ -703,15 +703,16 @@ export function createScenarioEditor(host) {
   function refresh() {
     const m = model();
     const supportedObjective=scene=>m.objectives.some(row=>row.physicalIndex===scene.physicalIndex&&row.editable);
-    const scenes = m.scenarios.filter(scene => (scene.placements.length||scene.conditions?.length||supportedObjective(scene)) && m.mapFor(scene.mapIndex));
+    const scenes = sortScenarioSelections(m.scenarios.filter(scene => (scene.chapter?.source === 'user-bin-scenario-chapter'
+      || scene.placements.length || scene.conditions?.length || supportedObjective(scene)) && m.mapFor(scene.mapIndex)));
     if (!m.mapFor(mapIndex)) { const first = scenes.find(scene => scene.placements.some(item => item.editable))??scenes.find(supportedObjective); mapIndex = first?.mapIndex ?? m.maps[0]?.mapIndex ?? null; scenarioIndex = first?.physicalIndex ?? null; }
-    ui.scenarioSelector.replaceChildren(option('', '시나리오 자료 선택'), ...scenes.map(scene => {
+    ui.scenarioSelector.replaceChildren(option('', '시나리오 선택'), ...scenes.map(scene => {
       const item = option(scene.physicalIndex, scenarioSelectionLabel(scene));
       item.title = scenarioSelectionDescription(scene); return item;
     }));
     ui.scenarioSelector.value = scenarioIndex === null ? '' : String(scenarioIndex);
     ui.scenarioSelector.title = scenarioSelectionDescription(scene());
-    ui.scenarioSelector.setAttribute('aria-label', `시나리오 자료 선택. ${scenarioSelectionDescription(scene())}`);
+    ui.scenarioSelector.setAttribute('aria-label', `시나리오 선택. ${scenarioSelectionDescription(scene())}`);
     ui.scenarioMapSelector.replaceChildren(...m.maps.map(item => option(item.mapIndex, `맵 #${aliasText(item.mapSlots)}`)));
     ui.scenarioMapSelector.value = mapIndex === null ? '' : String(m.mapFor(mapIndex).mapIndex);
     ui.scenarioPlaneSelector.value = String(planeIndex);
