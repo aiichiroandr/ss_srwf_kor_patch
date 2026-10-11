@@ -20,14 +20,14 @@
 // still has the `from` value, is a conflict when it has another value, is already done when it has the `to` value, and is
 // skipped (with a reason) when the session could not take it: a record that does not exist or is read-only, a structural
 // unit ability (editor-locks.mjs), a terrain grade the writer refuses, a skill list the record cannot hold.
-import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261011-public7';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261011-public7';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public7';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public7';
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261011-public7";
-import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261011-public7";
-import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261011-public7";
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public7";
+import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261011-public8';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261011-public8';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public8';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public8';
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261011-public8";
+import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261011-public8";
+import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261011-public8";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public8";
 import {
   DEFAULT_CONSUMER_LIMIT,
   countConsumers,
@@ -38,10 +38,11 @@ import {
   skillCatalog,
   skillRequest,
   spiritRequest, spiritCatalog, isSpiritLocked,
-} from "./editor-skill-list.mjs?v=20261011-public7";
+  pilotPairRequirement, syncPilotExpansionBudget,
+} from "./editor-skill-list.mjs?v=20261011-public8";
 
-import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261011-public7";
-import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261011-public7";
+import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261011-public8";
+import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261011-public8";
 
 export const PRESET_FORMAT = "srwf.editor-preset";
 export const PRESET_VERSION = 1;
@@ -472,7 +473,8 @@ function planSkills(item, row, gameId) {
   const kept = new Set(stored.map((entry) => `${entry.id}:${entry.level}`));
   if (item.to.some((entry) => !catalog.has(entry.id))) return skipItem(item, "skill-unknown");
   if (item.to.some((entry) => !isValidLevel(entry.level) && !kept.has(`${entry.id}:${entry.level}`))) return skipItem(item, "skill-level");
-  const capacity = Number.isSafeInteger(row.pairCapacity) ? row.pairCapacity - (row.extraSpirits?.length ?? 0) - (row.spiritMinimum ?? 0) : row.skillCapacity;
+  const expansion = Number.isSafeInteger(row.skillExpansionPairs) ? Math.max(0, row.skillExpansionPairs) : 0;
+  const capacity = Number.isSafeInteger(row.pairCapacity) ? row.pairCapacity + expansion - (row.extraSpirits?.length ?? 0) - (row.spiritMinimum ?? 0) : row.skillCapacity;
   if (item.to.length > capacity) return skipItem(item, "skill-capacity");
   const limit = Number.isSafeInteger(row.skillConsumerLimit) ? row.skillConsumerLimit : DEFAULT_CONSUMER_LIMIT;
   if (countConsumers(gameId, item.to) > limit) return skipItem(item, "skill-consumers");
@@ -505,10 +507,45 @@ function guardPairCapacity(items, row) {
   const lists = items.filter((item) => ["skills", "spirits"].includes(item.field) && item.status !== "skip");
   for (const statuses of [["apply"], ["apply", "conflict"]]) {
     const wanted = (field, current) => lists.find((item) => item.field === field && statuses.includes(item.status))?.to ?? current;
-    if (wanted("spirits", row.spirits ?? []).length + wanted("skills", row.specialAbilities ?? []).length
-      + (row.extraSpirits?.length ?? 0) > row.pairCapacity) {
+    const expansion = Number.isSafeInteger(row.skillExpansionPairs) ? row.skillExpansionPairs : 0;
+    if (pilotPairRequirement(row, wanted("skills", row.specialAbilities ?? []), wanted("spirits", row.spirits ?? []))
+      > row.pairCapacity + expansion) {
       for (const item of lists) skipItem(item, "spirit-capacity");
       return;
+    }
+  }
+}
+
+// Lists share one bounded padding pool across their inspected span. Judge both import modes as complete snapshots,
+// including edits already pending in the session. A refusal skips every imported list in the exhausted span so that
+// applying some entries cannot silently make another pilot's six-spirit reservation or existing list unwritable.
+function guardSharedPilotBudgets(items, rows, modes = [["apply"], ["apply", "conflict"]]) {
+  const lists = items.filter((item) => item.kind === "pilot" && ["skills", "spirits"].includes(item.field) && item.status !== "skip");
+  if (lists.length === 0) return;
+  for (const statuses of modes) {
+    const proposed = rows.map((row) => ({ ...row, specialAbilities: row.specialAbilities ?? [], spirits: row.spirits ?? [] }));
+    syncPilotExpansionBudget(proposed, rows);
+    const byIndex = new Map(proposed.map((row) => [row.recordIndex, row]));
+    for (const item of lists) {
+      if (!statuses.includes(item.status)) continue;
+      const row = byIndex.get(item.recordIndex);
+      if (!row) continue;
+      if (item.field === "skills") row.specialAbilities = item.to;
+      else row.spirits = item.to;
+    }
+    syncPilotExpansionBudget(proposed);
+    const refusedGroups = new Set();
+    const refusedRecords = new Set();
+    for (const row of proposed) {
+      if (!Number.isSafeInteger(row.pairCapacity)) continue;
+      const expansion = Number.isSafeInteger(row.skillExpansionPairs) ? row.skillExpansionPairs : 0;
+      if (pilotPairRequirement(row) <= row.pairCapacity + expansion) continue;
+      if (typeof row.pilotExpansionGroup === "string" || Number.isSafeInteger(row.pilotExpansionGroup)) refusedGroups.add(row.pilotExpansionGroup);
+      else refusedRecords.add(row.recordIndex);
+    }
+    for (const item of lists) {
+      const row = byIndex.get(item.recordIndex);
+      if (refusedRecords.has(item.recordIndex) || refusedGroups.has(row?.pilotExpansionGroup)) skipItem(item, "spirit-capacity");
     }
   }
 }
@@ -667,6 +704,7 @@ export function planPresetApplication(preset, session) {
       items.push(...planned);
     }
   }
+  guardSharedPilotBudgets(items, sessionRows(session, "pilot"));
   const mapItems = items.filter(item => item.kind === "map" && item.status !== "skip");
   if (mapItems.length) {
     const rows = sessionRows(session, "map");
@@ -718,10 +756,12 @@ export const PRESET_APPLY_MODES = Object.freeze(["all", "matching"]);
 export function applyPresetPlan(plan, session, mode) {
   if (!PRESET_APPLY_MODES.includes(mode)) throw new RangeError("unknown preset apply mode");
   const take = new Set(mode === "all" ? ["apply", "conflict"] : ["apply"]);
+  const items = plan.items.map((item) => ({ ...item }));
+  guardSharedPilotBudgets(items, sessionRows(session, "pilot"), [[...take]]);
   const rows = Object.fromEntries(PRESET_KINDS.map((kind) => [kind, new Map(sessionRows(session, kind).map((row) => [row.recordIndex, row]))]));
   const records = new Map();
   let applied = 0;
-  for (const item of plan.items) {
+  for (const item of items) {
     if (!take.has(item.status)) continue;
     const row = rows[item.kind].get(item.recordIndex);
     if (!row) continue;
@@ -734,6 +774,7 @@ export function applyPresetPlan(plan, session, mode) {
     applied += 1;
     records.set(`${item.kind}:${item.recordIndex}`, Object.freeze({ kind: item.kind, recordIndex: item.recordIndex }));
   }
+  syncPilotExpansionBudget(sessionRows(session, "pilot"));
   for(const record of records.values()){
     const row=rows[record.kind].get(record.recordIndex);
     if(record.kind!=='event'||session.gameId!=='srwf-f'||!eventHostAllowed(row,session.gameId))continue;

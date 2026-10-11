@@ -14,7 +14,7 @@
 // The writer refuses (and the dialog therefore never offers): a list longer than the capacity, more than the limit of
 // distinct slot consumers (a ladder family counts once, every other skill once each), a repeated id, a new or changed
 // level outside 1..99, and any change of a level-100-and-up entry other than keeping or deleting it.
-import { PILOT_LADDER_FAMILIES, pilotSkillFamily, pilotSkillLevel } from "./editor-facts.mjs?v=20261011-public7";
+import { PILOT_LADDER_FAMILIES, pilotSkillFamily, pilotSkillLevel } from "./editor-facts.mjs?v=20261011-public8";
 
 export const SKILL_LEVEL_MIN = 1;
 export const SKILL_LEVEL_MAX = 99;
@@ -59,12 +59,16 @@ export function skillCatalog(row) {
 }
 
 // What the dialog says about capacity and slot consumers for the list as it is now. A row that carries the shared room
-// (`pairCapacity` and its own spirit list) has as much skill room as the spirit commands it holds now leave free.
+// (`pairCapacity` and its own spirit list) reserves all six spirit slots for new skills, even when a spirit was deleted.
+// The physical capacity still describes existing entries, so a short original spirit block does not lock their edits.
 export function skillSummary(row, gameId, list = row.specialAbilities ?? []) {
   const supported = hasSkillEditing(row);
   const shared = supported && isSharedRoom(row);
+  const expansionPairs = shared && Number.isSafeInteger(row.skillExpansionPairs)
+    ? row.skillExpansionPairs : 0;
+  const reservedSpiritCount = shared ? Math.max(SPIRIT_SLOTS, row.spirits.length) : null;
   const capacity = shared
-    ? Math.max(0, row.pairCapacity - row.spirits.length - extraPairCount(row))
+    ? Math.max(0, row.pairCapacity + Math.max(0, expansionPairs) - row.spirits.length - extraPairCount(row))
     : supported && Number.isSafeInteger(row.skillCapacity) ? row.skillCapacity : list.length;
   const limit = Number.isSafeInteger(row.skillConsumerLimit) ? row.skillConsumerLimit : DEFAULT_CONSUMER_LIMIT;
   return Object.freeze({
@@ -73,11 +77,79 @@ export function skillSummary(row, gameId, list = row.specialAbilities ?? []) {
     editable: supported && row.skillEditable === true,
     reason: supported ? row.skillEditReason ?? null : "unsupported",
     capacity,
+    reservedSpiritCount,
     count: list.length,
-    free: Math.max(0, capacity - list.length),
+    free: Math.max(0, shared
+      ? row.pairCapacity + expansionPairs - reservedSpiritCount - extraPairCount(row) - list.length
+      : capacity - list.length),
     consumers: countConsumers(gameId, list),
     limit,
   });
+}
+
+const expansionBaselines = new WeakMap();
+
+// Account for every pending pilot edit against the inspector's shared padding pool. Capture the inspected facts once:
+// recalculating after an undo must not treat a previously reduced budget as a fresh baseline. Negative external room is
+// retained as debt when another pilot has consumed this record's own padding; clamping it would spend that padding twice.
+export function syncPilotExpansionBudget(rows, baselineRows = null) {
+  const groups = new Map();
+  for (const [index, row] of (rows ?? []).entries()) {
+    if (!row || !isSharedRoom(row) || !Array.isArray(row.specialAbilities)) continue;
+    let baseline = expansionBaselines.get(row) ?? expansionBaselines.get(baselineRows?.[index]);
+    if (baseline) expansionBaselines.set(row, baseline);
+    if (!baseline) {
+      const group = row.pilotExpansionGroup;
+      const pool = row.pilotExpansionPairs;
+      const sharedFree = row.sharedPilotPairFree;
+      const external = row.skillExpansionPairs;
+      if ((typeof group !== "string" && !Number.isSafeInteger(group)) || group === ""
+        || !Number.isSafeInteger(pool) || pool < 0 || !Number.isSafeInteger(sharedFree) || sharedFree < 0
+        || !Number.isSafeInteger(external) || external < 0) continue;
+      const ownFree = sharedFree - external;
+      if (pool !== sharedFree || ownFree < 0 || ownFree > row.pairCapacity) continue;
+      baseline = Object.freeze({
+        group, pool, external, protectedPairs: row.pairCapacity - ownFree,
+        skillCount: (row.originalSkillEntries ?? row.specialAbilities).length,
+        spiritCount: Math.max((row.original?.spirits ?? row.spirits).length,
+          Number.isSafeInteger(row.pilotSpiritReserve) && row.pilotSpiritReserve >= 0 ? row.pilotSpiritReserve : 0),
+      });
+      expansionBaselines.set(row, baseline);
+    }
+    const required = requiredPilotPairs(row, row.specialAbilities.length, row.spirits.length, baseline.skillCount, baseline.spiritCount);
+    const spent = required - baseline.protectedPairs;
+    if (!groups.has(baseline.group)) groups.set(baseline.group, []);
+    groups.get(baseline.group).push({ row, baseline, spent });
+  }
+  for (const entries of groups.values()) {
+    const spent = entries.reduce((sum, entry) => sum + entry.spent, 0);
+    const pool = entries[0].baseline.pool;
+    const consistent = entries.every((entry) => entry.baseline.pool === pool);
+    for (const entry of entries) {
+      entry.row.skillExpansionPairs = consistent
+        ? entry.baseline.external - (spent - entry.spent)
+        : -entry.row.pairCapacity;
+    }
+  }
+  return rows;
+}
+
+function requiredPilotPairs(row, skills, spirits, originalSkills, originalSpirits) {
+  const extra = extraPairCount(row);
+  const actual = spirits + extra + skills;
+  const protectedSpirits = Math.max(originalSpirits, spirits, skills > 0 ? SPIRIT_SLOTS : 0);
+  return skills > originalSkills
+    ? Math.max(SPIRIT_SLOTS, spirits) + extra + skills
+    : Math.max(actual, Math.min(row.pairCapacity, protectedSpirits + extra + skills));
+}
+
+// The same reservation cost used by the shared budget and preset transaction validation. An existing short original
+// remains editable, while a new learning entry must leave room for all six spirits. Canonical reserves survive reopen.
+export function pilotPairRequirement(row, skills = row.specialAbilities ?? [], spirits = row.spirits ?? []) {
+  const originalSkills = (row.originalSkillEntries ?? row.specialAbilities ?? []).length;
+  const originalSpirits = Math.max((row.original?.spirits ?? row.spirits ?? []).length,
+    Number.isSafeInteger(row.pilotSpiritReserve) && row.pilotSpiritReserve >= 0 ? row.pilotSpiritReserve : 0);
+  return requiredPilotPairs(row, skills.length, spirits.length, originalSkills, originalSpirits);
 }
 
 // The catalog without what is already in `list`: the choices of the add box.
@@ -177,26 +249,14 @@ export function addSkill(row, gameId, id, level, list = row.specialAbilities ?? 
   return orderLadders(gameId, [...list, entry]);
 }
 
-// A full record can make one learning pair available by explicitly giving up an ordinary skill or spirit command.
-// Spirit candidates use the same minimum and event-slot rules as the spirit editor; no event entry is offered.
-export function skillRoomChoices(row, gameId) {
-  if (!row || !Array.isArray(row.specialAbilities) || !skillSummary(row, gameId).editable) return [];
-  const choices = row.specialAbilities.flatMap((entry, index) => isFlagGated(entry) ? [] : [{
-    key: `skill-${index}`, kind: "skill", index, entry,
-  }]);
-  if (isSharedRoom(row) && hasSpiritEditing(row)) {
-    row.spirits.forEach((entry, index) => {
-      if (spiritRemoveBlock(row, row.spirits, index) === null) {
-        choices.push({ key: `spirit-${index}`, kind: "spirit", index, entry });
-      }
-    });
-  }
-  return choices;
+// Adding keeps every existing spirit and ability. Retain this compatibility export for stale callers without offering
+// any entry as disposable storage. Replacement and deletion have their own explicit operations.
+export function skillRoomChoices() {
+  return [];
 }
 
-// Plan both lists before committing either one. Failed plans return the original arrays, so a forbidden fifth ability,
-// invalid level or locked removal cannot silently discard the selected spirit command or learning milestone.
-// When a real free pair exists, an obsolete removal selection is ignored and every existing pair is kept.
+// Plan a new skill without removing any existing entry. Refuse stale room-trading requests, including ones sent directly
+// with real room available. Every refusal returns the original arrays; successful plans keep the spirit list unchanged.
 export function planSkillAdd(row, gameId, { id, level, freePair = null } = {}) {
   const skills = Array.isArray(row?.specialAbilities) ? row.specialAbilities : [];
   const spirits = Array.isArray(row?.spirits) ? row.spirits : [];
@@ -204,33 +264,13 @@ export function planSkillAdd(row, gameId, { id, level, freePair = null } = {}) {
   if (!row || !Array.isArray(row.specialAbilities) || !skillSummary(row, gameId, skills).editable) return refused("read-only");
   if (!Number.isInteger(id) || !skillCatalog(row).some((choice) => choice.id === id)) return refused("no-choice");
   if (!isValidLevel(level)) return refused("level");
+  if (freePair !== null) return refused("invalid-removal");
   const summary = skillSummary(row, gameId, skills);
-  let nextSkills = skills;
-  let nextSpirits = spirits;
-  let removed = null;
-  if (summary.free <= 0) {
-    if (freePair === null) return refused("missing-removal");
-    if (!freePair || !Number.isInteger(freePair.index) || !["skill", "spirit"].includes(freePair.kind)) return refused("invalid-removal");
-    const { kind, index } = freePair;
-    if (kind === "skill") {
-      if (!skills[index]) return refused("invalid-removal");
-      if (isFlagGated(skills[index])) return refused("event-gated");
-      nextSkills = removeSkill(skills, index);
-    } else {
-      if (!isSharedRoom(row) || !hasSpiritEditing(row) || !spirits[index]) return refused("invalid-removal");
-      const block = spiritRemoveBlock(row, spirits, index);
-      if (block !== null) return refused(block);
-      nextSpirits = removeSpirit(row, spirits, index);
-    }
-    removed = skillRoomChoices(row, gameId).find((choice) => choice.kind === kind && choice.index === index) ?? null;
-    if (!removed) return refused("invalid-removal");
-  }
-  const proposed = { ...row, spirits: nextSpirits, specialAbilities: nextSkills };
-  const block = addBlock(proposed, gameId, id, level, nextSkills);
+  const block = addBlock(row, gameId, id, level, skills);
   if (block !== null) return refused(block);
-  const added = addSkill(row, gameId, id, level, nextSkills);
+  const added = addSkill(row, gameId, id, level, skills);
   if (countConsumers(gameId, added) > summary.limit) return refused("consumers");
-  return { block: null, skills: added, spirits: nextSpirits, removed };
+  return { block: null, skills: added, spirits, removed: null };
 }
 
 // Replacing a learning entry needs no free pair, but its new id must still belong to this row's catalog and leave no
@@ -338,7 +378,9 @@ export function isSpiritLocked(entry) {
 export function pairRoom(row, spirits = row.spirits ?? [], skills = row.specialAbilities ?? []) {
   if (!isSharedRoom(row)) return null;
   const used = spirits.length + extraPairCount(row) + skills.length;
-  return Object.freeze({ capacity: row.pairCapacity, used, free: Math.max(0, row.pairCapacity - used) });
+  const expansion = Number.isSafeInteger(row.skillExpansionPairs) ? row.skillExpansionPairs : 0;
+  const available = row.pairCapacity + expansion;
+  return Object.freeze({ capacity: Math.max(used, available), used, free: Math.max(0, available - used) });
 }
 
 export function spiritSummary(row, list = row.spirits ?? []) {

@@ -1210,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261011-public7');
+  --frame: url('./runtime-panel-frame.svg?v=20261011-public8');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -3443,7 +3443,6 @@ body[data-view="editor"] .editor-region {
 
 .pilot-skill-add-target[hidden],
 .pilot-skill-add-rank[hidden],
-.pilot-skill-room-field[hidden],
 .pilot-skill-add[hidden] {
   display: none;
 }
@@ -3465,24 +3464,6 @@ body[data-view="editor"] .editor-region {
 .pilot-skill-add-choice select {
   flex: 1 1 0;
   min-width: 0;
-  padding: 4px 8px;
-}
-
-.pilot-skill-room-field {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  color: #f1dd74;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.pilot-skill-room-field select {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 100%;
   padding: 4px 8px;
 }
 

@@ -2,16 +2,16 @@
 // victory/defeat actions execute first; this hook does not replace those paths.
 // The generated tail is authenticated by exact regeneration, then removed for
 // comparison with the original immutable scenario profile.
-import { inspectPendingObjectiveHook as hookOf, readScenarioPurpose, encodeObjectiveText as encodeText } from './editor-scenario-objective-base.mjs?v=20261011-public7';
-export { readScenarioPurpose } from './editor-scenario-objective-base.mjs?v=20261011-public7';
-import { CRITERIA_FIELDS, inspectScenarioCriteria, normalizeScenarioCriteriaBody, updateScenarioCriteriaBody, snapshotScenarioCriteria } from './editor-scenario-criteria.mjs?v=20261011-public7';
-import { normalizeScenarioReinforcementBody, inspectScenarioReinforcement } from './editor-scenario-spawns.mjs?v=20261011-public7';
-import { normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261011-public7';
-import { EVENT_PHASE_FIELDS, normalizeScenarioEventPhaseBody, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261011-public7';
-import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261011-public7';
-import { ownData } from './editor-own.mjs?v=20261011-public7';
+import { inspectPendingObjectiveHook as hookOf, readScenarioPurpose, encodeObjectiveText as encodeText } from './editor-scenario-objective-base.mjs?v=20261011-public8';
+export { readScenarioPurpose } from './editor-scenario-objective-base.mjs?v=20261011-public8';
+import { CRITERIA_FIELDS, inspectScenarioCriteria, normalizeScenarioCriteriaBody, updateScenarioCriteriaBody, snapshotScenarioCriteria } from './editor-scenario-criteria.mjs?v=20261011-public8';
+import { normalizeScenarioReinforcementBody, inspectScenarioReinforcement } from './editor-scenario-spawns.mjs?v=20261011-public8';
+import { normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261011-public8';
+import { EVENT_PHASE_FIELDS, normalizeScenarioEventPhaseBody, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261011-public8';
+import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261011-public8';
+import { ownData } from './editor-own.mjs?v=20261011-public8';
 
-import {objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261011-public7';
+import {objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261011-public8';
 const MAGIC = Uint8Array.of(83,82,87,70,68,76,48,49); // SRWFDL01
 const TRAILER = 24;
 const CAPACITY = Object.freeze({ 'srwf-f': 0x8000, 'srwf-final': 0x9000 });

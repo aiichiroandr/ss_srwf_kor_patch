@@ -515,3 +515,151 @@ test("presets keep boolean flags and spirit lists, checking the shared pair capa
   target.pilots[1].pairCapacity = 1;
   assert.equal(planPresetApplication(parsed, target).items.find((item) => item.field === "spirits").reason, "spirit-capacity");
 });
+
+const expansionSpirits = () => Array.from({ length: 6 }, (_, index) => ({ id: index + 1, level: index + 1, name: `m${index + 1}` }));
+const expansionKoujiSkills = () => [{ id: 69, level: 30, name: "s69" }, { id: 70, level: 38, name: "s70" }, { id: 78, level: 1, name: "s78" }];
+function expansionView(pool = 2) {
+  const facts = (skills, capacity, external) => ({
+    specialAbilities: skills, spirits: expansionSpirits(), spiritEditable: true, spiritMinimum: 0,
+    spiritChoices: catalogOf(Array.from({ length: 30 }, (_, index) => index + 1)),
+    pairCapacity: capacity, skillCapacity: capacity + external - 6,
+    addableSkills: catalogOf(Array.from({ length: 51 }, (_, index) => index + 33)),
+    pilotExpansionGroup: "verified-span", pilotExpansionPairs: pool,
+    sharedPilotPairFree: pool, skillExpansionPairs: external, pilotSpiritReserve: 6,
+  });
+  const session = baseView({ pilot: {
+    2: facts([], 6, pool), 5: facts(expansionKoujiSkills(), 9, pool), 3: facts([], 6 + pool, 0),
+  } });
+  for (const row of session.pilots) if (Array.isArray(row.spirits)) row.original = { ...row.original, spirits: row.spirits.map((entry) => ({ ...entry })) };
+  return session;
+}
+function expansionPreset(session, records = [2, 5]) {
+  for (const recordIndex of records) find(session, "pilot", recordIndex).specialAbilities.push({ id: 41, level: 1, name: "s41" });
+  return parsePreset(serializePreset(buildPreset({ gameId: GAME }, tables(session))));
+}
+const expansionLists = (session) => session.pilots.map((row) => ({
+  recordIndex: row.recordIndex, skills: skillRequest(row.specialAbilities),
+  spirits: (row.spirits ?? []).map(({ id, level }) => ({ id, level })),
+}));
+
+test("an expanded Bright and Kouji preset reloads both additions while preserving every existing spirit and milestone", () => {
+  const source = expansionView(2);
+  const original = expansionLists(source);
+  const parsed = expansionPreset(source);
+  const target = expansionView(2);
+  const before = expansionLists(target);
+  const plan = planPresetApplication(parsed, target);
+  assert.deepEqual(plan.items.map((item) => [item.recordIndex, item.status, item.reason]), [[2, "apply", null], [5, "apply", null]]);
+  assert.deepEqual(expansionLists(target), before, "planning does not mutate either pilot or its budget");
+  assert.equal(applyPresetPlan(plan, target, "all").applied, 2);
+  assert.deepEqual(expansionLists(target), expansionLists(source));
+  for (const recordIndex of [2, 5]) {
+    const beforeRow = original.find((row) => row.recordIndex === recordIndex);
+    const after = find(target, "pilot", recordIndex);
+    assert.deepEqual(after.spirits.map(({ id, level }) => ({ id, level })), beforeRow.spirits);
+    assert.deepEqual(skillRequest(after.specialAbilities), [...beforeRow.skills, { id: 41, level: 1 }]);
+  }
+  const savedAgain = parsePreset(serializePreset(buildPreset({ gameId: GAME }, tables(target))));
+  const reopened = expansionView(2);
+  assert.equal(applyPreset(savedAgain, reopened, "matching").applied, 2);
+  assert.deepEqual(expansionLists(reopened), expansionLists(source), "repeated editing and preset reload retain the same two additions");
+});
+
+test("two individually valid imports cannot spend the same final shared padding pair", () => {
+  const parsed = expansionPreset(expansionView(1));
+  for (const mode of ["matching", "all"]) {
+    const target = expansionView(1);
+    const before = expansionLists(target);
+    const references = target.pilots.map((row) => [row.spirits, row.specialAbilities]);
+    const plan = planPresetApplication(parsed, target);
+    assert.deepEqual(plan.items.map((item) => [item.status, item.reason]), [["skip", "spirit-capacity"], ["skip", "spirit-capacity"]]);
+    assert.equal(applyPresetPlan(plan, target, mode).applied, 0);
+    assert.deepEqual(expansionLists(target), before);
+    for (const [index, row] of target.pilots.entries()) {
+      assert.equal(row.spirits, references[index][0]);
+      assert.equal(row.specialAbilities, references[index][1]);
+    }
+  }
+});
+
+test("an import includes already pending edits in the shared budget and rechecks a stale plan before mutation", () => {
+  const target = expansionView(1);
+  const brightOnly = expansionPreset(expansionView(1), [2]);
+  const koujiOnly = expansionPreset(expansionView(1), [5]);
+  const staleKouji = planPresetApplication(koujiOnly, target);
+  assert.equal(staleKouji.counts.apply, 1);
+  assert.equal(applyPreset(brightOnly, target, "all").applied, 1);
+  const before = expansionLists(target);
+  assert.equal(find(target, "pilot", 3).skillExpansionPairs, -1, "the pending addition consumes the donor's original own padding");
+  assert.equal(applyPresetPlan(staleKouji, target, "all").applied, 0, "a previously valid plan cannot overspend the newly consumed pair");
+  assert.deepEqual(expansionLists(target), before);
+  const fresh = planPresetApplication(koujiOnly, target);
+  assert.equal(fresh.counts.skip, 1);
+  assert.deepEqual(expansionLists(target), before);
+});
+
+test("matching-only imports also account for a conflicting ability already consuming the shared pool", () => {
+  const parsed = expansionPreset(expansionView(1));
+  for (const mode of ["matching", "all"]) {
+    const target = expansionView(1);
+    find(target, "pilot", 2).specialAbilities = [{ id: 41, level: 9, name: "s41" }];
+    const before = expansionLists(target);
+    const plan = planPresetApplication(parsed, target);
+    assert.deepEqual(plan.items.map((item) => [item.status, item.reason]), [["skip", "spirit-capacity"], ["skip", "spirit-capacity"]]);
+    assert.equal(applyPresetPlan(plan, target, mode).applied, 0);
+    assert.deepEqual(expansionLists(target), before, "neither mode can ignore the conflicting pilot's existing pool use");
+  }
+});
+
+test("preset imports cannot trade a deleted spirit for a new skill and reserve missing slots before allocating expansion", () => {
+  const session = expansionView(5);
+  const row = find(session, "pilot", 2);
+  row.pairCapacity = 2;
+  row.skillCapacity = 6;
+  row.spirits = [{ id: 1, level: 1, name: "m1" }];
+  row.original = { ...row.original, spirits: row.spirits.slice() };
+  row.pilotSpiritReserve = 1;
+  row.specialAbilities = [{ id: 69, level: 1, name: "s69" }];
+  row.originalSkillEntries = row.specialAbilities.slice();
+  row.skillChoices = catalogOf(Array.from({ length: 51 }, (_, index) => index + 33));
+  const parsed = presetWith({ pilots: [{ recordIndex: 2,
+    skills: { from: [{ id: 69, level: 1 }], to: [{ id: 69, level: 1 }, { id: 41, level: 1 }] },
+    spirits: { from: [{ id: 1, level: 1 }], to: [] },
+  }] });
+  const before = expansionLists(session);
+  const plan = planPresetApplication(parsed, session);
+  assert.deepEqual(plan.items.map((item) => [item.status, item.reason]), [["skip", "spirit-capacity"], ["skip", "spirit-capacity"]]);
+  assert.equal(applyPresetPlan(plan, session, "all").applied, 0);
+  assert.deepEqual(expansionLists(session), before, "both lists remain intact when five donor pairs cannot also cover the six-slot reservation");
+});
+
+test("a saved five-spirit personal image keeps its canonical sixth-slot reserve on preset reload", () => {
+  const session = expansionView(0);
+  const row = find(session, "pilot", 2);
+  row.spirits = row.spirits.slice(0, 5);
+  row.original = { ...row.original, spirits: row.spirits.slice() };
+  const parsed = expansionPreset(expansionView(0), [2]);
+  const before = expansionLists(session);
+  assert.equal(planPresetApplication(parsed, session).items[0].reason, "spirit-capacity");
+  assert.equal(applyPreset(parsed, session, "all").applied, 0);
+  assert.deepEqual(expansionLists(session), before);
+});
+
+test("a short original record can still import a same-count replacement without being forced to expand", () => {
+  const session = expansionView(0);
+  const row = find(session, "pilot", 2);
+  row.pairCapacity = 2;
+  row.skillCapacity = 1;
+  row.pilotSpiritReserve = 1;
+  row.spirits = [{ id: 1, level: 1, name: "m1" }];
+  row.original = { ...row.original, spirits: row.spirits.slice() };
+  row.specialAbilities = [{ id: 69, level: 1, name: "s69" }];
+  row.originalSkillEntries = row.specialAbilities.slice();
+  row.skillChoices = catalogOf(Array.from({ length: 51 }, (_, index) => index + 33));
+  const parsed = presetWith({ pilots: [{ recordIndex: 2,
+    skills: { from: [{ id: 69, level: 1 }], to: [{ id: 41, level: 1 }] },
+  }] });
+  assert.equal(applyPreset(parsed, session, "matching").applied, 1);
+  assert.deepEqual(skillRequest(row.specialAbilities), [{ id: 41, level: 1 }]);
+  assert.deepEqual(row.spirits.map(({ id, level }) => ({ id, level })), [{ id: 1, level: 1 }]);
+});

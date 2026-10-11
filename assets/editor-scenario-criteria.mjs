@@ -1,14 +1,14 @@
 // Compile user conditions around the original root-8 action destinations.
 // Original guards, dialogue, flags and clear/failure actions stay in place.
-import { ownData } from './editor-own.mjs?v=20261011-public7';
-import { compileObjectiveBranches, compileEntityObjectiveBranches, compilePilotObjectiveBranches, compileRegionObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261011-public7';
-import { snapshotPilotObjectiveContext, encodePilotObjectiveRule, decodePilotObjectiveRule } from './editor-scenario-pilot-context.mjs?v=20261011-public7';
-import { Sha256 } from './sha256.mjs?v=20261011-public7';
-import { readDenseList } from './editor-own.mjs?v=20261011-public7';
-import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public7';
-import { inspectPendingObjectiveHook, inspectClosedObjectiveCallback, readScenarioPurpose, encodeObjectiveText, OBJECTIVE_RAM_CAPACITY } from './editor-scenario-objective-base.mjs?v=20261011-public7';
+import { ownData } from './editor-own.mjs?v=20261011-public8';
+import { compileObjectiveBranches, compileEntityObjectiveBranches, compilePilotObjectiveBranches, compileRegionObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261011-public8';
+import { snapshotPilotObjectiveContext, encodePilotObjectiveRule, decodePilotObjectiveRule } from './editor-scenario-pilot-context.mjs?v=20261011-public8';
+import { Sha256 } from './sha256.mjs?v=20261011-public8';
+import { readDenseList } from './editor-own.mjs?v=20261011-public8';
+import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public8';
+import { inspectPendingObjectiveHook, inspectClosedObjectiveCallback, readScenarioPurpose, encodeObjectiveText, OBJECTIVE_RAM_CAPACITY } from './editor-scenario-objective-base.mjs?v=20261011-public8';
 
-import {encodeRegionRule,decodeRegionRule,isRegionRuleWireValue,regionContextOf,regionContextDigest,objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261011-public7';
+import {encodeRegionRule,decodeRegionRule,isRegionRuleWireValue,regionContextOf,regionContextDigest,objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261011-public8';
 export const CRITERIA_FIELDS=Object.freeze(['objectivePriority','victoryJoin','defeatJoin',
   'victoryRule1','victoryRule2','victoryRule3','defeatRule1','defeatRule2','defeatRule3']);
 const MAGIC=Uint8Array.of(83,82,87,70,79,66,48,49),TRAILER=80; // SRWFOB01
