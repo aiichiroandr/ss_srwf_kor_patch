@@ -1,12 +1,13 @@
-import { packMeasuredGroups } from './editor-layout.mjs?v=20261011-public3';
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public3';
-import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261011-public3';
-import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption, sortScenarioSelections } from './editor-scenario-labels.mjs?v=20261011-public3';
-import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public3';
-import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public3';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261011-public3';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public3';
-import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261011-public3';
+import { packMeasuredGroups } from './editor-layout.mjs?v=20261011-public4';
+import { createScenarioTilePicker } from './editor-scenario-tile-picker.mjs?v=20261011-public4';
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public4';
+import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261011-public4';
+import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption, sortScenarioSelections } from './editor-scenario-labels.mjs?v=20261011-public4';
+import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public4';
+import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public4';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261011-public4';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public4';
+import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261011-public4';
 const eventRuleControls=[1,2,3].map(n=>({field:`eventRule${n}`,prefix:`scenarioEventRule${n}`}));
 const eventCriteriaIds=['scenarioEventPhaseGroup','scenarioEventPhase','scenarioEventPhaseHint','scenarioEventCriteriaChoice','scenarioEventJoin','scenarioEventAdd','scenarioEventCriteriaReset',...eventRuleControls.flatMap(({prefix})=>['Group','Comparison','Value','Remove'].map(suffix=>prefix+suffix))];
 const ruleControls = ['Victory','Defeat'].flatMap(outcome => [1,2,3].map(n => ({field:`${outcome.toLowerCase()}Rule${n}`,prefix:`scenario${outcome}Rule${n}`})));
@@ -19,15 +20,15 @@ const aliasText = ids => ids.length > 2 ? `${ids[0]} 외 ${ids.length - 1}개` :
 export function createScenarioEditor(host) {
   const ui = Object.fromEntries(['scenarioEditorPanel', 'scenarioSelector', 'scenarioMapSelector', 'scenarioPlaneSelector',
     'scenarioMapViewport', 'scenarioMapCanvas', 'scenarioMapSummary', 'scenarioSelectionDescription', 'scenarioCellInfo', 'scenarioZoom',
-    'scenarioDeploymentTool', 'scenarioTileTool', 'scenarioDeploymentFields', 'scenarioTileFields',
-    'scenarioDeploymentSelector', 'scenarioX', 'scenarioY', 'scenarioMove', 'scenarioReward', 'scenarioPilotName',
-    'scenarioDeploymentReset', 'scenarioTileSelector', 'scenarioApplyTile', 'scenarioBrush', 'scenarioTerrainLink',
+    'scenarioDeploymentTool', 'scenarioEventTool', 'scenarioObjectiveTool', 'scenarioTileTool', 'scenarioTaskHint', 'scenarioMapLegend', 'scenarioTilePickerOpen', 'scenarioCurrentTilePreview', 'scenarioCurrentTileName', 'scenarioTileName', 'scenarioDeploymentFields', 'scenarioTileFields',
+    'scenarioDeploymentSelector', 'scenarioX', 'scenarioY', 'scenarioMove', 'scenarioReward', 'scenarioRewardDetail', 'scenarioPilotName',
+    'scenarioDeploymentReset', 'scenarioTileSelector', 'scenarioTilePickerOpen', 'scenarioApplyTile', 'scenarioBrush', 'scenarioTerrainLink',
     'scenarioTileReset', 'scenarioTilePreview', 'scenarioStatus', 'scenarioViewPager', 'scenarioMapPage', 'scenarioFieldsPage',
     'scenarioFieldsPager', 'scenarioFieldsPrev', 'scenarioFieldsNext', 'scenarioFieldsPosition',
     'scenarioSpawnChoice','scenarioSpawnPosition','scenarioSpawnRewardGroup','scenarioSpawnTemplate','scenarioSpawnPilot','scenarioSpawnToggle','scenarioSpawnReset','scenarioSpawnTurn','scenarioSpawnX','scenarioSpawnY','scenarioSpawnMove','scenarioSpawnReward',
     'scenarioObjectiveFields','scenarioObjectiveDescription','scenarioDeadline','scenarioDeadlineRule','scenarioObjectiveReset','scenarioVictoryText','scenarioDefeatText',
     ...criteriaIds,...eventCriteriaIds,'scenarioObjectiveNote','scenarioEventSelector','scenarioEventFields','scenarioEventChoice','scenarioConditionSelector','scenarioTurn','scenarioConditionRule','scenarioEventReset'].map(id => [id, $(id)]));
-  let mapIndex = null, planeIndex = 0, selected = null, scenarioIndex = null, tool = 'deployment';
+  let mapIndex = null, planeIndex = 0, selected = null, scenarioIndex = null, tool = 'deployment', mode = 'placement';
   let x = 0, y = 0, brush = false, paintedTile = 0, zoom = 1, page = 'map';
   let fieldsPage = 0, fieldsPaged = false;
   let fieldsPages = [];
@@ -38,7 +39,7 @@ export function createScenarioEditor(host) {
   const model = () => host.model(), map = () => model().mapFor(mapIndex), plane = () => map()?.planes[planeIndex];
   const placements = () => model().deployments.filter(row => map()?.mapSlots.includes(row.mapIndex)
     && (scenarioIndex === null || row.physicalIndex === scenarioIndex)
-    && (eventIndex===null || row.waveIndex===eventIndex));
+    && (eventIndex===null || eventIndex==='all' || row.waveIndex===eventIndex));
   const scene=()=>model().scenarios.find(item=>item.physicalIndex===scenarioIndex);
   const condition=()=>model().events.find(item=>item.recordIndex===conditionIndex);
   const reinforcement=()=>model().reinforcements.find(item=>item.physicalIndex===scenarioIndex);
@@ -50,13 +51,13 @@ export function createScenarioEditor(host) {
   let lastCriteriaControl=null;
   const pendingCriteria=new Set();
   const pendingEventCriteria=new Set();
-  const eventCriteriaActive=()=>Boolean(condition()?.eventCriteriaEditable);
+  const eventCriteriaActive=()=>mode==='events'&&Boolean(condition()?.eventCriteriaEditable);
   const eventCriteriaGroups=()=>[ui.scenarioEventPhaseGroup,ui.scenarioEventCriteriaChoice,...eventRuleControls.map(({prefix})=>ui[prefix+'Group'])];
   const eventCriteriaFields=row=>Object.fromEntries(EVENT_CRITERIA_FIELDS.map(field=>[field,row[field]]));
   const eventFields=row=>row?.eventPhaseEditable?EVENT_PHASE_FIELDS:EVENT_CRITERIA_FIELDS;
   const eventPhaseName=row=>row?.eventPhaseEditable?(row.eventPhase===1?'아군':'적군'):row?.phase==='enemy-start'?'적군':row?.phase==='player-start'?'아군':'';
   const showDeadline=()=>!objective()?.criteriaEditable||Boolean(objective().deadline||objective().original.deadline);
-  const criteriaActive=()=>objective()?.criteriaEditable&&eventIndex?.startsWith('objective:');
+  const criteriaActive=()=>mode==='objective'&&objective()?.criteriaEditable&&eventIndex?.startsWith('objective:');
   const criteriaFields=row=>Object.fromEntries(CRITERIA_FIELDS.map(field=>[field,row[field]]));
   const objectiveContext=()=>model().objectiveContextFor?.(objective()?.physicalIndex)??model().objectiveContext;
   const criterionUnits=()=>model().units.filter(row=>Number.isInteger(row.recordIndex)&&row.recordIndex>=1&&row.recordIndex<=objectiveUnitIdLimit(objectiveContext()));
@@ -74,7 +75,7 @@ export function createScenarioEditor(host) {
   const pilotExplanation='맵에서 해당 파일럿이 연결된 기체를 찾습니다. 미출현·퇴각·연결 변경도 ‘없음’일 수 있습니다. 격추 여부를 뜻하지 않습니다.';
   const customCriteria=row=>row?.criteriaEditable&&CRITERIA_FIELDS.some(field=>row[field]!==row.criteriaDefaults[field]);
   const wave=()=>scene()?.waves?.find(item=>item.recordIndex===eventIndex);
-  const row = () => placements().find(row => row.recordIndex === selected);
+  const row = () => mode==='placement' ? placements().find(row => row.recordIndex === selected) : null;
   const cell = () => map() ? model().cell(map().mapIndex, planeIndex, x, y) : null;
   const terrainId = tileId => model().bankFor(map())?.terrainIds[tileId];
   const terrainName = id => host.terrainName(id) || `지형 #${id}`;
@@ -104,7 +105,7 @@ export function createScenarioEditor(host) {
     }
     // Dots are placement entries, not faction markers. Keep all occupants;
     // selecting one in a stack uses the explicit entry selector below.
-    const shown = placements();
+    const shown = mode==='placement' ? placements() : [];
     if (planeIndex === 0) for (const [index, item] of shown.entries()) {
       if (item.x >= current.width || item.y >= current.height) continue;
       const active = item.recordIndex === selected;
@@ -125,7 +126,8 @@ export function createScenarioEditor(host) {
     }
     ctx.strokeStyle = '#ffe39e'; ctx.lineWidth = 2;
     ctx.strokeRect(x * size + 1, y * size + 1, Math.max(1, size - 2), Math.max(1, size - 2));
-    canvas.setAttribute('aria-label', `맵 #${map().mapIndex}, 상태 ${planeIndex + 1}, ${current.width}×${current.height}. 선택 (${x}, ${y}). 방향키로 칸 선택, Enter로 ${regionPicker?'영역 위치 지정':tool === 'tile' ? '타일 적용' : '선택 기체 이동'}.`);
+    const enterAction=regionPicker?'영역 위치 지정':mode==='tile'?'타일 적용':mode==='placement'?'선택 기체 이동':'';
+    canvas.setAttribute('aria-label', `맵 #${map().mapIndex}, 맵 데이터 ${planeIndex + 1}, ${current.width}×${current.height}. 선택 (${x}, ${y}). 방향키로 칸 선택${enterAction?`, Enter로 ${enterAction}`:''}.`);
   }
 
   function describeCell() {
@@ -133,9 +135,17 @@ export function createScenarioEditor(host) {
     const current = plane();
     if (!current) { ui.scenarioCellInfo.textContent = '맵 데이터가 없습니다'; return; }
     const tileId = model().tile(mapIndex, planeIndex, x, y), terrain = terrainId(tileId);
-    ui.scenarioCellInfo.textContent = `(${x}, ${y}) · 타일 #${tileId} · ${terrainName(terrain)}`;
+    ui.scenarioCellInfo.textContent = `선택 칸 (${x}, ${y}) · ${terrainName(terrain)} · #${tileId}`;
+    ui.scenarioCellInfo.title = `X는 왼쪽부터, Y는 위쪽부터 0으로 셉니다. 선택 칸 (${x}, ${y}), ${terrainName(terrain)}, 타일 #${tileId}.`;
+    ui.scenarioMapLegend.hidden = mode!=='placement'||planeIndex!==0||!placements().length;
+    const bank=model().bankFor(map()),orientation=current.orientations?.[y*current.width+x]??0;
+    ui.scenarioCurrentTilePreview.hidden=!paintTilePreview(ui.scenarioCurrentTilePreview,bank&&model().graphics.tile(bank,tileId,orientation));
+    ui.scenarioCurrentTileName.textContent=terrainName(terrain);ui.scenarioCurrentTileName.title=`${terrainName(terrain)} · #${tileId}`;
+    ui.scenarioMove.textContent=`(${x},${y})로 이동`;
+    ui.scenarioMove.title=`선택한 기체를 (${x}, ${y}) 칸으로 이동`;
+    ui.scenarioApplyTile.title=`(${x}, ${y}) 칸을 고른 타일로 교체`;
     const shared = scenarioSharedCaption(scene());
-    ui.scenarioMapSummary.textContent = `${model().bankFor(map())?.graphics ? '맵' : '지형 배치도'} · ${current.width}×${current.height}${shared ? ` · ${shared}` : map().mapSlots.length > 1 ? ` · 공유 맵 ${map().mapSlots.length}` : ''}`;
+    ui.scenarioMapSummary.textContent = `${model().bankFor(map())?.graphics ? '맵' : '지형 배치도'}${planeIndex===1?' · 데이터 2':''} · ${current.width}×${current.height}${shared ? ` · ${shared}` : map().mapSlots.length > 1 ? ` · 공유 맵 ${map().mapSlots.length}` : ''}`;
     ui.scenarioMapSummary.title = `${scenarioSelectionDescription(scene())} 맵 선택 번호: ${map().mapSlots.map(id => `#${id}`).join(' · ')}.`;
     ui.scenarioTileReset.disabled = !host.canEdit() || !modified(cell(), ['tileId']);
   }
@@ -164,14 +174,15 @@ export function createScenarioEditor(host) {
   }
   function fieldGroups(){
     const groups=[...(tool==='deployment'?ui.scenarioDeploymentFields:ui.scenarioTileFields).children];
-    if(tool!=='deployment')return groups;
+    if(tool==='tile')return groups;
     if(spawnMode())return groups.filter(group=>spawnGroups().includes(group)&&Boolean(reinforcement()));
-    if(eventIndex?.startsWith('objective:'))return groups.filter(group=>Boolean(objective())&&(group===ui.scenarioObjectiveFields&&showDeadline()||group===ui.scenarioObjectiveDescription||criteriaActive()&&criteriaGroups().includes(group)&&!ruleControls.some(({field,prefix})=>group===ui[prefix+'Group']&&!objective()[field]&&!pendingCriteria.has(field))));
-    return groups.filter(group=>!spawnGroups().includes(group)&&!criteriaGroups().includes(group)&&group!==ui.scenarioObjectiveFields&&group!==ui.scenarioObjectiveDescription
+    if(mode==='objective')return groups.filter(group=>Boolean(objective())&&(group===ui.scenarioObjectiveFields&&showDeadline()||group===ui.scenarioObjectiveDescription||criteriaActive()&&criteriaGroups().includes(group)&&!ruleControls.some(({field,prefix})=>group===ui[prefix+'Group']&&!objective()[field]&&!pendingCriteria.has(field))));
+    const eventGroups=[ui.scenarioEventFields,ui.scenarioEventChoice,...eventCriteriaGroups()];
+    if(mode==='events')return groups.filter(group=>eventGroups.includes(group)
       &&(!eventCriteriaGroups().includes(group)||eventCriteriaActive()&&(group!==ui.scenarioEventPhaseGroup||condition().eventPhaseEditable)&&(group!==ui.scenarioEventCriteriaChoice||!condition().eventExactTurnOnly)&&!eventRuleControls.some(({field,prefix})=>group===ui[prefix+'Group']&&!condition()[field]&&!pendingEventCriteria.has(field)))
       &&(group!==ui.scenarioEventFields||Boolean(condition())&&!eventCriteriaActive())
-      &&(group!==ui.scenarioEventChoice||ui.scenarioConditionSelector.children.length>1)
-      &&(!eventIndex?.startsWith('event:')||group===ui.scenarioEventFields||group===ui.scenarioEventChoice||eventCriteriaGroups().includes(group)));
+      &&(group!==ui.scenarioEventChoice||ui.scenarioConditionSelector.children.length>1));
+    return groups.filter(group=>!spawnGroups().includes(group)&&!criteriaGroups().includes(group)&&!eventGroups.includes(group)&&group!==ui.scenarioObjectiveFields&&group!==ui.scenarioObjectiveDescription);
   }
   function measureExplanation() {
     const popup = ui.scenarioSelectionDescription?.closest?.('.reward-explanation');
@@ -252,7 +263,8 @@ export function createScenarioEditor(host) {
     const inspector = panel.querySelector('.scenario-inspector'), work = panel.querySelector('.scenario-workarea');
     const groups = fieldGroups();
     const focused = groups.findIndex(group => group.contains(document.activeElement));
-    groups.forEach(group => { group.hidden = false; }); ui.scenarioFieldsPager.hidden = true;
+    for(const group of [...ui.scenarioDeploymentFields.children,...ui.scenarioTileFields.children])group.hidden=!groups.includes(group);
+    ui.scenarioFieldsPager.hidden = true;
     const stackHeight=(element,minimumChild=null)=>{
       const children=[...element.children].filter(child=>child.getClientRects().length),style=getComputedStyle(element);
       const pixel=key=>Number.parseFloat(style[key])||0;
@@ -290,10 +302,12 @@ export function createScenarioEditor(host) {
   }
   function sync() {
     const editable = host.canEdit(), current = row();
+    for(const [next,id]of Object.entries(modeButtons))ui[id].disabled=!editable||!modeEntries(next).length;
     if(!editable&&regionPicker){regionPicker=null;say();draw();}
     for (const id of ['scenarioSelector', 'scenarioMapSelector', 'scenarioPlaneSelector', 'scenarioZoom']) ui[id].disabled = !editable || !map();
     for (const id of ['scenarioDeploymentSelector', 'scenarioX', 'scenarioY', 'scenarioMove', 'scenarioReward']) ui[id].disabled = !editable || !current?.editable || planeIndex !== 0;
-    for (const id of ['scenarioTileSelector', 'scenarioApplyTile', 'scenarioBrush', 'scenarioTerrainLink']) ui[id].disabled = !editable || !map();
+    for (const id of ['scenarioTileSelector', 'scenarioTilePickerOpen', 'scenarioApplyTile', 'scenarioBrush', 'scenarioTerrainLink']) ui[id].disabled = !editable || !map();
+    ui.scenarioRewardDetail.disabled=!editable||!current?.editable||!host.rewardRows().some(item=>item.editable&&item.aliases.includes(current.rewardSelector));
     ui.scenarioDeploymentReset.disabled = !editable || !current?.editable || !modified(current, ['x', 'y', 'rewardSelector']);
     ui.scenarioTileReset.disabled = !editable || !modified(cell(), ['tileId']);
     const spawn=reinforcement();
@@ -342,7 +356,7 @@ export function createScenarioEditor(host) {
   function renderDeployment() {
     const rows = placements();
     ui.scenarioDeploymentFields.dataset.spawnOnly=String(spawnMode());
-    ui.scenarioDeploymentFields.dataset.eventOnly=String(Boolean(eventIndex?.startsWith('event:')));
+    ui.scenarioDeploymentFields.dataset.eventOnly=String(mode==='events'&&!spawnMode());
     ui.scenarioDeploymentFields.dataset.objectiveOnly=String(Boolean(eventIndex?.startsWith('objective:')));
     if (!rows.some(item => item.recordIndex === selected)) selected = rows.find(item => item.editable)?.recordIndex ?? rows[0]?.recordIndex ?? null;
     ui.scenarioDeploymentSelector.replaceChildren(...rows.map((item, i) => option(item.recordIndex, `${i + 1}. ${item.name} · (${item.x}, ${item.y})`)));
@@ -353,18 +367,24 @@ export function createScenarioEditor(host) {
       input.value = current ? String(current[field]) : ''; input.max = String((current?.[field === 'x' ? 'width' : 'height'] ?? 64) - 1);
       input.setCustomValidity(''); input.removeAttribute('aria-invalid');
     }
-    ui.scenarioReward.replaceChildren(option(255, '보상 없음'), ...host.rewardRows().flatMap(item => item.aliases.map(id => option(id, `표 #${id}${item.editable ? '' : ' · 보상 없음'}`))));
+    ui.scenarioReward.replaceChildren(option(255, '보상 없음'), ...host.rewardRows().flatMap(item => item.aliases.map(id => {
+      const parts=Array.from({length:item.capacity??0},(_,i)=>`${host.partName?.(item[`part${i+1}`])||`파츠 #${item[`part${i+1}`]}`} ${item[`chance${i+1}`]}%`);
+      const choice=option(id,item.editable?`#${id} · ${host.partName?.(item.part1)||`파츠 #${item.part1}`}`:`#${id} · 보상 없음`);
+      choice.title=parts.length?`${parts.join(' / ')} · 남은 확률은 보상 없음`:'보상 없음';return choice;
+    })));
+    ui.scenarioReward.title=ui.scenarioReward.selectedOptions?.[0]?.title??'';
+    if(current&&!Array.from(ui.scenarioReward.options).some(item=>Number(item.value)===current.rewardSelector))ui.scenarioReward.append(option(current.rewardSelector,`표 #${current.rewardSelector} · 현재 보상`));
     ui.scenarioReward.value = String(current?.rewardSelector ?? 255);
+    ui.scenarioReward.title=ui.scenarioReward.selectedOptions?.[0]?.title??'';
     ui.scenarioPilotName.textContent = current ? current.pilotName : '';
     ui.scenarioPilotName.title = current?.pilotName ?? '';
-    say(current?.readOnlyReason || (planeIndex !== 0 ? '기체 배치는 상태 1에서 편집합니다.' : ''));
+    say(mode==='placement'?(current?.readOnlyReason || (planeIndex !== 0 ? '기체 배치는 맵 데이터 1에서 편집합니다.' : '')):'');
+    const visible=fieldGroups();for(const group of [...ui.scenarioDeploymentFields.children,...ui.scenarioTileFields.children])group.hidden=!visible.includes(group);
     sync();
   }
   function waveLabel(item){
-    if(item.initial) return `초기 배치 · ${item.placements.length}기`;
-    const guards=item.guards.map(guard=>({guard,row:model().events.find(row=>row.recordIndex===guard.recordIndex)})).filter(item=>item.row);
-    const main=guards.find(item=>item.guard.taken&&item.row.comparison==='eq')??guards[0];
-    return `${main?eventConditionLabel(main.row,main.guard.taken):'후속 등장'}${item.phase==='enemy-start'?' · 적군 시작':''} · ${item.placements.length}기`;
+    const others=(scene()?.waves??[]).filter(w=>!w.initial),number=others.indexOf(item)+1;
+    return `${item.initial?'초기 배치':`후속 등장 ${number}`} · ${item.placements.length}기`;
   }
   const eventRules=row=>eventRuleControls.map(({field})=>row?.[field]?decodeObjectiveRule(row[field]):null).filter(Boolean);
   const eventRuleText=c=>`${c.value}턴${({eq:'',ne:' 외',le:' 이하',ge:' 이상'}[c.comparison])??''}`;
@@ -377,30 +397,53 @@ export function createScenarioEditor(host) {
   function standaloneDescription(row,index){
     const text=row.eventCriteriaEditable?eventRules(row).map(eventRuleText).join(row.eventJoin?' 또는 ':' + '):eventConditionLabel(row);
     const impossible=row.eventCriteriaEditable&&eventCriteriaTurnSummary(eventCriteriaFields(row))?.possible===false;
-    return `${text}${impossible?' · 함께 충족되는 턴 없음':''}${eventPhaseName(row)?' · '+eventPhaseName(row)+' 시작 검사':''} · 사건 ${index+1}`;
+    const related=(scene()?.waves??[]).flatMap(item=>{const guard=item.guards.find(g=>g.recordIndex===row.recordIndex);return guard?[`${waveLabel(item)} (${eventConditionLabel(row,guard.taken)})`]:[];});
+    return `${text}${impossible?' · 함께 충족되는 턴 없음':''}${eventPhaseName(row)?' · '+eventPhaseName(row)+' 시작 검사':''} · 사건 ${index+1}${related.length?`. 연결: ${related.join(' / ')}. 다른 플래그와 조건도 유지됩니다.`:''}`;
   }
   function describeEventSelection(){
     const selected=ui.scenarioEventSelector.selectedOptions?.[0]??ui.scenarioEventSelector.options[ui.scenarioEventSelector.selectedIndex];
     const text=selected?.title||selected?.textContent||'';
     ui.scenarioEventSelector.title=text;
+    if(mode==='events'&&eventIndex?.startsWith('event:')){
+      const related=(scene()?.waves??[]).filter(item=>item.guards.some(guard=>guard.recordIndex===eventIndex.slice(6)));
+      const first=related[0],name=first?(first.initial?'초기 배치':`후속 등장 ${(scene().waves??[]).filter(w=>!w.initial).indexOf(first)+1}`):'';
+      ui.scenarioTaskHint.textContent=name?`턴 검사 편집 · ${name}${related.length>1?' 등':''} 연결`:'턴 검사 편집 · 다른 이벤트 조건 유지';
+    }
     ui.scenarioEventSelector.setAttribute('aria-label',`등장·사건 선택${text?`. ${text}`:''}`);
   }
+  const modeButtons={placement:'scenarioDeploymentTool',events:'scenarioEventTool',objective:'scenarioObjectiveTool',tile:'scenarioTileTool'};
+  function modeEntries(next){
+    const current=scene(),waves=(current?.waves??[]).filter(w=>w.placements.length),events=model().events.filter(row=>row.physicalIndex===scenarioIndex);
+    if(next==='placement')return waves.length?waves.map(item=>[item.recordIndex,waveLabel(item)]):current?.placements.length?[['all',`기체 배치 · ${current.placements.length}기`]]:[];
+    if(next==='events')return [...events.map((item,i)=>[`event:${item.recordIndex}`,standaloneLabel(item,i),standaloneDescription(item,i)]),...(reinforcement()?.editable?[[`reinforcement:${reinforcement().recordIndex}`,'새 증원 · 적군 시작']]:[])];
+    if(next==='objective')return objective()?.editable?[[`objective:${objective().recordIndex}`,objective().criteriaEditable?'승리·패배 조건':'추가 턴 제한']]:[];
+    return map()?[['tile','타일']]:[];
+  }
+  function renderMode(){
+    tool=mode==='tile'?'tile':'deployment';
+    ui.scenarioEditorPanel.dataset.mode=mode;ui.scenarioEditorPanel.dataset.tool=tool;
+    for(const [next,id]of Object.entries(modeButtons)){
+      const available=modeEntries(next).length>0;
+      ui[id].disabled=!host.canEdit()||!available;ui[id].setAttribute('aria-pressed',String(next===mode));
+      ui[id].title=available?({placement:'기체의 위치와 격추 보상 편집',events:'확인된 턴 검사 편집',objective:'이 시나리오에서 지원하는 승리·패배 조건 편집',tile:'지도 한 칸의 그림과 지형 교체'}[next]):'이 시나리오에서 확인된 편집 대상이 없습니다';
+    }
+    ui.scenarioTaskHint.textContent=({placement:'기체 선택 → 지도에서 칸 선택 → 이동',events:'턴 검사 편집 · 다른 이벤트 조건 유지',objective:objective()?.criteriaEditable?'승리·패배 조건을 조합하세요':'기존 승패에 추가할 턴 제한을 정하세요',tile:'칸 선택 → 타일 고르기 → 교체'}[mode]);
+    ui.scenarioDeploymentFields.hidden=tool!=='deployment';ui.scenarioTileFields.hidden=tool!=='tile';
+  }
   function renderEvents(){
-    const current=scene(),waves=current?.waves??[],events=model().events.filter(row=>row.physicalIndex===scenarioIndex);
-    const standalone=events.filter(row=>!waves.some(w=>w.guards.some(g=>g.recordIndex===row.recordIndex)));
-    ui.scenarioEventSelector.hidden=!waves.length&&!events.length&&!objective()&&!reinforcement();
-    const entries=[...waves.map(item=>[item.recordIndex,waveLabel(item)]),...standalone.map((item,i)=>[`event:${item.recordIndex}`,standaloneLabel(item,i),standaloneDescription(item,i)]),...(objective()?[[`objective:${objective().recordIndex}`,objective().criteriaEditable?'작전 목적 · 조건':'작전 목적 · 추가 턴 제한']]:[]),...(reinforcement()?[[`reinforcement:${reinforcement().recordIndex}`,'새 증원 · 적군 시작']]:[])];
-    if(!entries.some(([id])=>id===eventIndex)) eventIndex=entries[0]?.[0]??null;
+    if(!modeEntries(mode).length)mode=['placement','objective','events','tile'].find(next=>modeEntries(next).length)||'tile';
+    renderMode();
+    const entries=mode==='tile'?[]:modeEntries(mode);
+    if(!entries.some(([id])=>id===eventIndex))eventIndex=entries[0]?.[0]??null;
     ui.scenarioEventSelector.replaceChildren(...entries.map(([id,label,description])=>{const item=option(id,label);item.title=description??label;return item;}));
     ui.scenarioEventSelector.value=eventIndex??'';
+    if(mode==='placement'&&wave()&&model().mapFor(wave().mapIndex))mapIndex=wave().mapIndex;
+    ui.scenarioMapSelector.value=String(model().mapFor(mapIndex)?.mapIndex??'');ui.scenarioPlaneSelector.value=String(planeIndex);
+    ui.scenarioEventSelector.hidden=!entries.length||mode==='objective';
     describeEventSelection();
-    const waveConditions=wave()?.guards.map(guard=>guard.recordIndex)??[];
-    const selectedConditions=eventIndex?.startsWith('event:')?[eventIndex.slice(6)]:waveConditions;
-    if(!selectedConditions.includes(conditionIndex)) conditionIndex=selectedConditions.at(-1)??null;
-    ui.scenarioConditionSelector.replaceChildren(...selectedConditions.map(id=>{
-      const row=model().events.find(row=>row.recordIndex===id),guard=wave()?.guards.find(guard=>guard.recordIndex===id);
-      return option(id,`${row?eventConditionLabel(row,guard?.taken):id}${row?.phase==='enemy-start'?' · 적군 시작 검사':''}`);
-    }));
+    const selectedConditions=mode==='events'&&eventIndex?.startsWith('event:')?[eventIndex.slice(6)]:[];
+    if(!selectedConditions.includes(conditionIndex))conditionIndex=selectedConditions.at(-1)??null;
+    ui.scenarioConditionSelector.replaceChildren(...selectedConditions.map(id=>option(id,eventConditionLabel(model().events.find(row=>row.recordIndex===id)))));
     ui.scenarioConditionSelector.value=conditionIndex??'';renderCondition();renderObjective();renderSpawn();
   }
   function renderSpawn(){
@@ -435,7 +478,7 @@ export function createScenarioEditor(host) {
     say();sync();draw();if(changed)host.onChange('reinforcement',current);return true;
   }
   function renderCondition(){
-    const current=condition();ui.scenarioEventFields.hidden=!current||eventCriteriaActive();
+    const current=condition();ui.scenarioEventFields.hidden=mode!=='events'||!current||eventCriteriaActive();
     ui.scenarioEventChoice.hidden=!current||ui.scenarioConditionSelector.children.length<2;
     ui.scenarioTurn.value=current?String(current.turn):'';
     ui.scenarioTurn.setCustomValidity('');ui.scenarioTurn.removeAttribute('aria-invalid');
@@ -471,7 +514,7 @@ export function createScenarioEditor(host) {
     for(const item of scene()?.waves??[]){const el=ui.scenarioEventSelector.querySelector(`option[value="${item.recordIndex}"]`);if(el) el.title=el.textContent=waveLabel(item);}
     const standalone=ui.scenarioEventSelector.querySelector(`option[value="event:${current.recordIndex}"]`);
     if(standalone){
-      const events=model().events.filter(row=>row.physicalIndex===scenarioIndex&&!scene()?.waves?.some(w=>w.guards.some(g=>g.recordIndex===row.recordIndex)));
+      const events=model().events.filter(row=>row.physicalIndex===scenarioIndex);
       const index=events.indexOf(current);standalone.textContent=standaloneLabel(current,index);standalone.title=standaloneDescription(current,index);
     }
     describeEventSelection();
@@ -527,7 +570,7 @@ export function createScenarioEditor(host) {
   function acceptTurn({report=false}={}){
     if(eventCriteriaActive())return acceptEventCriteria({report});
     const current=condition(),input=ui.scenarioTurn;
-    if(!current?.editable||!host.canEdit()) return true;
+    if(mode!=='events'||!current?.editable||!host.canEdit()) return true;
     input.setCustomValidity('');input.removeAttribute('aria-invalid');
     const turn=input.value===''?NaN:Number(input.value);
     if(!Number.isInteger(turn)||turn<1||turn>99){
@@ -672,17 +715,20 @@ export function createScenarioEditor(host) {
     const control=remove?ui[`scenario${outcome}Add`]:ui[chosen.prefix+'Query'];
     fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(control)));showFieldsPage();showPage('fields');control.focus();
   }
-  function chooseTool(next) {
+  function validateAll(){return acceptSpawn({report:true})&&acceptCriteria({report:true})&&acceptDeadline({report:true})&&acceptTurn({report:true})&&accept({report:true});}
+  function chooseTool(next){
+    // Internal error/focus paths retain their current editing context.
+    if(next==='tile')mode='tile';
     if(next!=='deployment')regionPicker=null;
-    if (next !== tool) fieldsPage = 0;
-    tool = next; brush = false;
-    ui.scenarioEditorPanel.dataset.tool=next;
-    ui.scenarioBrush.setAttribute('aria-pressed', 'false');
-    ui.scenarioDeploymentTool.setAttribute('aria-pressed', String(next === 'deployment'));
-    ui.scenarioTileTool.setAttribute('aria-pressed', String(next === 'tile'));
-    ui.scenarioDeploymentFields.hidden = next !== 'deployment'; ui.scenarioTileFields.hidden = next !== 'tile';
-    say(next === 'tile' ? '칸과 타일을 고른 뒤 적용합니다.' : row()?.readOnlyReason || '');
-    measure(); sync();
+    tool=mode==='tile'?'tile':'deployment';brush=false;ui.scenarioBrush.setAttribute('aria-pressed','false');
+    renderMode();measure();sync();
+  }
+  function chooseMode(next){
+    if(next===mode||!modeEntries(next).length||!host.canEdit()||!validateAll())return;
+    regionPicker=null;mode=next;eventIndex=conditionIndex=selected=null;fieldsPage=0;brush=false;ui.scenarioBrush.setAttribute('aria-pressed','false');
+    if(next==='placement')planeIndex=0;
+    ui.scenarioPlaneSelector.value=String(planeIndex);renderEvents();renderMap();
+    if(next==='events'||next==='objective')showPage('fields');else showPage('map');
   }
   function renderMap() {
     const current = plane(); if (current) { x = Math.min(x, current.width - 1); y = Math.min(y, current.height - 1); }
@@ -698,7 +744,8 @@ export function createScenarioEditor(host) {
     const orientation = plane()?.orientations?.[y * plane().width + x] ?? 0;
     const pixels = bank && model().graphics.tile(bank, paintedTile, orientation);
     ui.scenarioTilePreview.hidden = !paintTilePreview(ui.scenarioTilePreview, pixels);
-    ui.scenarioTilePreview.setAttribute('aria-label', `타일 #${paintedTile} · ${terrainName(terrainId(paintedTile))}`);
+    const text=`${terrainName(terrainId(paintedTile))} · #${paintedTile}`;
+    ui.scenarioTilePreview.setAttribute('aria-label',text);ui.scenarioTileName.textContent=terrainName(terrainId(paintedTile));ui.scenarioTileName.title=text;
   }
   function refresh() {
     const m = model();
@@ -737,14 +784,14 @@ export function createScenarioEditor(host) {
     wanted.rewardSelector = Number(ui.scenarioReward.value);
     if (!(Number.isInteger(wanted.rewardSelector) && (wanted.rewardSelector >= 0 && wanted.rewardSelector < 48 || wanted.rewardSelector === 255))) return false;
     const changed = Object.keys(wanted).some(field => current[field] !== wanted[field]);
-    Object.assign(current, wanted); say(); sync(); draw();
+    Object.assign(current, wanted);ui.scenarioReward.title=ui.scenarioReward.selectedOptions?.[0]?.title??'';say(); sync(); draw();
     const chosen = ui.scenarioDeploymentSelector.querySelector(`option[value="${current.recordIndex}"]`);
     if (chosen) chosen.textContent = `${placements().indexOf(current) + 1}. ${current.name} · (${current.x}, ${current.y})`;
     if (changed) host.onChange('deployment', current);
     return true;
   }
   function move() {
-    const current = row(); if (eventIndex?.startsWith('objective:') || !host.canEdit() || !current?.editable || planeIndex !== 0) return;
+    const current = row(); if (mode!=='placement' || !host.canEdit() || !current?.editable || planeIndex !== 0) return;
     ui.scenarioX.value = String(x); ui.scenarioY.value = String(y); accept();
   }
   function applyTile() {
@@ -757,8 +804,8 @@ export function createScenarioEditor(host) {
   function selectCell(cx, cy, { clicked = false } = {}) {
     const current = plane(); if (!current) return;
     x = Math.max(0, Math.min(current.width - 1, cx)); y = Math.max(0, Math.min(current.height - 1, cy));
-    if(clicked&&regionPicker){selectRegionPoint();return;}
-    if (clicked && tool === 'deployment' && planeIndex === 0 && !eventIndex?.startsWith('objective:')) {
+    if(clicked&&regionPicker){describeCell();selectRegionPoint();return;}
+    if (clicked && mode === 'placement' && planeIndex === 0 && !eventIndex?.startsWith('objective:')) {
       const occupied = placements().filter(item => item.x === x && item.y === y);
       if (occupied.length) { selected = occupied.find(item => item.recordIndex !== selected)?.recordIndex ?? occupied[0].recordIndex; renderDeployment(); }
     }
@@ -848,18 +895,21 @@ export function createScenarioEditor(host) {
   ui.scenarioEventAdd.addEventListener('click',()=>changeEventRule(null,false));
   ui.scenarioEventCriteriaReset.addEventListener('click',()=>{const current=condition();if(!eventCriteriaActive()||!host.canEdit())return;pendingEventCriteria.clear();Object.assign(current,Object.fromEntries(eventFields(current).map(field=>[field,current.original[field]])));if(current.eventExactTurnOnly)current.turn=current.original.turn;renderEvents();say();sync();measure();host.onChange('event',current);focusAfterReset(current.eventPhaseEditable?ui.scenarioEventPhase:ui.scenarioEventJoin);});
   ui.scenarioEventReset.addEventListener('click',()=>{const current=condition();if(!current?.editable||!host.canEdit())return;current.turn=current.original.turn;renderEvents();say();sync();host.onChange('event',current);focusAfterReset(ui.scenarioTurn);});
-  ui.scenarioMapSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioMapSelector.value=String(mapIndex);return;}mapIndex = Number(ui.scenarioMapSelector.value); scenarioIndex = null; eventIndex=conditionIndex=null;selected = null; x = y = 0; refresh(); });
-  ui.scenarioPlaneSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioPlaneSelector.value=String(planeIndex);return;}regionPicker=null;planeIndex = Number(ui.scenarioPlaneSelector.value); brush = false; ui.scenarioBrush.setAttribute('aria-pressed', 'false'); renderMap(); });
+  ui.scenarioMapSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioMapSelector.value=String(mapIndex);return;}mapIndex = Number(ui.scenarioMapSelector.value); scenarioIndex = null;mode='tile';eventIndex=conditionIndex=null;selected = null; x = y = 0; refresh();ui.scenarioMapSelector.closest?.('details')?.removeAttribute('open'); });
+  ui.scenarioPlaneSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioPlaneSelector.value=String(planeIndex);return;}regionPicker=null;planeIndex = Number(ui.scenarioPlaneSelector.value); if(planeIndex!==0&&mode==='placement'){mode='tile';eventIndex=conditionIndex=null;renderEvents();}brush = false; ui.scenarioBrush.setAttribute('aria-pressed', 'false'); renderMap(); });
   ui.scenarioDeploymentSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioDeploymentSelector.value=selected??'';return;}selected = ui.scenarioDeploymentSelector.value; renderDeployment(); if (row()) { x = row().x; y = row().y; } describeCell(); draw(); });
   for (const input of [ui.scenarioX, ui.scenarioY, ui.scenarioReward]) { input.addEventListener('input', () => accept()); input.addEventListener('change', () => accept()); }
   ui.scenarioMove.addEventListener('click', move);
+  ui.scenarioRewardDetail.addEventListener('click',()=>{if(host.canEdit()&&row()&&validateAll())host.openReward?.(row().rewardSelector);});
   ui.scenarioDeploymentReset.addEventListener('click', () => { const current = row(); if (!host.canEdit() || !current?.editable) return; const changed = ['x', 'y', 'rewardSelector'].find(field => current[field] !== current.original[field]); Object.assign(current, current.original); renderDeployment(); draw(); host.onChange('deployment', current); focusAfterReset(changed === 'rewardSelector' ? ui.scenarioReward : changed === 'y' ? ui.scenarioY : ui.scenarioX); });
-  ui.scenarioDeploymentTool.addEventListener('click', () => chooseTool('deployment'));
-  ui.scenarioTileTool.addEventListener('click', () => chooseTool('tile'));
+  for(const [next,id]of Object.entries(modeButtons))ui[id].addEventListener('click',()=>chooseMode(next));
+  const tilePicker=createScenarioTilePicker({el:$,model,terrainName,selection:()=>({mapIndex,planeIndex,x,y,tileId:paintedTile}),choose:tileId=>{
+    if(!host.canEdit())return;paintedTile=tileId;ui.scenarioTileSelector.value=String(tileId);previewTile();measure();
+  }});
   ui.scenarioTileSelector.addEventListener('change', () => { paintedTile = Number(ui.scenarioTileSelector.value); previewTile(); });
   ui.scenarioApplyTile.addEventListener('click', applyTile);
-  ui.scenarioBrush.addEventListener('click', () => { if (!host.canEdit()) return; brush = !brush; ui.scenarioBrush.setAttribute('aria-pressed', String(brush)); say(brush ? '누른 칸에 선택한 타일을 칠합니다.' : '칸과 타일을 고른 뒤 적용합니다.'); });
-  ui.scenarioTileReset.addEventListener('click', () => { const current = cell(); if (!host.canEdit() || !current) return; current.tileId = current.original.tileId; describeCell(); draw(); host.onChange('map', current); focusAfterReset(ui.scenarioTileSelector); });
+  ui.scenarioBrush.addEventListener('click', () => { if (!host.canEdit()) return; brush = !brush; ui.scenarioBrush.setAttribute('aria-pressed', String(brush)); say(brush ? '누른 칸에 선택한 타일을 칠합니다.' : '칸 선택 → 타일 고르기 → 교체'); });
+  ui.scenarioTileReset.addEventListener('click', () => { const current = cell(); if (!host.canEdit() || !current) return; current.tileId = current.original.tileId; describeCell();previewTile(); draw(); host.onChange('map', current); focusAfterReset(ui.scenarioTilePickerOpen); });
   ui.scenarioTerrainLink.addEventListener('click', () => host.openTerrain(terrainId(paintedTile)));
   ui.scenarioZoom.addEventListener('change', () => { zoom = Number(ui.scenarioZoom.value); draw(); });
   ui.scenarioMapPage.addEventListener('click', () => showPage('map'));
@@ -867,19 +917,28 @@ export function createScenarioEditor(host) {
   ui.scenarioFieldsPrev.addEventListener('click', () => { fieldsPage--; showFieldsPage(); if(ui.scenarioFieldsPrev.disabled&&!ui.scenarioFieldsNext.disabled)ui.scenarioFieldsNext.focus({preventScroll:true}); });
   ui.scenarioFieldsNext.addEventListener('click', () => { fieldsPage++; showFieldsPage(); if(ui.scenarioFieldsNext.disabled&&!ui.scenarioFieldsPrev.disabled)ui.scenarioFieldsPrev.focus({preventScroll:true}); });
   ui.scenarioSelectionDescription?.closest?.('details')?.addEventListener('toggle', measureExplanation);
+  function measureMapDetails(){
+    const details=ui.scenarioMapSelector.closest?.('details'),popup=details?.querySelector('.scenario-map-options');if(!details?.open||!popup)return;
+    popup.style.top='';popup.style.left='';popup.style.right='';
+    const toolbar=ui.scenarioEditorPanel.querySelector('.scenario-toolbar').getBoundingClientRect(),rect=popup.getBoundingClientRect();
+    popup.style.top=`${Math.max(8-toolbar.top,Math.min(rect.top-toolbar.top,window.innerHeight-rect.height-8-toolbar.top))}px`;
+  }
+  const mapDetails=ui.scenarioMapSelector.closest?.('details');mapDetails?.addEventListener('toggle',measureMapDetails);
+  $('scenarioMapDetailsClose')?.addEventListener('click',()=>{if(mapDetails){mapDetails.open=false;mapDetails.querySelector('summary').focus({preventScroll:true});}});
+  window.addEventListener('resize',measureMapDetails);
   window.addEventListener('resize', measure); document.fonts?.ready.then(measure);
   return Object.freeze({ refresh, sync, measure, validate: () => acceptSpawn({report:true})&&acceptCriteria({report:true})&&acceptDeadline({report:true})&&acceptTurn({report:true})&&accept({ report: true }),
-    openCell: target => { mapIndex = target.mapIndex; planeIndex = target.plane; scenarioIndex = null; selected = null;
+    openCell: target => { mode='tile';mapIndex = target.mapIndex; planeIndex = target.plane; scenarioIndex = null; selected = null;
       x = target.x; y = target.y; refresh(); chooseTool('tile'); showPage('map'); ui.scenarioMapCanvas.focus(); },
-    reset: () => { regionPicker=null;pendingCriteria.clear();pendingEventCriteria.clear();mapIndex = selected = scenarioIndex = eventIndex=conditionIndex=null; planeIndex = 0; x = y = 0; brush = false; zoom = 1; ui.scenarioZoom.value = '1'; page = 'map'; chooseTool('deployment'); refresh(); },
+    reset: () => { mode='placement';regionPicker=null;pendingCriteria.clear();pendingEventCriteria.clear();mapIndex = selected = scenarioIndex = eventIndex=conditionIndex=null; planeIndex = 0; x = y = 0; brush = false; zoom = 1; ui.scenarioZoom.value = '1'; page = 'map'; chooseTool('deployment'); refresh(); },
     focus: (kind, id, fields = []) => {
-      if(kind==='reinforcement'){
+      if(kind==='reinforcement'){mode='events';
         const target=model().reinforcements.find(item=>item.recordIndex===id);if(!target)return false;
         scenarioIndex=target.physicalIndex;mapIndex=target.mapIndex;planeIndex=0;eventIndex=`reinforcement:${id}`;conditionIndex=selected=null;
         refresh();chooseTool('deployment');showPage('fields');
         const control=({turn:ui.scenarioSpawnTurn,x:ui.scenarioSpawnX,y:ui.scenarioSpawnY,rewardSelector:ui.scenarioSpawnReward,templateOffset:ui.scenarioSpawnTemplate}[fields[0]]??ui.scenarioSpawnToggle);
         fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(control)));showFieldsPage();control.focus();
-      }else if(kind==='objective'){
+      }else if(kind==='objective'){mode='objective';
         const target=model().objectives.find(item=>item.recordIndex===id);if(!target)return false;
         scenarioIndex=target.physicalIndex;mapIndex=scene()?.mapIndex;planeIndex=0;eventIndex=`objective:${id}`;conditionIndex=selected=null;
         refresh();chooseTool('deployment');showPage('fields');
@@ -888,19 +947,17 @@ export function createScenarioEditor(host) {
         const control=selectedRule?(selectedKind==='factionRegion'?regionControls.get(selectedRule.field).inputs.x0:ui[selectedRule.prefix+(target[selectedRule.field]?(entityQuery(selectedKind)?'Unit':'Value'):'Query')]):({objectivePriority:ui.scenarioObjectivePriority,victoryJoin:ui.scenarioVictoryJoin,defeatJoin:ui.scenarioDefeatJoin}[fields[0]]??ui.scenarioDeadline);
         const activeControl=selectedRule&&!target[selectedRule.field]?ui[`scenario${selectedRule.field.startsWith('victory')?'Victory':'Defeat'}Add`]:control;
         fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(activeControl)));showFieldsPage();activeControl.focus();
-      }else if(kind==='event'){const target=model().events.find(item=>item.recordIndex===id);if(!target)return false;scenarioIndex=target.physicalIndex;
+      }else if(kind==='event'){mode='events';const target=model().events.find(item=>item.recordIndex===id);if(!target)return false;scenarioIndex=target.physicalIndex;
         const current=scene();mapIndex=current.mapIndex;planeIndex=0;eventIndex=`event:${id}`;conditionIndex=id;selected=null;
-        // A predicate used by a wave is selected through that wave's entry.
-        const associated=current.waves?.find(w=>w.guards.some(g=>g.recordIndex===id));if(associated)eventIndex=associated.recordIndex;
         refresh();conditionIndex=id;ui.scenarioConditionSelector.value=id;renderCondition();chooseTool('deployment');showPage('fields');
         const eventControl=eventCriteriaActive()?(fields[0]==='eventPhase'&&target.eventPhaseEditable?ui.scenarioEventPhase:fields[0]==='eventJoin'?ui.scenarioEventJoin:ui[(eventRuleControls.find(c=>c.field===fields[0])?.prefix??'scenarioEventRule1')+'Value']):ui.scenarioTurn;
         fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(eventControl)));showFieldsPage();eventControl.focus();
-      }else if (kind === 'deployment') { const target = model().deployments.find(item => item.recordIndex === id); if (!target) return false;
+      }else if (kind === 'deployment') { mode='placement';const target = model().deployments.find(item => item.recordIndex === id); if (!target) return false;
         mapIndex = target.mapIndex; planeIndex = 0; scenarioIndex = target.physicalIndex;eventIndex=target.waveIndex??null;conditionIndex=null; selected = id; x = target.x; y = target.y; refresh(); chooseTool('deployment'); showPage('fields');
         const control = ({ x: ui.scenarioX, y: ui.scenarioY, rewardSelector: ui.scenarioReward }[fields[0]] ?? ui.scenarioDeploymentSelector);
         fieldsPage = fieldsPages.findIndex(groups => groups.some(group => group.contains(control))); showFieldsPage(); control.focus();
-      } else { const target = model().rows('map').find(item => item.recordIndex === id); if (!target) return false;
-        mapIndex = target.mapIndex; planeIndex = target.plane; scenarioIndex = null; x = target.x; y = target.y; refresh(); chooseTool('tile'); showPage('fields'); ui.scenarioTileSelector.focus(); }
+      } else { mode='tile';const target = model().rows('map').find(item => item.recordIndex === id); if (!target) return false;
+        mapIndex = target.mapIndex; planeIndex = target.plane; scenarioIndex = null; x = target.x; y = target.y; refresh(); chooseTool('tile'); showPage('fields'); ui.scenarioTilePickerOpen.focus(); }
       return true;
     },
   });
