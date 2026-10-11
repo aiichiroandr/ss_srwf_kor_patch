@@ -18,6 +18,7 @@ import {
 } from '../assets/editor-core.mjs';
 import { UNIT_LOCK_LAYOUTS } from '../assets/editor-lock-layout.mjs';
 import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from '../assets/editor-provenance-profiles.mjs';
+import { HERO_EDITOR_PROFILES } from '../assets/editor-hero-profiles.mjs';
 import { immutableBytesHash } from '../assets/editor-provenance.mjs';
 
 // Optional golden checks on real decoded tables. The repository ships no game data: point SRWF_GOLDEN_TSR_DIR at a
@@ -67,10 +68,10 @@ for (const [lane, gameId] of Object.entries(LANES)) {
 
     // pinned pilot ids: hero slots, hero heads, head-less list templates
     assert.deepEqual(idsOf(pilots, 'hero-slot'), [302, 303]);
-    assert.deepEqual(idsOf(pilots, 'nonstandard-tail'), span(308, 311));
+    assert.deepEqual(idsOf(pilots, 'hero-list-template'), span(308, 311));
     assert.deepEqual(pilots.filter((row) => row.role === 'hero-head').map((row) => [row.recordIndex, row.faceId, row.recordKind]),
       span(304, 307).map((id) => [id, 0, 'regular']));
-    assert.ok(pilots.filter((row) => row.recordKind === 'nonstandard-tail').every((row) => row.listTemplate.spiritCommands.length === 6));
+    assert.ok(pilots.filter((row) => row.recordKind === 'hero-list-template').every((row) => row.spirits.length === 6 && row.spiritMinimum === 6));
     assert.ok(pilots.every((row) => row.tailClosed));
 
     // records that the old name key showed as unnamed (or under a neighbour's name) now carry their own table name
@@ -124,7 +125,7 @@ for (const [lane, gameId] of Object.entries(LANES)) {
 
     // the row model must not move the editable byte ranges: this lane's stored provenance profile still matches
     const masks = editorDecodedMasks(root, gameId);
-    const profiles = EDITOR_PROVENANCE_PROFILES.filter((profile) => profile.gameId === gameId && profile.decodedLength === decoded.length);
+    const profiles = HERO_EDITOR_PROFILES.filter((profile) => profile.gameId === gameId && profile.decodedLength === decoded.length);
     assert.ok(profiles.some((profile) => JSON.stringify(masks) === JSON.stringify(profile.decodedMasks)
       && immutableBytesHash(decoded, profile.decodedMasks) === profile.immutableTsrSha256), 'a stored profile matches the recomputed masks');
 
@@ -155,13 +156,14 @@ for (const [lane, gameId] of Object.entries(LANES)) {
     // skill once a spirit command is deleted; only F records that keep their one spirit command in a one-pair footprint
     // (and the two F records of 25 bytes) have no room for a skill at all
     if (final) {
-      assert.deepEqual(reasons, { 'alias-group': 1, 'hero-slot': 2, 'nonstandard-tail': 4, 'unused-filler': 1 });
-      assert.deepEqual([editableRows.length, free, editableRows.length - free], [383, 115, 268]);
+      assert.deepEqual(reasons, { 'alias-group': 1, 'hero-slot': 2, 'hero-head': 4, 'unused-filler': 1 });
+      assert.deepEqual([editableRows.length, free, editableRows.length - free], [383, 379, 4]);
     } else {
-      assert.deepEqual(reasons, { 'alias-group': 1, 'hero-slot': 2, 'nonstandard-tail': 4, 'unused-filler': 28, 'no-capacity': 13 });
-      assert.deepEqual([editableRows.length, free, editableRows.length - free], [343, 154, 189]);
+      assert.deepEqual(reasons, { 'alias-group': 1, 'hero-slot': 2, 'hero-head': 4, 'unused-filler': 28 });
+      assert.deepEqual([editableRows.length, free, editableRows.length - free], [356, 352, 4]);
     }
-    assert.equal(Math.max(...editableRows.map((row) => row.skillCapacity)), 21);
+    assert.equal(Math.max(...editableRows.map((row) => row.pairCapacity - row.spirits.length - row.extraSpirits.length)), 21);
+    assert.equal(Math.max(...editableRows.map((row) => row.skillCapacity)), final ? 107 : 153, 'ordinary pilots include the shared verified padding budget');
     assert.ok(pilots.every((row) => row.skillConsumerLimit === 4 && Array.isArray(row.addableSkills)));
     assert.ok(editableRows.every((row) => row.skillCapacity >= row.specialAbilities.length && row.skillFree === row.skillCapacity - row.specialAbilities.length));
     assert.ok(editableRows.every((row) => row.addableSkills.length === (final ? 51 : 49) - row.specialAbilities.length));
@@ -185,7 +187,13 @@ for (const [lane, gameId] of Object.entries(LANES)) {
     for (const row of pilots) {
       if (!row.skillEditable || random() < 0.2) continue;
       const kept = row.specialAbilities.filter((skill) => skill.level > 99).map(({ id, level }) => ({ id, level }));
-      const count = Math.min(row.skillCapacity, kept.length + 1 + Math.floor(random() * 3));
+      // This plan verifies in-place pair writes. Per-row shared capacity cannot
+      // be consumed independently by every pilot in one simultaneous request.
+      const localCapacity = row.pairCapacity - row.spirits.length - row.extraSpirits.length;
+      // Growing a short ordinary list reserves all six spirit slots and may
+      // repack its shared span. Exercise replacement/deletion here; expansion
+      // and its separate shared budget have dedicated layout tests.
+      const count = Math.min(localCapacity, row.specialAbilities.length, kept.length + 1 + Math.floor(random() * 3));
       const list = kept.slice();
       for (let tries = 0; list.length < count && tries < 40; tries += 1) {
         const id = 33 + Math.floor(random() * (max - 32));
@@ -208,7 +216,7 @@ for (const [lane, gameId] of Object.entries(LANES)) {
     const ranges = editorDecodedMasks(editedRoot, gameId);
     // the font variants of a release have the same ranges but different data, so the profile of this lane is the one whose
     // hash the unedited data matches
-    const profile = EDITOR_PROVENANCE_PROFILES.find((candidate) => candidate.gameId === gameId && candidate.decodedLength === decoded.length
+    const profile = HERO_EDITOR_PROFILES.find((candidate) => candidate.gameId === gameId && candidate.decodedLength === decoded.length
       && JSON.stringify(candidate.decodedMasks) === JSON.stringify(ranges) && immutableBytesHash(decoded, candidate.decodedMasks) === candidate.immutableTsrSha256);
     assert.ok(profile, 'the ranges of the edited table are the stored ones');
     assert.equal(immutableBytesHash(edited, profile.decodedMasks), profile.immutableTsrSha256, 'everything outside the ranges is untouched');
@@ -218,7 +226,9 @@ for (const [lane, gameId] of Object.entries(LANES)) {
     for (const row of pilots) {
       const after = again.find((candidate) => candidate.recordIndex === row.recordIndex);
       const want = lists.get(row.recordIndex);
-      assert.equal(after.skillCapacity, row.skillCapacity, `capacity of ${row.recordIndex}`);
+      assert.equal(after.pairCapacity, row.pairCapacity, `fixed footprint of ${row.recordIndex}`);
+      if (row.role === 'hero-list') assert.equal(after.skillCapacity, row.skillCapacity, `hero budget of ${row.recordIndex}`);
+      else assert.ok(after.skillCapacity >= row.skillCapacity, `deletions preserve or free shared room for ${row.recordIndex}`);
       assert.deepEqual(after.spiritCommands.filter((command) => !command.placeholder), row.spiritCommands.filter((command) => !command.placeholder));
       if (!want) { assert.deepEqual(after.specialAbilities, row.specialAbilities); continue; }
       const ordered = want.slice();

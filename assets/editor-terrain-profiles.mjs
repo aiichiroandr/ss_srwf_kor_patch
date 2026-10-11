@@ -1,6 +1,6 @@
 // Verified root-34 combat/recovery bytes in the six latest accepted and two exact stock TSRs.
 // EN's control bit, pointers, names, and layout remain immutable. Reward-only/legacy profiles remain supported.
-import { REWARD_EDITOR_PROFILES } from './editor-reward-profiles.mjs?v=20261011-public12';
+import { REWARD_EDITOR_PROFILES } from './editor-reward-profiles.mjs?v=20261011-public13';
 const pins = [
   {
     "baseTargetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",

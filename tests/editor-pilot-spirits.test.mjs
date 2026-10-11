@@ -20,7 +20,8 @@ import {
   splitRootSegments,
   updatePilotRecords,
 } from '../assets/editor-core.mjs';
-import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from '../assets/editor-provenance-profiles.mjs';
+import { ACCEPTED_EDITOR_TARGETS } from '../assets/editor-provenance-profiles.mjs';
+import { HERO_EDITOR_PROFILES } from '../assets/editor-hero-profiles.mjs';
 import { immutableBytesHash } from '../assets/editor-provenance.mjs';
 import * as fixture from './helpers/synthetic-pilots.mjs';
 import { echoRequest } from './helpers/synthetic-iso.mjs';
@@ -447,14 +448,14 @@ for (const [lane, gameId] of Object.entries(LANES)) {
     const editable = pilots.filter((row) => row.spiritEditable);
     const reasons = countBy(pilots.filter((row) => !row.spiritEditable), 'spiritEditReason');
     if (gameId === FINAL) {
-      assert.deepEqual(reasons, { 'alias-group': 1, 'hero-slot': 2, 'hero-head': 4, 'nonstandard-tail': 4, 'unused-filler': 1 });
-      assert.equal(editable.length, 379);
+      assert.deepEqual(reasons, { 'alias-group': 1, 'hero-slot': 2, 'hero-head': 4, 'unused-filler': 1 });
+      assert.equal(editable.length, 383);
       // the only free pairs are those of the records without spirit commands
       assert.equal(editable.filter((row) => row.pairFree > 0).length, 111);
       assert.ok(editable.filter((row) => row.pairFree > 0).every((row) => row.spirits.length === 0 && row.pairFree === 1));
     } else {
-      assert.deepEqual(reasons, { 'alias-group': 1, 'no-spirit-block': 152, 'hero-slot': 2, 'hero-head': 4, 'nonstandard-tail': 4, 'unused-filler': 28 });
-      assert.equal(editable.length, 200);
+      assert.deepEqual(reasons, { 'alias-group': 1, 'no-spirit-block': 152, 'hero-slot': 2, 'hero-head': 4, 'unused-filler': 28 });
+      assert.equal(editable.length, 204);
       assert.equal(editable.filter((row) => row.pairFree > 0).length, 0, 'every F record with spirit commands is full');
       assert.equal(byId(pilots, 175).spiritEditReason, 'no-spirit-block');
     }
@@ -484,7 +485,7 @@ for (const [lane, gameId] of Object.entries(LANES)) {
     });
     assert.ok(changedAt(edited, decoded).every((at) => blocks.some(([from, to]) => at >= from && at < to)));
     const masks = editorDecodedMasks(editedRoot, gameId);
-    const profile = EDITOR_PROVENANCE_PROFILES.find((candidate) => candidate.gameId === gameId && candidate.decodedLength === decoded.length
+    const profile = HERO_EDITOR_PROFILES.find((candidate) => candidate.gameId === gameId && candidate.decodedLength === decoded.length
       && JSON.stringify(candidate.decodedMasks) === JSON.stringify(masks) && immutableBytesHash(decoded, candidate.decodedMasks) === candidate.immutableTsrSha256);
     assert.ok(profile, 'the ranges of the edited table are the stored ones');
     assert.equal(immutableBytesHash(edited, profile.decodedMasks), profile.immutableTsrSha256);

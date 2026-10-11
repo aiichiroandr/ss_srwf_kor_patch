@@ -835,6 +835,181 @@ const skillRows = () => indexedSkillRows(byId);
 const skillNames = () => skillRows().map((row) => row.querySelector(".pilot-skill-name").children[0].textContent);
 const chooseSkill = (id, level = 1) => choosePilotSkill(byId, state.editorGameId, id, level);
 
+// Hero slots are rebuilt by the game. Their links must select the verified source, not edit the placeholder slot.
+function heroNavigationView() {
+  const view = makeView();
+  const spirits = Array.from({ length: 6 }, (_, index) => ({ id: index + 1, level: index + 1, name: `정신${index + 1}`, unresolved: false, eventFlag: null }));
+  view.pilots = [
+    pilotRow(1, "일반 파일럿"),
+    ...[302, 303].map(recordIndex => pilotRow(recordIndex, "자리표시 숫자열", {
+      recordKind: "hero-slot", role: "hero-slot", editable: false, readOnlyReason: "runtime-assembled", space: 3,
+      spiritEditable: false, spiritEditReason: "hero-slot", skillEditable: false, skillEditReason: "hero-slot",
+    })),
+    ...[304, 305, 306, 307].map(recordIndex => pilotRow(recordIndex, "레난제스·이룸 이름표", {
+      role: "hero-head", atk: 80 + recordIndex - 304, space: 4,
+      spiritEditable: false, spiritEditReason: "hero-head", skillEditable: false, skillEditReason: "hero-head",
+    })),
+    ...[308, 309, 310, 311].map(recordIndex => skillPilot(recordIndex, [skillEntry(33)], {
+      name: "헥토르·윈 이름표", recordKind: "hero-list-template", role: "hero-list", statsValid: false,
+      listTemplate: { spiritCommands: spirits, skills: [skillEntry(33)], readOnly: false },
+      spirits, spiritCommands: spirits, spiritEditable: true, spiritEditReason: null, spiritSlots: 6,
+      spiritMinimum: 6, spiritMinimumReason: "keeps-hero-spirit-slots", addableSpirits: Array.from({ length: 24 }, (_, index) => ({ id: index + 7, name: `정신${index + 7}`, unresolved: false })),
+      pairCapacity: 23, pairFree: 16, skillCapacity: 17, skillFree: 16, skillExpansionPairs: 0,
+    })),
+  ];
+  return view;
+}
+
+function openHeroNavigation(recordIndex = 303, gameId = "srwf-f", view = heroNavigationView()) {
+  hooks.installEditorRows(view);
+  state.editorGameId = gameId;
+  openEditorState();
+  hooks.selectEditorTab("pilot", { render: false });
+  hooks.selectEditorRecord("pilot", recordIndex);
+}
+
+const heroTarget = recordIndex => byId("pilotHeroTargets").querySelector(`[data-hero-target="${recordIndex}"]`);
+const heroTargets = () => byId("pilotHeroTargets").querySelectorAll("[data-hero-target]").map(button => Number(button.dataset.heroTarget));
+
+test("hero slots expose the verified edit sources and replace placeholder stats with source navigation", () => {
+  for (const gameId of ["srwf-f", "srwf-final"]) {
+    openHeroNavigation(303, gameId);
+    assert.equal(byId("pilotHeroLinks").hidden, false);
+    assert.equal(byId("pilotStatsForm").hidden, true, "the slot's initial 100s are not presented as the real hero's stats");
+    assert.deepEqual(heroTargets(), [304, 305, 306, 307, 308, 309]);
+    for (const recordIndex of [304, 305, 306, 307]) assert.equal(heroTarget(recordIndex).dataset.heroSection, "stats");
+    for (const recordIndex of [308, 309]) assert.equal(heroTarget(recordIndex).dataset.heroSection, "lists");
+    assert.doesNotMatch(byId("pilotHeroTargets").textContent, /레난제스|이룸|헥토르|윈/);
+    assert.equal(byId("pilotHeroReturnButton").hidden, true);
+    hooks.selectEditorRecord("pilot", 302);
+    assert.deepEqual(heroTargets(), [303, 310, 311], "302 does not claim any of 304–307 as its verified stat provider");
+    assert.equal(heroTarget(303).dataset.heroSection, "sources");
+    assert.match(byId("pilotHeroTargets").textContent, /능력치.*미확인/);
+    for (const recordIndex of [310, 311]) assert.equal(heroTarget(recordIndex).dataset.heroSection, "lists");
+    hooks.selectEditorRecord("pilot", 1);
+    assert.equal(byId("pilotHeroLinks").hidden, true);
+    assert.equal(byId("pilotStatsForm").hidden, false, "ordinary pilot controls stay accessible after both slot screens");
+  }
+  resetState();
+});
+
+test("a hero stat source link clears conditions that hide the source and preserves unsaved edits when returning", () => {
+  const view = heroNavigationView();
+  view.pilots.find(row => row.recordIndex === 304).defaultVisible = false;
+  openHeroNavigation(303, "srwf-f", view);
+  byId("pilotFilterButton").click();
+  byId("editorSearchSubmit").click();
+  assert.equal(hooks.editorSearchTools.hasConditions("pilot"), true);
+  byId("pilotSearch").value = "#303";
+  hooks.renderRecordList("pilot");
+  assert.deepEqual(hooks.visibleRecordRows("pilot").map(row => row.recordIndex), [303]);
+  const beforeRevision = state.editorEditRevision;
+  heroTarget(304).click();
+  assert.equal(state.editorSelected.pilot, 304);
+  assert.equal(byId("pilotSearch").value, "");
+  assert.equal(hooks.editorSearchTools.hasConditions("pilot"), false);
+  assert.equal(state.showUnused.pilot, true, "a hidden source becomes reachable in the list");
+  assert.equal(byId("pilotStatsForm").hidden, false);
+  assert.equal(byId("pilotHeroReturnButton").hidden, false);
+  assert.doesNotMatch(byId("pilotStatsHeading").textContent, /레난제스|이룸/);
+  const input = byId("pilotStatsForm").querySelector('[data-editor-field="atk"]');
+  assert.equal(input.disabled, false);
+  assert.equal(document.activeElement, input, "the source's first editable stat is focused");
+  assert.equal(state.editorEditRevision, beforeRevision, "navigation is not an edit");
+  input.value = "123";
+  input.dispatchEvent({ type: "input", target: input });
+  const row = state.editorPilots.find(candidate => candidate.recordIndex === 304);
+  assert.equal(row.atk, 123);
+  const editedRevision = state.editorEditRevision, editedCount = hooks.countEditorChanges();
+  byId("pilotHeroReturnButton").click();
+  assert.equal(state.editorSelected.pilot, 303);
+  assert.equal(byId("pilotStatsForm").hidden, true);
+  assert.equal(row.atk, 123);
+  assert.equal(state.editorEditRevision, editedRevision);
+  assert.equal(hooks.countEditorChanges(), editedCount);
+  heroTarget(304).click();
+  assert.equal(input.value, "123", "returning to the source keeps its current unsaved value");
+  const requested = hooks.buildEditorExportRequest().pilotEdits.find(entry => entry.recordIndex === 304);
+  assert.equal(requested.fields.atk, 123);
+  assert.equal(hooks.buildEditorExportRequest().pilotEdits.find(entry => entry.recordIndex === 303).fields.atk, 100);
+  resetState();
+});
+
+test("a hero list link opens six editable spirit slots while numeric template bytes stay protected", () => {
+  for (const [slot, list] of [[302, 310], [303, 308]]) {
+    openHeroNavigation(slot);
+    heroTarget(list).click();
+    assert.equal(state.editorSelected.pilot, list);
+    assert.equal(byId("pilotStatsForm").hidden, false);
+    assert.doesNotMatch(byId("pilotStatsHeading").textContent, /헥토르|윈|비표준/);
+    const controls = byId("pilotStatsForm").querySelectorAll("[data-editor-field]");
+    assert.ok(controls.length > 0);
+    assert.ok(controls.every(control => control.disabled), "list bytes are not editable pilot stats or terrain grades");
+    const choices = byId("pilotMentalCommands").querySelectorAll("select[data-spirit-slot]");
+    assert.equal(choices.length, 6);
+    assert.ok(choices.every(choice => !choice.disabled));
+    assert.equal(document.activeElement, choices[0]);
+    assert.ok(byId("pilotMentalCommands").querySelectorAll("[data-spirit-remove]").every(button => button.disabled), "the game's six fixed spirit pairs remain in place");
+    const row = state.editorPilots.find(candidate => candidate.recordIndex === list), beforeAtk = row.atk;
+    const number = byId("pilotStatsForm").querySelector('[data-editor-field="atk"]');
+    number.value = "222";
+    number.dispatchEvent({ type: "input", target: number });
+    assert.equal(row.atk, beforeAtk, "a programmatic input cannot turn template bytes into editable stats");
+    choices[0].value = "7";
+    choices[0].dispatchEvent({ type: "change", target: choices[0] });
+    assert.equal(row.spirits[0].id, 7);
+    assert.equal(row.spirits.length, 6);
+    const exportRow = hooks.buildEditorExportRequest().pilotEdits.find(entry => entry.recordIndex === list);
+    assert.equal(exportRow.spirits[0].id, 7);
+    assert.equal(exportRow.spirits.length, 6);
+    const revision = state.editorEditRevision;
+    byId("pilotHeroReturnButton").click();
+    assert.equal(state.editorSelected.pilot, slot, "return goes to the slot that opened the shared source");
+    assert.equal(state.editorEditRevision, revision);
+    assert.equal(row.spirits[0].id, 7);
+  }
+  resetState();
+});
+
+test("hero list skill editing and source navigation preserve all six spirit commands", () => {
+  openHeroNavigation(303, "srwf-final");
+  heroTarget(309).click();
+  assert.equal(byId("pilotSkillScheduleButton").disabled, false);
+  const row = state.editorPilots.find(candidate => candidate.recordIndex === 309);
+  const initialSpirits = row.spirits.map(({ id, level }) => [id, level]);
+  byId("pilotSkillScheduleButton").click();
+  assert.equal(byId("pilotSkillDialog").open, true);
+  chooseSkill(60, 7);
+  assert.equal(byId("pilotSkillAddButton").disabled, false);
+  byId("pilotSkillAddButton").click();
+  assert.ok(row.specialAbilities.some(entry => entry.id === 60 && entry.level === 7));
+  assert.deepEqual(row.spirits.map(({ id, level }) => [id, level]), initialSpirits);
+  byId("pilotSkillDialogClose").click();
+  byId("pilotHeroReturnButton").click();
+  assert.equal(state.editorSelected.pilot, 303);
+  heroTarget(309).click();
+  assert.ok(row.specialAbilities.some(entry => entry.id === 60 && entry.level === 7));
+  assert.deepEqual(row.spirits.map(({ id, level }) => [id, level]), initialSpirits);
+  const requested = hooks.buildEditorExportRequest().pilotEdits.find(entry => entry.recordIndex === 309);
+  assert.deepEqual(requested.spirits.map(({ id, level }) => [id, level]), initialSpirits);
+  assert.ok(requested.specialAbilities.some(entry => entry.id === 60 && entry.level === 7));
+  resetState();
+});
+
+test("directly selected hero sources return to the verified owning slot and never use table character names", () => {
+  for (const [recordIndex, expectedSlot] of [[304, 303], [307, 303], [308, 303], [309, 303], [310, 302], [311, 302]]) {
+    openHeroNavigation(recordIndex);
+    assert.equal(byId("pilotHeroLinks").hidden, false);
+    assert.equal(byId("pilotHeroReturnButton").hidden, false);
+    assert.deepEqual(heroTargets(), recordIndex < 308 ? [308 + recordIndex % 2] : [], "head sources keep one link to their corresponding list, rather than the entire chooser");
+    assert.doesNotMatch(byId("pilotStatsHeading").textContent, /레난제스|이룸|헥토르|윈|비표준/);
+    byId("pilotHeroReturnButton").click();
+    assert.equal(state.editorSelected.pilot, expectedSlot);
+    assert.equal(byId("pilotStatsForm").hidden, true);
+  }
+  resetState();
+});
+
 test("the skill dialog lists the skills with a level box and a delete button, and says how much room is left", () => {
   openSkillDialog(1);
   assert.equal(byId("pilotSkillDialog").open, true);

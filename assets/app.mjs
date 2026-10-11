@@ -1,10 +1,10 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public12';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public12';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public12";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public12";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public12";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public12";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public12";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public13';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public13';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public13";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public13";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public13";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public13";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public13";
 import {
   canStep,
   filterRecords,
@@ -13,7 +13,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public12";
+} from "./editor-list.mjs?v=20261011-public13";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -24,7 +24,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public12";
+} from "./editor-grades.mjs?v=20261011-public13";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -58,27 +58,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public12";
+} from "./editor-skill-list.mjs?v=20261011-public13";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public12";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public12";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public12";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public12";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public12";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public12";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public12";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public12";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public12";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public12";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public12";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public12";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public12";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public12";
+} from "./editor-facts.mjs?v=20261011-public13";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public13";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public13";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public13";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public13";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public13";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public13";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public13";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public13";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public13";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public13";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public13";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public13";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public13";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -86,14 +86,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public12";
+} from "./font-revisions.mjs?v=20261011-public13";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public12";
+} from "./release-notes.mjs?v=20261011-public13";
 
-const STATIC_ASSET_REVISION = "20261011-public12";
+const STATIC_ASSET_REVISION = "20261011-public13";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -394,6 +394,11 @@ const elements = {
   unitPreviewCaption: byId("unitPreviewCaption"),
   pilotPreviewImage: byId("pilotPreviewImage"),
   pilotPreviewCaption: byId("pilotPreviewCaption"),
+  pilotHeroLinks: byId("pilotHeroLinks"),
+  pilotHeroLinksTitle: byId("pilotHeroLinksTitle"),
+  pilotHeroTargets: byId("pilotHeroTargets"),
+  pilotHeroLinksNote: byId("pilotHeroLinksNote"),
+  pilotHeroReturnButton: byId("pilotHeroReturnButton"),
   liveRegion: byId("liveRegion"),
 };
 
@@ -562,6 +567,7 @@ const state = {
   editorSelected: { unit: null, pilot: null, weapon: null },
   editorVisible: { unit: [], pilot: [], weapon: [] },
   editorPage: { unit: "main", pilot: "main", weapon: "main" },
+  editorHeroOrigin: null,
   // 기체 특수능력의 조건 플래그 번호 칸은 거의 항상 0이라 기본은 접어 두고, 0이 아닌 값이 있으면 저절로 보인다.
   unitFlagsOpen: false,
   editorTab: "unit",
@@ -723,6 +729,8 @@ elements.unitSpecialAbilities.addEventListener("click", (event) => {
 });
 elements.unitWeaponList.addEventListener("click", (event) => handleJumpClick(event));
 elements.weaponOwnerList.addEventListener("click", (event) => handleJumpClick(event));
+elements.pilotHeroTargets.addEventListener("click", handleHeroEditorLink);
+elements.pilotHeroReturnButton.addEventListener("click", handleHeroEditorLink);
 document.addEventListener("keydown", handleEditorNavigationKey);
 elements.editorExportButton.addEventListener("click", () => navigateWorkflow("save"));
 elements.workflowOpenEditor.addEventListener("click", () => prepareWorkflow("editor"));
@@ -4182,6 +4190,7 @@ const PATCHED_FALLBACK_NOTES = Object.freeze({
 
 // 검사를 마친 보기(view)의 표를 화면 상태에 넣고 세 목록을 그린다. 테스트도 같은 길로 행을 넣는다.
 function installEditorRows(view) {
+  state.editorHeroOrigin = null;
   editorSearchTools.reset();
   state.editorUnitAbilityNames = Array.isArray(view.unitAbilityNames) ? view.unitAbilityNames : [];
   state.editorPilotAbilityNames = Array.isArray(view.pilotAbilityNames) ? view.pilotAbilityNames : [];
@@ -4662,6 +4671,8 @@ function isLockedRecord(record) {
 
 // 목록과 머리글에 쓰는 이름. 이름이 없는 행은 막연히 미지정이라 하지 않고 행의 종류로 구분한다.
 function editorRowName(row) {
+  if (row.role === "hero-head") return `${row.recordIndex % 2 ? "격투형" : "사격형"} 능력치`;
+  if (row.recordKind === "hero-list-template") return `${row.recordIndex % 2 ? "저력" : "뉴타입·실드"} 습득표`;
   if (row.recordKind === "unused-filler") return "미사용 레코드";
   if (row.recordKind === "nonstandard-tail") return "비표준 레코드 (머리부 없음)";
   // 주인공 자리의 표 이름은 자리표시 숫자열이라 이름으로 보여 주지 않는다.
@@ -5087,6 +5098,106 @@ function handleJumpClick(event) {
   const target = event.target.closest?.("[data-jump-type]");
   if (!target) return;
   jumpToEditorRecord(target.dataset.jumpType, Number(target.dataset.jumpIndex));
+}
+
+function heroSourceSlot(record) {
+  if (record?.role === "hero-head") return 303;
+  if (record?.recordKind === "hero-list-template") return record.recordIndex >= 310 ? 302 : 303;
+  return null;
+}
+
+function renderPilotHeroNavigation(record) {
+  const slot = record?.recordKind === "hero-slot";
+  const source = heroSourceSlot(record);
+  const panel = EDITOR_UI.pilot.panel, form = EDITOR_UI.pilot.form;
+  elements.pilotHeroLinks.hidden = !slot && source === null;
+  if (source !== null) elements.pilotHeroLinks.dataset.source = record.role === "hero-head" ? "head" : "list";
+  else delete elements.pilotHeroLinks.dataset.source;
+  form.hidden = Boolean(slot);
+  if (slot) panel.dataset.heroView = "slot";
+  else delete panel.dataset.heroView;
+  if (source !== null) form.dataset.heroSource = record.role === "hero-head" ? "head" : "list";
+  else delete form.dataset.heroSource;
+  elements.pilotHeroTargets.replaceChildren();
+  elements.pilotHeroLinksNote.textContent = "";
+  elements.pilotHeroLinksNote.removeAttribute("title");
+  elements.pilotHeroReturnButton.hidden = !source;
+  if (!slot && source === null) return;
+  // The selected game's name tables use other pilots' placeholder names here.
+  elements.pilotHeroLinksTitle.textContent = slot ? "실제 주인공 편집" : "주인공 원본";
+  const makeButton = (recordIndex, label, section, detail) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "pilot-hero-target";
+    button.textContent = label;
+    button.dataset.heroTarget = String(recordIndex);
+    button.dataset.heroSection = section;
+    button.title = detail ?? label;
+    button.disabled = !findEditorDisplayRow("pilot", recordIndex);
+    return button;
+  };
+  const group = (label, buttons) => {
+    const section = document.createElement("section");
+    section.className = "pilot-hero-target-group";
+    const heading = document.createElement("h4");
+    heading.textContent = label;
+    const choices = document.createElement("div");
+    choices.className = "pilot-hero-target-grid";
+    choices.append(...buttons);
+    section.append(heading, choices);
+    elements.pilotHeroTargets.append(section);
+  };
+  if (slot) {
+    if (record.recordIndex === 303) {
+      group("능력치 원본", [304, 305, 306, 307].map(id => makeButton(id,
+        `${id % 2 ? "격투형" : "사격형"} #${id}`, "stats",
+        `#303이 선택 정보에 따라 가져오는 능력치 원본 #${id}. 정신기·특수능력은 별도 원본에서 가져옵니다.`)));
+    } else {
+      group("능력치 연결 미확인", [makeButton(303, "#303 능력치 원본", "sources",
+        "#302의 능력치 공급원은 아직 확인하지 못했습니다. 확인된 다른 주인공 자리 #303의 능력치 원본을 볼 수 있습니다.")]);
+    }
+    const first = record.recordIndex === 302 ? 310 : 308;
+    group("정신기·특수능력 원본", [
+      makeButton(first, `뉴타입·실드 #${first}`, "lists", "뉴타입·실드·베어내기와 기본 정신커맨드를 편집합니다."),
+      makeButton(first + 1, `저력 #${first + 1}`, "lists", "저력·베어내기와 기본 정신커맨드를 편집합니다."),
+    ]);
+    elements.pilotHeroLinksNote.textContent = "이 자리 대신 원본을 고칩니다.";
+    elements.pilotHeroLinksNote.title = record.recordIndex === 302
+      ? "게임이 선택 정보에 따라 정신기·특수능력 습득표를 이 자리로 복사합니다. 능력치 공급원은 미확인입니다. 생일 등에 따른 이후 덮어쓰기 경로까지 확인한 것은 아닙니다."
+      : "게임이 선택 정보에 따라 원본 능력치와 습득표를 복사해 이 자리를 구성합니다. 생일 등에 따른 이후 덮어쓰기 경로까지 확인한 것은 아닙니다.";
+    return;
+  }
+  state.editorHeroOrigin = source;
+  elements.pilotHeroReturnButton.dataset.heroTarget = String(source);
+  elements.pilotHeroReturnButton.dataset.heroSection = "sources";
+  if (record.role === "hero-head") {
+    const listId = 308 + record.recordIndex % 2;
+    elements.pilotHeroTargets.append(makeButton(listId, "정신·특수", "lists", "이 능력치 원본과 같은 선택 정보로 가져오는 습득표를 엽니다."));
+    elements.pilotHeroLinksNote.textContent = "정신기·특수능력은 별도 원본";
+  }
+}
+
+function handleHeroEditorLink(event) {
+  const button = event.target.closest?.("[data-hero-target]");
+  if (!button || button.disabled) return false;
+  const recordIndex = Number(button.dataset.heroTarget);
+  const record = findEditorDisplayRow("pilot", recordIndex);
+  if (!record || (record.recordKind !== "hero-slot" && heroSourceSlot(record) === null)) return false;
+  const fields = button.dataset.heroSection === "stats" ? ["atk"]
+    : button.dataset.heroSection === "lists" ? ["spirits"] : [];
+  if (record.recordKind === "hero-slot") state.editorHeroOrigin = recordIndex;
+  else state.editorHeroOrigin = heroSourceSlot(record);
+  const moved = fields.length ? focusEditorChange("pilot", recordIndex, fields) : jumpToEditorRecord("pilot", recordIndex);
+  if (moved && fields.length) requestAnimationFrame(() => {
+    if (state.editorSelected.pilot !== recordIndex) return;
+    const target = fields[0] === "spirits"
+      ? EDITOR_UI.pilot.form.querySelector(".pilot-mental-slot select")
+      : EDITOR_UI.pilot.form.querySelector('[data-editor-field="atk"]');
+    editorLayouts.get("pilot")?.reveal(target);
+    target?.focus?.({ preventScroll: true });
+  });
+  if (moved && !fields.length) elements.pilotHeroTargets.querySelector("[data-hero-target]")?.focus?.({ preventScroll: true });
+  return moved;
 }
 
 // ---- 지형 적응도: 게임 화면처럼 공·육·해·우 알파벳 ---------------------------------------------------------
@@ -5553,12 +5664,12 @@ function renderEditorRecord(type, record) {
     const value = showStats && isEditorValue(record[field]) ? record[field] : null;
     if (control.dataset.gradeKind) {
       setGradeSelectValue(control, value);
-      control.disabled = locked || (value !== null && !isEditableGradeValue(value));
+      control.disabled = locked || !showStats || (value !== null && !isEditableGradeValue(value));
     } else if (OPTIONAL_EDITOR_FIELDS.has(field)) {
       renderUseConditionControl(control, record, value, locked);
     } else {
       control.value = value === null ? "" : String(value);
-      control.disabled = locked;
+      control.disabled = locked || !showStats;
     }
   }
   ui.heading.textContent = record ? `${editorRowName(record)} · #${record.recordIndex}` : ui.fallbackTitle;
@@ -5571,6 +5682,7 @@ function renderEditorRecord(type, record) {
     renderUnitWeapons(record);
   }
   if (type === "pilot") {
+    renderPilotHeroNavigation(record);
     renderPilotMentalCommands(record);
     renderPilotRuntimeSkills(record);
     renderPilotSkillSchedule(record);
@@ -6045,7 +6157,8 @@ function pilotSkillGroupKey(ability) {
 
 function renderPilotRuntimeSkills(record) {
   const grouped = new Map();
-  const abilities = record?.statsValid === false ? record.listTemplate?.skills : record?.specialAbilities;
+  const abilities = record?.statsValid === false && record.recordKind !== "hero-list-template"
+    ? record.listTemplate?.skills : record?.specialAbilities;
   for (const ability of abilities ?? []) {
     if (!ability.name) continue;
     const family = pilotSkillGroupKey(ability);
@@ -6086,6 +6199,7 @@ const SKILL_REASON_COPY = Object.freeze({
   "alias-group": "여러 ID가 한 레코드를 함께 쓰기 때문에 한 번의 수정이 다른 ID까지 바꾸게 되어서",
   "shared-by-ids": "여러 ID가 한 레코드를 함께 쓰기 때문에 한 번의 수정이 다른 ID까지 바꾸게 되어서",
   "hero-slot": "게임이 실행 중에 다른 레코드에서 다시 만들어 쓰는 주인공 자리라서",
+  "hero-head": "게임이 이 기록에서는 능력치만 가져가고 특수능력은 별도 주인공 습득표에서 읽어서",
   "no-capacity": "이 레코드 안에는 능력을 더 넣을 자리가 없어서",
   "unterminated-tail": "목록의 끝 표시가 없거나 그 뒤 바이트가 규칙과 달라서",
   "terminator-level": "목록 끝 표시의 레벨이 규칙과 달라서",
@@ -6660,6 +6774,9 @@ function spiritRoomHelp(summary, room) {
   if (summary.minimumReason === "keeps-spirit-block") {
     parts.push("F에서는 정신커맨드를 하나 이상 남겨야 합니다. 정신커맨드가 하나도 없는 F 기록을 게임이 어떻게 읽는지는 확인되지 않았습니다.");
   }
+  if (summary.minimumReason === "keeps-hero-spirit-slots") {
+    parts.push("주인공 원본은 정신커맨드 여섯 칸을 모두 유지합니다. 이름과 습득 레벨을 바꿀 수 있으며 칸은 지울 수 없습니다.");
+  }
   if (summary.minimumReason === "extra-spirit-pairs") {
     parts.push("이 기록에는 게임이 읽지 않는 일곱 번째 쌍이 있어 여섯 칸을 모두 채워 둡니다. 칸을 지우면 그 쌍이 여섯 번째 칸이 되기 때문입니다.");
   }
@@ -6801,7 +6918,7 @@ function renderEditableSpirits(record) {
 
 function renderPilotMentalCommands(record) {
   renderSpiritRoom(record);
-  if (record && record.statsValid !== false && spiritSummary(record).editable) {
+  if (record && spiritSummary(record).editable) {
     renderEditableSpirits(record);
     return;
   }
@@ -6927,7 +7044,7 @@ function restoreEditorField(type, event) {
   if (!reset) return;
   const field = reset.dataset.editorResetField;
   const row = selectedEditorRow(type);
-  if (!row || !Object.hasOwn(row.original ?? {}, field)) return;
+  if (!row || row.statsValid === false || !Object.hasOwn(row.original ?? {}, field)) return;
   row[field] = row.original[field];
   const input = [...EDITOR_UI[type].form.querySelectorAll("[data-editor-field]")]
     .find((candidate) => candidate.dataset.editorField === field);
@@ -7093,7 +7210,7 @@ function setEditorRangeError(control) {
 
 function updateEditorRowFromForm(type) {
   const row = selectedEditorRow(type);
-  if (!row) return;
+  if (!row || isLockedRecord(row) || row.statsValid === false) return;
   let valid = true;
   for (const control of EDITOR_UI[type].form.querySelectorAll("[data-editor-field]")) {
     // 읽기 전용 레코드의 칸은 고치지 않는다.
@@ -7204,6 +7321,7 @@ function refreshEditorAfterPreset() {
 
 function validateEditorForms() {
   for (const type of EDITOR_TYPES) {
+    if (selectedEditorRow(type)?.statsValid === false) continue;
     const form = EDITOR_UI[type].form;
     for (const input of form.querySelectorAll("[data-editor-field]")) {
       // 읽기 전용 레코드의 칸은 편집하지 않으므로 검사하지 않는다(저장 요청은 원래 값을 그대로 싣는다).
@@ -8901,6 +9019,8 @@ export const __testHooks = Object.freeze({
   setEditorPage,
   jumpToEditorRecord,
   handleJumpClick,
+  renderPilotHeroNavigation,
+  handleHeroEditorLink,
   recordSearchText,
   visibleRecordRows,
   weaponOwnerSummary,

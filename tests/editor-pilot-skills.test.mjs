@@ -94,8 +94,9 @@ test('a row tells how many skills fit in place, how many are free and why a reco
     assert.deepEqual(locked(id), { skillEditable: false, skillEditReason: reason, skillCapacity: 0, skillFree: 0 }, `cell ${id}`);
     assert.deepEqual(byId(rows, id).addableSkills, []);
   }
-  // heads of the hero pool are ordinary records
-  assert.equal(byId(rows, 305).skillEditable, true);
+  // The game copies only the numeric head; abilities must be changed in the separate hero list.
+  assert.equal(byId(rows, 305).skillEditable, false);
+  assert.equal(byId(rows, 305).skillEditReason, 'hero-head');
   // the alias cells 312..319 are not rows of the table at all
   assert.equal(byId(rows, 312), undefined);
 });
@@ -137,7 +138,7 @@ test('addableSkills lists every id the writer accepts for the game, without the 
   assert.deepEqual([entry(42).familyId, entry(42).rank, entry(60).familyId, entry(60).rank], ['enhanced', 1, 'shield', 1]);
   assert.deepEqual([entry(78).familyId, entry(78).rank, entry(83).familyId, entry(83).rank], ['single-46', null, 'single-51', null]);
   // rows that hold nothing share one list, and the entries are shared by every row
-  assert.equal(byId(finalRows, CELL.PLACEHOLDER).addableSkills, byId(finalRows, 305).addableSkills);
+  assert.deepEqual(byId(finalRows, 305).addableSkills, [], 'a hero head cannot offer ineffective ability edits');
   assert.equal(wide.addableSkills.find((candidate) => candidate.id === 78), entry(78));
   assert.ok(Object.isFrozen(catalog) && Object.isFrozen(entry(41)) && Object.isFrozen(wide.addableSkills));
   // the entries of the list the pilot holds say the same about family and rank

@@ -745,6 +745,44 @@ const IRREGULAR_TAILS = {
   24: [33, 1, 42, 1, 51, 1, 60, 1, 78, 1, 0, 0], // too-many-skills (five consumers)
 };
 
+test("hero-head rows lock their unused lists with an explanation while their actual statistics remain editable in both games", async () => {
+  const heads = [304, 305, 306, 307];
+  const tails = Object.fromEntries(heads.map((cell) => [cell, [3, 1, 33, 1, 0, 0]]));
+  for (const gameId of [F_GAME, GAME]) {
+    await openPage(gameId, tails);
+    for (const cell of heads) {
+      const row = pilotRow(cell);
+      assert.equal(row.role, "hero-head", `${gameId} #${cell} is classified by the real parser`);
+      assert.equal(row.editable, true);
+      assert.equal(row.statsValid, true);
+      assert.deepEqual([row.spiritEditable, row.spiritEditReason, row.skillEditable, row.skillEditReason],
+        [false, "hero-head", false, "hero-head"]);
+      openDialog(cell);
+      const input = byId("pilotStatsForm").querySelector('[data-editor-field="atk"]');
+      assert.equal(input.disabled, false, "only the unused lists are locked, not the copied statistics");
+      assert.equal(hooks.editorRecordNotes("pilot", row).some((note) => note.tone === "readonly"), false,
+        "the source is not presented as an entirely read-only record");
+      assert.equal(byId("pilotMentalCommands").querySelector("select"), null);
+      assert.equal(byId("pilotSkillDialog").open, true);
+      assert.ok(byId("pilotSkillDialogNote").textContent.includes(hooks.SKILL_REASON_COPY["hero-head"]));
+      assert.equal(byId("pilotSkillAddButton").disabled, true);
+      assert.equal(byId("pilotSkillAddSelect").disabled, true);
+      for (const entry of skillRows()) {
+        assert.equal(entry.querySelector("input").disabled, true);
+        assert.equal(entry.querySelector(".pilot-skill-remove").disabled, true);
+      }
+      byId("pilotSkillDialogClose").click();
+      const original = row.atk;
+      input.value = String(original + 1);
+      input.dispatchEvent({ type: "input", target: input });
+      assert.equal(pilotRow(cell).atk, original + 1, "the actual parsed source still accepts a statistic edit");
+      input.value = String(original);
+      input.dispatchEvent({ type: "input", target: input });
+    }
+    assert.equal(hooks.countEditorChanges(), 0, "the contract checks leave every source unchanged");
+  }
+});
+
 test("every reason the core gives for a locked skill list has a sentence on the screen, in the dialog and in the record notice", async () => {
   await openPage(F_GAME, IRREGULAR_TAILS);
   const reasons = new Map();
@@ -754,7 +792,7 @@ test("every reason the core gives for a locked skill list has a sentence on the 
   // the fixture reaches every reason the core can attach to a row of F except the unused filler, which needs a record without
   // any name (the synthetic names cover every cell); unknown-game and a spirit id behind a skill never become a row
   assert.deepEqual([...reasons.keys()].sort(), [
-    "alias-group", "duplicate-skill", "hero-slot", "no-capacity", "nonstandard-tail", "skill-id", "terminator-level", "too-many-skills", "unterminated-tail",
+    "alias-group", "duplicate-skill", "hero-head", "hero-slot", "no-capacity", "nonstandard-tail", "skill-id", "terminator-level", "too-many-skills", "unterminated-tail",
   ]);
   for (const reason of ["unused-filler", "unknown-game", "spirit-after-skill"]) {
     assert.ok(Object.hasOwn(hooks.SKILL_REASON_COPY, reason), `the dialog also knows ${reason}`);

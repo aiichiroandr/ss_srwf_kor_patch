@@ -25,6 +25,25 @@ test("conditions AND numeric bounds and current held abilities; inactive extra s
   assert.equal(matchesConditions("pilot", pilot, [condition("spirit", 3, "has")]), false);
   assert.equal(matchesConditions("unit", row, [condition("modified", true)], () => true), true);
 });
+test("hero learning tables match current list membership while numeric filters and bulk edits stay unavailable", () => {
+  const row = { recordIndex: 308, recordKind: 'hero-list-template', editable: true, statsValid: false,
+    spirits: [{ id: 6, level: 8 }], specialAbilities: [{ id: 41, level: 1 }],
+    extraSpirits: [{ id: 3 }], atk: 50, space: 3, original: { atk: 50, space: 3 } };
+  assert.equal(matchesConditions('pilot', row, [condition('spirit', 6, 'has'), condition('ability', 41, 'has')]), true);
+  assert.equal(matchesConditions('pilot', row, [condition('ability', 78, 'lacks')]), true);
+  assert.equal(matchesConditions('pilot', row, [condition('spirit', 3, 'has')]), false);
+  for (const numeric of [condition('space', 3), condition('atk', 50, 'gte')]) {
+    assert.equal(matchesConditions('pilot', row, [numeric]), false);
+  }
+  const view = session([], [], [row]), before = structuredClone(row);
+  const bulk = planBulkEdit(view, 'pilot', [row], 'atk', 70);
+  assert.deepEqual(bulk.plan.counts, { apply: 0, conflict: 0, same: 0, skip: 1 });
+  assert.equal(bulk.plan.items[0].reason, 'read-only');
+  assert.equal(applyBulkEdit(bulk, view).applied, 0);
+  assert.deepEqual(row, before);
+  const legacy = { ...row, recordKind: 'nonstandard-tail', editable: false };
+  assert.equal(matchesConditions('pilot', legacy, [condition('ability', 41, 'has')]), false);
+});
 test("malformed filters fail closed and bulk choices expose scalar fields only", () => {
   for (const bad of [condition("__proto__", 1), condition("hp", NaN), condition("hp", null), condition("space", 5), condition("hp", 1, "OR")]) {
     assert.equal(isValidCondition("unit", bad), false);
