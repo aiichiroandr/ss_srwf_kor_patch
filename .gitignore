@@ -83,3 +83,6 @@ mednafen/
 states/
 saves/
 screenshots/
+
+# Local assistant configuration and nested worktrees
+.claude/

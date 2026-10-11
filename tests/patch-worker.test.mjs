@@ -110,7 +110,9 @@ globalThis.self = {
     }
   },
 };
+const postedMessages = [];
 globalThis.postMessage = function postWorkerMessage(message, transferOrOptions) {
+  postedMessages.push(message);
   if (!['complete', 'error', 'cancelled'].includes(message?.type)) {
     return;
   }
@@ -670,4 +672,78 @@ test('worker dispatches nine-key v2 descriptors to the growth engine and never c
     assert.equal(invalid.type, 'error', `descriptor ${index}`);
     assert.equal(invalid.error.code, 'PATCH_DESCRIPTOR_INVALID', `descriptor ${index}`);
   }
+});
+
+test('worker checks the whole source image when the page asks, for both formats, and only the pinned image passes', { timeout: 10_000 }, async () => {
+  messageListener({ data: { type: 'RESET' } });
+  const v1 = workerFixture();
+  const v2 = v2WorkerFixture();
+  const patchUrl = new URL('/patches/check.srwfp', workerLocation).href;
+  let served = v1.patch;
+  globalThis.fetch = async () => new Response(served, { status: 200 });
+  const prepare = (jobId, fixture, sourceBytes, extra = {}) => dispatch({
+    type: 'PREPARE_SOURCE',
+    jobId,
+    sourceFile: new CountingBlob([sourceBytes]),
+    releaseKey: `check:${fixture.descriptor.patchSha256}`,
+    patchUrl,
+    descriptor: fixture.descriptor,
+    ...extra,
+  });
+
+  // The exact stock image passes, in one read, and says so. Nothing is claimed when the page did not ask.
+  const plain = await prepare('check-plain', v1, v1.source);
+  assert.equal(plain.type, 'complete');
+  assert.equal('sourceVerified' in plain, false);
+  for (const flag of [false, 'yes', 1, undefined]) {
+    const loose = await prepare(`check-loose-${String(flag)}`, v1, v1.target, { verifySource: flag });
+    assert.equal(loose.type, 'complete', 'only a strict true asks for the check');
+    assert.equal('sourceVerified' in loose, false);
+  }
+  postedMessages.length = 0;
+  const stock = await prepare('check-v1-stock', v1, v1.source, { verifySource: true });
+  assert.equal(stock.type, 'complete');
+  assert.equal(stock.sourceVerified, true);
+  const phases = postedMessages.filter((message) => message.jobId === 'check-v1-stock' && message.type === 'phase').map((message) => message.phase);
+  // the parsed patch is cached from the earlier job in this test, so only the check itself is announced
+  assert.deepEqual(phases, ['source-verify']);
+  const progress = postedMessages.filter((message) => message.jobId === 'check-v1-stock' && message.type === 'progress' && message.phase === 'source-verify');
+  assert.ok(progress.length > 0 && progress.at(-1).processed === progress.at(-1).total && progress.at(-1).total === v1.source.byteLength);
+  // The preparation that followed the check is a real one: the patch run uses it.
+  const output = outputHandle();
+  const applied = await dispatch({ type: 'APPLY_PATCH', jobId: 'check-v1-apply', releaseKey: `check:${v1.descriptor.patchSha256}`, preparationToken: stock.preparationToken, outputHandle: output.handle });
+  assert.equal(applied.type, 'complete');
+  assert.deepEqual(output.bytes(), v1.target);
+
+  // An image that already carries the patched bytes is refused at its first record; any other change is refused by its hash.
+  const alreadyPatched = await prepare('check-v1-patched', v1, v1.target, { verifySource: true });
+  assert.equal(alreadyPatched.type, 'error');
+  assert.equal(alreadyPatched.error.code, 'NON_DIFFERING_BYTE');
+  const farChange = v1.source.slice();
+  farChange[400] ^= 1;
+  const hashRefused = await prepare('check-v1-far', v1, farChange, { verifySource: true });
+  assert.equal(hashRefused.error.code, 'SOURCE_HASH_MISMATCH');
+  const nearChange = v1.source.slice();
+  nearChange[100] ^= 1;
+  const preimageRefused = await prepare('check-v1-near', v1, nearChange, { verifySource: true });
+  assert.equal(preimageRefused.error.code, 'PREIMAGE_MISMATCH');
+  // A refused check leaves nothing prepared: the earlier token is revoked, too.
+  const afterRefusal = await dispatch({ type: 'APPLY_PATCH', jobId: 'check-v1-after', releaseKey: `check:${v1.descriptor.patchSha256}`, preparationToken: stock.preparationToken, outputHandle: outputHandle().handle });
+  assert.equal(afterRefusal.error.code, 'PREPARED_SOURCE_MISSING');
+
+  // A growth patch has no source-only pass: the whole-image hash is what the check compares.
+  served = v2.patch;
+  const growthStock = await prepare('check-v2-stock', v2, v2.source, { verifySource: true });
+  assert.equal(growthStock.type, 'complete');
+  assert.equal(growthStock.sourceVerified, true);
+  const growthChange = v2.source.slice();
+  growthChange[5] ^= 1;
+  const growthRefused = await prepare('check-v2-changed', v2, growthChange, { verifySource: true });
+  assert.equal(growthRefused.type, 'error');
+  assert.equal(growthRefused.error.code, 'SOURCE_HASH_MISMATCH');
+  // The size is still checked before anything is downloaded or read.
+  const shortSource = new CountingBlob([v2.source.subarray(1)]);
+  const wrongSize = await dispatch({ type: 'PREPARE_SOURCE', jobId: 'check-v2-short', sourceFile: shortSource, releaseKey: 'check-short', patchUrl, descriptor: v2.descriptor, verifySource: true });
+  assert.equal(wrongSize.error.code, 'SOURCE_SIZE_MISMATCH');
+  assert.equal(shortSource.streamCalls, 0);
 });

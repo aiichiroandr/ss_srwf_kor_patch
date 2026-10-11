@@ -1,0 +1,4067 @@
+/* Shared local workflow and editor layout, loaded after style.css.
+   data-view chooses setup, editor or save. Setup/save cards use their content height;
+   the editor uses the available viewport and packs measured groups into pages. */
+
+/* Mode bar ---------------------------------------------------------------------------------------- */
+
+.mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  grid-column: 1 / -1;
+}
+
+.mode-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--white);
+}
+
+.mode-switch-button {
+  min-height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-primary);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.mode-switch-button[aria-pressed="true"] {
+  color: var(--white);
+  background: var(--blue);
+}
+
+.mode-switch-button:not([aria-pressed="true"]):not(:disabled):hover {
+  color: var(--blue-deep);
+  background: rgba(39, 93, 225, 0.08);
+}
+
+/* The other mode's job is still running: a small pulsing dot says so without changing the label. */
+.mode-switch-button[data-busy="true"]::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--blue);
+  animation: mode-busy-pulse 1.1s ease-in-out infinite;
+  vertical-align: 1px;
+}
+
+@keyframes mode-busy-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-switch-button[data-busy="true"]::after {
+    animation: none;
+  }
+}
+
+.mode-switch-button:disabled,
+.mode-setup-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* The origin line of the open editor session: what is being edited, then what saving does. */
+.mode-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.mode-summary p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.origin-line {
+  color: var(--ink);
+  font-size: clamp(13px, 12px + 0.2vw, 16px);
+  font-weight: 850;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.origin-note {
+  color: var(--ink-soft);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.mode-setup-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--white);
+  font: inherit;
+  font-size: var(--fs-label);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mode-setup-toggle:not(:disabled):hover {
+  border-color: var(--blue);
+  color: var(--blue-deep);
+}
+
+.mode-setup-toggle[aria-expanded="true"] > span:last-child {
+  transform: rotate(180deg);
+}
+
+.mode-setup-toggle .toggle-short {
+  display: none;
+}
+
+/* Every card sits in the row under the bar; the narrow layout lets the grid place them in order. */
+.patch-workspace {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* Side by side (every desktop width): the three cards of the row are equally wide in both modes (they are already as
+   tall as the row). */
+@media (min-width: 761px) {
+  .patch-workspace {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.patch-workspace > :not(.mode-bar) {
+  grid-row: 2;
+}
+#editorSourceRegion { grid-column: 1; }
+#releaseRegion { grid-column: 2; }
+#editorEntryRegion { grid-column: 3; }
+body[data-view="save"] #workflowSaveRegion { grid-column: 1 / -1; grid-row: 2; }
+.workflow-save { display: grid; align-content: start; align-self: start; height: auto; max-height: 100%; gap: 12px; padding: 20px; width: 100%; max-width: 760px; justify-self: center; overflow: auto; }
+.workflow-save > * { margin: 0; }
+.workflow-save h3 { font-size: 18px; line-height: 1.4; }
+.workflow-save p { font-size: 14px; line-height: 1.5; }
+#workflowSaveSummary { white-space: nowrap; }
+.workflow-save .editor-intro { font-size: 12px; }
+.workflow-save-navigation { display: flex; flex-wrap: wrap; gap: 0 8px; }
+.workflow-save .editor-download-actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; }
+.workflow-save .editor-download-actions[hidden] { display: none; }
+.workflow-save .editor-download-actions > span { flex: 1 1 0; align-self: center; white-space: nowrap; position: static; width: auto; height: auto; max-height: none; overflow: visible; clip: auto; color: var(--ink-soft); order: 2; }
+.workflow-save .editor-download-actions > a { flex: 1 1 calc(50% - 8px); }
+.workflow-copy-hash { order: 2; flex: 0 0 90px; min-height: 36px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+#workflowSaveFeedback:not(:has(> :not([hidden]))) { display: none; }
+.release-card[data-patch-choices="false"] :is(.selector-grid, .font-preview-row, .patch-note-toggle, .release-facts) { display: none; }
+.release-card .card-heading h3 { display: block; }
+#release-heading { white-space: nowrap; }
+@media (min-width: 761px) and (max-width: 1100px) {
+  .card-heading h3, .zone-heading h3 { font-size: var(--fs-primary); }
+  .release-card .card-heading { min-height: calc(1.6 * var(--fs-label) + 10px); }
+}
+@media (min-width: 761px) and (max-width: 1100px), (max-width: 760px) and (max-height: 480px) and (min-width: 520px) {
+  #workflowPatchState { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); }
+}
+@media (max-width: 760px) and (max-height: 480px) and (min-width: 520px) {
+  .release-card .card-heading { min-height: calc(1.6 * var(--fs-label) + 8px); }
+}
+.workflow-language { border: 0; padding: 0; margin: 8px 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.workflow-language legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.workflow-language label { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: 14px; line-height: 1.4; }
+.workflow-language label:has(input:checked) { border-color: var(--blue); background: rgba(39,93,225,.06); }
+.workflow-language label:has(input:disabled) { cursor: default; }
+.workflow-language label:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+.workflow-language span { min-width: 0; white-space: nowrap; }
+.workflow-language input { flex: 0 0 18px; width: 18px; height: 18px; margin: 0; accent-color: var(--blue); }
+.workflow-language p { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; }
+body[data-view="setup"] .mode-bar { display: none; }
+body[data-view="setup"] .patch-workspace { grid-template-rows: auto; align-content: start; }
+body[data-view="setup"][data-patch-settings="skip"] .patch-workspace { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body[data-view="setup"][data-patch-settings="skip"] #editorEntryRegion { grid-column: 2; }
+body:is([data-view="setup"], [data-view="save"]) .patch-console { align-self: start; height: auto; max-height: 100%; }
+body:is([data-view="setup"], [data-view="save"]) .patch-workspace { height: auto; max-height: 100%; }
+body[data-view="setup"] .patch-workspace > .workflow-zone { grid-row: 1; height: auto; max-height: 100%; align-self: stretch; }
+body[data-view="setup"] .source-zone-body { margin-block: 0; }
+body[data-view="setup"] #editorSourceRegion { align-content: start; }
+body[data-view="setup"] .card-feedback:not(:has(> :not([hidden]))) { display: none; }
+body[data-view="setup"] #editorEntryRegion { flex: 0 0 auto; }
+body[data-view="save"] .origin-note,
+body[data-view="editor"] .origin-note { display: none; }
+.font-preview > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-zone .file-selection strong,
+.source-zone .file-selection div > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workflow-editor-facts { margin: 10px 0 0; display: grid; gap: 4px; font-size: 13px; line-height: 1.4; }
+.workflow-editor-facts > div { display: flex; justify-content: space-between; gap: 12px; }
+.workflow-editor-facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.workflow-detected-summary { margin: 8px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; white-space: nowrap; }
+body[data-mode="editor"] .release-card .selector-grid > div:first-child,
+body[data-mode="editor"] .release-card .release-facts { display: none; }
+.workflow-link { border: 0; background: transparent; color: inherit; text-decoration: underline; text-underline-offset: 4px; padding: 12px 4px; cursor: pointer; min-height: 44px; }
+.workflow-link:disabled { opacity: .5; cursor: default; }
+#workflowOpenEditor { margin-top: 8px; }
+#workflowOpenEditor, .source-zone .file-button { min-height: 44px; margin-top: 8px; padding-block: 8px; border-radius: 8px; line-height: 1.25; }
+body[data-view="save"] .patch-workspace { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); }
+@media (max-width: 760px) and (min-height: 481px), (max-width: 519px) {
+  body[data-view="setup"] #editorSourceRegion { order: 1; grid-column: 1 / -1; }
+  body[data-view="setup"] #releaseRegion { order: 2; grid-column: 1 / -1; }
+  body[data-view="setup"] #editorEntryRegion { order: 3; grid-column: 1 / -1; }
+  .workflow-editor-facts { display: none; }
+}
+@media (max-width: 760px) {
+  .workflow-save { padding: 12px; gap: 8px; }
+  .workflow-language { margin-block: 8px; gap: 6px; }
+}
+@media (max-width: 760px) and (max-height: 480px) and (min-width: 520px) {
+  #editorSourceSelection:not([hidden]) { display: flex !important; }
+  #editorSourceSelection .file-type, #editorSourceSelection .file-check { display: none; }
+  .workflow-save { grid-template-columns: minmax(0,1fr) minmax(0,1fr); column-gap: 16px; }
+  .workflow-save h3 { grid-column: 1 / -1; }
+  #workflowSaveFeedback { grid-column: 2; grid-row: 2 / span 4; }
+  .workflow-save > :is(p, button, nav) { grid-column: 1; }
+}
+
+
+body[data-mode="editor"] #sourceRegion,
+body[data-mode="editor"] #patchRegion {
+  display: none;
+}
+
+/* Disc card states of the editor (a personal image is never shown as matching a public hash). */
+.zone-state.is-personal {
+  color: var(--ink-soft);
+  background: rgba(64, 80, 99, 0.14);
+}
+
+.file-check.is-personal {
+  color: var(--ink-soft);
+  background: rgba(64, 80, 99, 0.14);
+  font-style: italic;
+}
+
+.file-check.is-error {
+  color: var(--red);
+  background: rgba(200, 62, 67, 0.11);
+}
+
+/* Setup view of the editor ---------------------------------------------------------------------- */
+
+/* The editor's folder card and entry card take the place of the patcher's folder card and patch card: same row, same
+   columns, same shape, one button. Only the wording differs. */
+.editor-entry {
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+}
+
+.editor-entry .editor-intro {
+  display: none;
+}
+
+.editor-entry .editor-intro + .editor-intro {
+  margin-top: 0;
+}
+
+/* The editor's folder card names both kinds of folder, one per line, in the heading's own style. */
+.heading-lines > span {
+  display: block;
+}
+
+/* One sentence per line. */
+.editor-source-help {
+  white-space: pre-line;
+}
+
+.editor-entry .editor-entry-note {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+}
+
+/* Progress, the wait note and errors of a folder card sit under its button, stacked in the normal flow (usually only
+   one of them shows). Nothing in the slot is drawn over the rows above it: a longer message makes the slot taller. */
+.card-feedback {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 10px;
+}
+
+.card-feedback > * {
+  min-width: 0;
+  margin: 0;
+}
+
+.card-feedback .progress-panel,
+.card-feedback .message-panel {
+  padding: 10px 13px;
+  border-radius: 11px;
+}
+
+.card-feedback .message-panel {
+  grid-template-columns: 35px minmax(0, 1fr);
+}
+
+.card-feedback .message-panel p {
+  overflow-wrap: break-word;
+}
+
+.card-feedback .progress-kicker {
+  display: none;
+}
+
+.card-feedback .progress-panel progress {
+  margin: 8px 0 4px;
+}
+
+.card-feedback .progress-copy {
+  align-items: center;
+  gap: 10px;
+}
+
+.card-feedback .progress-copy strong {
+  margin-top: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.card-feedback .progress-actions {
+  flex: 0 0 auto;
+  flex-direction: row;
+}
+
+.card-feedback .cancel-button {
+  white-space: nowrap;
+}
+
+.card-feedback .progress-panel p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* The folder cards are vertically centred: the slot keeps a minimum height so a check that starts after a folder is
+   chosen does not move the button. */
+.source-zone .card-feedback {
+  min-height: 112px;
+}
+
+/* Once a folder is chosen, refused or being checked, the card's general help gives way to what the card now says. */
+.source-zone:has(.card-feedback > :not([hidden])) .source-zone-body > p,
+.source-zone:has(.file-selection:not([hidden])) .source-zone-body > p {
+  display: none;
+}
+
+/* Side by side, a folder card whose content is taller than the row (a long reason on a short window) scrolls inside the
+   card; the centring gives way instead of pushing the top rows out of the card. */
+@media (min-width: 761px) {
+  .source-zone.workflow-zone {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .source-zone-body {
+    align-self: auto;
+    margin-block: auto;
+  }
+}
+
+/* The glow ring stays inside a card that can scroll (its outer pixel would count as overflow). */
+.source-zone.workflow-zone::after {
+  inset: 0;
+  padding: 1px;
+}
+
+/* A chosen file's name can be long: the folder button never grows past its card (its label ends in an ellipsis) and
+   the file row under it shows the whole name. */
+.source-zone .file-button {
+  max-width: 100%;
+}
+
+.source-zone .file-selection strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.source-zone .file-selection div span {
+  overflow-wrap: anywhere;
+}
+
+/* The editor's folder button carries a longer label than the patcher's: it takes the card's width and wraps instead of
+   running out of the card. */
+#editorSourceButton {
+  width: 100%;
+  max-width: 100%;
+}
+
+#editorSourceButton > span:last-child {
+  overflow: visible;
+  text-align: left;
+  white-space: normal;
+}
+
+/* The file chip of a chosen folder keeps its place before and after a folder is chosen, so that choosing one moves nothing. */
+@media (min-width: 761px) {
+  .source-zone .file-selection[hidden] {
+    display: grid !important;
+    visibility: hidden;
+  }
+}
+
+.card-wait {
+  align-self: end;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--ink-soft);
+  background: rgba(16, 31, 47, 0.06);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+/* Detected values of an opened patched file replace the game/version/font selectors (read only). */
+.release-detected {
+  margin-top: 4px;
+}
+
+.release-detected .detected-value {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.release-detected .detected-note {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.release-card.is-detected .selector-grid,
+.release-card.is-detected .patch-note-toggle,
+.release-card.is-detected .release-facts {
+  display: none;
+}
+
+.editor-feedback {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.editor-feedback:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+.editor-progress {
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #f7f9ff;
+}
+
+.editor-progress-topline,
+.editor-progress-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editor-progress-topline strong,
+.editor-progress-topline span {
+  font-size: 12px;
+}
+
+.editor-progress-topline span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.editor-progress progress {
+  width: 100%;
+  height: 9px;
+  margin: 10px 0 2px;
+  accent-color: var(--blue);
+}
+
+.editor-progress-actions span {
+  color: var(--ink-soft);
+  font-size: var(--fs-label);
+}
+
+.editor-cancel-button {
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink-soft);
+  background: var(--white);
+  font: inherit;
+  font-size: var(--fs-label);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.editor-cancel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.editor-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(200, 62, 67, 0.3);
+  border-radius: 9px;
+  color: #812b30;
+  background: #fff1f0;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.editor-error-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.editor-error-close {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(200, 62, 67, 0.4);
+  border-radius: 8px;
+  color: #812b30;
+  background: var(--white);
+  font: inherit;
+  font-size: var(--fs-label);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* The editor screen itself only exists in the editor view. */
+body[data-view="setup"] .editor-workspace {
+  display: none;
+}
+
+/* Editor view: bar + editor fill the page -------------------------------------------------------- */
+
+body[data-view="editor"] #releaseRegion,
+body[data-view="editor"] #editorSourceRegion,
+body[data-view="editor"] #editorEntryRegion {
+  display: none;
+}
+
+/* The page is one screen tall when the editor fits and scrolls the document (never a hidden inner scroller)
+   when the window is too short for it. */
+html:has(body[data-view="editor"]) {
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
+}
+
+body[data-view="editor"] {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+body[data-view="editor"] main,
+body[data-view="editor"] .patch-section,
+body[data-view="editor"] .patch-console,
+body[data-view="editor"] .patch-workspace,
+body[data-view="editor"] .editor-region,
+body[data-view="editor"] .editor-workspace {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+body[data-view="editor"] .patch-section {
+  padding-block: 8px 10px;
+}
+
+body[data-view="editor"] .patch-workspace {
+  gap: 6px;
+  padding: 8px;
+}
+
+body[data-view="editor"] .mode-bar {
+  flex: 0 0 auto;
+}
+
+/* Over the editor, a running save and its errors show as a panel over a dimmed editor (nothing moves under it, and
+   nothing of the editor peeks out half covered); the panel's own close or stop button gives the editor back. */
+body[data-view="editor"] .editor-feedback {
+  position: absolute;
+  z-index: 25;
+  inset: 0;
+  align-content: center;
+  justify-items: center;
+  padding: 12px;
+  background: rgba(0, 6, 16, 0.78);
+}
+
+body[data-view="editor"] .editor-feedback > * {
+  box-sizing: border-box;
+  width: min(560px, 100%);
+}
+
+body[data-view="editor"] .editor-region {
+  position: relative;
+}
+
+.editor-workspace {
+  gap: 6px;
+  color: #e1e8d4;
+  color-scheme: dark;
+}
+
+/* Tabs, the record notice and the unused-records toggle share one row on wide screens. On narrow screens the
+   notice takes a row of its own under the tabs. */
+.editor-tab-bar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.editor-tab-row {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  min-width: 0;
+  width: 540px;
+}
+
+.editor-unused-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-left: auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #26778a;
+  border-radius: 2px;
+  color: #cfe3e0;
+  background: #051326;
+  font-size: var(--fs-label);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor-unused-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #74dc53;
+  cursor: pointer;
+}
+
+/* Record notice: why a record is read-only, or what is unusual about it. The detail opens as a floating panel
+   so the screen below never moves. */
+.editor-record-notice {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: nowrap;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.notice-item {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+  border: 1px solid #5d4d1f;
+  background: #1c1704;
+  color: #f1dd74;
+  font-size: var(--fs-label);
+}
+
+.notice-item.is-info {
+  border-color: #1f5568;
+  background: #05202c;
+  color: #b8e1ee;
+}
+
+.notice-item > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 3px 10px;
+  overflow: hidden;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notice-badge {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  font-size: var(--fs-label);
+  font-weight: 800;
+}
+
+.notice-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.notice-body {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 30;
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 24px));
+  margin: 2px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #6e5f2b;
+  color: #ece6d0;
+  background: #14110a;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.notice-item.is-info .notice-body {
+  border-color: #2b7088;
+  background: #07171f;
+}
+
+
+.editor-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid #26778a;
+  border-radius: 2px;
+  color: #b9d3d1;
+  background: #051326;
+  font: inherit;
+  font-size: var(--fs-primary);
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.editor-tab[aria-selected="true"] {
+  border-color: #74dc53;
+  color: #04120d;
+  background: linear-gradient(#a3e56b, #60bd49);
+  box-shadow: inset 0 -2px 0 #32813d;
+}
+
+.editor-tab .tab-short { display: none; }
+
+.editor-footer {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "status presets" "export export";
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.editor-footer .editor-status { grid-area: status; }
+.editor-footer > .editor-primary-button { grid-area: export; }
+
+/* The status line wraps (it is never cut); the footer grows by a line when it must. */
+.editor-footer .editor-status {
+  display: flex;
+  flex: 1 1 200px;
+  align-items: center;
+  min-width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 5px 10px;
+  border: 1px solid #174a59;
+  border-radius: 0;
+  color: #a9bcaa;
+  background: #03101d;
+  font-size: var(--fs-label);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.editor-preset-file-actions {
+  grid-area: presets;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.editor-preset-file-button {
+  min-height: 40px;
+  padding: 5px 12px;
+  border: 1px solid #174a59;
+  border-radius: 0;
+  color: #dcf5ef;
+  background: #03101d;
+  font: inherit;
+  font-size: var(--fs-label);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor-preset-file-button:not(:disabled):hover {
+  border-color: #2b8796;
+  background: #092333;
+}
+
+.editor-preset-file-button:disabled {
+  color: #7c8884;
+  cursor: not-allowed;
+}
+
+.editor-preset-file-button:focus-visible {
+  outline: 2px solid #ffe04e;
+  outline-offset: 1px;
+}
+
+/* Keep both file actions visible on a phone without squeezing or wrapping their labels. */
+@media (max-width: 519px) {
+  .editor-footer {
+    grid-template-areas: "presets presets" "status export";
+    gap: 4px 6px;
+  }
+
+  .editor-preset-file-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.editor-primary-button {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--white);
+  background: var(--blue);
+  font: inherit;
+  font-size: var(--fs-primary);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.editor-primary-button:not(:disabled):hover {
+  background: var(--blue-deep);
+}
+
+.editor-primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.editor-download-actions {
+  display: contents;
+}
+
+.editor-download-actions .download-link {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 2px;
+  font-size: var(--fs-label);
+}
+
+.editor-download-actions > span {
+  order: 2;
+  flex: 1 0 100%;
+  max-height: 2.6em;
+  overflow: hidden;
+  color: #a8c0ad;
+  font-size: var(--fs-label);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/* Narrow screens ---------------------------------------------------------------------------------- */
+
+@media (max-width: 980px) {
+  .mode-setup-toggle .toggle-long {
+    display: none;
+  }
+
+  .mode-setup-toggle .toggle-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 760px) {
+  /* The tabs share their row only with the record notice's badge. The unused-records switch only matters for the list,
+     so it shows (on a line of its own) only while the list is on screen. */
+  .editor-tab-row {
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  .editor-tab { padding-inline: 3px; font-size: 12px; min-height: 40px; }
+  .editor-tab .tab-long { display: none; }
+  .editor-tab .tab-short { display: inline; }
+
+  /* The record notice keeps the tabs' row: only its badge shows (the title stays readable to assistive technology);
+     tapping it opens the explanation. */
+  .editor-record-notice {
+    flex: 0 0 auto;
+  }
+
+  .editor-record-notice .notice-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .editor-unused-toggle {
+    flex: 1 1 100%;
+    order: 4;
+    margin-left: 0;
+  }
+
+  .editor-workspace:not(:has(> .editor-data-panel:not([hidden])[data-page="list"])) .editor-unused-toggle {
+    display: none;
+  }
+
+  .notice-item > summary {
+    min-height: 28px;
+    padding-block: 2px;
+  }
+
+  /* The cards stack in one column under the bar, each as tall as its content, and the last card takes what is left (the
+     editor's folder card and entry card take the place of the patcher's). Nothing scrolls inside a card: when a card
+     needs more room (a refused folder's reason, a result), the cards around it give way. */
+  .patch-workspace {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .patch-workspace > .workflow-zone {
+    flex: 0 0 auto;
+    height: auto;
+    max-height: none;
+  }
+
+  .patch-workspace > :is(#patchRegion, #editorEntryRegion) {
+    flex: 1 1 auto;
+  }
+
+  /* The first card's captions are read out but not drawn on a phone: the choices say what they are. */
+  .release-card .field-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  /* While a folder's reason, a running patch or its result needs the room, the first card keeps only its choices. */
+  /* While a refused folder's reason shows, the patch card (still waiting for a source) keeps only its heading. */
+  body[data-mode="patch"] .patch-workspace:has(#sourceRegion .card-feedback > .message-panel:not([hidden])) #patchRegion.is-pending .apply-actions {
+    display: none;
+  }
+
+  .patch-workspace:has(#patchRegion:is(.is-busy, .is-complete, .is-error)) .release-card :is(.font-preview-row, .patch-note-toggle),
+  body[data-mode="patch"] .patch-workspace:has(#sourceRegion .card-feedback > :not([hidden])) .release-card :is(.font-preview-row, .patch-note-toggle),
+  body[data-mode="editor"] .patch-workspace:has(#editorSourceRegion .card-feedback > :not([hidden])) .release-card :is(.font-preview-row, .patch-note-toggle) {
+    display: none;
+  }
+
+  .editor-entry {
+    padding: 7px 9px;
+  }
+
+  .editor-entry .editor-intro {
+    display: none;
+  }
+
+
+  /* No room for a reserved slot on a phone: it exists only while something shows in it, and then it is as tight as it can be. */
+  .card-feedback {
+    padding-top: 4px;
+  }
+
+  .card-feedback .progress-panel,
+  .card-feedback .message-panel {
+    padding: 6px 10px;
+  }
+
+  .card-feedback .progress-panel progress {
+    margin: 4px 0 0;
+  }
+
+  .card-feedback:not(:has(> :not([hidden]))) {
+    display: none;
+  }
+
+  .source-zone .card-feedback {
+    min-height: 0;
+  }
+
+  /* On a phone the card has no room for both: while a check runs its bar (with its own stop button) takes the place of
+     the heading, the folder button and the file chip. */
+  .source-zone:has(.card-feedback > .progress-panel:not([hidden])) .zone-heading,
+  .source-zone:has(.card-feedback > .progress-panel:not([hidden])) .file-button,
+  .source-zone:has(.card-feedback > .progress-panel:not([hidden])) .file-selection {
+    display: none;
+  }
+
+  .card-feedback .progress-panel p {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  /* A folder the page refused needs room for its reason: the card's heading gives way to it, and so do the font
+     pictures and the notes button of the first card (the choices themselves stay). */
+  .source-zone:has(.card-feedback > .message-panel:not([hidden])) .zone-heading {
+    display: none;
+  }
+
+
+  .mode-bar {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .mode-switch-button {
+    min-height: 34px;
+    padding: 0 14px;
+  }
+
+  .mode-summary {
+    order: 0;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  body[data-view="editor"] .patch-workspace {
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .editor-footer .editor-status {
+    flex-basis: 0;
+    min-height: 40px;
+    padding: 4px 8px;
+  }
+
+  .editor-primary-button,
+  .editor-download-actions .download-link {
+    min-height: 40px;
+  }
+
+  .editor-primary-button {
+    flex: 0 0 auto;
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+
+  /* "BIN/CUE 만들기" on a phone; the full name stays the button's accessible name. */
+  .export-label-lead {
+    display: none;
+  }
+
+  /* After a save the row holds the two download links. The status is still read out; the save button comes back
+     with the next change (a change also takes the links away). */
+  .editor-footer:has(.editor-download-actions:not([hidden])) .editor-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  .editor-footer:has(.editor-download-actions:not([hidden])) .editor-primary-button {
+    display: none;
+  }
+
+  .editor-download-actions {
+    display: flex;
+    flex: 1 1 100%;
+    gap: 6px;
+  }
+
+  .editor-download-actions .download-link {
+    flex: 1 1 0;
+  }
+
+  /* The full result line stays readable to assistive technology and as a tooltip, not in the cramped footer. */
+  .editor-download-actions > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip: rect(0, 0, 0, 0);
+  }
+}
+
+/* The smallest phones: the entry card's general hint gives way while no file is open (the folder card above says the
+   same in its heading); once a file is open the card names it. */
+@media (max-width: 760px) and (max-height: 640px) {
+  .editor-entry .editor-entry-note {
+    display: none;
+  }
+}
+
+/* A phone lower than 700px keeps the origin line and drops the line under it (the save button says what saving makes). */
+@media (max-width: 760px) and (max-height: 700px) {
+  body[data-view="editor"] .origin-note {
+    display: none;
+  }
+}
+
+/* The editor needs the height: a short window (or a phone) drops the header's second line. */
+@media (max-height: 760px), (max-width: 760px) {
+  body[data-view="editor"] .brand-copy > span:last-child {
+    display: none;
+  }
+
+  body[data-view="editor"] .site-header {
+    min-height: 44px;
+    padding-block: 2px;
+  }
+}
+
+/* Game screens ------------------------------------------------------------------------------------
+
+   Every editor tab is
+     [record bar]            previous / title / next, and the position in the list
+     [page switch]           paged layouts: which part of the record shows
+     [record pane | screen]  a scrolling list of records and the game screen of the selected record
+
+   The window picks one of three layouts:
+     wide    at least 1100 x 720    the list and every part of the record at once
+     medium  761 wide or more, but narrower than 1100 or lower than 720
+                                    the list beside one part of the record; the page switch shares the record bar's row
+     narrow  760 wide or less       one thing at a time: the list, or one part of the record
+   A part is the data-editor-section of a panel; the page switch sets data-page on the tab panel.
+   A phone held sideways (narrow, at most 480 tall) moves the tabs into a rail on the left and puts the page switch in
+   the record bar's row, so that the record keeps most of the short window.
+
+   Type sizes grow with the window width only (vw, never the container), so a larger window never shows smaller type:
+     --ed-primary  values, names, ability names     14px .. 18px
+     --ed-label    captions, notes                  12px .. 15px
+     --ed-name     record titles, weapon names      15px .. 21px
+   A number box is as wide as its largest value (--digits, from its max or a negative min) and never narrower; the grids
+   around it make room instead of cutting the value. Nothing holds variable content in a box of fixed height. */
+
+.editor-workspace {
+  --ed-primary: var(--fs-primary);
+  --ed-label: var(--fs-label);
+  --ed-name: var(--fs-name);
+  --ed-field: var(--ed-primary);
+  --ed-control: 40px;
+  --ed-pad: 6px;
+}
+
+.editor-data-panel {
+  --edge: 5px;
+  --frame: url('./runtime-panel-frame.svg?v=20261011-public1');
+  --ed-text: #e8e8da;
+  --ed-muted: #a9bcaa;
+  --ed-cyan: #9fd7e6;
+  --ed-rail: #16808b;
+  --ed-gold: #e9d870;
+  --ed-modified: #fff19b;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  color: var(--ed-text);
+}
+
+.editor-panel-body {
+  display: flex;
+  flex: 1 1 0;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Record bar ----------------------------------------------------------------------------------- */
+
+.record-bar {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 3px 10px;
+  border: 2px solid var(--ed-gold);
+  outline: 1px solid #80652b;
+  background: #000010;
+}
+
+.record-bar-label {
+  flex: 0 0 auto;
+  color: var(--ed-cyan);
+  font-size: var(--ed-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A long name ends in an ellipsis; the whole name is in the title (and read out in full). */
+.record-title {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--ed-name);
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-position {
+  flex: 0 0 auto;
+  min-width: 7ch;
+  color: var(--ed-muted);
+  font-size: var(--ed-label);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.record-nav {
+  flex: 0 0 auto;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 1px solid var(--ed-rail);
+  border-radius: 0;
+  color: var(--ed-text);
+  background: #00111d;
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.record-nav:not(:disabled):hover {
+  border-color: #74dc53;
+  background: #0a2a1a;
+}
+
+.record-nav:disabled {
+  color: #4f6366;
+  border-color: #174048;
+  cursor: not-allowed;
+}
+
+.record-nav:focus-visible,
+.editor-page-button:focus-visible,
+.record-list:focus-visible,
+.editor-search:focus-visible,
+.editor-game-screen :is(input, select, button):focus-visible,
+.editor-scenario-panel :is(input, select, button, summary):focus-visible {
+  outline: 2px solid #ffe04e;
+  outline-offset: 1px;
+}
+
+/* Page switch (paged layouts only) */
+.editor-page-switch {
+  display: none;
+  flex: 0 0 auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+.editor-page-button {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid #26778a;
+  border-radius: 0;
+  color: #b9d3d1;
+  background: #051326;
+  font: inherit;
+  font-size: var(--ed-primary);
+  font-weight: 650;
+  line-height: 1.2;
+  word-break: keep-all;
+  cursor: pointer;
+}
+
+.editor-page-button[aria-pressed="true"] {
+  border-color: #74dc53;
+  color: #04120d;
+  background: linear-gradient(#a3e56b, #60bd49);
+}
+
+.editor-page-count:not(:empty)::before { content: "("; }
+.editor-page-count:not(:empty)::after { content: ")"; }
+
+/* Record pane: search and a scrolling list ---------------------------------------------------------- */
+
+.record-pane {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 var(--pane-width, clamp(220px, 21vw, 300px));
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px;
+  border: 2px solid var(--ed-gold);
+  outline: 1px solid #80652b;
+  background: #000010;
+  font-size: var(--ed-primary);
+}
+
+.record-pane.is-weapons {
+  --pane-width: clamp(300px, 29vw, 400px);
+}
+
+.editor-search {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid #227b8c;
+  border-radius: 0;
+  color: var(--ed-text);
+  background: #000817;
+  font: inherit;
+}
+
+.editor-search::placeholder {
+  color: #7f99a2;
+}
+
+/* Conditions and bulk editing share the existing record pane. Extra controls open only on demand. */
+.record-search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; flex: 0 0 auto; }
+.record-search-row .editor-search { min-width: 0; padding-inline: 8px; font-size: 16px; }
+.record-tool, .record-filter-chip, .record-note-button {
+  box-sizing: border-box; min-height: 40px; padding: 4px 8px; border: 1px solid #227b8c; border-radius: 0;
+  color: var(--ed-text); background: #000817; font: 500 14px/1.25 "Apple SD Gothic Neo", system-ui, sans-serif; cursor: pointer;
+}
+.record-tool { white-space: nowrap; }
+.record-tool:disabled, .record-note-button:disabled { opacity: .5; cursor: not-allowed; }
+.record-tool:focus-visible, .record-filter-chip:focus-visible, .record-note-button:focus-visible { outline: 2px solid #ffe04e; outline-offset: 1px; }
+.record-filter-chips { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.record-filter-chip { min-height: 32px; max-width: 100%; font-size: 12px; word-break: keep-all; overflow-wrap: anywhere; text-align: left; }
+.record-filter-chip.is-applied { border-color: #74dc53; }
+.record-actions { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 6px; }
+.record-actions .record-count { min-width: 0; white-space: nowrap; font-size: 12px; }
+.record-bulk-note { flex: 0 0 auto; padding: 5px 7px; border-left: 2px solid #74dc53; background: #031822; font: 400 12px/1.35 "Apple SD Gothic Neo", system-ui, sans-serif; }
+.record-bulk-result { display: block; }
+.record-bulk-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.record-note-button { min-height: 32px; padding: 3px 4px; border: 0; color: #8bd8df; background: transparent; font-size: 12px; }
+
+.editor-search-dialog {
+  position: fixed; inset: 12px 0 auto; width: min(680px, calc(100vw - 24px)); max-width: none;
+  max-height: var(--editor-search-height, calc(100dvh - 24px)); margin: 0 auto; padding: 0; overflow: hidden;
+  border: 2px solid #c5a850; border-radius: 0; color: #ece6d5; background: #000819;
+  box-shadow: 0 0 0 3px #111627, 0 12px 48px rgba(0,0,0,.7);
+  font: 500 14px/1.35 "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+.editor-search-dialog::backdrop { background: rgba(0,0,12,.72); }
+.editor-search-shell { display: flex; flex-direction: column; gap: 8px; max-height: inherit; padding: 10px 12px; border: 2px solid #155400; box-sizing: border-box; container-type: inline-size; }
+.editor-search-shell > * { flex: 0 0 auto; min-width: 0; }
+.editor-search-dialog.is-tight .editor-search-shell { gap: 4px; padding-block: 8px; }
+.editor-search-dialog.is-tight .editor-bulk-preview-heading { margin-block: 2px; }
+.editor-search-dialog.is-tight .editor-bulk-choose-tools { margin-top: 2px; }
+.editor-search-dialog.is-target-selection .editor-bulk-fields { display: none; }
+.editor-search-header { display: flex; align-items: center; gap: 8px; }
+.editor-search-header h2 { flex: 1 1 auto; margin: 0; font-size: 18px; line-height: 1.2; font-weight: 650; white-space: nowrap; }
+.editor-search-dialog button, .editor-search-dialog select, .editor-search-dialog input:not([type="checkbox"]) {
+  box-sizing: border-box; min-width: 0; min-height: 40px; padding: 5px 8px; border: 1px solid #227b8c; border-radius: 0;
+  color: #dcf5ef; background: #00111d; font: inherit;
+}
+.editor-search-dialog button { cursor: pointer; white-space: nowrap; }
+.editor-search-dialog select, .editor-search-dialog input:not([type="checkbox"]) { width: 100%; font-size: 16px; }
+.editor-search-dialog button:disabled { opacity: .48; cursor: not-allowed; }
+.editor-search-dialog :is(button, select, input):focus-visible { outline: 2px solid #ffe04e; outline-offset: 1px; }
+.editor-search-header button { flex: 0 0 40px; width: 40px; padding: 0; }
+.editor-search-summary, .editor-bulk-summary, .editor-search-error { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.editor-search-summary { color: #b2c9ce; }
+.editor-search-error { color: #ffbdb7; }
+.editor-filter-conditions, .editor-bulk-targets { display: grid; gap: 6px; min-width: 0; }
+.editor-filter-condition { display: grid; grid-template-columns: minmax(130px, 1fr) 76px 110px 40px; gap: 6px; }
+.editor-filter-tools, .editor-bulk-choose-tools { display: flex; justify-content: space-between; gap: 6px; margin-top: 6px; }
+.editor-bulk-fields { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 8px; }
+.editor-bulk-fields label { display: grid; gap: 4px; color: #b2c9ce; font-size: 12px; }
+.editor-bulk-summary { margin-top: 8px; }
+.editor-bulk-preview-heading { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin: 6px 0; font-size: 12px; }
+.editor-bulk-preview-heading button { min-height: 36px; padding: 3px 5px; border: 0; color: #8bd8df; background: transparent; font-size: 12px; }
+.editor-bulk-target { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; min-height: 40px; padding: 5px 0; border-bottom: 1px solid #18424e; }
+.editor-bulk-target-name { display: flex; align-items: center; flex: 1 1 220px; gap: 7px; min-width: 0; overflow-wrap: anywhere; }
+.editor-bulk-target-name input { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: #74dc53; }
+.editor-bulk-target-value { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.editor-search-pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.editor-search-pager button { width: 44px; padding: 0; font-size: 22px; }
+.editor-search-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 6px; }
+.editor-search-actions .is-primary:not(:disabled) { border-color: #74dc53; color: #04120d; background: linear-gradient(#a3e56b,#60bd49); font-weight: 650; }
+@container (min-width: 310px) and (max-width: 500px) {
+  .editor-filter-condition { grid-template-columns: minmax(0,1fr) 48px 82px 40px; gap: 5px; }
+  .editor-search-dialog .editor-filter-operator { padding-inline: 3px; }
+}
+@container (max-width: 310px) {
+  .editor-filter-condition { grid-template-columns: 86px minmax(0,1fr) 40px; }
+  .editor-filter-field { grid-column: 1 / 3; }
+  .editor-filter-remove { grid-column: 3; grid-row: 1; }
+  .editor-filter-operator { grid-column: 1; grid-row: 2; }
+  .editor-filter-condition [data-condition-value] { grid-column: 2 / 4; grid-row: 2; }
+}
+@container (max-width: 500px) {
+  .editor-filter-condition.is-membership { grid-template-columns: 86px minmax(0,1fr) 40px; }
+  .editor-filter-condition.is-membership .editor-filter-field { grid-column: 1 / 3; }
+  .editor-filter-condition.is-membership .editor-filter-remove { grid-column: 3; grid-row: 1; }
+  .editor-filter-condition.is-membership .editor-filter-operator { grid-column: 1; grid-row: 2; }
+  .editor-filter-condition.is-membership [data-condition-value] { grid-column: 2 / 4; grid-row: 2; }
+}
+@media (pointer: coarse) {
+  .record-tool, .record-filter-chip, .record-note-button, .editor-search-dialog button,
+  .editor-search-dialog select, .editor-search-dialog input:not([type="checkbox"]), .editor-bulk-target-name { min-height: 44px; }
+}
+
+.record-list {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--ed-rail);
+  background: #00060f;
+  scrollbar-color: #41785a #06101a;
+  -webkit-overflow-scrolling: touch;
+}
+.record-list:empty::before {
+  content: "검색 결과가 없습니다.";
+  display: block; padding: 16px 8px; color: var(--ed-muted); text-align: center; font-size: 14px; white-space: nowrap;
+}
+
+.record-count {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--ed-muted);
+  font-size: var(--ed-label);
+  line-height: 1.35;
+}
+
+.record-option {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 8px;
+  min-height: 44px;
+  padding: 5px 14px 5px 10px;
+  border-bottom: 1px solid #0b1f2b;
+  border-left: 4px solid transparent;
+  color: var(--ed-text);
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.record-option:hover {
+  background: #0a2432;
+}
+
+.record-option.is-selected {
+  border-left-color: #75c943;
+  color: #fff;
+  background: #00600a;
+}
+
+.record-option.is-read-only {
+  color: #97a39a;
+}
+
+.record-option-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.record-option-meta {
+  color: #a9c3cf;
+  font-size: var(--ed-label);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.record-option.is-selected .record-option-meta {
+  color: #d7f0d0;
+}
+
+/* The modified mark sits in the row's right padding, clear of the numbers. */
+.record-option-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  color: #ffe04e;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.is-weapons .record-option {
+  grid-template-columns: minmax(0, 1fr) 6ch 7.5ch 4.5ch;
+  grid-template-areas:
+    "name attack range hit"
+    "meta meta meta meta";
+  gap: 1px 6px;
+  padding-block: 6px;
+}
+
+.is-weapons .record-option-name { grid-area: name; font-size: var(--ed-name); }
+.is-weapons .record-option-meta { grid-area: meta; overflow-wrap: anywhere; white-space: normal; }
+.is-weapons .record-option-stat { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.is-weapons .record-option-stat.is-attack { grid-area: attack; }
+.is-weapons .record-option-stat.is-range { grid-area: range; color: #c9d6ca; }
+.is-weapons .record-option-stat.is-hit { grid-area: hit; color: #c9d6ca; }
+
+/* Game screen (shared) ------------------------------------------------------------------------- */
+
+.game-screen-shell {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  container-type: inline-size;
+}
+
+.editor-game-screen {
+  --runtime-korean-face: "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --runtime-number-face: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  box-sizing: border-box;
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--edge) var(--edge) 0;
+  overflow: hidden;
+  border: 2px solid var(--ed-gold);
+  outline: 1px solid #80652b;
+  background: #000010;
+  color: var(--ed-text);
+  font: 500 var(--ed-primary) / 1.25 var(--runtime-korean-face);
+}
+
+/* Panels draw their own full frame and overlap their neighbours' by the frame width, so no panel needs to know which
+   side of the screen it is on. A panel grows with its content; the screen's grid gives every panel its room. */
+.game-panel {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--panel-gap, 6px);
+  min-width: 0;
+  margin: 0 calc(var(--edge) * -1) calc(var(--edge) * -1) 0;
+  padding: calc(var(--edge) + 4px) calc(var(--edge) + 6px);
+  /* The invisible hit layers of the small buttons may reach past the frame; they never widen the screen. */
+  overflow: clip;
+  border: var(--edge) solid transparent;
+  border-image: var(--frame) 8 / 1 / 0 round;
+  background: #000010;
+}
+
+.game-panel h3,
+.game-panel h4 {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--ed-cyan);
+  font-size: var(--ed-label);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.panel-count {
+  margin-left: auto;
+  color: var(--ed-muted);
+  font-weight: 500;
+}
+
+/* The flag switch follows the heading's words (clear of the info buttons on the slots' corners below it). */
+.panel-toggle {
+  flex: 0 0 auto;
+  min-height: 32px;
+  margin-left: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--ed-rail);
+  border-radius: 0;
+  color: #ade9ef;
+  background: #00111d;
+  font: 500 var(--ed-label) / 1.2 var(--runtime-korean-face);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.panel-toggle[aria-pressed="true"] {
+  border-color: #74dc53;
+  color: #04120d;
+  background: linear-gradient(#a3e56b, #60bd49);
+}
+
+.panel-note {
+  margin: 0;
+  color: var(--ed-muted);
+  font-size: var(--ed-label);
+  line-height: 1.4;
+}
+
+.panel-note.is-caution {
+  color: #f1dd74;
+}
+
+.weapon-scope-note {
+  grid-area: note;
+  margin: 0;
+  padding: 6px 12px;
+  color: var(--ed-muted);
+  font-size: var(--ed-label);
+  line-height: 1.4;
+}
+
+/* Fields: a caption, the revert button (only for a changed value; its place is kept) and the value, in one row. Grids of
+   small fields (.is-stacked, and every grid of a paged layout) put the caption and the revert button above the value. */
+.editor-game-screen label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px 6px;
+  min-width: 0;
+  min-height: var(--ed-control);
+  color: var(--ed-text);
+  font-size: var(--ed-field);
+  line-height: 1.2;
+}
+
+.editor-game-screen label > .editor-field-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: keep-all;
+}
+
+.editor-game-screen label > .editor-diff-reset { flex: 0 0 auto; }
+
+/* The last word of a caption and its info button never part (the button cannot drop under the words it follows). */
+.caption-tail {
+  white-space: nowrap;
+}
+.editor-game-screen label > select { flex: 0 1 auto; min-width: 0; }
+
+.editor-game-screen input[data-editor-field],
+.editor-game-screen select {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: var(--ed-control);
+  margin: 0;
+  padding: 4px var(--ed-pad);
+  border: 1px solid #17505a;
+  border-radius: 0;
+  color: var(--ed-text);
+  background: #00101d;
+  font: 600 var(--ed-primary) / 1.15 var(--runtime-number-face);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Choices draw a small arrow inside their right padding, so the chosen text has the rest of the box. */
+.editor-game-screen select {
+  padding-right: 18px;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 9px center, right 5px center;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  font-family: var(--runtime-korean-face);
+  font-weight: 500;
+  text-align: left;
+}
+
+/* A number box holds its largest value: max digits (or the minus sign and digits of a negative min), a caret's room,
+   the padding and the border. */
+.editor-game-screen input[type="number"] {
+  --digits: 5;
+  --number-width: calc(var(--digits) * 1ch + 0.6ch + 2 * var(--ed-pad) + 2px);
+  flex: 0 0 auto;
+  inline-size: var(--number-width);
+  min-inline-size: var(--number-width);
+  appearance: textfield;
+}
+
+.editor-game-screen input[type="number"][max="9999"],
+.editor-game-screen input[type="number"][min="-128"] { --digits: 4; }
+.editor-game-screen input[type="number"][max="255"] { --digits: 3; }
+.editor-game-screen input[type="number"][max="99"],
+.editor-game-screen input[type="number"][max="15"] { --digits: 2; }
+
+.editor-game-screen input::-webkit-inner-spin-button {
+  appearance: none;
+}
+
+.is-stacked label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: end;
+  gap: 2px 4px;
+  min-height: 0;
+}
+
+/* Stacked number fields: the caption on top, the value with its revert button beside it below. */
+.is-stacked label > .editor-field-name { grid-column: 1 / -1; grid-row: 1; font-size: var(--ed-label); }
+.is-stacked label > .editor-diff-reset { grid-column: 2; grid-row: 2; align-self: center; }
+.editor-game-screen .is-stacked label > :is(input[data-editor-field], select) { grid-column: 1; grid-row: 2; inline-size: 100%; text-align: center; }
+
+.editor-game-screen [data-editor-field].is-modified,
+.editor-game-screen .terrain-select.is-modified {
+  color: var(--ed-modified);
+  border-color: #e8cc39;
+  background-color: #292307;
+}
+
+.editor-game-screen :is(input, select):disabled {
+  color: #8f9a8d;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.editor-diff-reset {
+  position: relative;
+  box-sizing: border-box;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #ccb235;
+  border-radius: 0;
+  color: #ffed96;
+  background: #252007;
+  font: 500 14px / 1 var(--runtime-number-face);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor-diff-reset.is-empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* 20px plus 8px on every side: a 36px target. */
+.editor-diff-reset::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+/* Terrain: four letter choices as on the game's screen; one line under them says what each letter is worth. */
+.terrain-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 3em), 1fr));
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.editor-game-screen .terrain-grid label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: end;
+  gap: 2px 4px;
+  min-height: 0;
+}
+
+.editor-game-screen .terrain-grid label > .editor-field-name { grid-column: 1; grid-row: 1; font-size: var(--ed-label); }
+.editor-game-screen .terrain-grid label > .editor-diff-reset { grid-column: 2; grid-row: 1; }
+.editor-game-screen .terrain-grid label > select { grid-column: 1 / -1; grid-row: 2; }
+
+/* The legend shares the heading's line when it fits and wraps under it when not. */
+.terrain-legend {
+  order: 10;
+  margin-left: auto;
+  color: var(--ed-muted);
+  font-size: var(--ed-label);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.editor-game-screen .terrain-select {
+  inline-size: 100%;
+  min-inline-size: calc(2.5ch + 26px);
+}
+
+
+/* Number fields and their captions invite a click on a mouse: the pointer becomes a hand over them. */
+@media (hover: hover) {
+  .editor-game-screen label:has(> input[data-editor-field]),
+  .editor-game-screen label:has(> input[data-editor-field]) > .editor-field-name,
+  .editor-game-screen input[data-editor-field],
+  .editor-game-screen select {
+    cursor: pointer;
+  }
+}
+
+/* Info buttons: a small circled i that sits at the top right of the end of its caption, like a superscript. The glyph
+   stays small; an invisible layer enlarges the hit area for a finger or a mouse (26 x 26). */
+.editor-help-button {
+  position: relative;
+  display: inline-block;
+  box-sizing: border-box;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  min-height: 0;
+  margin: 0 0 0 2px;
+  padding: 0;
+  border: 1px solid #74c8d7;
+  border-radius: 50%;
+  color: #b9e9f2;
+  background: #102c3b;
+  font: italic 700 12px / 14px Georgia, serif;
+  text-align: center;
+  vertical-align: top;
+  cursor: help;
+}
+
+.editor-help-button::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+}
+
+.editor-field-name > .editor-help-button,
+.record-title > .editor-help-button,
+.game-panel h4 > .editor-help-button,
+.pilot-mental-name > .editor-help-button,
+.pilot-runtime-skill-name > .editor-help-button {
+  position: relative;
+  top: -0.3em;
+}
+
+.editor-help-button:focus-visible {
+  outline: 2px solid #ffeb75;
+  outline-offset: 2px;
+}
+
+/* Unit screen ------------------------------------------------------------------------------------ */
+
+.unit-game-screen {
+  grid-template-columns: minmax(0, 44fr) minmax(0, 30fr) minmax(0, 26fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "abilities image weapons"
+    "vitals core terrain";
+}
+
+.unit-info-panel { grid-area: abilities; }
+.unit-image-panel { grid-area: image; }
+.unit-weapons-panel { grid-area: weapons; }
+.unit-vitals-panel { grid-area: vitals; }
+.unit-core-panel { grid-area: core; }
+.unit-terrain-panel { grid-area: terrain; }
+
+/* Four ability slots: the choice, and its flag number when shown (beside the choice, never under it). The info button
+   sits on the choice's top right corner. */
+.unit-special-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+}
+
+.unit-special-row {
+  display: grid;
+  grid-template-columns: 1.4ch minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.unit-special-slot-name {
+  color: #83d5eb;
+  font-size: var(--ed-label);
+  text-align: center;
+}
+
+.unit-ability-remove {
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--ed-rail);
+  border-radius: 0;
+  color: #ade9ef;
+  background: #00111d;
+  font: 500 22px / 1 var(--runtime-korean-face);
+  cursor: pointer;
+}
+
+.unit-ability-remove:disabled { color: #6d7d7d; cursor: not-allowed; }
+
+/* The choice and its revert button share one line; the info button stands on the choice's top right corner. */
+.editor-game-screen .unit-special-name-field {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  column-gap: 4px;
+  min-height: 0;
+}
+
+.editor-game-screen .unit-special-name-field select {
+  grid-column: 1;
+  grid-row: 1;
+  inline-size: 100%;
+  padding-left: 4px;
+}
+
+.editor-game-screen .unit-special-name-field > .editor-diff-reset {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.unit-special-name-field > .editor-help-button {
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  margin: 0;
+  z-index: 1;
+}
+
+.editor-game-screen .unit-special-value-field {
+  display: flex;
+  min-height: 0;
+  font-size: var(--ed-label);
+}
+
+.unit-event-condition {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin: -4px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #a9d8d5;
+  font: 500 var(--ed-label) / 1.4 var(--runtime-korean-face);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.unit-event-condition:hover,
+.unit-event-condition:focus-visible { color: #ffe88f; text-decoration: underline; }
+
+/* Field grids hold as many fields per line as fit (a field never gets narrower than its caption, info button, revert
+   button and largest value need: --cell) and wrap the rest to the next line. */
+.unit-vitals-grid,
+.unit-core-grid,
+.pilot-combat-grid,
+.pilot-points-grid,
+.pilot-growth-grid,
+.weapon-detail-grid {
+  --cell: calc(7.5 * var(--ed-primary) + 60px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--cell)), 1fr));
+  min-width: 0;
+  gap: 4px 12px;
+}
+
+/* A stacked field needs the wider of its two lines: the caption's longest word with the info button, and the largest
+   value (about 0.6em a digit in the number face, plus caret room and padding) with the revert button beside it. */
+.unit-vitals-grid,
+.pilot-combat-grid { --stacked-cell: max(2 * var(--ed-label) + 22px, 3.4 * var(--ed-primary) + 38px); }
+.pilot-points-grid { --stacked-cell: max(3 * var(--ed-label) + 22px, 3.4 * var(--ed-primary) + 38px); }
+.pilot-growth-grid { --stacked-cell: max(2 * var(--ed-label) + 22px, 1.6 * var(--ed-primary) + 38px); }
+.unit-core-grid,
+.weapon-detail-grid { --stacked-cell: max(4 * var(--ed-label) + 22px, 3.4 * var(--ed-primary) + 38px); }
+
+.weapon-detail-grid > label:has(select[data-editor-field="requiredSkill"]) {
+  grid-column: span 2;
+}
+
+.unit-vitals-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.is-stacked {
+  --cell: var(--stacked-cell);
+}
+
+.editor-game-screen .unit-vital-row {
+  flex-wrap: wrap;
+}
+
+.unit-vital-row > .unit-runtime-gauge {
+  flex: 1 0 100%;
+}
+
+/* Shield and parry: two on/off choices side by side under HP / EN. */
+.unit-flag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+/* A value that cannot be edited for this record (a weapon without ammo) reads as information, not as a greyed box. */
+.editor-game-screen label > .editor-field-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  color: var(--ed-muted);
+  font-size: var(--ed-label);
+}
+
+.editor-game-screen label > .editor-field-info[hidden] {
+  display: none;
+}
+
+.is-stacked label > .editor-field-info { grid-column: 1; grid-row: 2; }
+
+.unit-vital-row .editor-field-name,
+.unit-vital-row input {
+  color: #a9df72;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.unit-runtime-gauge {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border: 1px solid #164a24;
+  background: #00130b;
+}
+
+.unit-runtime-gauge > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(#b6f978, #53c839 54%, #248b28);
+}
+
+/* Pictures: the game's own image, scaled by whole pixels as far as the panel allows, never under 64px. */
+/* A picture cell leaves at least 64px for the picture inside its frame and padding. */
+.editor-visual {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  place-items: center;
+  min-width: calc(64px + 4 * var(--edge) + 12px);
+  min-height: calc(64px + 4 * var(--edge) + 10px);
+  margin: 0 calc(var(--edge) * -1) calc(var(--edge) * -1) 0;
+  background: #000022;
+}
+
+.editor-visual canvas {
+  display: block;
+  max-width: 100%;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+#unitPreviewImage {
+  inline-size: clamp(83px, 100%, 288px);
+  aspect-ratio: 144 / 112;
+}
+
+#pilotPreviewImage {
+  inline-size: clamp(64px, 100%, 160px);
+  aspect-ratio: 1;
+}
+
+.editor-visual canvas[hidden] {
+  display: none;
+}
+
+.editor-visual figcaption {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  color: #9ea99d;
+  font-size: var(--ed-label);
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* The unit's own weapons: a scrolling list of buttons that jump to the weapon. */
+.unit-weapons-panel .unit-weapon-list {
+  display: grid;
+  flex: 1 1 0;
+  align-content: start;
+  gap: 3px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #41785a #06101a;
+}
+
+.unit-weapon-entry,
+.owner-chip {
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid #14505a;
+  border-radius: 0;
+  color: var(--ed-text);
+  background: #00101d;
+  font: inherit;
+  font-size: var(--ed-primary);
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+}
+
+.unit-weapon-entry {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "slot slot"
+    "name name"
+    "stats stats"
+    "flags flags";
+  gap: 0 8px;
+}
+
+.unit-weapon-entry:not(:disabled):hover,
+.owner-chip:hover {
+  border-color: #74dc53;
+  background: #0a2a1a;
+}
+
+.unit-weapon-entry:disabled {
+  color: #8f9a8d;
+  cursor: not-allowed;
+}
+
+.weapon-entry-slot {
+  grid-area: slot;
+  color: #83d5eb;
+  font-size: var(--ed-label);
+  white-space: nowrap;
+}
+
+.weapon-entry-name {
+  grid-area: name;
+  max-width: 100%;
+  min-width: 0;
+  font-size: var(--ed-name);
+  overflow-wrap: anywhere;
+}
+
+.weapon-entry-stats {
+  grid-area: stats;
+  color: #c9d6ca;
+  font-size: var(--ed-label);
+}
+
+.weapon-entry-flags {
+  grid-area: flags;
+  color: #f1dd74;
+  font-size: var(--ed-label);
+}
+
+/* Pilot screen ------------------------------------------------------------------------------------ */
+
+.pilot-game-screen {
+  --panel-gap: 3px;
+  grid-template-columns: minmax(0, 16fr) minmax(0, 46fr) minmax(0, 38fr);
+  grid-template-areas:
+    "portrait combat points"
+    "mental mental skills"
+    "growth growth terrain";
+}
+
+.pilot-portrait-panel { grid-area: portrait; }
+.pilot-combat-panel { grid-area: combat; }
+.pilot-points-panel { grid-area: points; }
+.pilot-mental-panel { grid-area: mental; }
+.pilot-special-panel { grid-area: skills; }
+.pilot-growth-panel { grid-area: growth; }
+.pilot-terrain-panel { grid-area: terrain; }
+
+/* The four sections of the lower half are grid items of the screen itself. */
+.pilot-lower-panel {
+  display: contents;
+}
+
+.pilot-mental-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  min-height: 0;
+}
+
+.pilot-mental-slot {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 2px 5px;
+  border: 1px solid #12404a;
+  background: #00101d;
+}
+
+.pilot-mental-slot.is-empty {
+  border-style: dashed;
+  border-color: #0d2a31;
+  background: transparent;
+}
+
+.pilot-mental-name {
+  min-width: 0;
+  font-size: var(--ed-primary);
+  word-break: keep-all;
+}
+
+.pilot-mental-level {
+  color: #a9d6ee;
+  font: 400 var(--ed-label) / 1.1 var(--runtime-number-face);
+}
+
+.pilot-mental-none {
+  grid-column: 1 / -1;
+  align-self: center;
+  color: #c8c6a8;
+  font-size: var(--ed-primary);
+}
+
+/* Editable spirit slots: the name line is a select, the level line a level box and a delete button. The controls keep the
+   text metrics of a read-only slot (no 40px control height), so an editable slot is as tall as a read-only one. */
+.pilot-mental-name.is-choice,
+.pilot-mental-level.is-edit {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pilot-mental-level.is-edit > label {
+  font: inherit;
+  min-height: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  min-width: 0;
+}
+
+.editor-game-screen .pilot-mental-slot :is(select, input) {
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px dashed #2b6f7a;
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  line-height: 1.15;
+}
+
+.editor-game-screen .pilot-mental-slot select {
+  flex: 1 1 auto;
+  width: 100%;
+  text-align: left;
+}
+
+.editor-game-screen .pilot-mental-slot input {
+  width: 3.4ch;
+  text-align: center;
+}
+
+.pilot-mental-remove {
+  margin-left: auto;
+  padding: 0 4px;
+  border: 0;
+  color: #a9d6ee;
+  background: transparent;
+  font: inherit;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+.pilot-mental-remove:disabled {
+  color: #4f6a70;
+  cursor: not-allowed;
+}
+
+.pilot-mental-slot.is-modified {
+  border-color: #e8cc39;
+}
+
+.pilot-mental-slot.is-locked .pilot-mental-level,
+.pilot-mental-name.is-full {
+  color: #8f9a8d;
+}
+
+/* Skills: one name per line, then the edit button under them (in the flow, never over a name). */
+.pilot-runtime-skills {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9em), 1fr));
+  align-content: start;
+  gap: 4px 12px;
+}
+
+.pilot-runtime-skill,
+.pilot-special-empty {
+  min-width: 0;
+  font-size: var(--ed-primary);
+  line-height: 1.3;
+}
+
+.pilot-runtime-skill-name {
+  word-break: keep-all;
+}
+
+.pilot-skill-schedule-button {
+  box-sizing: border-box;
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--ed-rail);
+  border-radius: 0;
+  color: #ade9ef;
+  background: #00111d;
+  font: 500 var(--ed-label) / 1.2 var(--runtime-korean-face);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pilot-skill-schedule-button:disabled {
+  color: #6d7d7d;
+  border-color: #27474c;
+  cursor: not-allowed;
+}
+
+/* Weapon screen ----------------------------------------------------------------------------------- */
+
+.weapon-game-screen {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-areas:
+    "note note"
+    "detail terrain"
+    "owners owners";
+}
+
+.weapon-detail-panel { grid-area: detail; }
+.weapon-terrain-panel { grid-area: terrain; }
+.weapon-owner-panel { grid-area: owners; }
+
+.owner-chip-list {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #41785a #06101a;
+}
+
+.owner-chip-list > [role="listitem"] {
+  display: contents;
+}
+
+.owner-chip {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.owner-chip.is-unverified {
+  border-style: dashed;
+  color: #c8c6a8;
+}
+
+.owner-chip-name {
+  font-size: var(--ed-primary);
+  overflow-wrap: anywhere;
+}
+
+.owner-chip-meta {
+  color: #a9c3cf;
+  font-size: var(--ed-label);
+}
+
+/* Tab bar, footer and the page switch need larger targets on touch screens -------------------------- */
+
+@media (pointer: coarse) {
+  .editor-tab,
+  .editor-primary-button,
+  .editor-unused-toggle {
+    min-height: 40px;
+  }
+}
+
+/* Paged layouts (medium and narrow): one part of the record at a time ---------------------------------- */
+
+@media (max-width: 1099px), (max-height: 719px) {
+  .editor-page-switch { display: flex; }
+  .editor-data-panel:not([data-auto-pages]):not([data-page="main"]):not([data-page="list"]) [data-editor-section="main"],
+  .editor-data-panel:not([data-auto-pages]):not([data-page="aux"]) [data-editor-section="aux"],
+  .editor-data-panel:not([data-auto-pages]):not([data-page="extra"]) [data-editor-section="extra"] {
+    display: none;
+  }
+
+  /* Every grid of small fields puts its captions above the values. */
+  .editor-game-screen :is(.unit-vitals-grid, .unit-core-grid, .pilot-points-grid) label {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: end;
+    gap: 2px 4px;
+    min-height: 0;
+  }
+
+  .editor-game-screen :is(.unit-vitals-grid, .unit-core-grid, .pilot-points-grid) label > .editor-field-name { grid-column: 1 / -1; grid-row: 1; font-size: var(--ed-label); }
+  .editor-game-screen :is(.unit-vitals-grid, .unit-core-grid, .pilot-points-grid) label > .editor-diff-reset { grid-column: 2; grid-row: 2; align-self: center; }
+  .editor-game-screen :is(.unit-vitals-grid, .unit-core-grid, .pilot-points-grid) label > input[data-editor-field] { grid-column: 1; grid-row: 2; inline-size: 100%; text-align: center; }
+
+  .unit-runtime-gauge {
+    display: none;
+  }
+
+  .unit-vitals-grid,
+  .unit-core-grid,
+  .pilot-combat-grid,
+  .pilot-points-grid,
+  .weapon-detail-grid {
+    --cell: var(--stacked-cell);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--cell)), 1fr));
+  }
+
+  /* Unit, values: the picture beside HP/EN and the four values, the four terrains under them */
+  .unit-game-screen {
+    grid-template-columns: var(--portrait, clamp(150px, 34cqw, 300px)) minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      "image vitals"
+      "core core"
+      "terrain terrain"
+      "abilities abilities"
+      "weapons weapons";
+  }
+
+  /* Unit, abilities: as many slots per line as fit (a slot is as wide as the longest ability name); a slot that shows
+     its flag number takes a whole line, with the number beside the choice. */
+  .unit-special-list {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(var(--ability-text, 8) * var(--ed-primary) + 64px)), 1fr));
+    gap: 8px;
+  }
+
+  .unit-special-row:has(> .unit-special-value-field:not([hidden])) {
+    grid-column: 1 / -1;
+  }
+
+  .unit-special-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .unit-special-slot-name {
+    display: none;
+  }
+
+  .unit-weapons-panel {
+    flex: 1 1 auto;
+  }
+
+  /* Pilot, abilities: the face beside the six combat values and SP / EXP */
+  .pilot-game-screen {
+    grid-template-columns: var(--portrait-pilot, clamp(96px, 24cqw, 200px)) minmax(0, 1fr);
+    grid-template-areas:
+      "portrait points"
+      "combat combat"
+      "growth growth"
+      "terrain terrain"
+      "mental mental"
+      "skills skills";
+  }
+
+  /* Weapon: the values and the terrains, then the units that own the weapon on their own part */
+  .weapon-game-screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      "note"
+      "detail"
+      "terrain"
+      "owners";
+  }
+
+  .weapon-owner-panel {
+    flex: 1 1 auto;
+  }
+
+  .owner-chip-list {
+    flex: 1 1 0;
+  }
+
+  /* A part that holds a list (the unit's weapons; a weapon's terrains and owners) gives the list the rest of the height. */
+  .editor-data-panel[data-page="extra"] .unit-game-screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "terrain"
+      "weapons";
+  }
+
+  .editor-data-panel[data-page="extra"] .unit-weapons-panel {
+    min-height: 0;
+  }
+
+  .editor-data-panel[data-page="extra"] .weapon-game-screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "terrain"
+      "owners";
+  }
+
+  .editor-data-panel[data-page="extra"] .weapon-owner-panel {
+    min-height: 0;
+  }
+
+  /* Wider screens of a paged layout use the width: the values beside the terrains. */
+  @container (min-width: 480px) {
+    .unit-game-screen {
+      grid-template-areas:
+        "image vitals"
+        "image core"
+        "terrain terrain"
+        "abilities abilities"
+        "weapons weapons";
+    }
+
+    .pilot-game-screen {
+      grid-template-columns: var(--portrait-pilot, clamp(96px, 24cqw, 200px)) minmax(0, 1fr);
+      grid-template-areas:
+        "portrait combat"
+        "portrait points"
+        "growth growth"
+        "terrain terrain"
+        "mental mental"
+        "skills skills";
+    }
+  }
+
+  @container (min-width: 560px) {
+    .pilot-game-screen {
+      grid-template-columns: var(--portrait-pilot, clamp(96px, 20cqw, 200px)) minmax(0, 1.4fr) minmax(0, 1fr);
+      grid-template-areas:
+        "portrait combat points"
+        "growth growth growth"
+        "terrain terrain terrain"
+        "mental mental mental"
+        "skills skills skills";
+    }
+
+  }
+
+
+
+}
+
+/* Medium: the list stays beside the record; the page switch shares the record bar's row. */
+@media (min-width: 761px) and (max-width: 1099px), (min-width: 761px) and (max-height: 719px) {
+  .editor-data-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "bar switch"
+      "body body";
+    gap: 6px;
+  }
+
+  .editor-data-panel[hidden] {
+    display: none;
+  }
+
+  .record-bar { grid-area: bar; }
+  .editor-page-switch { grid-area: switch; }
+  .editor-panel-body { grid-area: body; }
+
+  .editor-page-button[data-editor-page="list"] {
+    display: none;
+  }
+
+  .editor-page-button {
+    min-width: 5.5em;
+  }
+
+  .record-bar-label {
+    display: none;
+  }
+}
+
+/* Narrow: one thing at a time ------------------------------------------------------------------------ */
+
+@media (max-width: 760px) {
+  .editor-data-panel {
+    gap: 4px;
+    --edge: 3px;
+  }
+
+  .game-panel h3,
+  .game-panel h4 {
+    line-height: 1.1;
+  }
+
+  .record-bar {
+    min-height: 40px;
+    gap: 6px;
+    padding: 0 4px;
+    border-width: 1px;
+  }
+
+  .record-nav {
+    min-height: 36px;
+  }
+
+  .record-bar-label,
+  .record-position {
+    display: none;
+  }
+
+  .editor-page-button {
+    padding: 4px 4px;
+  }
+
+  .editor-panel-body {
+    flex-direction: column;
+  }
+
+  .record-pane {
+    flex: 1 1 0;
+    padding: 6px;
+  }
+
+  .record-pane.is-weapons {
+    --pane-width: auto;
+  }
+
+  .is-weapons .record-option {
+    grid-template-columns: minmax(0, 1fr) 5.5ch 6.5ch 4ch;
+  }
+
+  .editor-data-panel[data-page="list"] .game-screen-shell,
+  .editor-data-panel:not([data-page="list"]) .record-pane {
+    display: none;
+  }
+
+  .editor-game-screen {
+    gap: 0;
+  }
+
+  .game-panel {
+    gap: 4px;
+    padding: calc(var(--edge) + 2px) calc(var(--edge) + 3px);
+  }
+
+  .unit-vitals-panel h4,
+  .unit-core-panel h4,
+  .pilot-combat-panel h4,
+  .pilot-points-panel h4,
+  .weapon-detail-panel h4 {
+    display: none;
+  }
+
+  .unit-game-screen {
+    --portrait: clamp(88px, 26cqw, 200px);
+  }
+
+  .pilot-game-screen {
+    --portrait-pilot: clamp(88px, 26cqw, 150px);
+  }
+
+  .unit-vitals-grid,
+  .unit-core-grid,
+  .pilot-combat-grid,
+  .pilot-points-grid,
+  .pilot-growth-grid,
+  .weapon-detail-grid,
+  .terrain-grid {
+    gap: 3px 4px;
+  }
+
+  /* Four core values share one row, including their reset buttons. At 320px
+     each cell still holds the full five-digit value at the normal font size. */
+  .unit-core-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .editor-game-screen .unit-core-grid label {
+    grid-template-columns: minmax(0, 1fr) 16px;
+    column-gap: 2px;
+  }
+
+  .editor-game-screen .unit-core-grid label > input[data-editor-field] {
+    min-inline-size: 0;
+    padding-inline: 1px;
+  }
+
+  .editor-game-screen .unit-core-grid label > .editor-diff-reset {
+    width: 16px;
+    min-width: 16px;
+    height: var(--ed-control);
+    min-height: var(--ed-control);
+  }
+
+  .editor-game-screen .unit-core-grid label > .editor-diff-reset::after {
+    inset: -2px 0 -2px -8px;
+  }
+
+  /* Room between the ability heading and the slots, where the slots' info buttons stand on their corners. */
+  .unit-info-panel {
+    gap: 8px;
+  }
+}
+
+/* A phone held sideways: the tabs make a rail on the left and the page switch joins the record bar. */
+@media (max-width: 760px) and (max-height: 480px) and (min-width: 520px) {
+  body[data-view="editor"] .editor-workspace {
+    display: grid;
+    grid-template-columns: 124px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "rail panel"
+      "footer footer";
+  }
+
+  .editor-tab-bar {
+    grid-area: rail;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    align-self: start;
+  }
+
+  .editor-tab-row {
+    flex: 0 0 auto;
+    flex-direction: column;
+    width: auto;
+  }
+
+  .editor-tab {
+    flex: 0 0 auto;
+  }
+
+  /* Six map-editor tabs need more height than a short landscape rail has.
+     One row leaves that height for the measured map and input pages. */
+  body[data-view="editor"] .editor-workspace:has(> .editor-scenario-panel:not([hidden])) {
+    display: flex;
+  }
+
+  .editor-workspace:has(> .editor-scenario-panel:not([hidden])) .editor-tab-bar {
+    flex-direction: row;
+    align-self: stretch;
+  }
+
+  .editor-workspace:has(> .editor-scenario-panel:not([hidden])) .editor-tab-row {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .editor-workspace:has(> .editor-scenario-panel:not([hidden])) .editor-tab {
+    flex: 1 1 0;
+  }
+
+  /* The weapon tab's record bar has room for its label ("전체 무기 목록"), which replaces the weapon note. */
+  #weaponEditorPanel .record-bar-label {
+    display: inline;
+  }
+
+  .weapon-scope-note {
+    display: none;
+  }
+
+  .editor-unused-toggle {
+    margin-left: 0;
+    white-space: normal;
+  }
+
+  .editor-record-notice {
+    flex: 0 1 auto;
+    flex-direction: column;
+    order: 0;
+  }
+
+  .editor-data-panel {
+    display: grid;
+    grid-area: panel;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "bar switch"
+      "body body";
+  }
+
+  .editor-data-panel[hidden] {
+    display: none;
+  }
+
+  .record-bar { grid-area: bar; }
+  .editor-page-switch { grid-area: switch; }
+  .editor-panel-body { grid-area: body; }
+
+  /* The status and the save button stand under the tabs, so the record keeps the window's height. */
+  .editor-footer {
+    grid-area: footer;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    align-self: end;
+  }
+
+  .editor-footer .editor-status {
+    flex: 0 0 auto;
+  }
+
+  /* While the list shows, its own count line says enough; the status gives its room to the list switch. */
+  .editor-workspace:has(> .editor-data-panel:not([hidden])[data-page="list"]) .editor-footer .editor-status {
+    display: none;
+  }
+
+  .editor-download-actions {
+    flex-direction: column;
+  }
+
+  /* Wide and low: the parts of a page sit side by side. */
+  .unit-game-screen {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) minmax(0, 5fr);
+    grid-template-areas:
+      "image vitals vitals"
+      "image core core"
+      "abilities abilities abilities"
+      "weapons weapons weapons";
+  }
+
+  .editor-tab,
+  .record-nav {
+    min-height: 36px;
+  }
+
+  .mode-switch-button {
+    min-height: 30px;
+  }
+
+
+  .pilot-game-screen {
+    grid-template-columns: 96px minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-areas:
+      "portrait combat points"
+      "growth growth terrain"
+      "mental mental skills";
+  }
+
+  .editor-data-panel[data-page="extra"] .unit-game-screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "terrain"
+      "weapons";
+  }
+}
+
+/* A phone held sideways: the three cards stand side by side as on a desktop (the window is wide but low). */
+@media (max-width: 760px) and (max-height: 480px) and (min-width: 520px) {
+  .patch-workspace {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .patch-workspace > .workflow-zone {
+    align-self: stretch;
+    height: auto;
+  }
+
+  .brand-copy {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 10px;
+  }
+
+  .site-header {
+    min-height: 36px;
+    padding-block: 2px;
+  }
+
+  .compatibility {
+    min-height: 28px;
+    padding-block: 2px;
+  }
+
+  .brand-mark {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+  }
+}
+
+/* A phone held sideways: the header and the bar above the editor keep to one line each. */
+@media (max-width: 760px) and (max-height: 480px) {
+  body[data-view="editor"] .mode-bar {
+    flex-wrap: nowrap;
+  }
+
+  body[data-view="editor"] .mode-summary {
+    order: 0;
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 480px) and (min-width: 520px) {
+  .editor-footer { flex-direction: row; }
+  .editor-footer .editor-status { flex: 1 1 0; min-width: 0; }
+}
+
+/* Help popover (top layer) ----------------------------------------------------------------------- */
+
+.editor-gameplay-help {
+  box-sizing: border-box;
+  position: fixed;
+  inset: auto;
+  z-index: 10000;
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  margin: 0;
+  padding: 14px 40px 14px 16px;
+  overflow: auto;
+  border: 1px solid #63b5c6;
+  border-radius: 12px;
+  color: #edf7fa;
+  background: #0d2031;
+  box-shadow: 0 8px 30px #0008;
+  font: 400 15px / 1.55 system-ui, sans-serif;
+}
+
+.editor-gameplay-help[hidden] {
+  display: none;
+}
+
+.help-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.help-title {
+  color: #ffe88f;
+  font-size: 16px;
+}
+
+.fact-badge {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.fact-badge.is-verified { color: #8fe08a; }
+.fact-badge.is-sourced { color: #7fc4ff; }
+.fact-badge.is-inferred { color: #ffd166; }
+.fact-badge.is-unknown { color: #c3c9cf; }
+
+.help-effect {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+
+.help-event-condition { margin-bottom: 10px; }
+.help-event-title { color: #ffe88f; }
+.help-event-step { margin: 8px 0; }
+.help-event-step > b { color: #aeece8; }
+.help-event-evidence { margin-top: 8px; color: #a9bfbe; font-size: 12px; }
+.help-event-evidence summary { cursor: pointer; }
+.help-event-evidence a { color: #aeece8; }
+
+.help-params {
+  width: 100%;
+  margin: 6px 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.help-params th,
+.help-params td {
+  padding: 4px 0;
+  border-top: 1px solid #1d4458;
+  text-align: left;
+  vertical-align: top;
+}
+
+.help-params th {
+  width: 44%;
+  padding-right: 8px;
+  color: #cfe6ee;
+  font-weight: 600;
+}
+
+.help-params td {
+  font-variant-numeric: tabular-nums;
+}
+
+.help-note {
+  display: block;
+  color: #a3c1ce;
+  font-size: 12px;
+}
+
+.help-cautions {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+  padding: 0;
+  font-size: 13px;
+  list-style: none;
+}
+
+.help-how {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid #1d4458;
+  color: #c4d8e0;
+  font-size: 13px;
+}
+
+.help-game,
+.help-scope {
+  display: block;
+  margin-top: 6px;
+  color: #a3c1ce;
+  font-size: 12px;
+}
+
+.editor-help-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  color: #edf7fa;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Pilot skill dialog ------------------------------------------------------------------------------ */
+
+.pilot-skill-dialog {
+  --ed-ink: #ece6d5;
+  --ed-muted: #aebbb9;
+  --ed-rail: #13818c;
+  width: min(760px, 94vw);
+  max-width: none;
+  max-height: min(calc(100dvh - 16px), 720px);
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid #c5a850;
+  border-radius: 0;
+  color: var(--ed-ink);
+  background: #000819;
+  box-shadow: 0 0 0 4px #111627, 0 24px 80px rgba(0, 0, 0, 0.75);
+  font: 500 clamp(14px, 0.4vw + 11px, 16px) / 1.4 "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+
+.pilot-skill-dialog::backdrop {
+  background: rgba(0, 0, 12, 0.78);
+}
+
+.pilot-skill-dialog-shell {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(min(100dvh - 16px, 720px) - 4px);
+  padding: 12px 14px;
+  border: 3px solid #155400;
+  background: #000819;
+}
+
+.pilot-skill-dialog-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #23720d;
+}
+
+.pilot-skill-dialog-header span {
+  color: #82c5d1;
+  font: 600 12px / 1.2 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+
+.pilot-skill-dialog-header h2 {
+  margin: 2px 0 0;
+  color: #f2e9c9;
+  font-size: clamp(17px, 0.6vw + 14px, 20px);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilot-skill-dialog-header > div { min-width: 0; }
+
+.pilot-skill-dialog button:not(.editor-help-button):not(.editor-help-close),
+.pilot-skill-dialog select,
+.pilot-skill-dialog input {
+  box-sizing: border-box;
+  min-height: 40px;
+  border: 1px solid var(--ed-rail);
+  border-radius: 0;
+  color: #dcf5ef;
+  background: #00111d;
+  font: inherit;
+}
+
+.pilot-skill-dialog button:not(.editor-help-button):not(.editor-help-close) {
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.pilot-skill-dialog button:not(.editor-help-button):not(.editor-help-close):disabled,
+.pilot-skill-dialog select:disabled,
+.pilot-skill-dialog input:disabled {
+  color: #7c8884;
+  border-color: #27474c;
+  cursor: not-allowed;
+}
+
+.pilot-skill-dialog :is(button, select, input):focus-visible {
+  outline: 2px solid #ffe04e;
+  outline-offset: 1px;
+}
+
+.pilot-skill-dialog-note,
+.pilot-skill-add-hint,
+.pilot-skill-dialog-footnote {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--ed-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.pilot-skill-dialog-footnote {
+  padding-top: 8px;
+  border-top: 1px solid #263d39;
+  color: #a69c80;
+  font-size: 13px;
+}
+
+.pilot-skill-status {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid #14505a;
+  color: #ade9ef;
+  background: #00101d;
+  font-variant-numeric: tabular-nums;
+}
+
+.pilot-skill-status:empty,
+.pilot-skill-warning:empty {
+  display: none;
+}
+
+.pilot-skill-warning {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #b8932a;
+  color: #f6df8a;
+  background: #231c04;
+}
+
+.pilot-skill-schedule {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #41785a #06101a;
+}
+
+.pilot-skill-row {
+  display: grid;
+  grid-template-columns: 2.4em minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid #133f36;
+  background: #000e1d;
+}
+
+.pilot-skill-row.is-new {
+  border-color: #3f9c3a;
+  background: rgba(40, 100, 30, 0.2);
+}
+
+.pilot-skill-row.is-modified {
+  border-color: #e8cf4e;
+  background: rgba(119, 91, 5, 0.16);
+}
+
+.pilot-skill-row.is-locked .pilot-skill-name {
+  color: #c8c6a8;
+}
+
+.pilot-skill-index {
+  color: #78c6d7;
+  font: 500 14px / 1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  text-align: center;
+}
+
+.pilot-skill-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pilot-skill-meta {
+  display: block;
+  color: #f1dd74;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.pilot-skill-level-field,
+.pilot-skill-add-choice,
+.pilot-skill-add-level {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ed-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.pilot-skill-level-field input,
+.pilot-skill-add-level input {
+  width: 5.5em;
+  padding: 4px 8px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pilot-skill-level-field input.is-modified {
+  color: #fff1a0;
+  border-color: #d2bd39;
+}
+
+.pilot-skill-remove {
+  min-width: 56px;
+}
+
+.pilot-skill-add {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #23720d;
+}
+
+.pilot-skill-add-choice {
+  flex: 1 1 14em;
+}
+
+.pilot-skill-add-choice select {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 4px 8px;
+}
+
+.pilot-skill-add-button {
+  min-width: 72px;
+  color: #04120d;
+  border-color: #74dc53;
+  background: linear-gradient(#a3e56b, #60bd49);
+  font-weight: 650;
+}
+
+.pilot-skill-dialog .pilot-skill-add-button:disabled {
+  color: #7c8884;
+  background: #00111d;
+}
+
+.pilot-skill-add-hint.is-caution {
+  color: #f1dd74;
+}
+
+.pilot-skill-actions {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+.pilot-skill-schedule-empty {
+  margin: 0;
+  padding: 12px;
+  color: #aab0a7;
+}
+
+@media (max-width: 540px) {
+  .pilot-skill-dialog {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    margin: auto;
+  }
+
+  .pilot-skill-dialog-shell {
+    max-height: calc(100dvh - 20px);
+    padding: 8px 10px;
+  }
+
+  .pilot-skill-row {
+    grid-template-columns: 1.8em minmax(0, 1fr) auto auto;
+    gap: 6px;
+    padding-inline: 6px;
+  }
+
+  .pilot-skill-level-field input {
+    width: 4.5em;
+  }
+
+  .pilot-skill-add {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .pilot-skill-add-choice {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Change list and preset file ---------------------------------------------------------------------- */
+/* The status line at the bottom is a button that opens the list of changed values; the dialog lies over the editor, so
+   nothing here adds height to the page. The list scrolls inside the dialog. */
+
+.editor-footer button.editor-status {
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.editor-footer button.editor-status::after {
+  content: " ▴";
+  color: var(--ed-gold, #e9d870);
+}
+
+.editor-footer button.editor-status:hover {
+  border-color: #2b8796;
+  color: #dcefe2;
+}
+
+.editor-footer button.editor-status:focus-visible {
+  outline: 2px solid #ffe04e;
+  outline-offset: 1px;
+}
+
+.editor-changes-dialog {
+  width: min(720px, 94vw);
+  max-width: none;
+  max-height: min(86dvh, 720px);
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid #c5a850;
+  border-radius: 0;
+  color: #ece6d5;
+  background: #000819;
+  box-shadow: 0 0 0 4px #111627, 0 24px 80px rgba(0, 0, 0, 0.75);
+  font: 500 clamp(14px, 0.4vw + 11px, 16px) / 1.4 "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+
+.editor-changes-dialog::backdrop {
+  background: rgba(0, 0, 12, 0.72);
+}
+
+.editor-changes-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: inherit;
+  padding: 12px 14px;
+  border: 3px solid #155400;
+  box-sizing: border-box;
+}
+
+.editor-changes-header {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #23720d;
+}
+
+.editor-changes-header h2 {
+  flex: 1 1 auto;
+  margin: 0;
+  color: #f2e9c9;
+  font-size: clamp(17px, 0.6vw + 14px, 20px);
+  line-height: 1.2;
+}
+
+.editor-preset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.editor-changes-dialog button {
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #13818c;
+  border-radius: 0;
+  color: #dcf5ef;
+  background: #00111d;
+  font: inherit;
+  cursor: pointer;
+}
+
+.editor-changes-dialog button:disabled {
+  color: #7c8884;
+  border-color: #27474c;
+  cursor: not-allowed;
+}
+
+.editor-changes-dialog :is(button, summary):focus-visible {
+  outline: 2px solid #ffe04e;
+  outline-offset: 1px;
+}
+
+.editor-changes-dialog .editor-changes-tool.is-primary:not(:disabled) {
+  border-color: #74dc53;
+  color: #04120d;
+  background: linear-gradient(#a3e56b, #60bd49);
+  font-weight: 750;
+}
+
+.editor-changes-dialog .editor-changes-close {
+  min-width: 40px;
+  padding: 0;
+}
+
+.editor-changes-message {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid #14505a;
+  color: #ade9ef;
+  background: #00101d;
+  overflow-wrap: anywhere;
+}
+
+.editor-changes-message[data-tone="error"] {
+  border-color: #a8483f;
+  color: #ffc9bf;
+}
+
+.editor-changes-list,
+.editor-preset-summary {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.editor-changes-empty {
+  margin: 0;
+  padding: 16px 12px;
+  color: #aab0a7;
+}
+
+.editor-changes-group + .editor-changes-group {
+  margin-top: 10px;
+}
+
+.editor-changes-heading {
+  margin: 0 0 4px;
+  color: #9fd7e6;
+  font-size: 14px;
+}
+
+.editor-changes-items,
+.editor-preset-counts,
+.editor-preset-conflicts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.editor-changes-dialog .editor-changes-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-color: #1c3d45;
+  text-align: start;
+}
+
+.editor-changes-dialog .editor-changes-item:hover {
+  border-color: #2b8796;
+  background: #021a2b;
+}
+
+.editor-changes-items li + li {
+  margin-top: 4px;
+}
+
+.editor-changes-name {
+  color: #f2e9c9;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.editor-changes-detail {
+  color: #fff19b;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.editor-event-change-value { display: block; white-space: nowrap; }
+
+.editor-preset-file {
+  margin: 0 0 8px;
+  color: #aebbb9;
+  overflow-wrap: anywhere;
+}
+
+.editor-preset-count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  padding: 6px 10px;
+  border-left: 3px solid #13818c;
+  background: #00101d;
+}
+
+.editor-preset-count + .editor-preset-count {
+  margin-top: 4px;
+}
+
+.editor-preset-count span {
+  color: #aebbb9;
+  font-size: 14px;
+}
+
+.editor-preset-count.is-conflict {
+  border-left-color: #e9d870;
+}
+
+.editor-preset-count.is-skip {
+  border-left-color: #a8483f;
+}
+
+.editor-preset-details {
+  margin-top: 8px;
+}
+
+.editor-preset-details summary {
+  min-height: 32px;
+  color: #9fd7e6;
+  cursor: pointer;
+}
+
+.editor-preset-conflicts li {
+  padding: 4px 0;
+  border-bottom: 1px solid #12303a;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.editor-preset-actions {
+  margin-top: 10px;
+}
+
+/* the field that a change list entry led to */
+.is-change-target {
+  outline: 2px solid #ffe04e;
+  outline-offset: 2px;
+}
+
+@media (max-width: 540px) {
+  .editor-changes-dialog {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100dvh;
+    margin: 0;
+    border-width: 0;
+  }
+
+  .editor-changes-shell {
+    height: 100dvh;
+    padding: 8px 10px;
+  }
+
+  .editor-preset-actions button {
+    flex: 1 1 100%;
+  }
+}
+
+.editor-range-error { color: #ffb5a7; font-size: 12px; grid-column: 1 / -1; }
+.unit-special-row.is-locked { opacity: .8; }
+
+.editor-data-panel[data-auto-pages] .editor-visual canvas { max-height: 128px; }
+
+.editor-data-panel[data-auto-pages] .unit-image-panel { min-height: 100px; }
+
+/* Screenshot manual: scoped to its own dialog, with no changes to editor/session layout. */
+.site-header { min-width: 0; }
+.site-header .brand { min-width: 0; }
+.site-header .brand-copy { min-width: 0; }
+.site-header .header-status { flex-shrink: 0; }
+.user-guide-open {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 4px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--white);
+  font-size: var(--fs-label);
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.user-guide-open:hover { border-color: var(--blue); color: var(--blue-deep); }
+.user-guide-dialog {
+  width: min(1100px, calc(100vw - 32px));
+  height: min(860px, calc(100dvh - 32px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  color: var(--ink);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+.user-guide-dialog::backdrop { background: rgba(16, 31, 47, .58); }
+.user-guide-shell {
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+  padding: 16px;
+}
+.user-guide-dialog[data-guide-group="2"] .user-guide-shell { grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto; }
+.user-guide-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.user-guide-header h2 { margin: 0; font-size: 20px; line-height: 1.3; }
+.user-guide-close,
+.user-guide-footer button {
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.user-guide-route { display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 13px; font-weight: 700; }
+.user-guide-route > span { flex: 0 0 auto; white-space: nowrap; }
+.user-guide-route select {
+  width: 260px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--white);
+  font-size: 14px;
+}
+.user-guide-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.user-guide-steps button {
+  min-width: 0;
+  min-height: 40px;
+  padding: 6px 4px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.user-guide-steps button[aria-current] { border-color: var(--blue); color: var(--blue-deep); background: #eef3ff; }
+.user-guide-copy h3 { margin: 0 0 4px; font-size: 17px; line-height: 1.3; }
+.user-guide-copy p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.5; word-break: keep-all; overflow-wrap: break-word; }
+.user-guide-figure {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.user-guide-figure picture { display: block; width: 100%; height: 100%; min-height: 0; }
+.user-guide-figure img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.user-guide-figure figcaption { text-align: center; color: var(--ink-soft); font-size: 12px; line-height: 1.3; }
+.user-guide-figure > p { margin: 0; padding: 12px; font-size: 14px; }
+.user-guide-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.user-guide-footer > span { font-size: 13px; font-variant-numeric: tabular-nums; }
+.user-guide-footer button:disabled { opacity: .4; cursor: default; }
+@media (max-width: 760px) {
+  .site-header .brand-copy strong { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .site-header .compatibility { width: auto; gap: 0; padding-inline: 7px; font-size: 0; }
+  .site-header .compatibility > span { font-size: 12px; }
+  .site-header .header-status { gap: 6px; }
+  .user-guide-open { padding-inline: 9px; }
+  .user-guide-dialog { width: calc(100vw - 16px); height: calc(100dvh - 16px); margin: auto; border-radius: 14px; }
+  .user-guide-shell { gap: 8px; padding: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .user-guide-header h2 { font-size: 18px; }
+  .user-guide-route { gap: 8px; }
+  .user-guide-route select { flex: 1; width: 0; }
+  .user-guide-steps button { font-size: 12px; min-height: 40px; }
+  .user-guide-copy h3 { font-size: 16px; }
+  .user-guide-copy p { font-size: 13px; }
+  .user-guide-figure { padding: 4px; }
+}
+@media (max-height: 480px) {
+  .user-guide-shell { gap: 4px; padding: 6px 10px; }
+  .user-guide-header h2 { font-size: 16px; }
+  .user-guide-close, .user-guide-route select, .user-guide-steps button, .user-guide-footer button { min-height: 30px; padding-block: 2px; }
+  .user-guide-copy h3 { font-size: 14px; }
+  .user-guide-copy p { font-size: 12px; line-height: 1.35; }
+}
+
+/* Reward tables have two compact pairs at most; no empty record rail or artificial pages. */
+.editor-reward-panel { min-width: 0; min-height: 0; grid-area: panel; align-self: stretch; }
+.editor-reward-panel[hidden] { display: none; }
+.reward-toolbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 8px; color: #d5ebe7; background: #07192d; border: 1px solid #26778a; }
+.reward-toolbar label { font-weight: 700; font-size: var(--fs-label); white-space: nowrap; }
+.reward-toolbar select, .reward-pair select, .reward-pair input { width: 100%; min-width: 0; height: 40px; box-sizing: border-box; color: #effcf8; background: #061425; border: 1px solid #3c8193; border-radius: 2px; padding: 0 8px; font: inherit; }
+.reward-card { padding: 12px; background: #07192d; border: 1px solid #26778a; border-top: 0; color: #d5ebe7; }
+#rewardFields { display: grid; gap: 8px; }
+.reward-pair { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 8px; }
+.reward-pair label { display: grid; gap: 4px; min-width: 0; font-size: var(--fs-label); font-weight: 700; }
+.reward-pair .is-modified { border-color: #f5cd67; color: #ffe39e; }
+.reward-pair [aria-invalid="true"] { border-color: #ff8d8d; }
+#rewardSummary { margin: 10px 0 4px; font-weight: 700; }
+#rewardScope, .reward-timing { margin: 4px 0 0; font-size: var(--fs-help); line-height: 1.45; overflow-wrap: anywhere; }
+@media (min-width: 900px) { #rewardFields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .reward-toolbar { grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 4px 8px; }
+  .reward-toolbar label { grid-column: 1 / -1; }
+  .reward-card { padding: 8px; }
+}
+
+.reward-toolbar { position: relative; }
+.reward-pair[hidden], .reward-pager[hidden] { display: none; }
+.reward-pager { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+.reward-pager button { height: 40px; width: 28px; padding: 0; border: 1px solid #3c8193; background: #061425; color: #effcf8; font: inherit; }
+.reward-pager span { font-size: 12px; }
+.reward-details summary { height: 40px; display: grid; align-items: center; box-sizing: border-box; padding: 0 7px; border: 1px solid #3c8193; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.reward-explanation { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; width: min(400px, 90vw); max-height: var(--reward-help-max-height, max(80px, calc(100dvh - 220px))); box-sizing: border-box; padding: 10px; border: 1px solid #3c8193; background: #061425; overflow-y: auto; box-shadow: 0 4px 16px #0008; }
+.editor-reward-panel[data-compact="true"] .reward-toolbar { padding: 4px; gap: 4px; grid-template-columns: minmax(0, 1fr) auto auto auto; }
+.editor-reward-panel[data-compact="true"] .reward-toolbar > label { display: none; }
+.editor-reward-panel[data-compact="true"] .reward-card { padding: 4px; }
+.editor-reward-panel[data-compact="true"] .reward-pair label { font-size: 0; gap: 0; }
+.editor-reward-panel[data-compact="true"] .reward-pair input, .editor-reward-panel[data-compact="true"] .reward-pair select { font-size: var(--fs-primary); }
+.editor-reward-panel[data-compact="true"] #rewardSummary { margin: 4px 0 0; font-size: 12px; }
+/* A short reward view reserves a single footer row before deciding whether a second pair fits. */
+body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) .editor-footer {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1.2fr);
+  grid-template-areas: "status save load export"; gap: 4px;
+}
+body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) .editor-preset-file-actions { display: contents; }
+body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) #editorPresetSaveButton { grid-area: save; }
+body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) #editorPresetLoadButton { grid-area: load; }
+body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) .editor-footer button { min-height: 40px; height: 40px; padding: 4px; font-size: 11px; white-space: nowrap; }
+body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) .editor-changes-button > span { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) .editor-changes-button::before { content: "변경 " attr(data-change-count); }
+body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) .editor-changes-button::after { display: none; }
+
+/* Map terrain effects use the same frame and field heights as the existing editor. */
+.editor-terrain-panel { min-width: 0; min-height: 0; grid-area: panel; align-self: stretch; }
+.editor-terrain-panel[hidden] { display: none; }
+.terrain-toolbar { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 8px; color: #d5ebe7; background: #07192d; border: 1px solid #26778a; }
+.terrain-toolbar > label { font-weight: 700; font-size: var(--fs-label); white-space: nowrap; }
+.terrain-toolbar select, .terrain-value { width: 100%; min-width: 0; height: 40px; box-sizing: border-box; color: #effcf8; background: #061425; border: 1px solid #3c8193; border-radius: 2px; font: inherit; }
+.terrain-toolbar select { padding: 0 8px; }
+.terrain-card { padding: 12px; background: #07192d; border: 1px solid #26778a; border-top: 0; color: #d5ebe7; }
+#terrainFields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+#terrainFields > label { display: grid; gap: 4px; min-width: 0; font-size: var(--fs-label); font-weight: 700; white-space: nowrap; }
+.terrain-value { display: flex; align-items: center; }
+.terrain-value input { width: 100%; min-width: 0; padding: 0 4px 0 8px; border: 0; background: transparent; color: inherit; font: inherit; }
+.terrain-value > span { padding-right: 6px; font-size: 12px; }
+.terrain-value:has(.is-modified) { border-color: #f5cd67; color: #ffe39e; }
+.terrain-value:has([aria-invalid="true"]) { border-color: #ff8d8d; }
+#terrainStatus:empty { display: none; }
+#terrainStatus { margin: 4px 0 0; font-size: 12px; color: #ff8d8d; }
+.terrain-toolbar .reward-explanation p, .scenario-toolbar .reward-explanation p { margin: 4px 0; font-size: var(--fs-help); line-height: 1.45; }
+.scenario-explanation-content { display: grid; gap: 8px; }
+.scenario-toolbar .scenario-explanation-content p { margin: 0; }
+.scenario-explanation-pager { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.scenario-explanation-pager[hidden], .scenario-explanation-content > [hidden], .scenario-explanation-pager > [hidden] { display: none; }
+.scenario-explanation-pager button { min-width: 36px; min-height: 36px; padding: 0 8px; border: 1px solid #3c8193; background: #061425; color: #effcf8; font-size: var(--fs-help); }
+.scenario-explanation-pager button:last-child { margin-left: auto; }
+.scenario-explanation-pager span { font-size: var(--fs-help); white-space: nowrap; }
+@media (max-width: 760px) {
+  .terrain-toolbar { grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 8px; }
+  .terrain-toolbar > label { grid-column: 1 / -1; }
+  .terrain-card { padding: 8px; }
+  #terrainFields { gap: 4px; }
+  #terrainFields > label { font-size: 11px; }
+}
+.editor-terrain-panel[data-compact="true"] .terrain-toolbar { padding: 4px; gap: 4px; grid-template-columns: minmax(0, 1fr) auto auto; }
+.editor-terrain-panel[data-compact="true"] .terrain-toolbar > label { display: none; }
+.editor-terrain-panel[data-compact="true"] .terrain-card { padding: 4px; }
+.terrain-tile-examples { display: flex; gap: 6px; margin-bottom: 8px; }
+.terrain-tile-examples[hidden] { display: none; }
+.terrain-tile-examples button { display: flex; align-items: center; gap: 5px; min-width: 0; min-height: 40px; padding: 3px; color: #d5ebe7; background: #061425; border: 1px solid #3c8193; font: inherit; font-size: 11px; cursor: pointer; }
+.terrain-tile-examples canvas { width: 32px; height: 32px; image-rendering: pixelated; flex: 0 0 auto; }
+.terrain-tile-examples span { white-space: nowrap; }
+.editor-terrain-panel[data-compact="true"] .terrain-tile-examples { gap: 4px; margin-bottom: 4px; }
+.editor-terrain-panel[data-compact="true"] .terrain-toolbar { padding: 2px; }
+.editor-terrain-panel[data-compact="true"] .terrain-toolbar select,
+.editor-terrain-panel[data-compact="true"] .terrain-toolbar button,
+.editor-terrain-panel[data-compact="true"] .terrain-toolbar summary,
+.editor-terrain-panel[data-compact="true"] .terrain-value { height: 28px; min-height: 28px; font-size: 11px; }
+.editor-terrain-panel[data-compact="true"] .terrain-card { padding: 2px; }
+.editor-terrain-panel[data-compact="true"] #terrainFields > label { gap: 2px; font-size: 10px; line-height: 12px; }
+.editor-terrain-panel[data-compact="true"] .terrain-tile-examples button { height: 28px; min-height: 28px; padding: 1px; }
+.editor-terrain-panel[data-compact="true"] .terrain-tile-examples canvas { width: 24px; height: 24px; }
+.editor-terrain-panel[data-compact="true"] .terrain-card:has(#terrainStatus:not(:empty)) .terrain-tile-examples { display: none; }
+.editor-terrain-panel[data-compact="true"] #terrainStatus:not(:empty) { min-height: 28px; display: flex; align-items: center; margin-bottom: 4px; }
+@media (max-width: 400px) {
+  .terrain-tile-examples button { flex: 1; gap: 3px; font-size: 10px; }
+  .terrain-tile-examples canvas { width: 28px; height: 28px; }
+}
+
+/* A map gets the actual remaining viewport; only a measured short view uses
+   map/fields pages. The outer document never needs a tall map or empty rail. */
+.editor-scenario-panel { grid-area: panel; min-width: 0; min-height: 0; height: var(--scenario-height, 520px); display: flex; flex-direction: column; color: #d5ebe7; background: #07192d; border: 1px solid #26778a; }
+.editor-scenario-panel[hidden] { display: none; }
+.scenario-toolbar { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px; border-bottom: 1px solid #26778a; }
+.scenario-toolbar > select { flex: 1 1 0; }
+#scenarioSelectionDescription { overflow-wrap: anywhere; }
+#scenarioPlaneSelector { flex: 0 0 84px; }
+.scenario-toolbar select, .scenario-inspector select, .scenario-position input, .scenario-map-caption select { min-width: 0; max-width: 100%; height: 38px; padding: 0 7px; color: #effcf8; background: #061425; border: 1px solid #3c8193; border-radius: 2px; font: inherit; font-size: 13px; box-sizing: border-box; }
+.scenario-toolbar button, .scenario-inspector button { min-height: 38px; padding: 4px 8px; color: #d5ebe7; background: #061425; border: 1px solid #3c8193; border-radius: 2px; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.scenario-toolbar button[aria-pressed="true"], .scenario-inspector button[aria-pressed="true"] { color: #04120d; background: #a3e56b; border-color: #74dc53; }
+.scenario-workarea { display: grid; grid-template-columns: minmax(0, 1fr) 260px; flex: 1; min-height: 0; min-width: 0; }
+.scenario-map-area { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 6px; gap: 4px; }
+.scenario-map-caption { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 28px; font-size: 12px; white-space: nowrap; }
+.scenario-map-caption select { min-width: 56px; height: 28px; padding-inline: 3px; }
+.scenario-map-viewport { position: relative; display: grid; place-items: start; align-content: start; min-height: 0; min-width: 0; flex: 1; overflow: auto; background: #020b15; overscroll-behavior: contain; }
+.scenario-map-viewport[data-zoom="1"] { place-items: center; align-content: center; }
+#scenarioMapCanvas { display: block; flex: 0 0 auto; cursor: crosshair; outline-offset: -3px; }
+#scenarioCellInfo { margin: 0; min-height: 18px; font-size: 12px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scenario-inspector { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 8px; gap: 6px; border-left: 1px solid #26778a; }
+.scenario-tools, .scenario-position, .scenario-action-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.scenario-tools > button { flex: 1; }
+#scenarioDeploymentFields, #scenarioTileFields { display: grid; gap: 6px; min-width: 0; }
+#scenarioDeploymentFields[hidden], #scenarioTileFields[hidden] { display: none; }
+.scenario-inspector select { width: 100%; }
+.scenario-tile-choice { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.scenario-tile-choice select { flex: 1; }
+#scenarioTilePreview { flex: 0 0 auto; width: 38px; height: 38px; image-rendering: pixelated; border: 1px solid #3c8193; box-sizing: border-box; }
+.editor-scenario-panel[data-compact="true"] #scenarioTilePreview { width: 28px; height: 28px; }
+.scenario-position label { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.scenario-position input { width: 48px; padding-inline: 3px; }
+.scenario-position > button { flex: 1; padding-inline: 3px; }
+#scenarioConditionRule { flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; }
+#scenarioEventFields[hidden], #scenarioEventChoice[hidden] { display: none; }
+#scenarioDeploymentFields[data-objective-only="true"] > .scenario-edit-group:not(#scenarioObjectiveFields):not(#scenarioObjectiveDescription):not([data-scenario-criterion-group]) { display: none; }
+#scenarioDeploymentFields[data-spawn-only="true"] > .scenario-edit-group:not(#scenarioSpawnChoice):not(#scenarioSpawnPosition):not(#scenarioSpawnRewardGroup) { display: none; }
+#scenarioSpawnPilot { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px; }
+#scenarioSpawnChoice .scenario-action-row { margin-top:4px; }
+#scenarioSpawnChoice button { flex:none; }
+#scenarioDeploymentFields[data-event-only="true"] > .scenario-edit-group:not(#scenarioEventFields):not(#scenarioEventChoice):not([data-scenario-event-criterion-group]) { display: none; }
+.scenario-reward-label { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; }
+.scenario-reward-label select { flex: 1; }
+.scenario-action-row { justify-content: space-between; }
+.scenario-action-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.scenario-action-row button { flex: 0 0 auto; }
+#scenarioStatus { margin: 0; min-width: 0; font-size: 12px; line-height: 1.4; }
+#scenarioStatus:empty { display: none; }
+.scenario-inspector .is-modified { color: #ffe39e; border-color: #f5cd67; }
+.scenario-inspector [aria-invalid="true"] { border-color: #ff8d8d; }
+.scenario-view-pager { display: flex; gap: 3px; }
+.scenario-view-pager[hidden] { display: none; }
+@media (max-width: 759px) {
+  .scenario-toolbar { flex-wrap: wrap; gap: 4px; }
+  #scenarioSelector, #scenarioEventSelector { flex: 1 1 calc(50% - 4px); width: 0; }
+  .scenario-workarea { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .scenario-inspector { border-left: 0; border-top: 1px solid #26778a; padding: 6px; }
+  .scenario-position input { width: 62px; }
+  .scenario-tools button { min-height: 34px; }
+  .editor-scenario-panel[data-compact="true"] #scenarioSelector,
+  .editor-scenario-panel[data-compact="true"] #scenarioEventSelector { flex: 1 1 calc(50% - 2px); width: 0; }
+  .editor-scenario-panel[data-compact="true"] .scenario-toolbar { gap: 3px; padding: 4px; }
+  .editor-scenario-panel[data-compact="true"] .scenario-toolbar select, .editor-scenario-panel[data-compact="true"] .scenario-toolbar summary { height: 34px; min-height: 34px; font-size: 11px; }
+  .editor-scenario-panel[data-paged="true"] .scenario-workarea { display: flex; flex-direction: column; }
+  .editor-scenario-panel[data-paged="true"][data-page="map"] .scenario-inspector { display: none; }
+  .editor-scenario-panel[data-paged="true"][data-page="fields"] .scenario-map-area { display: none; }
+  .editor-scenario-panel[data-paged="true"] .scenario-map-area { flex: 1; }
+  .editor-scenario-panel[data-paged="true"] .scenario-inspector { border-top: 0; }
+  .editor-scenario-panel[data-paged="true"] .scenario-toolbar { flex-wrap: nowrap; }
+  .editor-scenario-panel[data-paged="true"] #scenarioSelector, .editor-scenario-panel[data-paged="true"] #scenarioEventSelector { flex: 1 1 0; }
+  /* Two selector names need their own row before the measured view buttons.
+     At 320px this keeps both the source number and shared count readable. */
+  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] .scenario-toolbar { flex-wrap: wrap; }
+  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] #scenarioSelector,
+  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] #scenarioEventSelector { flex: 1 1 calc(50% - 2px); }
+  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] .scenario-view-pager { flex: 1; }
+  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] .scenario-view-pager button { flex: 1; }
+  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] #scenarioMapSelector,
+  .editor-scenario-panel[data-paged="true"][data-tool="deployment"] #scenarioPlaneSelector,
+  .editor-scenario-panel[data-paged="true"][data-tool="tile"] #scenarioSelector,
+  .editor-scenario-panel[data-paged="true"][data-tool="tile"] #scenarioEventSelector { display: none; }
+}
+.scenario-edit-group { display: grid; gap: 6px; min-width: 0; }
+.scenario-edit-group[hidden] { display: none; }
+.scenario-fields-pager { display: flex; align-items: center; gap: 3px; font-size: 11px; white-space: nowrap; }
+.scenario-fields-pager[hidden] { display: none; }
+.scenario-fields-pager button { min-width: 20px; padding-inline: 3px; }
+.editor-scenario-panel[data-compact="true"] .scenario-inspector { gap: 4px; padding: 4px; }
+.editor-scenario-panel[data-compact="true"] .scenario-inspector:has(#scenarioStatus:not(:empty)) .scenario-tools > button { display: none; }
+.editor-scenario-panel[data-compact="true"] .scenario-inspector:has(#scenarioStatus:not(:empty)) .scenario-tools:has(.scenario-fields-pager[hidden]) { display: none; }
+.editor-scenario-panel[data-compact="true"] #scenarioStatus:not(:empty) { order: -1; min-height: 28px; display: flex; align-items: center; }
+.editor-scenario-panel[data-compact="true"] .scenario-inspector button, .editor-scenario-panel[data-compact="true"] .scenario-inspector input, .editor-scenario-panel[data-compact="true"] .scenario-inspector select { min-height: 28px; height: 28px; font-size: 11px; }
+.editor-scenario-panel[data-compact="true"] .scenario-edit-group, .editor-scenario-panel[data-compact="true"] #scenarioDeploymentFields, .editor-scenario-panel[data-compact="true"] #scenarioTileFields { gap: 4px; }
+.editor-preset-file-button .preset-short { display: none; }
+@media (max-width: 360px) {
+  body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) .editor-preset-file-button .preset-long { display: none; }
+  body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidden])) .editor-preset-file-button .preset-short { display: inline; }
+}
+
+/* Purpose controls and their consequence text fit together when there is room;
+   measured groups remain reachable in shorter inspector pages. */
+.scenario-criteria-heading, .scenario-criterion-row { display: flex; align-items: center; gap: 4px; min-width: 0; white-space: nowrap; }
+.scenario-criteria-heading label, .scenario-criterion-row > span { flex: 0 0 auto; font-size: 12px; }
+.scenario-criteria-heading select { flex: 1; width: 0; padding-inline: 3px; }
+.scenario-criteria-heading button { flex: 0 0 auto; padding-inline: 5px; }
+#scenarioEventPhaseHint { flex: 0 0 auto; font-size: 11px; }
+.scenario-criterion-row select { flex: 1; width: 0; padding-inline: 2px; font-size: 12px; }
+.scenario-criterion-row select:first-of-type { flex: 1.4; }
+.scenario-criterion-row input { flex: 0 0 39px; width: 39px; min-width: 0; height: 38px; padding: 0 2px; color: #effcf8; background: #061425; border: 1px solid #3c8193; border-radius: 2px; font: inherit; font-size: 12px; box-sizing: border-box; }
+.scenario-criterion-row button { flex: 0 0 24px; width: 24px; padding: 0; font-size: 18px; }
+#scenarioDeploymentFields[data-event-exact-turn-only="true"] #scenarioEventCriteriaReset { flex: 0 0 auto; width: auto; padding-inline: 5px; font-size: 12px; }
+.scenario-criterion-row input[hidden], .scenario-criterion-unit-row[hidden] { display: none; }
+.scenario-criterion-unit-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.scenario-criterion-unit-row select { flex: 1; width: 0; min-width: 0; font-size: 12px; }
+.scenario-criterion-unit-row button { flex: 0 0 24px; width: 24px; padding: 0; }
+.scenario-criterion-region { display: grid; gap: 4px; min-width: 0; }
+.scenario-criterion-region[hidden], .scenario-region-end[hidden] { display: none; }
+.scenario-region-tools, .scenario-region-coordinates { display: flex; align-items: center; gap: 4px; min-width: 0; white-space: nowrap; }
+.scenario-region-tools select { flex: 1; width: 0; min-width: 0; padding-inline: 2px; font-size: 12px; }
+.scenario-region-tools .scenario-region-side { flex: 1.5; }
+.scenario-region-tools button { flex: 0 0 auto; padding-inline: 5px; }
+.scenario-region-tools .scenario-region-info { flex-basis: 24px; width: 24px; padding: 0; }
+.scenario-region-coordinates { justify-content: space-between; }
+.scenario-region-coordinates label { display: flex; align-items: center; gap: 2px; font-size: 11px; }
+.scenario-region-coordinates input { width: 39px; min-width: 0; height: 38px; padding: 0 2px; color: #effcf8; background: #061425; border: 1px solid #3c8193; border-radius: 2px; font: inherit; box-sizing: border-box; }
+.scenario-region-coordinates > span { font-size: 11px; }
+.scenario-objective-copy{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 8px;margin:0;font-size:12px;line-height:1.4}
+.scenario-objective-copy dt{font-weight:700;color:var(--muted)}
+.scenario-objective-copy dd{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scenario-objective-note{margin:0;font-size:11px;line-height:1.4;white-space:nowrap}
+#scenarioDeadlineRule{min-width:0;font-size:12px;white-space:nowrap}

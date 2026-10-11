@@ -147,6 +147,42 @@ PNG_DIMENSION_MAX = 32_768
 # Binary UI assets are publication decisions, not extension-based exceptions.
 # Add only a reviewed canonical repository path and its exact lowercase SHA-256.
 PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
+    "assets/user-guide/changes-desktop.png": "d18a5fe540270c171283cb0de93d0283efedaad4477abe808825ed8738928a74",
+    "assets/user-guide/changes-portrait.png": "f73d06c5dabed0495d519d65897818275e3be869496bd2bed783eafceaf4d87b",
+    "assets/user-guide/downloads-desktop.png": "fee850038d2afea638b820acf97853229c757e587ca73bd9fea38f08b552f962",
+    "assets/user-guide/downloads-portrait.png": "b18fb13ede9600b45890e0b1a7a8228b30f2dfbf65fee05d11de72a4764b05d1",
+    "assets/user-guide/edit-desktop.png": "c13fbdb9b87089669b487dd469ea7db0b502d9c37702adb0241bfce1fff78268",
+    "assets/user-guide/edit-portrait.png": "4ebc4af6c450e5ca3076ad38b93cadc5a9afa38a118057c8def99062a73eada8",
+    "assets/user-guide/folder-desktop.png": "5ff9e4cd0364ce4b5c4e6488d5174f79ef58fa4cf7b2ea9830c6661dd870246c",
+    "assets/user-guide/folder-portrait.png": "1073c58b0b71597568d84e56ea59cab01203c2334d023d182abe6246520e62ce",
+    "assets/user-guide/native-desktop.png": "86d79eb9adf6b66b0e466f8771edb622b4d5e056bffef89ce81a2afaa28bb8c6",
+    "assets/user-guide/native-portrait.png": "684c0a83be4d1fabcffb293d62f13ce35eaa74f844c52b4bfb8e926cb7ba2314",
+    "assets/user-guide/patched-desktop.png": "ef887f2cb2faeeb06a82e970abdde8702ece3f1e59eb7d5a99695f1e2dd0f212",
+    "assets/user-guide/patched-portrait.png": "87257ace50cdad91a3e4c173340c7a7f701c36a27a286053fcf17e91a48a3171",
+    "assets/user-guide/personal-desktop.png": "5c3adc9ea79ff9cceeb65cffb2c6a6784478278d01fb76846ee467eda9435ee2",
+    "assets/user-guide/personal-portrait.png": "7200b855e1c4155069a347ca1b5acdaca10bb5082afa561ae8f4adbaac6c5b5f",
+    "assets/user-guide/pilot-desktop.png": "ef87f8bd1012809c6ade5a5d833dc8eb6c37bf30a9ba92aa73943ec664cbe473",
+    "assets/user-guide/pilot-portrait.png": "c004f60bbeb8eead123b85cec8c1325f0f6caa066fe11ce2b259302ca47d119d",
+    "assets/user-guide/preset-desktop.png": "27e86e38c4bab678735e089978ba98867498f66994e9eeb814552286e04f83fc",
+    "assets/user-guide/preset-portrait.png": "ddddaf73862bc6c01e6132a40950e3297e21f061a9bda9a2a5e0db47f9187eea",
+    "assets/user-guide/save-desktop.png": "9fd59b0ce325c2fc2cfdaa3a373cc8fedb19faf648548bd02c3aa654198f7e8a",
+    "assets/user-guide/save-portrait.png": "b78b26b85220c9078bb945e605911b35fd58cd8f5b215b255a2d8c5e54ee4f9f",
+    "assets/user-guide/skills-desktop.png": "09df7a326278d124852f83453a9dc333e87b4b2366a33d8e1cfd5353b03d41dc",
+    "assets/user-guide/skills-portrait.png": "3c112c885c9cdeed8c204a3024869ef121e65bd5054c115fc85211364f3c5d90",
+    "assets/user-guide/spirits-desktop.png": "18b2cf92b5f5879ca71bd387c43bd143f2bbd3e48a6070f2d61231c824e749e2",
+    "assets/user-guide/spirits-portrait.png": "f2c37d3b5af80f597c0c06b00f40af9bc91d1fb3c369fff9094456a60c2d3dee",
+    "assets/user-guide/stock-desktop.png": "d99cdc61068e8627911b88d8cb0268006b4f01ec77f5ccf80352622b9acd3498",
+    "assets/user-guide/stock-portrait.png": "77e0489e8832ecd9ffc7aefe6cb72a6f53d2856df123cfe5b528c59378871f3c",
+    "assets/user-guide/unit-abilities-desktop.png": "ea8d6375faa06a9ef670876a4d1e9568b3ca396bfb01f11857e5f413ffa5d4a5",
+    "assets/user-guide/unit-abilities-portrait.png": "57181979b2add0f96099e375301b7580af7278714bd8f1354f4084b39e1cbc1b",
+    "assets/user-guide/unit-desktop.png": "d6674142d9099f551a6022e2fd126222ab884484a10c842de15d7600aaf9f97d",
+    "assets/user-guide/unit-portrait.png": "cac9eb4937eeff41c255f461376c9e33469b10b9a36d571270d0fe53135e83fc",
+    "assets/user-guide/unit-terrain-desktop.png": "75702cd4073069be6fd10341bcfe8d072d043fc2a9da56fb09ba1c5ec5a471a6",
+    "assets/user-guide/unit-terrain-portrait.png": "e30e532c74f0476c1914b90863a352a601fe7584ab6613d6ee4da9ae95e6abf5",
+    "assets/user-guide/weapon-desktop.png": "9932a03f11135160b6817e968e742488c33bbac7bf0202ec42d8588ed7546b50",
+    "assets/user-guide/weapon-portrait.png": "33f64d471c39ebbca51bd14eebdd763e23593be9b7052a6f09f93ead6f243264",
+    "assets/user-guide/weapon-terrain-desktop.png": "29e0d0546da564475b0a2bd494002cccef17e0f3040e82f741d25557dccdff1f",
+    "assets/user-guide/weapon-terrain-portrait.png": "384932173b5ebdde8336544bc5f605da85dccb587e92138bba700e179a476e6f",
     "assets/patch-notes/fin-v0-3-shinji-eva3-1.png": "b0014ceb37bd581493cb0c18075f8939d555324bb35085e3ea33fa417d93bfcf",
     "assets/patch-notes/fin-v0-3-shinji-eva3-2.png": "8772da25e2528c98e8e280958f02872efd0a1d51399ce0ca43f5bdcd8ba5026f",
     "assets/patch-notes/fin-v0-3-revive-spirit.png": "ba7a7b1cc57b61bff3b6e65c528989046ccd98e2efe829468f50f24f6cd05bd8",
@@ -273,16 +309,11 @@ REQUIRED_IGNORE_LINES = {
     "/staging/", "build/", "node_modules/",
 }
 EXPECTED_PACKAGE_SCRIPTS = {
-    "build": (
-        "python3 scripts/verify_repo.py && node --test && "
-        "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_verify_repo.py"
-    ),
+    "build": "npm test",
     "verify": "python3 scripts/verify_repo.py",
-    "test": (
-        "node --test && PYTHONDONTWRITEBYTECODE=1 "
-        "python3 -m unittest tests/test_verify_repo.py && python3 scripts/verify_repo.py"
-    ),
+    "test": "node --test && PYTHONDONTWRITEBYTECODE=1 python3 -m scripts.verify_repo --test",
 }
+
 EXPECTED_PRE_COMMIT_LINES = [
     "#!/bin/sh",
     "set -eu",
@@ -380,6 +411,9 @@ class DeflateBitReader:
     def __init__(self, data: bytes) -> None:
         self.data = data
         self.bit_offset = 0
+        self._window_start = -1
+        self._window_end = -1
+        self._window = 0
 
     def peek(self, count: int) -> int:
         if self.bit_offset + count > len(self.data) * 8:
@@ -387,7 +421,12 @@ class DeflateBitReader:
         start = self.bit_offset >> 3
         shift = self.bit_offset & 7
         end = start + (shift + count + 7) // 8
-        return (int.from_bytes(self.data[start:end], "little") >> shift) & ((1 << count) - 1)
+        if start < self._window_start or end > self._window_end:
+            self._window_start = start
+            self._window_end = min(len(self.data), max(start + 8, end))
+            self._window = int.from_bytes(self.data[start:self._window_end], "little")
+        shift += (start - self._window_start) * 8
+        return (self._window >> shift) & ((1 << count) - 1)
 
     def read(self, count: int) -> int:
         value = self.peek(count)
@@ -761,7 +800,7 @@ def inspect_srwfp_cached(data: bytes) -> dict[str, int | str]:
            MAX_DOWNLOAD_CAPTURE_BYTES, DOWNLOAD_CAPTURE_CHUNK_BYTES)
     if key not in _PATCH_DESCRIPTOR_CACHE:
         actual = inspect_srwfp(data)
-        if len(_PATCH_DESCRIPTOR_CACHE) >= 16:
+        if len(_PATCH_DESCRIPTOR_CACHE) >= 128:
             _PATCH_DESCRIPTOR_CACHE.pop(next(iter(_PATCH_DESCRIPTOR_CACHE)))
         _PATCH_DESCRIPTOR_CACHE[key] = actual
     return dict(_PATCH_DESCRIPTOR_CACHE[key])
@@ -1009,7 +1048,7 @@ def inspect_srwfp_v2_cached(data: bytes) -> dict[str, int | str]:
            V2_GROWTH_MAX, V2_COPY_RECORD_MAX, V2_COPY_LENGTH_MIN)
     if key not in _PATCH_V2_DESCRIPTOR_CACHE:
         actual = inspect_srwfp_v2(data)
-        if len(_PATCH_V2_DESCRIPTOR_CACHE) >= 16:
+        if len(_PATCH_V2_DESCRIPTOR_CACHE) >= 128:
             _PATCH_V2_DESCRIPTOR_CACHE.pop(next(iter(_PATCH_V2_DESCRIPTOR_CACHE)))
         _PATCH_V2_DESCRIPTOR_CACHE[key] = actual
     return dict(_PATCH_V2_DESCRIPTOR_CACHE[key])
@@ -2549,6 +2588,17 @@ def validate_static_site(files: list[Path]) -> None:
         if suffix in ACTIVE_WEB_SUFFIXES and not path.is_symlink() and not excluded_test_fixture:
             site_files.append(path)
     external_url = re.compile(r"(?i)(?:https?:|wss?:)?//[^\s'\"`<>()]+")
+    # An SVG root element cannot be standards-conformant without its namespace
+    # declaration. These two URIs are XML namespace *identifiers*: a browser
+    # never dereferences them, so they are not a network fetch or a CDN. The
+    # exception covers exactly the `xmlns`/`xmlns:xlink` attribute form with
+    # exactly these URIs, in exactly .svg files. Any other http(s)/ws(s) URL —
+    # including the same URI used in `href`, `xlink:href`, or a stylesheet
+    # reference — still fails, and the network-write scan still reads the
+    # untouched file text.
+    svg_namespace_declaration = re.compile(
+        r'xmlns(?::xlink)?="http://www\.w3\.org/(?:2000/svg|1999/xlink)"'
+    )
     network_write = re.compile(
         r"(?i)\b(?:method\s*:\s*['\"`](?:POST|PUT|PATCH|DELETE)|"
         r"sendBeacon\s*\(|XMLHttpRequest\s*\(|WebSocket\s*\(|EventSource\s*\()"
@@ -2562,12 +2612,15 @@ def validate_static_site(files: list[Path]) -> None:
         except (OSError, UnicodeError) as exc:
             complain(f"{relative(path)}: deployable site file is not UTF-8: {exc}")
             continue
-        if external_url.search(text):
+        suffix = path.suffix.lower()
+        scanned = (
+            svg_namespace_declaration.sub("", text) if suffix == ".svg" else text
+        )
+        if external_url.search(scanned):
             complain(f"{relative(path)}: external/CDN URL is forbidden")
         if network_write.search(text):
             complain(f"{relative(path)}: upload or network-write API is forbidden")
 
-        suffix = path.suffix.lower()
         if suffix in MARKUP_WEB_SUFFIXES:
             inspector = ActiveMarkupInspector()
             try:
@@ -2642,4 +2695,15 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--test"]:
+        import unittest
+        # Tests import this same module, so their validated patch descriptors
+        # remain available to main(). No results are trusted across processes.
+        sys.modules["scripts.verify_repo"] = sys.modules[__name__]
+        suite = unittest.defaultTestLoader.loadTestsFromName("tests.test_verify_repo")
+        result = unittest.TextTestRunner(verbosity=1).run(suite)
+        if not result.wasSuccessful():
+            raise SystemExit(1)
+    elif sys.argv[1:]:
+        raise SystemExit("usage: verify_repo.py [--test]")
     raise SystemExit(main())

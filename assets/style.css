@@ -18,6 +18,11 @@
   --radius-md: 18px;
   --radius-sm: 12px;
   --content: 1180px;
+  /* Type grows with the window width only, so a larger window never shows smaller type. Floors: captions and notes
+     12px, values and buttons 14px, names 15px. */
+  --fs-label: clamp(12px, 11px + 0.22vw, 15px);
+  --fs-primary: clamp(14px, 12.6px + 0.36vw, 18px);
+  --fs-name: clamp(15px, 13.6px + 0.4vw, 21px);
 }
 
 *,
@@ -71,6 +76,11 @@ a:focus-visible {
 
 [hidden] {
   display: none !important;
+}
+
+/* Korean words in headings, buttons and captions break only at spaces (never in the middle of a word). */
+:is(h1, h2, h3, h4, button, label, summary, th) {
+  word-break: keep-all;
 }
 
 .skip-link {
@@ -150,7 +160,7 @@ a:focus-visible {
 .brand-copy span {
   margin-top: 5px;
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 700;
   letter-spacing: 0.01em;
   line-height: 1.35;
@@ -189,7 +199,7 @@ a:focus-visible {
   border-radius: 999px;
   color: var(--ink-soft);
   background: rgba(255, 254, 251, 0.7);
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 750;
 }
 
@@ -218,7 +228,7 @@ a:focus-visible {
   margin: 0;
   color: var(--blue);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 850;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -263,7 +273,7 @@ a:focus-visible {
   color: var(--white);
   background: var(--blue);
   box-shadow: 0 8px 24px rgba(39, 93, 225, 0.2);
-  font-size: 14px;
+  font-size: var(--fs-primary);
   font-weight: 800;
   text-decoration: none;
   transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
@@ -278,7 +288,7 @@ a:focus-visible {
 
 .compatibility span {
   color: #b17a00;
-  font-size: 9px;
+  font-size: var(--fs-label);
 }
 
 .compatibility.is-supported span {
@@ -302,7 +312,7 @@ a:focus-visible {
   margin: 28px 0 0;
   padding: 0;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 720;
   list-style: none;
 }
@@ -423,7 +433,7 @@ a:focus-visible {
 .machine-core span {
   color: rgba(255, 255, 255, 0.63);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
+  font-size: var(--fs-label);
   letter-spacing: 0.12em;
 }
 
@@ -450,13 +460,13 @@ a:focus-visible {
 
 .machine-card span {
   color: rgba(255, 255, 255, 0.55);
-  font-size: 8px;
+  font-size: var(--fs-label);
   letter-spacing: 0.12em;
 }
 
 .machine-card strong {
   margin: 6px 0 11px;
-  font-size: 12px;
+  font-size: var(--fs-label);
 }
 
 .machine-card i {
@@ -497,7 +507,7 @@ a:focus-visible {
   left: 25px;
   color: rgba(255, 255, 255, 0.45);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 8px;
+  font-size: var(--fs-label);
   letter-spacing: 0.12em;
 }
 
@@ -553,7 +563,7 @@ a:focus-visible {
   margin: 0 0 26px;
   color: rgba(255, 255, 255, 0.47);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -596,7 +606,7 @@ a:focus-visible {
   border-radius: 50%;
   background: var(--ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 800;
 }
 
@@ -611,7 +621,7 @@ a:focus-visible {
 
 .step-rail li small {
   color: rgba(255, 255, 255, 0.5);
-  font-size: 10px;
+  font-size: var(--fs-label);
 }
 
 .step-rail li.is-current,
@@ -641,7 +651,7 @@ a:focus-visible {
   border-radius: 11px;
   color: rgba(255, 255, 255, 0.55);
   background: rgba(255, 255, 255, 0.035);
-  font-size: 10px;
+  font-size: var(--fs-label);
   line-height: 1.55;
 }
 
@@ -692,7 +702,7 @@ a:focus-visible {
   border-radius: 999px;
   color: var(--ink-soft);
   background: var(--paper-deep);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 850;
 }
 
@@ -716,7 +726,7 @@ a:focus-visible {
   display: block;
   margin: 22px 0 7px;
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 800;
 }
 
@@ -768,7 +778,7 @@ a:focus-visible {
   border-radius: 10px;
   color: var(--ink);
   background: var(--white);
-  font-size: 14px;
+  font-size: var(--fs-primary);
   font-weight: 750;
   appearance: none;
   text-overflow: ellipsis;
@@ -806,18 +816,17 @@ a:focus-visible {
 .release-facts dt {
   margin-bottom: 3px;
   color: #6b777f;
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 750;
 }
 
+/* Facts wrap in full (a long file name breaks anywhere rather than being cut). */
 .release-facts dd {
-  overflow: hidden;
   margin: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .file-step {
@@ -847,7 +856,7 @@ a:focus-visible {
   color: #8c969a;
   background: #f4f4ef;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 800;
 }
 
@@ -880,17 +889,17 @@ a:focus-visible {
   border-radius: 9px;
   color: var(--ink);
   background: var(--white);
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 800;
   cursor: pointer;
   transition: border-color 150ms ease, background 150ms ease;
 }
 
+/* A chosen file's name can be long: the label wraps (it is never cut), so the whole name stays readable. */
 .file-button > span:last-child {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 .file-button:not(:disabled):hover {
@@ -941,7 +950,7 @@ a:focus-visible {
   color: var(--white);
   background: var(--blue);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
+  font-size: var(--fs-label);
   font-weight: 850;
 }
 
@@ -953,14 +962,14 @@ a:focus-visible {
 
 .file-selection strong {
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--fs-label);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .file-selection div span {
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--fs-label);
 }
 
 .file-check {
@@ -971,7 +980,7 @@ a:focus-visible {
   border-radius: 50%;
   color: var(--green);
   background: rgba(32, 196, 178, 0.14);
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 900;
 }
 
@@ -999,7 +1008,7 @@ a:focus-visible {
 .apply-card p {
   margin: 7px 0 0;
   color: rgba(255, 255, 255, 0.58);
-  font-size: 12px;
+  font-size: var(--fs-label);
 }
 
 .apply-actions {
@@ -1019,11 +1028,12 @@ a:focus-visible {
 .cancel-button {
   min-height: 48px;
   padding: 10px 15px;
+  white-space: nowrap;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 10px;
   color: var(--white);
   background: transparent;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 750;
   cursor: pointer;
 }
@@ -1059,7 +1069,7 @@ a:focus-visible {
 #progressPercent {
   color: var(--blue-deep);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 850;
 }
 
@@ -1094,7 +1104,7 @@ a:focus-visible {
 .progress-panel p {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--fs-label);
 }
 
 .message-panel {
@@ -1121,7 +1131,7 @@ a:focus-visible {
 .message-panel p {
   margin: 2px 0 0;
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--fs-label);
 }
 
 .cue-action {
@@ -1139,7 +1149,7 @@ a:focus-visible {
   border-radius: 8px;
   color: var(--green);
   background: var(--white);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 850;
   cursor: pointer;
 }
@@ -1156,7 +1166,7 @@ a:focus-visible {
 
 .cue-action > span {
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--fs-label);
 }
 
 .download-actions {
@@ -1179,7 +1189,7 @@ a:focus-visible {
   border-radius: 8px;
   color: #fff;
   background: var(--green);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 850;
   text-align: center;
   text-decoration: none;
@@ -1200,7 +1210,7 @@ a:focus-visible {
   flex: 0 0 100%;
   min-width: 0;
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--fs-label);
 }
 
 .message-panel.is-error {
@@ -1230,7 +1240,7 @@ a:focus-visible {
   border-radius: 10px;
   color: #8f3438;
   background: #fff1f0;
-  font-size: 12px;
+  font-size: var(--fs-label);
 }
 
 .release-notes {
@@ -1267,7 +1277,7 @@ a:focus-visible {
 .release-notes-card > span {
   color: #7c5a00;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 850;
   letter-spacing: 0.08em;
 }
@@ -1301,7 +1311,7 @@ a:focus-visible {
   padding-top: 16px;
   border-top: 1px solid rgba(177, 122, 0, 0.2);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--fs-label);
   line-height: 1.7;
 }
 
@@ -1336,7 +1346,7 @@ a:focus-visible {
 .safety-list > li > span {
   color: var(--blue);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 850;
 }
 
@@ -1394,7 +1404,7 @@ a:focus-visible {
   max-width: 730px;
   margin: 0;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--fs-label);
   line-height: 1.7;
 }
 
@@ -1415,7 +1425,7 @@ a:focus-visible {
 .rights-disclosure summary {
   width: fit-content;
   color: var(--blue-deep);
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 800;
   cursor: pointer;
 }
@@ -1430,7 +1440,7 @@ a:focus-visible {
   border-radius: 6px;
   color: var(--green);
   background: rgba(32, 196, 178, 0.1);
-  font-size: 9px;
+  font-size: var(--fs-label);
   font-weight: 850;
 }
 
@@ -1457,7 +1467,7 @@ a:focus-visible {
 .site-footer p {
   margin-left: auto;
   color: rgba(255, 255, 255, 0.48);
-  font-size: 11px;
+  font-size: var(--fs-label);
 }
 
 @keyframes spin {
@@ -1768,7 +1778,7 @@ a:focus-visible {
 
 .patch-note-toggle small {
   color: var(--blue);
-  font-size: 8px;
+  font-size: var(--fs-label);
   font-weight: 850;
   letter-spacing: 0.13em;
 }
@@ -1776,14 +1786,14 @@ a:focus-visible {
 .patch-note-toggle strong {
   margin-top: 3px;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--fs-label);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .patch-note-toggle > span:nth-child(2) {
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 750;
 }
 
@@ -1859,7 +1869,7 @@ a:focus-visible {
 
 .patch-note-dialog-header span:first-child {
   color: #9db8ff;
-  font-size: 9px;
+  font-size: var(--fs-label);
   font-weight: 850;
   letter-spacing: 0.12em;
 }
@@ -1893,7 +1903,7 @@ a:focus-visible {
   padding: 11px 19px;
   color: var(--ink-soft);
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 650;
   line-height: 1.45;
 }
@@ -1942,18 +1952,16 @@ a:focus-visible {
 
 .patch-note-card-heading h3 {
   margin: 0;
-  overflow: hidden;
   font-size: 16px;
   line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .patch-note-evidence {
   flex: 0 0 auto;
   padding: 3px 7px;
   border-radius: 999px;
-  font-size: 9px;
+  font-size: var(--fs-label);
   font-weight: 850;
   line-height: 1.35;
 }
@@ -2006,7 +2014,7 @@ a:focus-visible {
   padding: 4px 7px;
   color: #bed0ff;
   border-bottom: 1px solid #273549;
-  font-size: 9px;
+  font-size: var(--fs-label);
   font-weight: 900;
   letter-spacing: 0.1em;
 }
@@ -2024,7 +2032,7 @@ a:focus-visible {
   margin: 0;
   overflow: hidden;
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 650;
   line-height: 1.4;
   text-overflow: ellipsis;
@@ -2040,7 +2048,7 @@ a:focus-visible {
   padding: 7px 19px;
   color: var(--ink-soft);
   border-top: 1px solid var(--line);
-  font-size: 9px;
+  font-size: var(--fs-label);
   font-weight: 700;
 }
 
@@ -2059,11 +2067,11 @@ a:focus-visible {
 
   .patch-note-toggle strong {
     margin-top: 0;
-    font-size: 10px;
+    font-size: var(--fs-label);
   }
 
   .patch-note-toggle > span:nth-child(2) {
-    font-size: 9px;
+    font-size: var(--fs-label);
   }
 
   .patch-note-toggle > span:last-child {
@@ -2088,12 +2096,12 @@ a:focus-visible {
   .patch-note-close {
     min-height: 38px;
     padding: 6px 9px;
-    font-size: 11px;
+    font-size: var(--fs-label);
   }
 
   .patch-note-summary {
     padding: 8px 12px;
-    font-size: 10px;
+    font-size: var(--fs-label);
     line-height: 1.35;
   }
 
@@ -2115,7 +2123,7 @@ a:focus-visible {
   }
 
   .patch-note-card-heading h3 {
-    font-size: 12px;
+    font-size: var(--fs-primary);
   }
 
   .patch-note-comparison.is-wide-strip {
@@ -2133,13 +2141,13 @@ a:focus-visible {
   }
 
   .patch-note-description {
-    font-size: 9px;
+    font-size: var(--fs-label);
   }
 
   .patch-note-dialog-footer {
     min-height: 30px;
     padding: 5px 12px;
-    font-size: 8px;
+    font-size: var(--fs-label);
   }
 
   .patch-note-dialog-footer span:last-child {
@@ -2340,6 +2348,19 @@ main {
   border-bottom: 0;
 }
 
+/* Each fact is one row: its name, then its value (which wraps beside the name). */
+.release-card .release-facts > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 10px;
+  padding-block: 6px;
+}
+
+.release-card .release-facts dt {
+  margin: 0;
+}
+
 .task-stage {
   position: relative;
   min-height: 0;
@@ -2394,7 +2415,7 @@ main {
 .task-stage .file-step-body > p {
   max-width: 620px;
   margin: 7px 0 10px;
-  font-size: 11px;
+  font-size: var(--fs-label);
   line-height: 1.45;
 }
 
@@ -2525,19 +2546,25 @@ main {
   }
 
   .brand-copy strong {
-    max-width: 215px;
-    font-size: 11px;
-    line-height: 1.15;
+    max-width: 230px;
+    font-size: var(--fs-label);
+    line-height: 1.2;
   }
 
   .header-status .local-pill {
     display: none;
   }
 
+  /* A phone keeps the title and the notice line; the supported discs are named again by the folder card's checks. */
+  .brand-copy > span:last-child {
+    display: none;
+  }
+
   .brand-copy span {
-    margin-top: 3px;
-    font-size: 8px;
+    margin-top: 2px;
+    font-size: var(--fs-label);
     letter-spacing: -0.01em;
+    line-height: 1.25;
     text-transform: none;
   }
 
@@ -2547,10 +2574,8 @@ main {
   }
 
   .compatibility {
-    max-width: 128px;
-    overflow: hidden;
-    font-size: 9px;
-    text-overflow: ellipsis;
+    flex: 0 0 auto;
+    font-size: var(--fs-label);
     white-space: nowrap;
   }
 
@@ -2629,7 +2654,7 @@ main {
 
   .release-card .field-label {
     margin: 0 0 3px;
-    font-size: 8px;
+    font-size: var(--fs-label);
   }
 
   .selector-grid {
@@ -2644,7 +2669,7 @@ main {
     padding-left: 8px;
     padding-top: 7px;
     padding-bottom: 7px;
-    font-size: 12px;
+    font-size: var(--fs-primary);
   }
 
   .select-wrap::after {
@@ -2706,7 +2731,7 @@ main {
   .file-step-heading h3,
   .apply-card h3 {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--fs-primary);
   }
 
   .file-step-body > p {
@@ -2736,7 +2761,7 @@ main {
   .task-stage .apply-card .primary-button {
     min-height: 44px;
     padding: 8px 10px;
-    font-size: 11px;
+    font-size: var(--fs-label);
   }
 
   .progress-panel {
@@ -2920,6 +2945,16 @@ main {
   overflow-y: auto;
 }
 
+/* Side by side on wide screens the cards of a row are exactly as tall as the row (the content of the release card
+   scrolls inside it when a short window needs that). */
+@media (min-width: 761px) {
+  .release-card.workflow-zone {
+    height: 100%;
+    max-height: none;
+    align-self: stretch;
+  }
+}
+
 /* The glow ring's outer 1px sat outside the padding box, where the card's
    overflow already hid it; in a scrolling card it would also count as
    overflow and give a card that fits a stray scrollbar. */
@@ -2951,7 +2986,7 @@ main {
   border-radius: 999px;
   color: var(--ink-soft);
   background: rgba(16, 31, 47, 0.07);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 850;
 }
 
@@ -2994,7 +3029,7 @@ main {
 .source-zone-body > p {
   margin: 14px 0 18px;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--fs-label);
   line-height: 1.62;
   word-break: keep-all;
 }
@@ -3021,7 +3056,7 @@ main {
 .apply-main > p {
   margin: 10px 0 14px;
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--fs-label);
   line-height: 1.5;
   word-break: keep-all;
 }
@@ -3097,9 +3132,6 @@ main {
 
   .patch-workspace {
     height: 100%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(128px, 0.92fr) minmax(104px, 0.78fr) minmax(158px, 1.3fr);
     gap: 4px;
     padding: 4px;
   }
@@ -3117,18 +3149,18 @@ main {
 
   .card-heading h3,
   .zone-heading h3 {
-    font-size: 13px;
+    font-size: var(--fs-primary);
   }
 
   .state-chip,
   .zone-state {
     padding: 4px 7px;
-    font-size: 9px;
+    font-size: var(--fs-label);
   }
 
   .release-card .field-label {
     margin: 3px 0 2px;
-    font-size: 8px;
+    font-size: var(--fs-label);
   }
 
   .release-facts {
@@ -3167,7 +3199,7 @@ main {
   .apply-actions .primary-button {
     min-height: 44px;
     padding: 8px 10px;
-    font-size: 11px;
+    font-size: var(--fs-primary);
   }
 
   .patch-feedback .progress-panel,
@@ -3185,22 +3217,10 @@ main {
     height: 26px;
   }
 
-  .patch-feedback .message-panel.is-error {
-    overflow: auto;
-  }
-
+  /* Results and reasons wrap in full (they are never cut to two lines or scrolled inside the panel). */
   .patch-feedback .message-panel p,
   .patch-feedback .progress-panel p {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-
-  .patch-feedback .message-panel.is-error p {
-    display: block;
-    overflow: visible;
-    -webkit-line-clamp: unset;
+    overflow-wrap: anywhere;
   }
 
   .download-actions {
@@ -3211,11 +3231,11 @@ main {
   .download-link {
     min-height: 44px;
     padding: 6px 7px;
-    font-size: 10px;
+    font-size: var(--fs-label);
   }
 
   .download-help {
-    font-size: 9px;
+    font-size: var(--fs-label);
     line-height: 1.25;
   }
 }
@@ -3238,16 +3258,15 @@ main {
     white-space: nowrap;
   }
 
+  /* Only the coloured dot is left on the smallest phones; the words stay readable to assistive technology. */
   .compatibility {
-    width: 30px;
-    min-width: 30px;
+    gap: 0;
     padding: 5px 8px;
-    overflow: hidden;
-    color: transparent;
+    font-size: 0;
   }
 
   .compatibility > span {
-    color: var(--green);
+    font-size: var(--fs-label);
   }
 }
 
@@ -3255,10 +3274,6 @@ main {
   .patch-section {
     padding-top: 3px;
     padding-bottom: 4px;
-  }
-
-  .patch-workspace {
-    grid-template-rows: minmax(122px, 0.94fr) minmax(96px, 0.76fr) minmax(148px, 1.3fr);
   }
 
   .patch-feedback .progress-panel,
@@ -3276,6 +3291,16 @@ main {
 
   .apply-card.is-complete .patch-feedback {
     height: 100%;
+  }
+
+  /* The smallest phones give a result or a reason the whole width: the round mark beside it gives way (the title says
+     the same). */
+  .patch-feedback .message-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .patch-feedback .message-panel > span {
+    display: none;
   }
 }
 
@@ -3385,11 +3410,10 @@ main {
 
 .font-preview span {
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--fs-label);
   font-weight: 700;
   line-height: 1.15;
   text-align: center;
-  white-space: nowrap;
 }
 
 .font-preview[aria-pressed="true"] span {
@@ -3415,9 +3439,21 @@ main {
   line-height: 1.65;
 }
 
-@media (min-width: 761px) and (max-width: 1100px) {
-  .release-card {
-    overflow-y: auto;
+/* A short desktop window: the first card's captions are read out but not drawn, and its release date gives way, so the
+   choices, the font pictures, the notes button and the source and output facts fit without scrolling inside the card. */
+@media (min-width: 761px) and (max-height: 719px) {
+  .release-card .field-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .release-facts > div:last-child {
+    display: none;
   }
 }
 
@@ -3439,7 +3475,7 @@ main {
 #fontHelp {
   margin: 8px 0 0;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--fs-label);
   line-height: 1.6;
 }
 
@@ -3447,23 +3483,12 @@ main {
   display: none;
 }
 
-@media (max-width: 760px) {
-  .patch-workspace:has(.font-selector:not([hidden])) {
-    grid-template-rows: auto minmax(88px, 0.54fr) minmax(148px, 1.3fr);
-  }
-}
-
-@media (max-height: 620px) and (max-width: 760px) {
-  .patch-workspace:has(.font-selector:not([hidden])) {
-    grid-template-rows: auto minmax(84px, 0.5fr) minmax(140px, 1.3fr);
-  }
-}
 
 .patch-note-bgm-table { width:100%; table-layout:fixed; border-collapse:collapse; white-space:normal; margin:20px 0; }
 .patch-note-bgm-table caption { text-align:left; font-weight:700; margin-bottom:8px; }
 .patch-note-bgm-table th, .patch-note-bgm-table td { text-align:left; vertical-align:top; border-bottom:1px solid currentColor; padding:9px 7px; overflow-wrap:anywhere; }
 .patch-note-bgm-table th:first-child { width:27%; }
-@media(max-width:520px) { .patch-note-bgm-table { font-size:12px; } .patch-note-bgm-table th:first-child { width:30%; } }
+@media(max-width:520px) { .patch-note-bgm-table { font-size: var(--fs-label); } .patch-note-bgm-table th:first-child { width:30%; } }
 
 /* Native top-layer dialog keeps the note dialog and its scroll position intact. */
 .patch-note-image-button {
@@ -3570,4 +3595,149 @@ html.is-patch-notes-open, html.is-patch-image-open { overflow: hidden; }
   color: #fff;
   font-size: 21px;
   cursor: pointer;
+}
+
+/* Desktop folder save finished ---------------------------------------------- */
+/* 폴더 저장을 마친 주 버튼은 다시 실행할 수 없지만 고장처럼 보이는 회색 대신
+   완료 색으로 보인다. 바로 아래의 보조 버튼은 폴더를 건드리지 않는 다운로드다. */
+.primary-button.is-complete {
+  flex-direction: row-reverse;
+  justify-content: center;
+  gap: 8px;
+}
+
+.primary-button.is-complete:disabled {
+  color: var(--white);
+  border-color: transparent;
+  background: var(--green);
+  box-shadow: 0 8px 22px rgba(8, 125, 104, 0.2);
+  cursor: default;
+}
+
+.redownload-action {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.apply-card .redownload-help {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-label);
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.redownload-button {
+  width: 100%;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid rgba(8, 125, 104, 0.42);
+  border-radius: 10px;
+  color: var(--green);
+  background: var(--white);
+  font-size: var(--fs-label);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.redownload-button:not(:disabled):hover,
+.redownload-button:focus-visible {
+  border-color: var(--green);
+  background: #effbf7;
+}
+
+.redownload-button:disabled {
+  cursor: wait;
+}
+
+/* 좁은 화면은 세로 칸이 빠듯하므로 안내와 버튼을 한 줄에 나란히 둔다. */
+@media (max-width: 760px) {
+  .redownload-action {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+  }
+
+  .apply-card .redownload-help {
+    font-size: var(--fs-label);
+    line-height: 1.3;
+  }
+
+  .redownload-button {
+    width: auto;
+    min-height: 40px;
+    padding: 6px 10px;
+    font-size: var(--fs-label);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 340px) {
+  .redownload-action {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .redownload-button {
+    width: 100%;
+  }
+}
+
+/* 짧은 모바일 폭 화면은 완료 시 결과 패널에 칸 전체를 준다. 폴더 저장 뒤 다운로드
+   제안이 있을 때만 그 안내와 버튼을 결과 패널 위에 남긴다. */
+@media (max-height: 620px) and (max-width: 760px) {
+  .apply-card.is-complete:has(.redownload-action:not([hidden])) {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .apply-card.is-complete .apply-main:has(.redownload-action:not([hidden])) {
+    display: block;
+  }
+
+  .apply-card.is-complete .apply-main:has(.redownload-action:not([hidden])) > :not(.redownload-action) {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .redownload-button {
+    border: 2px solid ButtonText;
+  }
+}
+
+/* 좁은 화면의 결과 패널은 칸이 낮다. 누를 수 없는 완료 표시 버튼과 결과 패널의 여백을
+   줄여 다운로드 안내와 CUE 다시 저장 버튼이 들어가게 하고, 그래도 넘치면 패널 안에서만
+   세로로 스크롤한다(페이지는 한 화면을 지킨다). */
+@media (max-width: 760px) {
+  .apply-actions .primary-button.is-complete {
+    min-height: 38px;
+  }
+
+  .patch-feedback .message-panel.is-success {
+    padding-block: 6px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .patch-feedback .message-panel .cue-action {
+    margin-top: 5px;
+  }
+
+  .patch-feedback .message-panel.is-success p {
+    margin-top: 1px;
+  }
+
+  .patch-feedback .message-panel .download-actions {
+    margin-top: 5px;
+  }
+
+  .patch-feedback .message-panel .cue-button {
+    min-height: 34px;
+  }
 }
