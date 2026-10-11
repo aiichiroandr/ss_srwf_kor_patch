@@ -241,6 +241,30 @@ test('supported objectives remain reachable without decoded appearances while em
  install([placement]);$('scenarioTabButton').click();assert.equal($('scenarioSelector').value,'5');
 });
 
+test('chronological selector preserves physical edit targets and includes authenticated map-only battles',()=>{
+ const m0=setup(),chapter=(n,name)=>({source:'user-bin-scenario-chapter',gameId:'srwf-f',name,
+  scenarioSlot:n,episodes:[n===31?1:n],routeCode:'real',part:1,totalParts:1,order:n});
+ const rows=[2,31,1].map(physicalIndex=>({...deployment,physicalIndex,rewardSelector:255,recordIndex:`${physicalIndex}:64`,
+  scenarioSlots:[physicalIndex],identity:`deployment:1:${physicalIndex.toString(16).padStart(2,'0').repeat(32)}`}));
+ const scenes=rows.map(row=>({physicalIndex:row.physicalIndex,scenarioSlots:row.scenarioSlots,mapIndex:0,
+  placements:[row],chapter:chapter(row.physicalIndex,`작전 ${row.physicalIndex}`)}));
+ scenes.push({physicalIndex:3,scenarioSlots:[3],mapIndex:0,placements:[],conditions:[],chapter:chapter(3,'맵만 있는 작전')});
+ scenes.push({physicalIndex:4,scenarioSlots:[4],mapIndex:0,placements:[],conditions:[]});
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:rows,
+  objectives:[],maps:m0.maps,mapBanks:m0.banks,scenarios:scenes});$('scenarioTabButton').click();
+ assert.deepEqual($('scenarioSelector').options.map(item=>item.value),['','1','31','2','3']);
+ set('scenarioSelector',31);set('scenarioX',3);
+ const model=hooks.state.editorScenario;
+ assert.equal(model.deployments.find(row=>row.physicalIndex===31).x,3);
+ assert.equal(model.deployments.find(row=>row.physicalIndex===1).x,2);
+ assert.deepEqual(hooks.buildEditorExportRequest().deploymentEdits.map(row=>row.recordIndex),['31:64']);
+ assert.equal($('scenarioSelector').value,'31');
+ $('scenarioDeploymentReset').click();assert.equal(hooks.countEditorChanges(),0);assert.equal($('scenarioSelector').value,'31');
+ set('scenarioSelector',3);$('scenarioTileTool').click();
+ assert.equal($('scenarioSelector').value,'3');assert.equal($('scenarioTileFields').hidden,false);
+ assert.equal($('scenarioSelector').options.find(item=>item.value==='3').textContent,'제3화 · 맵만 있는 작전');
+});
+
 test('unit-kind criteria use actual names and bounded selections, preserve focus, and never reuse numeric values as ids',()=>{
  const m0=setup(true,false,true),units=[0,1,2,367,368].map(recordIndex=>({recordIndex,name:recordIndex===2?'가베라테트라':`기체 ${recordIndex}`}));
  hooks.installEditorRows({gameId:'srwf-f',units,pilots:[],weapons:[],terrains:[],rewards:[],deployments:[deployment],

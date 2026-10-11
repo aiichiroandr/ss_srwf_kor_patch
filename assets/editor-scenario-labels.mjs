@@ -1,4 +1,4 @@
-import { bindCompletionScenarioTitleHints, completionTitleHintText } from './editor-scenario-completion-title-hints.mjs?v=20261011-public2';
+import { bindCompletionScenarioTitleHints, completionTitleHintText } from './editor-scenario-completion-title-hints.mjs?v=20261011-public3';
 // Read-only labels. Selector numbers, physical bodies and displayed episode
 // numbers are different coordinates; this module never derives an episode.
 const TITLE_CELLS = Object.freeze({ 'srwf-f': 74, 'srwf-final': 192 });
@@ -79,9 +79,47 @@ export function scenarioSelectorEffect(command, state = {}) {
 function selectors(scene) {
   return Array.isArray(scene?.scenarioSlots) ? [...new Set(scene.scenarioSlots.filter(id => Number.isInteger(id) && id >= 0 && id <= 255))] : [];
 }
+function chapterFor(scene) {
+  const chapter = scene?.chapter;
+  if (chapter?.source !== 'user-bin-scenario-chapter'
+    || !['srwf-f', 'srwf-final'].includes(chapter.gameId)
+    || typeof chapter.name !== 'string'
+    || !Array.isArray(chapter.episodes) || !chapter.episodes.length
+    || chapter.episodes.some(value => !Number.isInteger(value) || value < 1 || value > 99)
+    || !Number.isInteger(chapter.part) || !Number.isInteger(chapter.totalParts)
+    || chapter.part < 1 || chapter.part > chapter.totalParts
+    || !Number.isInteger(chapter.order) || !selectors(scene).includes(chapter.scenarioSlot)) return null;
+  return chapter;
+}
+function chapterNumber(chapter) {
+  return `${chapter.gameId === 'srwf-final' ? '완결편 ' : '제'}${chapter.episodes.join('·')}화`;
+}
+const ROUTE_NAMES = Object.freeze({
+  real: '리얼계', super: '슈퍼계', common: '공통',
+  goraon: '고라온 분기', 'goraon-real': '고라온 분기 · 리얼계', 'goraon-super': '고라온 분기 · 슈퍼계',
+  grangaran: '그란 가란 분기', 'grangaran-real': '그란 가란 분기 · 리얼계', 'grangaran-super': '그란 가란 분기 · 슈퍼계',
+  direct: '직진 분기', detour: '우회 분기', space: '우주 분기', earth: '지상 분기',
+  dc: 'DC 분기', guest: '게스트·포세이달 분기', eva: '에바 분기',
+  todd: '토드 동료 분기', 'no-todd': '토드 비동료 분기',
+});
+
+// Sorting changes only the displayed list. Physical row ids, shared archive
+// bodies and the user's current selection never become chapter numbers.
+export function sortScenarioSelections(scenes) {
+  return [...scenes].sort((left, right) => {
+    const a = chapterFor(left), b = chapterFor(right);
+    if (Boolean(a) !== Boolean(b)) return a ? -1 : 1;
+    if (a && b) return Math.min(...a.episodes) - Math.min(...b.episodes)
+      || a.order - b.order || a.part - b.part || left.physicalIndex - right.physicalIndex;
+    return left.physicalIndex - right.physicalIndex;
+  });
+}
 export function scenarioSelectionLabel(scene) {
   const ids = selectors(scene);
   if (!ids.length) return '시나리오 자료';
+  const chapter = chapterFor(scene);
+  if (chapter) return `${chapterNumber(chapter)} · ${chapter.name || '제목 확인 불가'}${chapter.totalParts > 1
+    ? ` (${chapter.part}/${chapter.totalParts})` : ''}`;
   if (ids.length === 1 && scene?.verifiedTitle?.source === 'native-completion-title'
     && scene.verifiedTitle.scenarioSlot === ids[0]) return scene.verifiedTitle.name;
   return ids.length > 1 ? `공유 자료 #${ids[0]} · ${ids.length}개` : `자료 #${ids[0]}`;
@@ -89,6 +127,15 @@ export function scenarioSelectionLabel(scene) {
 export function scenarioSelectionDescription(scene) {
   const ids = selectors(scene);
   if (!ids.length) return '선택 번호는 플레이 화수가 아닙니다. 화수와 분기는 아직 확인하지 못했습니다.';
+  const chapter = chapterFor(scene);
+  if (chapter) {
+    const route = ROUTE_NAMES[chapter.routeCode];
+    const basis = chapter.gameId === 'srwf-final'
+      ? ' 화수는 완결편 시작을 1화로 센 순서입니다. 게임의 통산 화수는 F에서 이어온 진행 경로에 따라 달라집니다.'
+      : chapter.episodes.length > 1 ? ' 우회·직진 선택에 따라 표시 화수가 달라집니다.' : '';
+    return `${scenarioSelectionLabel(scene)}.${route ? ` ${route}.` : ''}${basis} 게임 자료 선택 번호: ${ids.map(id => `#${id}`).join(' · ')}.${ids.length > 1
+      ? ` 같은 자료를 공유하는 ${ids.length}개 선택 번호의 편집값이 함께 적용됩니다.` : ''}`;
+  }
   const binding = `게임 자료 선택 번호: ${ids.map(id => `#${id}`).join(' · ')}. 번호는 플레이 화수가 아닙니다.`;
   const title = ids.length === 1 && scene?.verifiedTitle?.source === 'native-completion-title'
     && scene.verifiedTitle.scenarioSlot === ids[0]
