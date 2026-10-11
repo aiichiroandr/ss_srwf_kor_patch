@@ -48,11 +48,11 @@ export function offeredPilotSkillIds(byId) {
   return ids.sort((left, right) => left - right);
 }
 
-export function assertSkillStatus(byId, count, capacity, free, consumers, limit = 4) {
+export function assertSkillStatus(byId, count, capacity, free, consumers, limit = 4, room = null) {
   const status = byId("pilotSkillStatus");
   const parts = status.children.filter((child) => child.tagName === "SPAN");
   assert.deepEqual(parts.map((part) => part.textContent), [
-    `습득 항목 ${count}/${capacity} · 빈자리 ${free}`,
+    room ? `저장 자리 ${room.used}/${room.capacity} · 빈자리 ${free}` : `습득 항목 ${count}/${capacity} · 빈자리 ${free}`,
     `능력 종류 ${consumers}/${limit}`,
   ], "learning-list capacity and the active ability limit are shown separately");
 }

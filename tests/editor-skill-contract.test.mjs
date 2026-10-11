@@ -174,17 +174,17 @@ test("add, remove and swap through the dialog reach the disc exactly as the dial
   // add: the placeholder pilot gets one skill
   openDialog(CELL.PLACEHOLDER);
   assert.equal(byId("pilotSkillScheduleButton").textContent, "추가·삭제");
-  assertSkillStatus(byId, 0, 1, 1, 0, 4);
+  assertSkillStatus(byId, 0, 1, 1, 0, 4, { used: 0, capacity: 1 });
   addSkill(41, 7);
   assert.deepEqual(pairsOf(pilotRow(CELL.PLACEHOLDER)), [{ id: 41, level: 7 }]);
-  assertSkillStatus(byId, 1, 1, 0, 1, 4);
+  assertSkillStatus(byId, 1, 1, 0, 1, 4, { used: 1, capacity: 1 });
   chooseSkill(42, 1);
   assert.equal(byId("pilotSkillAddButton").disabled, true, "no room left");
   byId("pilotSkillDialogClose").click();
 
   // swap: shield rank 2 out, a single skill in (the pilot has no free slot but the removal makes one)
   openDialog(CELL.FULL);
-  assertSkillStatus(byId, 3, 3, 0, 1, 4);
+  assertSkillStatus(byId, 3, 3, 0, 1, 4, { used: 9, capacity: 9 });
   removeSkill(65);
   addSkill(78, 40);
   assert.deepEqual(pairsOf(pilotRow(CELL.FULL)), [{ id: 64, level: 1 }, { id: 66, level: 35 }, { id: 78, level: 40 }]);
@@ -256,7 +256,7 @@ test("add, remove and swap through the dialog reach the disc exactly as the dial
   for (const type of ["pilot", "weapon"]) hooks.renderRecordList(type);
   openDialog(CELL.PLACEHOLDER);
   assert.equal(skillNames().length, 1);
-  assertSkillStatus(byId, 1, 1, 0, 1, 4);
+  assertSkillStatus(byId, 1, 1, 0, 1, 4, { used: 1, capacity: 1 });
   byId("pilotSkillDialogClose").click();
 });
 
@@ -284,14 +284,16 @@ test("a full learning list can replace one entry with Newtype rank 9 at pilot le
     const { base, worker } = await openPage(gameId);
     openDialog(CELL.FULL);
     const before = pairsOf(pilotRow(CELL.FULL));
-    assertSkillStatus(byId, 3, 3, 0, 1);
-    assert.equal(byId("pilotSkillAdd").hidden, true, "a full record has no visible unused add form");
+    assertSkillStatus(byId, 3, 3, 0, 1, 4, { used: 9, capacity: 9 });
+    assert.equal(byId("pilotSkillAdd").hidden, false, "a full record keeps its ability catalog accessible");
+    assert.equal(byId("pilotSkillRoomField").hidden, false, "adding to a full record requires an explicit choice of room");
     skillRows()[1].querySelector("button[data-skill-replace]").click();
     assert.equal(byId("pilotSkillAddTarget").hidden, false, "the selected learning entry is named as the replacement target");
     assert.equal(byId("pilotSkillAdd").hidden, false, "replacement exposes the family, rank and acquisition controls without requiring space");
     byId("pilotSkillReplaceCancel").click();
     assert.equal(byId("pilotSkillAddTarget").hidden, true);
-    assert.equal(byId("pilotSkillAdd").hidden, true, "cancelling returns the full record to its compact layout");
+    assert.equal(byId("pilotSkillAdd").hidden, false, "cancelling replacement keeps the ordinary add controls accessible");
+    assert.equal(byId("pilotSkillRoomField").hidden, false);
     assert.deepEqual(pairsOf(pilotRow(CELL.FULL)), before, "cancelling a replacement leaves the full list unchanged");
 
     skillRows()[1].querySelector("button[data-skill-replace]").click();
@@ -301,7 +303,7 @@ test("a full learning list can replace one entry with Newtype rank 9 at pilot le
     byId("pilotSkillAddButton").click();
     const expected = [{ id: 64, level: 1 }, { id: 41, level: 1 }, { id: 66, level: 35 }];
     assert.deepEqual(pairsOf(pilotRow(CELL.FULL)), expected);
-    assertSkillStatus(byId, 3, 3, 0, 2);
+    assertSkillStatus(byId, 3, 3, 0, 2, 4, { used: 9, capacity: 9 });
     assert.equal(byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-group").length, 2, "shield milestones and the single Newtype milestone have separate group headings");
     assert.equal(pilotRow(CELL.FULL).specialAbilities.filter((entry) => pilotSkillFamily(gameId, entry.id) === "newtype").length, 1,
       "rank 9 does not create rank 1 through rank 8 entries");
@@ -318,6 +320,254 @@ test("a full learning list can replace one entry with Newtype rank 9 at pilot le
   }
 });
 
+const currentPilotLists = (cell) => ({
+  spirits: pilotRow(cell).spirits.map(({ id, level }) => ({ id, level })),
+  skills: pairsOf(pilotRow(cell)),
+});
+function chooseSkillRoom(value) {
+  const select = byId("pilotSkillRoomSelect");
+  select.value = value;
+  select.dispatchEvent({ type: "change", target: select });
+}
+const roomOptionValues = () => [...byId("pilotSkillRoomSelect").options]
+  .filter((option) => option.value && !option.disabled).map((option) => option.value);
+const FULL_KOUJI_SHAPE = [3, 1, 26, 1, 4, 8, 10, 16, 6, 13, 29, 58, 69, 30, 70, 38, 78, 1, 0, 0];
+
+test("a Bright-shaped full record exposes the same catalog, cancels without deleting a spirit, and atomically saves a chosen trade", async () => {
+  for (const gameId of [GAME, F_GAME]) {
+    const { base, worker } = await openPage(gameId);
+    openDialog(CELL.NOROOM);
+    const before = currentPilotLists(CELL.NOROOM);
+    assert.equal(before.spirits.length, 6);
+    assert.deepEqual(before.skills, []);
+    assert.equal(pilotRow(CELL.NOROOM).pairCapacity, 6);
+    assert.equal(byId("pilotSkillAdd").hidden, false, "having no existing ability does not hide the add catalog");
+    assert.equal(byId("pilotSkillRoomField").hidden, false);
+    assert.equal(byId("pilotSkillRoomSelect").value, "", "no spirit is selected for automatic removal");
+    assert.equal(byId("pilotSkillScheduleButton").disabled, false);
+    assert.match(byId("pilotSkillStatus").textContent, /저장 자리 6\/6 · 빈자리 0/);
+    const { min, max } = PILOT_SKILL_EDIT_RANGE[gameId];
+    assert.deepEqual(offeredPilotSkillIds(byId), Array.from({ length: max - min + 1 }, (_, index) => min + index),
+      "having no spare pair does not remove any supported ability from the catalog");
+    assert.deepEqual(roomOptionValues(), Array.from({ length: 6 }, (_, index) => `spirit-${index}`),
+      "a record without abilities offers its removable spirit slots as room");
+    chooseSkill(41, 1);
+    assert.equal(byId("pilotSkillAddButton").disabled, true, "choosing an ability does not implicitly delete anything");
+    chooseSkillRoom("spirit-0");
+    assert.equal(byId("pilotSkillAddButton").disabled, false);
+    assert.equal(byId("pilotSkillAddButton").textContent, "비우고 추가");
+    assert.deepEqual(currentPilotLists(CELL.NOROOM), before, "planning a trade changes neither list");
+    byId("pilotSkillDialogClose").click();
+    assert.equal(byId("pilotSkillDialog").open, false);
+    assert.deepEqual(currentPilotLists(CELL.NOROOM), before, "closing a pending trade cancels both changes");
+    openDialog(CELL.NOROOM);
+    assert.equal(byId("pilotSkillRoomSelect").value, "", "reopening requires a fresh removal choice");
+    assert.equal(byId("pilotSkillAddSelect").value, "", "reopening also requires a fresh ability choice");
+    chooseSkill(41, 1);
+    chooseSkillRoom("spirit-0");
+    byId("pilotSkillAddButton").click();
+    const expected = { spirits: before.spirits.slice(1), skills: [{ id: 41, level: 1 }] };
+    assert.deepEqual(currentPilotLists(CELL.NOROOM), expected, "one apply removes exactly the chosen spirit and adds one rank-9 milestone");
+    assert.match(byId("pilotSkillStatus").textContent, /저장 자리 6\/6 · 빈자리 0/);
+    assert.equal(byId("pilotSkillRevertButton").textContent, "이번 추가 되돌리기");
+    byId("pilotSkillDialogClose").click();
+    const done = await exportThroughPage(worker);
+    assert.equal(done.type, "EXPORT_COMPLETE", done.error?.code);
+    const submitted = pilotEditsOf(worker).find((edit) => edit.recordIndex === CELL.NOROOM);
+    assert.deepEqual(submitted.spirits, expected.spirits);
+    assert.deepEqual(submitted.specialAbilities, expected.skills);
+    const reopened = await base.full.inspectPatchedImage(done.result.outputBlob, descriptorFor(base.disc, { gameId, imageKind: "local" }));
+    assert.deepEqual(listOfSpirits(reopened.view, CELL.NOROOM), expected.spirits);
+    assert.deepEqual(listOfView(reopened.view, CELL.NOROOM), expected.skills);
+    const after = reopened.view.pilots.find((row) => row.recordIndex === CELL.NOROOM);
+    assert.equal(after.recordLength, base.opened.view.pilots.find((row) => row.recordIndex === CELL.NOROOM).recordLength,
+      "adding an ability does not enlarge the pilot record");
+    assert.deepEqual(reopened.view.pilots.filter((row) => row.recordIndex !== CELL.NOROOM), base.opened.view.pilots.filter((row) => row.recordIndex !== CELL.NOROOM),
+      "all other pilots remain identical after export and reopen");
+  }
+});
+
+test("a Kouji-shaped full record can keep both ability families while trading a spirit, and undo restores the two original lists", async () => {
+  for (const gameId of [GAME, F_GAME]) {
+    const { base, worker } = await openPage(gameId, { [CELL.FULL]: FULL_KOUJI_SHAPE });
+    openDialog(CELL.FULL);
+    const before = currentPilotLists(CELL.FULL);
+    assert.deepEqual(before.skills, [{ id: 69, level: 30 }, { id: 70, level: 38 }, { id: 78, level: 1 }]);
+    chooseSkill(41, 1);
+    assert.equal(byId("pilotSkillAddButton").disabled, true);
+    assert.ok(roomOptionValues().includes("skill-0"), "an existing learning entry can also supply room");
+    assert.ok(roomOptionValues().includes("spirit-5"), "the user can preserve both abilities and choose a spirit instead");
+    chooseSkillRoom("spirit-5");
+    byId("pilotSkillAddButton").click();
+    const expected = {
+      spirits: before.spirits.slice(0, 5), skills: [...before.skills, { id: 41, level: 1 }],
+    };
+    assert.deepEqual(currentPilotLists(CELL.FULL), expected);
+    assert.match(byId("pilotSkillStatus").textContent, /저장 자리 9\/9 · 빈자리 0/);
+    assert.equal(byId("pilotSkillRevertButton").textContent, "이번 추가 되돌리기");
+    byId("pilotSkillDialogClose").click();
+    const done = await exportThroughPage(worker);
+    assert.equal(done.type, "EXPORT_COMPLETE", done.error?.code);
+    const reopened = await base.full.inspectPatchedImage(done.result.outputBlob, descriptorFor(base.disc, { gameId, imageKind: "local" }));
+    assert.deepEqual(listOfSpirits(reopened.view, CELL.FULL), expected.spirits);
+    assert.deepEqual(listOfView(reopened.view, CELL.FULL), expected.skills,
+      "the writer saves all four learning entries after the selected spirit supplies their room");
+    assert.equal(reopened.view.pilots.find((row) => row.recordIndex === CELL.FULL).recordLength,
+      base.opened.view.pilots.find((row) => row.recordIndex === CELL.FULL).recordLength);
+    assert.deepEqual(reopened.view.pilots.filter((row) => row.recordIndex !== CELL.FULL), base.opened.view.pilots.filter((row) => row.recordIndex !== CELL.FULL));
+    openDialog(CELL.FULL);
+    byId("pilotSkillRevertButton").click();
+    assert.deepEqual(currentPilotLists(CELL.FULL), before, "undo returns both the selected spirit and the prior skill list");
+    assert.equal(byId("pilotSkillRevertButton").textContent, "원래 목록으로 되돌리기");
+    assert.equal(byId("pilotSkillRevertButton").disabled, true, "undo leaves no pilot changes");
+    assert.equal(hooks.countEditorChanges(), 0);
+    byId("pilotSkillDialogClose").click();
+  }
+});
+
+test("a full record can select an existing skill as room without removing a spirit", async () => {
+  await openPage(GAME, { [CELL.FULL]: FULL_KOUJI_SHAPE });
+  openDialog(CELL.FULL);
+  const before = currentPilotLists(CELL.FULL);
+  chooseSkill(41, 2);
+  chooseSkillRoom("skill-0");
+  assert.equal(byId("pilotSkillAddButton").disabled, false);
+  byId("pilotSkillAddButton").click();
+  assert.deepEqual(currentPilotLists(CELL.FULL), {
+    spirits: before.spirits, skills: [...before.skills.slice(1), { id: 41, level: 2 }],
+  });
+  byId("pilotSkillRevertButton").click();
+  assert.deepEqual(currentPilotLists(CELL.FULL), before);
+  byId("pilotSkillDialogClose").click();
+});
+
+test("editing the selected room ability updates its removal preview without replacing or blurring the learning input", async () => {
+  await openPage(GAME, { [CELL.FULL]: FULL_KOUJI_SHAPE });
+  openDialog(CELL.FULL);
+  chooseSkill(41, 2);
+  chooseSkillRoom("skill-0");
+  assert.match(byId("pilotSkillRoomSelect").selectedOptions[0].textContent, /습득 Lv 30/);
+  assert.match(byId("pilotSkillAddHint").textContent, /습득 Lv 30/);
+  const levelInput = skillRows()[0].querySelector("input[data-skill-level]");
+  levelInput.focus();
+  levelInput.value = "47";
+  levelInput.dispatchEvent({ type: "input", target: levelInput });
+  assert.equal(skillRows()[0].querySelector("input[data-skill-level]"), levelInput,
+    "updating the room preview preserves the original learning input DOM node");
+  assert.equal(document.activeElement, levelInput, "the user's focus stays on the input being edited");
+  assert.equal(byId("pilotSkillRoomSelect").value, "skill-0", "the explicit removal target remains selected");
+  assert.match(byId("pilotSkillRoomSelect").selectedOptions[0].textContent, /습득 Lv 47/);
+  assert.match(byId("pilotSkillAddHint").textContent, /습득 Lv 47/);
+  assert.doesNotMatch(byId("pilotSkillAddHint").textContent, /습득 Lv 30/);
+  assert.equal(byId("pilotSkillAddButton").disabled, false);
+  const edited = currentPilotLists(CELL.FULL);
+  assert.equal(edited.skills[0].level, 47);
+  byId("pilotSkillAddButton").click();
+  assert.deepEqual(currentPilotLists(CELL.FULL), {
+    spirits: edited.spirits, skills: [...edited.skills.slice(1), { id: 41, level: 2 }],
+  }, "apply trades the current selected entry while retaining every other learning level");
+  byId("pilotSkillRevertButton").click();
+  assert.deepEqual(currentPilotLists(CELL.FULL), edited,
+    "undo restores the selected ability at its newly edited level, not the stale preview level");
+  byId("pilotSkillDialogClose").click();
+});
+
+test("undoing the last atomic addition preserves spirit and ability edits made before that addition", async () => {
+  await openPage(GAME, { [CELL.FULL]: FULL_KOUJI_SHAPE });
+  openDialog(CELL.FULL);
+  const spiritLevel = byId("pilotMentalCommands").querySelector('input[data-spirit-level="0"]');
+  spiritLevel.value = "2";
+  spiritLevel.dispatchEvent({ type: "input", target: spiritLevel });
+  const skillLevel = skillRows()[0].querySelector("input[data-skill-level]");
+  skillLevel.value = "31";
+  skillLevel.dispatchEvent({ type: "input", target: skillLevel });
+  const beforeAddition = currentPilotLists(CELL.FULL);
+  assert.equal(beforeAddition.spirits[0].level, 2);
+  assert.equal(beforeAddition.skills[0].level, 31);
+  assert.equal(hooks.countEditorChanges(), 2);
+  chooseSkill(41, 1);
+  chooseSkillRoom("spirit-5");
+  byId("pilotSkillAddButton").click();
+  assert.equal(byId("pilotSkillRevertButton").textContent, "이번 추가 되돌리기");
+  byId("pilotSkillRevertButton").click();
+  assert.deepEqual(currentPilotLists(CELL.FULL), beforeAddition, "undo restores the state before this addition, including both earlier edits");
+  assert.equal(hooks.countEditorChanges(), 2, "the two earlier changes remain unsaved edits");
+  assert.equal(byId("pilotSkillRevertButton").textContent, "원래 목록으로 되돌리기");
+  assert.equal(byId("pilotSkillRevertButton").disabled, false, "the earlier ability edit remains available for the separate original-list reset");
+  byId("pilotSkillDialogClose").click();
+});
+
+test("a later spirit edit invalidates atomic undo without overwriting the new spirit edit", async () => {
+  await openPage(GAME);
+  openDialog(CELL.NOROOM);
+  chooseSkill(41, 1);
+  chooseSkillRoom("spirit-0");
+  byId("pilotSkillAddButton").click();
+  const spiritLevel = byId("pilotMentalCommands").querySelector('input[data-spirit-level="0"]');
+  spiritLevel.value = "23";
+  spiritLevel.dispatchEvent({ type: "input", target: spiritLevel });
+  const changedSpirits = currentPilotLists(CELL.NOROOM).spirits;
+  assert.equal(changedSpirits[0].level, 23);
+  assert.equal(byId("pilotSkillRevertButton").textContent, "원래 목록으로 되돌리기", "the old transaction cannot undo a newer independent edit");
+  byId("pilotSkillRevertButton").click();
+  assert.deepEqual(currentPilotLists(CELL.NOROOM), { spirits: changedSpirits, skills: [] },
+    "the ordinary ability reset preserves the later spirit list");
+  byId("pilotSkillDialogClose").click();
+});
+
+test("invalid add plans cannot partially remove a spirit or ability even when the event handler is called directly", async () => {
+  await openPage(GAME);
+  openDialog(CELL.NOROOM);
+  const before = currentPilotLists(CELL.NOROOM);
+  for (const [room, level] of [["", 1], ["spirit-99", 1], ["skill-0", 1], ["spirit-0", 0], ["spirit-0", 100], ["spirit-0", 1.5]]) {
+    chooseSkill(41, level);
+    chooseSkillRoom(room);
+    assert.equal(byId("pilotSkillAddButton").disabled, true, `invalid plan ${room}/${level} is disabled`);
+    hooks.addPilotSkillFromDialog();
+    assert.deepEqual(currentPilotLists(CELL.NOROOM), before, `invalid plan ${room}/${level} changes neither list`);
+  }
+  byId("pilotSkillDialogClose").click();
+});
+
+test("making room by removing a spirit cannot bypass the four-ability limit", async () => {
+  const fullFourFamilies = [3, 1, 33, 1, 42, 1, 51, 1, 60, 1, 0, 0];
+  await openPage(GAME, { [CELL.WIDE]: fullFourFamilies });
+  openDialog(CELL.WIDE);
+  const before = currentPilotLists(CELL.WIDE);
+  chooseSkill(78, 1);
+  chooseSkillRoom("spirit-0");
+  assert.equal(byId("pilotSkillAddButton").disabled, true, "a free pair would still leave five active families");
+  hooks.addPilotSkillFromDialog();
+  assert.deepEqual(currentPilotLists(CELL.WIDE), before, "a refused fifth family does not discard the selected spirit");
+  chooseSkillRoom("skill-0");
+  assert.equal(byId("pilotSkillAddButton").disabled, false, "trading one whole family keeps the active limit at four");
+  byId("pilotSkillAddButton").click();
+  assert.deepEqual(currentPilotLists(CELL.WIDE), {
+    spirits: before.spirits, skills: [...before.skills.slice(1), { id: 78, level: 1 }],
+  });
+  byId("pilotSkillDialogClose").click();
+});
+
+test("a record with spare room ignores an obsolete removal selection and adds without deleting anything", async () => {
+  await openPage(GAME);
+  openDialog(CELL.NOROOM);
+  chooseSkill(41, 1);
+  chooseSkillRoom("spirit-0");
+  byId("pilotSkillDialogClose").click();
+  openDialog(CELL.SLACK);
+  const before = currentPilotLists(CELL.SLACK);
+  assert.equal(byId("pilotSkillRoomField").hidden, true);
+  chooseSkill(78, 2);
+  chooseSkillRoom("spirit-0");
+  assert.equal(byId("pilotSkillAddButton").disabled, false, "existing free room needs no deletion");
+  assert.equal(byId("pilotSkillAddButton").textContent, "추가");
+  byId("pilotSkillAddButton").click();
+  assert.deepEqual(currentPilotLists(CELL.SLACK), {
+    spirits: before.spirits, skills: [...before.skills, { id: 78, level: 2 }],
+  });
+  byId("pilotSkillDialogClose").click();
+});
+
 test("rank editing in a full group keeps stored learning levels and refuses a rank another milestone already uses", async () => {
   await openPage(GAME);
   openDialog(CELL.FULL);
@@ -332,7 +582,7 @@ test("rank editing in a full group keeps stored learning levels and refuses a ra
   rank.dispatchEvent({ type: "change", target: rank });
   assert.deepEqual(pairsOf(pilotRow(CELL.FULL)), [{ id: 65, level: 18 }, { id: 66, level: 35 }, { id: 68, level: 1 }],
     "changing rank retains that milestone's acquisition level while the shared ladder is saved in ascending rank order");
-  assertSkillStatus(byId, 3, 3, 0, 1);
+  assertSkillStatus(byId, 3, 3, 0, 1, 4, { used: 9, capacity: 9 });
   byId("pilotSkillDialogClose").click();
 
   openDialog(CELL.FLAGGED);

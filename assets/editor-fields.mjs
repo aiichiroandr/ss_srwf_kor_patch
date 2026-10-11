@@ -4,7 +4,7 @@
 //
 // Unit and pilot terrain grades are nibbles here (0..15, what the record can hold); the narrower rule for a CHANGED
 // grade (0..4) is isGradeEditAllowed in editor-grades.mjs, which the writers and the preset check share as well.
-import {isRegionRuleWireValue,decodeRegionRule} from './editor-scenario-region-context.mjs?v=20261011-public6';
+import {isRegionRuleWireValue,decodeRegionRule} from './editor-scenario-region-context.mjs?v=20261011-public7';
 const range = (minimum, maximum) => Object.freeze([minimum, maximum]);
 const BYTE = range(0, 0xff);
 const WORD = range(0, 0xffff);

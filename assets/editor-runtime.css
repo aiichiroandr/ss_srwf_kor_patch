@@ -1210,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261011-public6');
+  --frame: url('./runtime-panel-frame.svg?v=20261011-public7');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -3443,6 +3443,7 @@ body[data-view="editor"] .editor-region {
 
 .pilot-skill-add-target[hidden],
 .pilot-skill-add-rank[hidden],
+.pilot-skill-room-field[hidden],
 .pilot-skill-add[hidden] {
   display: none;
 }
@@ -3450,7 +3451,7 @@ body[data-view="editor"] .editor-region {
 .pilot-skill-add {
   display: grid;
   flex: 0 0 auto;
-  grid-template-columns: minmax(150px, 1fr) auto auto 76px;
+  grid-template-columns: minmax(150px, 1fr) auto auto 96px;
   align-items: center;
   gap: 8px;
   padding-top: 8px;
@@ -3458,12 +3459,30 @@ body[data-view="editor"] .editor-region {
 }
 
 .pilot-skill-add:has(.pilot-skill-add-rank[hidden]) {
-  grid-template-columns: minmax(150px, 1fr) auto 76px;
+  grid-template-columns: minmax(150px, 1fr) auto 96px;
 }
 
 .pilot-skill-add-choice select {
   flex: 1 1 0;
   min-width: 0;
+  padding: 4px 8px;
+}
+
+.pilot-skill-room-field {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #f1dd74;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.pilot-skill-room-field select {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
   padding: 4px 8px;
 }
 
@@ -3473,11 +3492,12 @@ body[data-view="editor"] .editor-region {
 }
 
 .pilot-skill-add-button {
-  min-width: 72px;
+  min-width: 88px;
   color: #04120d;
   border-color: #74dc53;
   background: linear-gradient(#a3e56b, #60bd49);
   font-weight: 650;
+  white-space: nowrap;
 }
 
 .pilot-skill-dialog .pilot-skill-add-button:not(.editor-help-button):not(.editor-help-close) {
