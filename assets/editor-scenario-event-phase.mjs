@@ -2,12 +2,12 @@
 // Metadata restores source bytes; it grants no profile or runtime authority.
 // PH01 is outside TE02: restore this wrapper before any existing normalizer.
 // Source/code hashes authenticate reversibility, never an accepted profile.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261011-public9';
-import { Sha256 } from './sha256.mjs?v=20261011-public9';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261011-public10';
+import { Sha256 } from './sha256.mjs?v=20261011-public10';
 import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, inspectEventCriteriaHook,
-  normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261011-public9';
+  normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261011-public10';
 import { snapshotFPhaseEvent, inspectFPhaseEventHook, normalizeScenarioFEventPhaseBody,
-  updateScenarioFEventPhaseBody } from './editor-scenario-f-event-phase.mjs?v=20261011-public9';
+  updateScenarioFEventPhaseBody } from './editor-scenario-f-event-phase.mjs?v=20261011-public10';
 
 export const EVENT_PHASE_FIELDS=Object.freeze(['eventPhase',...EVENT_CRITERIA_FIELDS]);
 const MAGIC=Uint8Array.of(83,82,87,70,80,72,48,49),TRAILER=96,CODE_LENGTH=14;

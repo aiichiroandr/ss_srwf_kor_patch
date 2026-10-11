@@ -1,10 +1,10 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public9';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public9';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public9";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public9";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public9";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public9";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public9";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public10';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public10';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public10";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public10";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public10";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public10";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public10";
 import {
   canStep,
   filterRecords,
@@ -13,7 +13,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public9";
+} from "./editor-list.mjs?v=20261011-public10";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -24,7 +24,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public9";
+} from "./editor-grades.mjs?v=20261011-public10";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -58,27 +58,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public9";
+} from "./editor-skill-list.mjs?v=20261011-public10";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public9";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public9";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public9";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public9";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public9";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public9";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public9";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public9";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public9";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public9";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public9";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public9";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public9";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public9";
+} from "./editor-facts.mjs?v=20261011-public10";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public10";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public10";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public10";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public10";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public10";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public10";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public10";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public10";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public10";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public10";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public10";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public10";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public10";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -86,14 +86,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public9";
+} from "./font-revisions.mjs?v=20261011-public10";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public9";
+} from "./release-notes.mjs?v=20261011-public10";
 
-const STATIC_ASSET_REVISION = "20261011-public9";
+const STATIC_ASSET_REVISION = "20261011-public10";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -3658,10 +3658,6 @@ async function saveCueFile() {
    데이터를 어디까지 옮겨 넣었느냐에 따라 릴리스마다 달라지므로, 승인된 결과
    이미지의 SHA-256 에 묶어 둔다. 새 릴리스는 결과 이미지에서 확인한 구성을 여기에
    더해야 CUE 가 만들어진다(빠뜨리면 계약 테스트가 실패한다). */
-const CUE_SINGLE_DATA_TRACK = Object.freeze([
-  "TRACK 01 MODE1/2352",
-  "INDEX 01 00:00:00",
-]);
 // g93a/b/c 전체 이미지에서 확인한 섹터 경계. CD-R 실기 검수와는 별개다.
 const F_V04_CUE_TRACKS = Object.freeze([
   "TRACK 01 MODE1/2352",
@@ -3687,54 +3683,6 @@ const PATCHED_IMAGE_CUE_TRACKS = new Map([
   ["f3292551e827ac66d4406a2994350342d9084a5d24a121a70185029fba574a3e", F_V04_CUE_TRACKS],
   ["fe713fcab98279f8f6ffe6da45c145bcf75ab70ebe7361e733b71559b94f8589", F_V04_CUE_TRACKS],
   ["5489ed4e2d980a0010ecffba3801621b88cf20d7aa317811eddcd37eff13fe5f", F_V04_CUE_TRACKS],
-  // F 2026.08.23 v0.3. 옮겨 넣은 한글 데이터가 MODE1 트랙 3, 원래 오디오의 나머지가
-  // 트랙 4다. 이 구성으로 CD-R 을 구워 실기에서 돌렸다는 사용자 보고가 있다.
-  ["6464be8cd7d855fcca7b6fb4710c0baabefb376826ca3d200170075e321dabe8", Object.freeze([
-    "TRACK 01 MODE1/2352",
-    "INDEX 01 00:00:00",
-    "TRACK 02 MODE2/2352",
-    "INDEX 00 22:34:18",
-    "INDEX 01 22:36:18",
-    "TRACK 03 MODE1/2352",
-    "INDEX 01 54:15:41",
-    "TRACK 04 AUDIO",
-    "INDEX 01 54:26:37",
-  ])],
-  // F 2026.08.15 v0.1.2 와 2026.08.14 v0.1.1. 다트랙 구성을 따로 확인한 적이 없어
-  // 승인 당시의 단일 데이터 트랙을 그대로 둔다.
-  ["12a9614e16ffc9b0020bb2536ccc2f4b8dddcd9619ff6a24823d86cfc87ea27e", CUE_SINGLE_DATA_TRACK],
-  ["b6364d14688f6dc68dfc4199f144c102de2061eea49f81e482276a620eff1e1c", CUE_SINGLE_DATA_TRACK],
-  // F 완결편 2026.09.21 v0.1 r110 G541 배치. Track 3 AUDIO가 뒤로 이동한 결과다.
-  ["09301e2d3a1a04376b812866e9de84f4ab8f37e2da5a4b1613f66a54a0b79150", Object.freeze([
-    "TRACK 01 MODE1/2352",
-    "INDEX 01 00:00:00",
-    "TRACK 02 MODE2/2352",
-    "INDEX 00 17:03:64",
-    "INDEX 01 17:06:64",
-    "TRACK 03 AUDIO",
-    "INDEX 00 48:55:28",
-    "INDEX 01 48:57:28",
-  ])],
-  ["20a87277c2f6138b87e1f769405590871fcf3f248ffd48ce7a241ef75f33a4ba", Object.freeze([
-    "TRACK 01 MODE1/2352",
-    "INDEX 01 00:00:00",
-    "TRACK 02 MODE2/2352",
-    "INDEX 00 17:03:64",
-    "INDEX 01 17:06:64",
-    "TRACK 03 AUDIO",
-    "INDEX 00 48:55:28",
-    "INDEX 01 48:57:28",
-  ])],
-  ["b6ddb95cb6c8a053106a5e169ad8d366d73f070a184465e031ca94054a6424df", Object.freeze([
-    "TRACK 01 MODE1/2352",
-    "INDEX 01 00:00:00",
-    "TRACK 02 MODE2/2352",
-    "INDEX 00 17:03:64",
-    "INDEX 01 17:06:64",
-    "TRACK 03 AUDIO",
-    "INDEX 00 48:55:28",
-    "INDEX 01 48:57:28",
-  ])],
 ]);
 
 // `sessionTracks` 는 에디터 한 세션만을 위한 구성이다(사용자 폴더의 CUE 또는 기반 공개 버전의 구성).

@@ -6,28 +6,41 @@ This repository is the public, static distribution surface for an accepted
 SRWF Korean patch. It is not a continuation of an internal binary lineage and
 it is not a candidate-testing area.
 
-The latest FIN public release is v0.3 a DOS thin / b Galmuri11 / c Mona12; a/b restoration is explicitly approved in the same user session (`srwf-final-20261005-v0-3-a/b/c`), explicitly approved by the user on 2026-10-05. Default FIN selection remains `srwf-final-20261005-v0-3-c`. a/b evidence: 18 actual display cases, per-font no-state boot; audio and user R7 remain unverified. Evidence and limitations: `docs/FIN-v0.3-patch-notes.md` and `docs/srwf-final-20261005-v0-3-c.build.json`. Final target SHA is `0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d`. Earlier accepted release targets are F G103 a/b/c as v0.5 and FIN r116 a/b/c as v0.2, accepted for local patch/download registration by the user's 2026-09-28 instruction. The F default remains `srwf-f-20260928-v0-5-a`. Evidence ceiling: `docs/F_V05_FIN_V02_VALIDATION.md`; no fresh user coldboot, a/b individual gameplay, long-play or CD-R claim. Remote publication of this accepted six-release set is authorized by the user's subsequent instruction: “원격배포도해”.
+The current repository state is `HAS_ACCEPTED_RELEASE`. Keep the latest and
+immediately preceding accepted version family for each game, including all
+a/b/c font variants. The current retained families are F v0.5/v0.4 and
+F Final v0.3/v0.2. Defaults remain `srwf-f-20260928-v0-5-a` and
+`srwf-final-20261005-v0-3-c`.
 
-The historical release state below is retained for earlier release context.
+F G103 v0.5 and Final r116 v0.2 were accepted in the user's 2026-09-28
+instruction and subsequently authorized for remote publication. Their evidence
+ceiling is `docs/F_V05_FIN_V02_VALIDATION.md`; fresh user coldboot, individual
+a/b gameplay, long-play and CD-R are not claimed. F v0.4 evidence remains
+bounded by `docs/F_V04_VALIDATION.md`; individual b/c coldboots, save/load,
+long-play and CD-R are not claimed.
 
-The current repository state is `HAS_ACCEPTED_RELEASE`. The default indexed
-release is `srwf-f-20260915-v0-4-a`, with b/c font variants. Its acceptance evidence
-ceiling is documented in `docs/F_V04_VALIDATION.md`; b/c individual coldboots,
-save/load, long-play and CD-R tests are not claimed. The prior v0.3 remains
-indexed, and the superseded
-`srwf-f-20260814-v0-1-1` hotfix remains indexed as historical evidence.
-`srwf-f-20260821-v0-2` was withdrawn on 2026-08-23: its payload violated the
-public v1 canonical form by carrying 1,873,210 bytes inside records that match
-the source, so the browser rejects it with `NON_DIFFERING_BYTE`. Its three
-artifacts stay byte-immutable in the withdrawal allowlist and must never be
-re-indexed. Each is
-backed by its own explicit, hash-pinned `ACCEPTED` receipt. The F Final public
-trial `srwf-final-20260814-v0-1` is also indexed and is limited to its documented
-cold-boot and demo-route evidence; it does not claim long-play or full-route
-completion. The broken
-`srwf-f-20260814-v0-1` artifact triplet is withdrawn, non-indexed, and retained
-only as byte-immutable historical evidence. Do not reintroduce withdrawn
-release rows or publish a new row without another complete acceptance chain.
+Final v0.3 a DOS thin / b Galmuri11 / c Mona12 was explicitly approved on
+2026-10-05. Its a/b evidence is 18 actual display cases and per-font no-state
+boot; audio and user R7 remain unverified. Evidence and limitations are in
+`docs/FIN-v0.3-patch-notes.md` and
+`docs/srwf-final-20261005-v0-3-c.build.json`. Final c target SHA is
+`0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d`.
+
+The user authorized archival and removal of older patch families on 2026-10-11.
+Their exact payloads, manifests and receipts were backed up to private Google
+Drive and downloaded again to verify full archive and member hashes before
+removal. `docs/RELEASE_ARCHIVE_20261011.json` is the hash-pinned archive ledger;
+it does not constitute a release index or new acceptance. Historical patch
+notes and validation documents may remain, but archived artifacts and release
+rows must not be reintroduced. Future retention changes require the same
+verified-backup procedure and coordinated ledger, validator and test updates.
+
+Withdrawal remains permanent. F `srwf-f-20260821-v0-2` violated v1 canonical
+form by carrying 1,873,210 non-differing bytes (`NON_DIFFERING_BYTE`); the broken
+F `srwf-f-20260814-v0-1` and historical Final trial
+`srwf-final-20260814-v0-1` also remain non-indexed. Their original byte pins and
+withdrawal status are preserved in the verifier and archive ledger. Do not
+publish a new release row without another complete acceptance chain.
 
 ## Publication gate
 

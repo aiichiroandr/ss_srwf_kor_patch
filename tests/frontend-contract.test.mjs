@@ -191,10 +191,29 @@ const FINAL_STOCK_PROFILE = Object.freeze({
   track: "TRACK 01 MODE1/2352",
 });
 const FINAL_RELEASE_ID = "srwf-final-20260814-v0-1";
-const V0_3_TARGET_SHA256 = "6464be8cd7d855fcca7b6fb4710c0baabefb376826ca3d200170075e321dabe8";
-const V0_1_1_TARGET_SHA256 = "b6364d14688f6dc68dfc4199f144c102de2061eea49f81e482276a620eff1e1c";
-const FINAL_TARGET_SHA256 = "922b1d15d54acfec5f3923ead2b969226305b35327c17bde9a39754b4ae15901";
-const V0_3_FOUR_TRACK_CUE_BODY = "  TRACK 01 MODE1/2352\r\n"
+// 아래의 옛 manifest는 삭제된 파일과 독립적인 파서 시험 데이터다.
+const ARCHIVED_PATCH_NOTE_RELEASE_IDS = Object.freeze([
+  "srwf-f-20260814-v0-1-1",
+  "srwf-f-20260815-v0-1-2",
+  "srwf-f-20260823-v0-3",
+  "srwf-final-20260814-v0-1",
+  "srwf-final-20260921-v0-1-a",
+  "srwf-final-20260921-v0-1-b",
+  "srwf-final-20260921-v0-1-c",
+]);
+const REMOVED_CUE_TARGETS = Object.freeze({
+  "srwf-f-20260814-v0-1": "6f6fd50207f69e240dfe6c3ddeac5b7a7f3816fb7e94d65143a89395995ea27a",
+  "srwf-f-20260814-v0-1-1": "b6364d14688f6dc68dfc4199f144c102de2061eea49f81e482276a620eff1e1c",
+  "srwf-f-20260815-v0-1-2": "12a9614e16ffc9b0020bb2536ccc2f4b8dddcd9619ff6a24823d86cfc87ea27e",
+  "srwf-f-20260821-v0-2": "9f9f3ecd1069d8748060e615952b4710eed24f68f549ac74f69d42f572924eba",
+  "srwf-f-20260823-v0-3": "6464be8cd7d855fcca7b6fb4710c0baabefb376826ca3d200170075e321dabe8",
+  "srwf-final-20260814-v0-1": "922b1d15d54acfec5f3923ead2b969226305b35327c17bde9a39754b4ae15901",
+  "srwf-final-20260921-v0-1-a": "09301e2d3a1a04376b812866e9de84f4ab8f37e2da5a4b1613f66a54a0b79150",
+  "srwf-final-20260921-v0-1-b": "20a87277c2f6138b87e1f769405590871fcf3f248ffd48ce7a241ef75f33a4ba",
+  "srwf-final-20260921-v0-1-c": "b6ddb95cb6c8a053106a5e169ad8d366d73f070a184465e031ca94054a6424df",
+});
+const F_V04_TARGET_SHA256 = "f3292551e827ac66d4406a2994350342d9084a5d24a121a70185029fba574a3e";
+const F_V04_FOUR_TRACK_CUE_BODY = "  TRACK 01 MODE1/2352\r\n"
   + "    INDEX 01 00:00:00\r\n"
   + "  TRACK 02 MODE2/2352\r\n"
   + "    INDEX 00 22:34:18\r\n"
@@ -326,7 +345,7 @@ const WIZARD_STEP_COPY = /\bSTEP(?:\s*[123])?\b(?!\s*=)/i;
 // 배포 자산의 캐시 개정판은 하나뿐이다. 이 상수를 고쳐야만 고정값이 함께
 // 움직이도록 한 곳에만 적는다. 여러 시험이 각자 literal 을 들고 있으면
 // 개정판을 올릴 때 일부만 따라가서 모듈이 두 번 적재된다.
-const STATIC_ASSET_REVISION = "20261011-public9";
+const STATIC_ASSET_REVISION = "20261011-public10";
 
 test("public page exposes the legal and accessibility contracts", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
@@ -994,8 +1013,8 @@ test("Android output failure automatically prepares fixed-name verified BIN and 
       outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
       imageName: plan.imageName,
       cueName: plan.cueName,
-      targetSha256: V0_1_1_TARGET_SHA256,
-    }, plan, 3, V0_1_1_TARGET_SHA256);
+      targetSha256: F_V04_TARGET_SHA256,
+    }, plan, 3, F_V04_TARGET_SHA256);
     assert.equal(element("downloadBinLink").getAttribute("href"), "blob:test-1");
     assert.equal(element("downloadBinLink").getAttribute("download"), plan.imageName);
     assert.equal(element("downloadCueLink").getAttribute("href"), "blob:test-2");
@@ -1015,10 +1034,10 @@ test("Android output failure automatically prepares fixed-name verified BIN and 
   }
 });
 
-test("v0.3 mobile download CUE is the four-track layout that boots from a burned CD-R", async () => {
+test("retained F v0.4 mobile download CUE uses its pinned four-track geometry", async () => {
   const plan = __testHooks.createDownloadOutputPlan(
-    "SRWF-KOR-20260823-v0.3.bin",
-    "SRWF-KOR-20260823-v0.3.cue",
+    "SRWF-KOR-20260915-v0.4-a.bin",
+    "SRWF-KOR-20260915-v0.4-a.cue",
   );
   const createdBlobs = [];
   const revoked = [];
@@ -1034,15 +1053,15 @@ test("v0.3 mobile download CUE is the four-track layout that boots from a burned
       outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
       imageName: plan.imageName,
       cueName: plan.cueName,
-      targetSha256: V0_3_TARGET_SHA256,
-    }, plan, 3, V0_3_TARGET_SHA256);
+      targetSha256: F_V04_TARGET_SHA256,
+    }, plan, 3, F_V04_TARGET_SHA256);
 
     // BIN 과 CUE 두 개뿐이다. 실기용 CUE 를 따로 두지 않고 기본 CUE 가 곧 실기용이다.
     assert.equal(createdBlobs.length, 2);
     assert.equal(element("downloadCueLink").getAttribute("download"), plan.cueName);
     assert.equal(
       await createdBlobs[1].text(),
-      `FILE "${plan.imageName}" BINARY\r\n${V0_3_FOUR_TRACK_CUE_BODY}`,
+      `FILE "${plan.imageName}" BINARY\r\n${F_V04_FOUR_TRACK_CUE_BODY}`,
     );
     assert.doesNotMatch(element("downloadHelp").textContent, /임시|실기용|SAROO/);
 
@@ -1056,19 +1075,16 @@ test("v0.3 mobile download CUE is the four-track layout that boots from a burned
 
 test("accepted release manifests expose clean version-only BIN and CUE names", async () => {
   for (const [manifestName, imageName, cueName] of [
-    ["srwf-f-20260814-v0-1-1.json", "SRWF-KOR-20260814-v0.1.1.bin", "SRWF-KOR-20260814-v0.1.1.cue"],
-    ["srwf-f-20260815-v0-1-2.json", "SRWF-KOR-20260815-v0.1.2.bin", "SRWF-KOR-20260815-v0.1.2.cue"],
-    ["srwf-f-20260823-v0-3.json", "SRWF-KOR-20260823-v0.3.bin", "SRWF-KOR-20260823-v0.3.cue"],
-    ...["a", "b", "c"].map((font) => [
-      `srwf-f-20260915-v0-4-${font}.json`,
-      `SRWF-KOR-20260915-v0.4-${font}.bin`,
-      `SRWF-KOR-20260915-v0.4-${font}.cue`,
-    ]),
-    ...["a", "b", "c"].map((font) => [
-      `srwf-final-20260921-v0-1-${font}.json`,
-      `SRWFIN-KOR-20260921-v0.1-${font}.bin`,
-      `SRWFIN-KOR-20260921-v0.1-${font}.cue`,
-    ]),
+    ...[
+      ["srwf-f", "SRWF", "20260915", "0-4", "0.4"],
+      ["srwf-f", "SRWF", "20260928", "0-5", "0.5"],
+      ["srwf-final", "SRWFIN", "20260928", "0-2", "0.2"],
+      ["srwf-final", "SRWFIN", "20261005", "0-3", "0.3"],
+    ].flatMap(([gameId, prefix, date, idVersion, version]) => ["a", "b", "c"].map((font) => [
+      `${gameId}-${date}-v${idVersion}-${font}.json`,
+      `${prefix}-KOR-${date}-v${version}-${font}.bin`,
+      `${prefix}-KOR-${date}-v${version}-${font}.cue`,
+    ])),
   ]) {
     const release = JSON.parse(await readFile(
       new URL(`../releases/${manifestName}`, import.meta.url),
@@ -1085,7 +1101,7 @@ test("accepted release manifests expose clean version-only BIN and CUE names", a
   }
 });
 
-test("each game points at its accepted default while withdrawn history stays unindexed", async () => {
+test("each game exposes only its current and previous accepted font families", async () => {
   const index = JSON.parse(await readFile(
     new URL("../manifest/releases.json", import.meta.url),
     "utf8",
@@ -1099,12 +1115,11 @@ test("each game points at its accepted default while withdrawn history stays uni
   assert.equal(game.defaultReleaseId, "srwf-f-20260928-v0-5-a");
   assert.deepEqual(
     fReleases.map((entry) => entry.id),
-    // v0.2 는 정규형 위반(record 안 동일 byte)으로 철회되어 인덱스에 없다.
-    ["srwf-f-20260928-v0-5-a", "srwf-f-20260928-v0-5-b", "srwf-f-20260928-v0-5-c", "srwf-f-20260915-v0-4-a", "srwf-f-20260915-v0-4-b", "srwf-f-20260915-v0-4-c", "srwf-f-20260823-v0-3", "srwf-f-20260815-v0-1-2", "srwf-f-20260814-v0-1-1"],
+    ["srwf-f-20260928-v0-5-a", "srwf-f-20260928-v0-5-b", "srwf-f-20260928-v0-5-c", "srwf-f-20260915-v0-4-a", "srwf-f-20260915-v0-4-b", "srwf-f-20260915-v0-4-c"],
   );
   assert.deepEqual(
     fReleases.map((entry) => entry.label),
-    ["2026.09.28 · v0.5", "2026.09.28 · v0.5", "2026.09.28 · v0.5", "2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.08.23 · v0.3", "2026.08.15 · v0.1.2", "2026.08.14 · v0.1.1"],
+    ["2026.09.28 · v0.5", "2026.09.28 · v0.5", "2026.09.28 · v0.5", "2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.09.15 · v0.4"],
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
   assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");
@@ -1118,43 +1133,35 @@ test("each game points at its accepted default while withdrawn history stays uni
       "srwf-final-20260928-v0-2-a",
       "srwf-final-20260928-v0-2-b",
       "srwf-final-20260928-v0-2-c",
-      "srwf-final-20260921-v0-1-a",
-      "srwf-final-20260921-v0-1-b",
-      "srwf-final-20260921-v0-1-c",
     ],
   );
   assert.equal(finalReleases.every((entry) => entry.state === "ACCEPTED"), true);
+  assert.equal(index.releases.length, 12);
+  for (const releaseId of Object.keys(REMOVED_CUE_TARGETS)) {
+    assert.ok(!index.releases.some((entry) => entry.id === releaseId), `${releaseId} must stay archived`);
+  }
 });
 
-test("v0.3 patched-image CUE is the four-track layout reported working on a burned CD-R", () => {
-  const imageName = "SRWF-KOR-20260823-v0.3.bin";
+test("retained F v0.4 patched-image CUE has the pinned four-track geometry", () => {
+  const imageName = "SRWF-KOR-20260915-v0.4-a.bin";
   assert.equal(
-    __testHooks.buildPatchedImageCue(imageName, V0_3_TARGET_SHA256),
-    `FILE "${imageName}" BINARY\r\n${V0_3_FOUR_TRACK_CUE_BODY}`,
+    __testHooks.buildPatchedImageCue(imageName, F_V04_TARGET_SHA256),
+    `FILE "${imageName}" BINARY\r\n${F_V04_FOUR_TRACK_CUE_BODY}`,
   );
   assert.throws(
-    () => __testHooks.buildPatchedImageCue("unsafe.bin\"\r\nFILE \"other.bin", V0_3_TARGET_SHA256),
+    () => __testHooks.buildPatchedImageCue("unsafe.bin\"\r\nFILE \"other.bin", F_V04_TARGET_SHA256),
     (error) => error?.code === "MANIFEST_INVALID",
   );
 });
 
-test("historical F CUEs keep their accepted geometry and withdrawn targets fail closed", () => {
-  // v0.1.1·v0.1.2 는 다트랙 구성을 따로 확인한 적이 없어 승인 당시의 단일 데이터 트랙이다.
-  for (const targetSha256 of [
-    V0_1_1_TARGET_SHA256,
-    "12a9614e16ffc9b0020bb2536ccc2f4b8dddcd9619ff6a24823d86cfc87ea27e",
-  ]) {
-    assert.equal(
-      __testHooks.buildPatchedImageCue("SRWF-KOR-old.bin", targetSha256),
-      "FILE \"SRWF-KOR-old.bin\" BINARY\r\n"
-        + "  TRACK 01 MODE1/2352\r\n"
-        + "    INDEX 01 00:00:00\r\n",
+test("archived and withdrawn target hashes have no public CUE layout", () => {
+  for (const [releaseId, targetSha256] of Object.entries(REMOVED_CUE_TARGETS)) {
+    assert.throws(
+      () => __testHooks.buildPatchedImageCue(`${releaseId}.bin`, targetSha256),
+      (error) => error?.code === "CUE_LAYOUT_MISSING",
+      `${releaseId} must not borrow a retained release's layout`,
     );
   }
-  assert.throws(
-    () => __testHooks.buildPatchedImageCue("SRWFIN-KOR-20260814-v0.1.bin", FINAL_TARGET_SHA256),
-    (error) => error?.code === "CUE_LAYOUT_MISSING",
-  );
   // 새 결과 이미지는 트랙 구성을 등록하기 전까지 다른 릴리스 구성을 빌려 쓰지 않는다.
   for (const unpinned of ["b".repeat(64), STOCK_PROFILE.sha256, STOCK_PROFILE.id]) {
     assert.throws(
@@ -1212,14 +1219,12 @@ test("CUE writer creates the exact fixed sibling file and commits its complete c
     directoryHandle,
     "srwf-kor-v5-r001.cue",
     "srwf-kor-v5-r001.bin",
-    V0_1_1_TARGET_SHA256,
+    F_V04_TARGET_SHA256,
   );
 
   assert.equal(cueHandle.name, "srwf-kor-v5-r001.cue");
   assert.deepEqual(writes, [
-    "FILE \"srwf-kor-v5-r001.bin\" BINARY\r\n"
-      + "  TRACK 01 MODE1/2352\r\n"
-      + "    INDEX 01 00:00:00\r\n",
+    `FILE "srwf-kor-v5-r001.bin" BINARY\r\n${F_V04_FOUR_TRACK_CUE_BODY}`,
   ]);
   assert.equal(closeCount, 1);
   assert.equal(abortCount, 0);
@@ -1274,7 +1279,7 @@ test("CUE writer aborts write and close failures without masking the original er
           directoryHandle,
           "srwf-kor-v5-r001.cue",
           "srwf-kor-v5-r001.bin",
-          V0_1_1_TARGET_SHA256,
+          F_V04_TARGET_SHA256,
         ),
         (error) => error === operationFailure,
       );
@@ -1318,7 +1323,7 @@ test("CUE retry reuses the exact handle created by this page after a write failu
       directoryHandle,
       ownedCueHandle.name,
       "srwf-kor-v5-r001.bin",
-      V0_1_1_TARGET_SHA256,
+      F_V04_TARGET_SHA256,
       ownedCueHandle,
     ),
     (error) => error === operationFailure,
@@ -1327,7 +1332,7 @@ test("CUE retry reuses the exact handle created by this page after a write failu
     directoryHandle,
     ownedCueHandle.name,
     "srwf-kor-v5-r001.bin",
-    V0_1_1_TARGET_SHA256,
+    F_V04_TARGET_SHA256,
     ownedCueHandle,
   );
   assert.equal(result, ownedCueHandle);
@@ -1501,7 +1506,7 @@ test("patch notes sit between release selection and source selection without add
   assert.match(css, /\.patch-note-dialog\.is-summary-only \.patch-note-dialog-shell\s*\{[^}]*grid-template-rows:\s*auto auto/s);
 });
 
-test("every accepted release has safe patch-note data and summary-only hotfixes preserve old evidence", async () => {
+test("indexed and explicitly archived releases retain safe patch-note data", async () => {
   const [
     {
       PATCH_NOTES,
@@ -1525,12 +1530,12 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
     .map((release) => release.id);
   const referencedAssets = new Map();
 
-  // 공개 인덱스에서 빠진 2026.08.14 시험판의 노트는 역사 자료로만 남긴다.
-  assert.deepEqual(
-    Object.keys(PATCH_NOTES).sort(),
-    [...acceptedReleaseIds, FINAL_RELEASE_ID].sort(),
-  );
-  for (const releaseId of acceptedReleaseIds) {
+  const noteReleaseIds = [...acceptedReleaseIds, ...ARCHIVED_PATCH_NOTE_RELEASE_IDS];
+  // 보관한 노트는 다운로드 목록에 추가하지 않는다.
+  assert.ok(ARCHIVED_PATCH_NOTE_RELEASE_IDS.every((id) => !acceptedReleaseIds.includes(id)));
+  assert.equal(new Set(noteReleaseIds).size, noteReleaseIds.length);
+  assert.deepEqual(Object.keys(PATCH_NOTES).sort(), [...noteReleaseIds].sort());
+  for (const releaseId of noteReleaseIds) {
     const notes = getPatchNotesForRelease(releaseId);
     assert.ok(notes, `missing patch notes for ${releaseId}`);
     assert.deepEqual(Object.keys(notes).sort(), notes.bgmTables ? ["bgmTables", "items", "summary", "version"] : ["items", "summary", "version"]);
@@ -1581,15 +1586,6 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
         }
         referencedAssets.set(side.src, { width: side.width, height: side.height });
       }
-    }
-  }
-
-  // 공개 목록에서 제외한 시험판의 비교 이미지도 역사 자료로 보존하므로
-  // 정적 자산 해시 검증 대상에는 계속 포함한다.
-  for (const item of getPatchNotesForRelease(FINAL_RELEASE_ID).items) {
-    for (const sideName of ["asIs", "toBe"]) {
-      const side = item[sideName];
-      referencedAssets.set(side.src, { width: side.width, height: side.height });
     }
   }
 
@@ -1658,8 +1654,7 @@ test("every accepted release has safe patch-note data and summary-only hotfixes 
 
   const finalNotes = getPatchNotesForRelease(FINAL_RELEASE_ID);
   assert.equal(finalNotes.version, "v0.1");
-  // 완결편은 F 보다 검수가 덜 됐다.  목록에 남겨는 두되, 노트 첫 문장이
-  // 설치를 말리지 않으면 안 된다 — 이 문장이 사라지면 시험판이 정식판처럼 읽힌다.
+  // 철회한 시험판 노트는 역사 자료이며 설치 비권장 근거를 유지한다.
   assert.match(finalNotes.summary, /설치를 권하지 않습니다/);
   assert.deepEqual(
     finalNotes.items.map((item) => item.id),
@@ -1849,12 +1844,23 @@ test("release and patch references are pinned to their release id", () => {
   );
 });
 
-test("runtime accepts the exact public index and Final accepted manifest contract", async () => {
-  const [index, finalManifest] = await Promise.all([
+test("runtime accepts the retained index and Final manifest without archived file dependencies", async () => {
+  const retainedFinalId = "srwf-final-20261005-v0-3-c";
+  const [index, retainedFinalManifest] = await Promise.all([
     readFile(new URL("../manifest/releases.json", import.meta.url), "utf8").then(JSON.parse),
-    readFile(new URL(`../releases/${FINAL_RELEASE_ID}.json`, import.meta.url), "utf8").then(JSON.parse),
+    readFile(new URL(`../releases/${retainedFinalId}.json`, import.meta.url), "utf8").then(JSON.parse),
   ]);
-  assert.deepEqual(finalManifest, makeFinalReleaseManifest());
+  const normalizedRetainedFinal = __testHooks.normalizeReleaseManifest(
+    retainedFinalManifest,
+    index.releases.find((release) => release.id === retainedFinalId),
+    new URL(`../releases/${retainedFinalId}.json`, import.meta.url),
+    __testHooks.validateStockProfiles(index.stock_profiles),
+  );
+  assert.equal(normalizedRetainedFinal.gameId, "srwf-final");
+  assert.equal(normalizedRetainedFinal.target.size, 521680656);
+  assert.equal(normalizedRetainedFinal.target.sha256, "0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d");
+  assert.equal(normalizedRetainedFinal.patch.format, "srwf.sparse-byte-delta.v2");
+  const finalManifest = makeFinalReleaseManifest();
   assert.deepEqual(
     index.stock_profiles.find((profile) => profile.gameId === "srwf-final"),
     FINAL_STOCK_PROFILE,
@@ -2453,6 +2459,52 @@ test("font selector loads the exact revision for both games and blocks an absent
   }
 });
 
+test("the site lists only indexed families while archived patch notes remain metadata", async () => {
+  const index = JSON.parse(await readFile(new URL("../manifest/releases.json", import.meta.url), "utf8"));
+  const documents = new Map([
+    ["manifest/releases.json", new TextEncoder().encode(JSON.stringify(index))],
+  ]);
+  for (const row of index.releases) {
+    documents.set(row.manifest, await readFile(new URL(`../${row.manifest}`, import.meta.url)));
+  }
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url) => {
+    const path = [...documents.keys()].find((key) => String(url).endsWith(key));
+    assert.ok(path, `unindexed release request: ${url}`);
+    requests.push(path);
+    const bytes = documents.get(path);
+    return { ok: true, status: 200, headers: { get: () => String(bytes.byteLength) },
+      arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+  };
+  try {
+    const fresh = await import(`../assets/app.mjs?retained-release-selection=${Date.now()}`);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(fresh.__testHooks.state.availability, "ready");
+    assert.equal(fresh.__testHooks.state.releaseRows.length, 12);
+    for (const gameId of ["srwf-f", "srwf-final"]) {
+      await fresh.__testHooks.activateGame(gameId);
+      const indexed = index.releases.filter((row) => row.gameId === gameId);
+      assert.deepEqual(fresh.__testHooks.state.visibleReleaseRows.map((row) => row.id), indexed.map((row) => row.id));
+      const families = [...new Set(indexed.map((row) => row.id.replace(/-[abc]$/, "")))];
+      assert.deepEqual(element("releaseSelect").children.map((option) => option.value), families);
+      for (const family of families) {
+        element("releaseSelect").value = family;
+        await fresh.__testHooks.handleReleaseChange();
+        for (const font of ["a", "b", "c"]) {
+          element("fontSelect").value = font;
+          await fresh.__testHooks.handleFontChange();
+          assert.equal(fresh.__testHooks.state.release.id, `${family}-${font}`);
+          assert.ok(!ARCHIVED_PATCH_NOTE_RELEASE_IDS.includes(fresh.__testHooks.state.release.id));
+        }
+      }
+    }
+    assert.ok(requests.every((path) => path === "manifest/releases.json" || index.releases.some((row) => row.manifest === path)));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 function installSyntheticFontSite(specs, defaults, customizeManifest = () => {}) {
   const encoder = new TextEncoder();
   const documents = new Map();
@@ -2920,7 +2972,7 @@ function installFolderPatcherHarness({ mobile = false, failCueWrite = false } = 
     { "srwf-f": FOLDER_FLOW_SPECS[0].id, "srwf-final": FINAL_RELEASE_ID },
     (manifest, gameId) => {
       // 폴더 CUE 자동 저장은 트랙 구성이 고정된 목표 이미지에서만 된다.
-      if (gameId === "srwf-f") manifest.target.sha256 = V0_3_TARGET_SHA256;
+      if (gameId === "srwf-f") manifest.target.sha256 = F_V04_TARGET_SHA256;
     },
   );
 
@@ -3073,7 +3125,7 @@ test("desktop folder success locks the primary button as finished and offers a f
       type: "complete",
       result: {
         outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
-        targetSha256: V0_3_TARGET_SHA256,
+        targetSha256: F_V04_TARGET_SHA256,
         imageName: download.imageName,
         cueName: download.cueName,
       },
@@ -3148,7 +3200,7 @@ test("a desktop save that falls back to downloads before checking the folder kee
       type: "complete",
       result: {
         outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
-        targetSha256: V0_3_TARGET_SHA256,
+        targetSha256: F_V04_TARGET_SHA256,
         imageName: download.imageName,
         cueName: download.cueName,
       },
@@ -3304,7 +3356,7 @@ test("a failed re-download keeps the finished folder state and retries only thro
         type: "complete",
         result: {
           outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
-          targetSha256: V0_3_TARGET_SHA256,
+          targetSha256: F_V04_TARGET_SHA256,
           imageName: download.imageName,
           cueName: download.cueName,
         },
@@ -3432,7 +3484,7 @@ test("a re-download that loses the prepared source keeps the finished state and 
       type: "complete",
       result: {
         outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
-        targetSha256: V0_3_TARGET_SHA256,
+        targetSha256: F_V04_TARGET_SHA256,
         imageName: download.imageName,
         cueName: download.cueName,
       },
@@ -3505,7 +3557,7 @@ test("a source that changed after the folder save keeps the finished state and i
       type: "complete",
       result: {
         outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
-        targetSha256: V0_3_TARGET_SHA256,
+        targetSha256: F_V04_TARGET_SHA256,
         imageName: download.imageName,
         cueName: download.cueName,
       },
@@ -3574,7 +3626,7 @@ test("a re-download whose source can no longer be read says so and retries by re
       type: "complete",
       result: {
         outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
-        targetSha256: V0_3_TARGET_SHA256,
+        targetSha256: F_V04_TARGET_SHA256,
         imageName: download.imageName,
         cueName: download.cueName,
       },
@@ -3731,7 +3783,7 @@ test("when only the BIN reached the folder, every re-download message says BIN, 
       type: "complete",
       result: {
         outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
-        targetSha256: V0_3_TARGET_SHA256,
+        targetSha256: F_V04_TARGET_SHA256,
         imageName: download.imageName,
         cueName: download.cueName,
       },
@@ -3771,7 +3823,7 @@ test("mobile download flow is unchanged and never shows the folder completion st
       type: "complete",
       result: {
         outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
-        targetSha256: V0_3_TARGET_SHA256,
+        targetSha256: F_V04_TARGET_SHA256,
         imageName: download.imageName,
         cueName: download.cueName,
       },

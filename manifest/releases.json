@@ -95,30 +95,6 @@
       "manifestSha256": "d7f16e963cb268b07bcca5a61937b29bcdb98cf075acc7108d61d1cd47b714e5"
     },
     {
-      "gameId": "srwf-final",
-      "id": "srwf-final-20260921-v0-1-a",
-      "state": "ACCEPTED",
-      "label": "2026.09.21 · v0.1",
-      "manifest": "releases/srwf-final-20260921-v0-1-a.json",
-      "manifestSha256": "6153b65e96270840650884512f5495bed4fad2b79c8a34c42766fc355b744fb7"
-    },
-    {
-      "gameId": "srwf-final",
-      "id": "srwf-final-20260921-v0-1-b",
-      "state": "ACCEPTED",
-      "label": "2026.09.21 · v0.1",
-      "manifest": "releases/srwf-final-20260921-v0-1-b.json",
-      "manifestSha256": "1faa90d127ff4738ff2ec2576dc5fdd1ab90b4445b7ba05d3a058fcb5657709a"
-    },
-    {
-      "gameId": "srwf-final",
-      "id": "srwf-final-20260921-v0-1-c",
-      "state": "ACCEPTED",
-      "label": "2026.09.21 · v0.1",
-      "manifest": "releases/srwf-final-20260921-v0-1-c.json",
-      "manifestSha256": "f549db387b23461a219421480a00c6e270110224a70f7484feef6ff74038931b"
-    },
-    {
       "gameId": "srwf-f",
       "id": "srwf-f-20260928-v0-5-a",
       "state": "ACCEPTED",
@@ -165,30 +141,6 @@
       "label": "2026.09.15 · v0.4",
       "manifest": "releases/srwf-f-20260915-v0-4-c.json",
       "manifestSha256": "be3c993c889c3af22d6e7265d56b8eba19497842f0308d6186b1e1b95db79f5e"
-    },
-    {
-      "gameId": "srwf-f",
-      "id": "srwf-f-20260823-v0-3",
-      "state": "ACCEPTED",
-      "label": "2026.08.23 · v0.3",
-      "manifest": "releases/srwf-f-20260823-v0-3.json",
-      "manifestSha256": "e188d09d873fa80e01168b39ccc403253632e87d3d72f9458876f2516efa7ede"
-    },
-    {
-      "gameId": "srwf-f",
-      "id": "srwf-f-20260815-v0-1-2",
-      "state": "ACCEPTED",
-      "label": "2026.08.15 · v0.1.2",
-      "manifest": "releases/srwf-f-20260815-v0-1-2.json",
-      "manifestSha256": "1e5db3441d633e56a6d143ad62915ae0c13628f752a9b7bd75a2b8975de65ce6"
-    },
-    {
-      "gameId": "srwf-f",
-      "id": "srwf-f-20260814-v0-1-1",
-      "state": "ACCEPTED",
-      "label": "2026.08.14 · v0.1.1",
-      "manifest": "releases/srwf-f-20260814-v0-1-1.json",
-      "manifestSha256": "46a454df5cdf6f4a97c9d3ef569b8d1a5112d9f5a54e632040e1b95c2a7f00fe"
     }
   ]
 }

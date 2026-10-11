@@ -77,6 +77,52 @@ def clone_test_file(source, destination):
 def copy_public_release_tree(root: Path) -> None:
     for directory in ("schemas", "manifest", "releases", "receipts", "patches"):
         shutil.copytree(PROJECT_ROOT / directory, root / directory, copy_function=clone_test_file)
+    archive = PROJECT_ROOT / verifier.RELEASE_ARCHIVE_PATH
+    if archive.is_file():
+        destination = root / verifier.RELEASE_ARCHIVE_PATH
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        clone_test_file(archive, destination)
+
+
+def synthetic_release_archive() -> dict[str, Any]:
+    """Metadata-only fixture; no ZIP, patch, disc, or extracted game bytes."""
+    records = []
+    entries = []
+    for release_id in sorted(verifier.ARCHIVED_RELEASE_IDS):
+        artifacts = [{"path":name, "bytes":100,
+            "sha256":verifier.WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST.get(name, hashlib.sha256(name.encode()).hexdigest())}
+            for name in sorted(verifier.archived_artifact_paths(release_id))]
+        records.append({"id":release_id,
+            "gameId":"srwf-final" if release_id.startswith("srwf-final-") else "srwf-f",
+            "previousState":"WITHDRAWN" if release_id in verifier.ARCHIVED_WITHDRAWN_IDS else "INDEXED_ACCEPTED",
+            "artifacts":artifacts})
+        entries.extend(dict(artifact) for artifact in artifacts)
+    file_id = "syntheticArchiveFile0123456789"
+    return {"schema":"srwf-kor.release-archive.v1",
+        "sourceCommit":verifier.RELEASE_ARCHIVE_SOURCE_COMMIT,
+        "retainedReleaseIds":sorted(verifier.RETAINED_RELEASE_IDS),
+        "archivedReleases":records,
+        "backup":{"folderUrl":"https://drive.google.com/drive/folders/syntheticArchiveFolder0123456789",
+            "archiveFiles":[{"fileId":file_id, "fileName":"synthetic-release-archive.zip",
+                "bytes":4096, "sha256":"a"*64, "md5":"b"*32,
+                "url":f"https://drive.google.com/file/d/{file_id}/view",
+                "readbackVerified":True, "entries":entries}]}}
+
+
+def archive_errors(archive: dict[str, Any], *, original_pin: str | None = None,
+                   reintroduced: str | None = None) -> list[str]:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        destination = root / verifier.RELEASE_ARCHIVE_PATH
+        write_json(destination, archive)
+        pin = original_pin or hashlib.sha256(destination.read_bytes()).hexdigest()
+        if reintroduced is not None:
+            artifact = root / reintroduced
+            artifact.parent.mkdir(parents=True, exist_ok=True)
+            artifact.write_bytes(b"synthetic reintroduction")
+        with verifier_root(root), mock_patch.object(verifier, "RELEASE_ARCHIVE_SHA256", pin):
+            verifier.validate_release_archive([path for path in root.rglob("*") if path.is_file()])
+            return list(verifier.errors)
 
 
 def png_chunk(chunk_type: bytes, payload: bytes) -> bytes:
@@ -540,10 +586,14 @@ class RepositoryPolicyTests(unittest.TestCase):
             {game["defaultReleaseId"] for game in index["games"]},
         )
         for name, expected_sha256 in verifier.WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST.items():
-            self.assertEqual(
-                hashlib.sha256((PROJECT_ROOT / name).read_bytes()).hexdigest(),
-                expected_sha256,
-            )
+            archive_path = PROJECT_ROOT / verifier.RELEASE_ARCHIVE_PATH
+            if archive_path.is_file():
+                archive = json.loads(archive_path.read_text())
+                artifacts = {artifact["path"]:artifact for row in archive["archivedReleases"] for artifact in row["artifacts"]}
+                self.assertEqual(artifacts[name]["sha256"], expected_sha256)
+                self.assertFalse((PROJECT_ROOT / name).exists())
+            else:
+                self.assertEqual(hashlib.sha256((PROJECT_ROOT / name).read_bytes()).hexdigest(), expected_sha256)
 
     def test_withdrawn_v01_artifact_tampering_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -553,13 +603,128 @@ class RepositoryPolicyTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(b"tampered")
 
-            with verifier_root(root):
+            # Legacy transition coverage; the finalized pinned archive path
+            # never falls back to accepting restored historical artifacts.
+            with verifier_root(root), mock_patch.object(verifier, "RELEASE_ARCHIVE_SHA256", None):
                 files = [path for path in root.rglob("*") if path.is_file()]
                 verifier.validate_withdrawn_release_artifacts(files)
                 self.assertEqual(
                     sum("withdrawn historical artifact hash mismatch" in error for error in verifier.errors),
                     len(verifier.WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST),
                 )
+
+    def test_finalized_archive_cannot_be_removed_even_if_legacy_files_are_restored(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in verifier.WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"synthetic restored historical artifact")
+            with verifier_root(root), mock_patch.object(verifier, "RELEASE_ARCHIVE_SHA256", "a"*64):
+                verifier.validate_withdrawn_release_artifacts([path for path in root.rglob("*") if path.is_file()])
+                self.assertEqual(verifier.errors, ["release archive: verified archive metadata is missing or not a regular file"])
+
+    def test_verified_archive_covers_every_removed_triplet_without_shipping_game_data(self) -> None:
+        archive = synthetic_release_archive()
+        archive["backup"]["archiveFiles"][0]["entries"].append({
+            "path":"manifest/releases.json", "bytes":50, "sha256":"c"*64})
+        self.assertEqual(archive_errors(archive), [])
+
+    def test_archive_metadata_requires_the_pinned_verified_receipt_bytes(self) -> None:
+        archive = synthetic_release_archive()
+        original = (json.dumps(archive, ensure_ascii=False, indent=2)+"\n").encode()
+        pin = hashlib.sha256(original).hexdigest()
+        archive["backup"]["archiveFiles"][0]["sha256"] = "d"*64
+        self.assertIn("metadata SHA-256", "\n".join(archive_errors(archive, original_pin=pin)))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            write_json(root / verifier.RELEASE_ARCHIVE_PATH, archive)
+            with verifier_root(root), mock_patch.object(verifier, "RELEASE_ARCHIVE_SHA256", None):
+                verifier.validate_release_archive([root / verifier.RELEASE_ARCHIVE_PATH])
+                self.assertIn("metadata SHA-256", "\n".join(verifier.errors))
+
+    def test_archive_requires_actual_readback_claim_and_complete_matching_entries(self) -> None:
+        for fault in ["unverified", "missing", "wrong-sha", "wrong-size", "duplicate"]:
+            with self.subTest(fault=fault):
+                archive = synthetic_release_archive()
+                container = archive["backup"]["archiveFiles"][0]
+                if fault == "unverified": container["readbackVerified"] = False
+                elif fault == "missing": container["entries"].pop()
+                elif fault == "wrong-sha": container["entries"][0]["sha256"] = "d"*64
+                elif fault == "wrong-size": container["entries"][0]["bytes"] += 1
+                else: container["entries"].append(dict(container["entries"][0]))
+                errors = "\n".join(archive_errors(archive))
+                self.assertTrue(errors)
+                self.assertIn("duplicated" if fault == "duplicate" else "lacks exact verified backup entry", errors)
+
+    def test_archive_historical_sha_and_release_identity_cannot_be_rewritten(self) -> None:
+        for fault in ["withdrawal-sha", "retained-id", "archived-id", "duplicate-id", "state", "game", "source"]:
+            with self.subTest(fault=fault):
+                archive = synthetic_release_archive()
+                if fault == "withdrawal-sha":
+                    artifact = archive["archivedReleases"][0]["artifacts"][0]
+                    artifact["sha256"] = "e"*64
+                    for entry in archive["backup"]["archiveFiles"][0]["entries"]:
+                        if entry["path"] == artifact["path"]: entry["sha256"] = "e"*64
+                elif fault == "retained-id": archive["retainedReleaseIds"][0] = "srwf-f-20260823-v0-3"
+                elif fault == "archived-id": archive["archivedReleases"][0]["id"] = "unreviewed-release"
+                elif fault == "duplicate-id": archive["archivedReleases"][1] = dict(archive["archivedReleases"][0])
+                elif fault == "state": archive["archivedReleases"][0]["previousState"] = "INDEXED_ACCEPTED"
+                elif fault == "game": archive["archivedReleases"][0]["gameId"] = "srwf-final"
+                else: archive["sourceCommit"] = "f"*40
+                errors = "\n".join(archive_errors(archive))
+                self.assertTrue(errors)
+                if fault == "withdrawal-sha": self.assertIn("original withdrawn artifact SHA-256 changed", errors)
+
+    def test_archived_file_reintroduction_is_rejected_for_all_three_artifact_kinds(self) -> None:
+        for name in sorted(verifier.archived_artifact_paths("srwf-f-20260823-v0-3")):
+            with self.subTest(path=name):
+                errors = "\n".join(archive_errors(synthetic_release_archive(), reintroduced=name))
+                self.assertIn(f"archived release artifact must not be reintroduced: {name}", errors)
+
+    def test_archive_rejects_unsafe_entry_paths_game_files_and_drive_id_mismatch(self) -> None:
+        for fault in ["../private.json", "/private.json", "game.bin", "payload.srwfp?upload=1", "url-id", "bool-size"]:
+            with self.subTest(fault=fault):
+                archive = synthetic_release_archive()
+                container = archive["backup"]["archiveFiles"][0]
+                if fault == "url-id": container["url"] = "https://drive.google.com/file/d/differentFile0123456789/view"
+                elif fault == "bool-size": container["entries"][0]["bytes"] = True
+                else: container["entries"][0]["path"] = fault
+                self.assertTrue(archive_errors(archive))
+
+    def test_retention_requires_two_complete_families_and_the_latest_default(self) -> None:
+        index = json.loads((PROJECT_ROOT / "manifest/releases.json").read_text())
+        releases = [row for row in index["releases"] if row["id"] in verifier.RETAINED_RELEASE_IDS]
+        with verifier_root(PROJECT_ROOT):
+            verifier.validate_retained_release_families(releases, index["games"])
+            self.assertEqual(verifier.errors, [])
+        for fault in ["missing-font", "old-family", "duplicate", "wrong-game", "previous-default"]:
+            with self.subTest(fault=fault):
+                rows = json.loads(json.dumps(releases))
+                games = json.loads(json.dumps(index["games"]))
+                if fault == "missing-font": rows.pop()
+                elif fault == "old-family": rows[0]["id"] = "srwf-final-20260921-v0-1-a"
+                elif fault == "duplicate": rows[1] = dict(rows[0])
+                elif fault == "wrong-game": rows[0]["gameId"] = "srwf-f"
+                else: games[0]["defaultReleaseId"] = "srwf-f-20260915-v0-4-a"
+                with verifier_root(PROJECT_ROOT):
+                    verifier.validate_retained_release_families(rows, games)
+                    self.assertTrue(verifier.errors)
+
+    def test_archived_release_cannot_be_reindexed_even_with_the_old_accepted_state(self) -> None:
+        index = json.loads((PROJECT_ROOT / "manifest/releases.json").read_text())
+        index["releases"] = [row for row in index["releases"] if row["id"] in verifier.RETAINED_RELEASE_IDS]
+        archived_id = "srwf-f-20260823-v0-3"
+        index["releases"].append({"id":archived_id, "gameId":"srwf-f", "state":"ACCEPTED",
+            "label":"Archived accepted", "manifest":f"releases/{archived_id}.json", "manifestSha256":"a"*64})
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copytree(PROJECT_ROOT / "schemas", root / "schemas")
+            write_json(root / "manifest/releases.json", index)
+            write_json(root / verifier.RELEASE_ARCHIVE_PATH, synthetic_release_archive())
+            with verifier_root(root), mock_patch.object(verifier, "validate_release_manifest", return_value=(None,None,None)):
+                verifier.validate_index([path for path in root.rglob("*") if path.is_file()])
+                self.assertIn(f"archived release must not be indexed: {archived_id}", verifier.errors)
 
     def test_symbolic_links_are_forbidden(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
