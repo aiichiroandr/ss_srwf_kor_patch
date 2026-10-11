@@ -33,7 +33,7 @@ test('320px compact selectors retain both source and independent event text befo
       <div class="scenario-toolbar"><select id="scenarioSelector"><option>공유 자료 #1 · 23개</option></select>
        <div class="scenario-mode-row"><button>기체 배치</button><button>이벤트</button><button>승리·패배</button><button>타일</button></div><div class="scenario-context-row"><select id="scenarioEventSelector"><option>1. 적군 99턴 이상</option></select>
 
-       <div class="scenario-view-pager"${paged?'':' hidden'}><button>맵</button><button>편집값</button></div><details><summary>도움말</summary></details><details><summary>맵 자료</summary></details></div>
+       <div class="scenario-view-pager"${paged?'':' hidden'}><button>맵</button><button>편집값</button></div><details><summary>도움말</summary></details><details hidden><summary>지도 설정</summary></details></div>
       </div></section></body>`);
     const measured=await page.locator('#scenarioSelector,#scenarioEventSelector').evaluateAll(selects=>selects.map(select=>{
      const style=getComputedStyle(select),context=document.createElement('canvas').getContext('2d');context.font=style.font;
@@ -413,6 +413,34 @@ test('advanced shared-map selection enters tile editing without merging other sc
  set('scenarioSelector',0);$('scenarioDeploymentTool').click();assert.equal($('scenarioEditorPanel').dataset.mode,'placement');assert.equal($('scenarioDeploymentTool').disabled,false);
 });
 
+test('map settings belong to tile editing and other tasks restore the scene map and its first plane',()=>{
+ const m0=setup(true),initial={...deployment,waveIndex:'0:100'},later={...deployment,recordIndex:'0:200',mapIndex:2,waveIndex:'0:197',x:3,y:2};
+ const event={recordIndex:'0:150',physicalIndex:0,scenarioSlots:[0,1],turn:5,comparison:'eq',phase:'enemy-start',editable:true};
+ const otherMap={...m0.maps[0],mapIndex:2,mapSlots:[2]};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:[initial,later],events:[event],objectives:m0.objectives,maps:[...m0.maps,otherMap],mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:[initial,later],conditions:[event],waves:[
+  {recordIndex:'0:100',initial:true,mapIndex:0,guards:[],placements:[initial]},
+  {recordIndex:'0:197',initial:false,mapIndex:2,guards:[],placements:[later]},
+ ]}]});$('scenarioTabButton').click();
+ const settings=$('scenarioMapSelector').closest('details'),m=hooks.state.editorScenario;
+ assert.equal(settings.querySelector('summary').textContent,'지도 설정');
+ assert.equal(settings.hidden,true);
+ for(const [button,mode] of [['scenarioDeploymentTool','placement'],['scenarioEventTool','events'],['scenarioObjectiveTool','objective']]){
+  // Enter a later wave's other map, then its second tile plane. Returning
+  // to any scenario task must not leave the actor overlay on tile data 2.
+  $('scenarioDeploymentTool').click();set('scenarioEventSelector','0:197');
+  assert.equal($('scenarioMapSelector').value,'2');
+  $('scenarioTileTool').click();assert.equal(settings.hidden,false);
+  set('scenarioPlaneSelector',1);assert.equal($('scenarioPlaneSelector').value,'1');
+  $(button).click();
+  assert.equal($('scenarioEditorPanel').dataset.mode,mode);
+  assert.equal($('scenarioPlaneSelector').value,'0',mode);
+  assert.equal($('scenarioMapSelector').value,'0',mode);
+  assert.equal(settings.hidden,true,mode);
+  assert.equal($('scenarioSelector').value,'0');
+ }
+ assert.deepEqual(m.exportDeployments(),[]);assert.deepEqual(m.exportMap(),[]);assert.deepEqual(m.exportEvents(),[]);
+});
+
 test('returning to the placement overview restores the starting map after a wave on another map',()=>{
  const m0=setup(),initial={...deployment,waveIndex:'0:100'},later={...deployment,recordIndex:'0:200',mapIndex:2,waveIndex:'0:197',name:'후속 기체',x:4,y:2};
  const otherMap={...m0.maps[0],mapIndex:2,mapSlots:[2]};
@@ -439,7 +467,7 @@ test('placement overview keeps physical scenes isolated, follows map aliases, an
  ]});$('scenarioTabButton').click();
  assert.equal($('scenarioEventSelector').value,'all');
  assert.deepEqual($('scenarioDeploymentSelector').options.map(item=>item.value),['0:64','0:200']);
- assert.equal($('scenarioMapLegend').hidden,false);assert.match($('scenarioMapLegend').textContent,/배치 1기/);
+ assert.equal($('scenarioMapLegend').hidden,false);assert.equal($('scenarioMapLegend').textContent,'● 배치 1/2기');
  set('scenarioDeploymentSelector','0:200');assert.equal($('scenarioMapSelector').value,'2');assert.equal($('scenarioX').disabled,true);
  assert.equal($('scenarioDeploymentSelector').disabled,false);assert.match($('scenarioStatus').textContent,/위치 편집 미지원/);
  set('scenarioDeploymentSelector','0:64');assert.equal($('scenarioMapSelector').value,'0');assert.equal($('scenarioX').disabled,false);
@@ -492,7 +520,50 @@ test('read-only sortie references retain runtime names, unknown positions and un
  assert.equal($('scenarioX').value,'');assert.equal($('scenarioY').value,'');assert.equal($('scenarioX').disabled,true);assert.equal($('scenarioPilotName').textContent,'게임 실행 시 결정');assert.equal($('scenarioReward').value,'unknown');
  assert.equal($('scenarioDeploymentSelector').disabled,false);assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
  assert.equal($('scenarioX').closest('.scenario-edit-group').hidden,true);assert.equal($('scenarioReward').closest('.scenario-edit-group').hidden,true);assert.equal($('scenarioMove').hidden,true);assert.equal($('scenarioDeploymentReset').hidden,true);
- assert.match($('scenarioMapLegend').textContent,/배치 1기/);
+ assert.equal($('scenarioMapLegend').textContent,'● 배치 1/2기');
+});
+
+test('runtime sortie targets draw unknown markers only with a proved map and retain unmapped target coordinates',()=>{
+ const m0=setup(),enemy={...deployment,waveIndex:'0:100',faction:'enemy',factionSource:'ca02-group-selector'};
+ const target={...deployment,recordIndex:'0:220',waveIndex:'0:210',placementKind:'roster-reference',placementStage:'scenario-script',name:'편성 기체',unitId:null,pilotId:null,pilotName:'게임 실행 시 결정',rosterReference:0x1234,x:1,y:2,rewardSelector:null,editable:false,faction:'unknown',factionSource:null,readOnlyReason:'게임에서 편성한 기체의 출격 목표 위치입니다.'};
+ const unmapped={...target,recordIndex:'0:230',waveIndex:'0:225',placementKind:'sortie-position',name:'출격 선택 기체',mapIndex:null,width:null,height:null,x:3,y:2};
+ const rows=[enemy,target,unmapped],canvas=$('scenarioMapCanvas'),viewport=$('scenarioMapViewport');
+ const savedContext=canvas.getContext,savedWidth=viewport.clientWidth,savedHeight=viewport.clientHeight,points=[];
+ const context={fillRect(){},strokeRect(){},clearRect(){},scale(){points.length=0;},beginPath(){},stroke(){},fillText(){},arc(x,y,r){this.point={x,y,r};},fill(){points.push({...this.point,color:this.fillStyle});}};
+ canvas.getContext=()=>context;viewport.clientWidth=600;viewport.clientHeight=400;
+ try{
+  hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:rows,maps:m0.maps,mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:rows,waves:[{recordIndex:'0:100',initial:true,mapIndex:0,guards:[],placements:[enemy]},{recordIndex:'0:210',initial:false,placementStage:'scenario-script',mapIndex:0,guards:[],placements:[target]},{recordIndex:'0:225',initial:false,placementStage:'scenario-script',mapIndex:null,guards:[],placements:[unmapped]}]}]});$('scenarioTabButton').click();
+  assert.equal($('scenarioDeploymentSelector').options.length,3);
+  assert.equal(points.length,2,'one verified enemy and one mapped runtime target, never the unmapped target');
+  assert.deepEqual(points.map(point=>point.color),['#ff8e8e','#e6f9ff']);
+  assert.deepEqual(points.map(({x,y})=>[x,y]),[[250,150],[150,250]]);
+  assert.match($('scenarioMapLegend').textContent,/배치 2\/3기/);
+  set('scenarioFactionSelector','player');assert.equal(points.length,0,'runtime roster targets do not acquire an unproved player faction');
+  set('scenarioFactionSelector','unknown');assert.equal(points.length,1);assert.equal(points[0].color,'#e6f9ff');
+  assert.deepEqual($('scenarioDeploymentSelector').options.map(option=>option.value),[target.recordIndex,unmapped.recordIndex]);
+  set('scenarioFactionSelector','sortie');assert.deepEqual($('scenarioDeploymentSelector').options.map(option=>option.value),[target.recordIndex,unmapped.recordIndex]);
+  assert.equal(points.length,1);assert.equal(points[0].color,'#e6f9ff');
+  assert.match($('scenarioDeploymentSelector').options[0].title,/초기 진영 미확인/);
+  set('scenarioDeploymentSelector',target.recordIndex);const beforeUnmappedCell=$('scenarioCellInfo').textContent;
+  set('scenarioDeploymentSelector',unmapped.recordIndex);
+  assert.match($('scenarioDeploymentSelector').selectedOptions[0].textContent,/출격 선택 기체.*\(3, 2\)/);
+  assert.match($('scenarioDeploymentSelector').selectedOptions[0].title,/맵 연결 미확인/);
+  assert.equal($('scenarioStatus').textContent,'맵 연결 미확인 · 지도 표시 불가');
+  assert.equal($('scenarioX').value,'3');assert.equal($('scenarioY').value,'2');
+  assert.equal($('scenarioX').disabled,true);assert.equal($('scenarioY').disabled,true);
+  assert.equal(points.length,1,'selecting an unmapped coordinate must not invent a point on the active map');
+  assert.equal($('scenarioCellInfo').textContent,beforeUnmappedCell,'the canvas selected tile is not moved to an unassociated target');
+  assert.equal(hooks.state.editorScenario.deployments.find(row=>row.recordIndex===unmapped.recordIndex).mapIndex,null);
+  set('scenarioEventSelector',unmapped.waveIndex);assert.equal(points.length,0);
+  assert.equal($('scenarioMapLegend').hidden,false);assert.match($('scenarioMapLegend').textContent,/0\/1기/);
+  assert.deepEqual($('scenarioDeploymentSelector').options.map(option=>option.value),[unmapped.recordIndex]);
+  set('scenarioEventSelector',enemy.waveIndex);
+  assert.equal($('scenarioFactionSelector').value,'sortie');
+  assert.equal($('scenarioDeploymentSelector').options.length,1);
+  assert.equal($('scenarioDeploymentSelector').options[0].textContent,'출격 위치 · 읽은 배치 0기');
+  assert.equal(points.length,0);assert.equal($('scenarioMapLegend').hidden,true);
+  assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);assert.equal(hooks.countEditorChanges(),0);
+ }finally{canvas.getContext=savedContext;viewport.clientWidth=savedWidth;viewport.clientHeight=savedHeight;}
 });
 
 test('initial faction filters use verified constructor metadata and preserve uncertain roster entries',()=>{

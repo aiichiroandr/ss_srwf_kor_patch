@@ -14,7 +14,7 @@
 // The writer refuses (and the dialog therefore never offers): a list longer than the capacity, more than the limit of
 // distinct slot consumers (a ladder family counts once, every other skill once each), a repeated id, a new or changed
 // level outside 1..99, and any change of a level-100-and-up entry other than keeping or deleting it.
-import { PILOT_LADDER_FAMILIES, pilotSkillFamily, pilotSkillLevel } from "./editor-facts.mjs?v=20261011-public10";
+import { PILOT_LADDER_FAMILIES, pilotSkillFamily, pilotSkillLevel } from "./editor-facts.mjs?v=20261011-public11";
 
 export const SKILL_LEVEL_MIN = 1;
 export const SKILL_LEVEL_MAX = 99;

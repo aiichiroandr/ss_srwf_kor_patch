@@ -1,10 +1,10 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public10';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public10';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public10";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public10";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public10";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public10";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public10";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public11';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public11';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public11";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public11";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public11";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public11";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public11";
 import {
   canStep,
   filterRecords,
@@ -13,7 +13,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public10";
+} from "./editor-list.mjs?v=20261011-public11";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -24,7 +24,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public10";
+} from "./editor-grades.mjs?v=20261011-public11";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -58,27 +58,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public10";
+} from "./editor-skill-list.mjs?v=20261011-public11";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public10";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public10";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public10";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public10";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public10";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public10";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public10";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public10";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public10";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public10";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public10";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public10";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public10";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public10";
+} from "./editor-facts.mjs?v=20261011-public11";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public11";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public11";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public11";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public11";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public11";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public11";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public11";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public11";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public11";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public11";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public11";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public11";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public11";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -86,14 +86,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public10";
+} from "./font-revisions.mjs?v=20261011-public11";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public10";
+} from "./release-notes.mjs?v=20261011-public11";
 
-const STATIC_ASSET_REVISION = "20261011-public10";
+const STATIC_ASSET_REVISION = "20261011-public11";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
