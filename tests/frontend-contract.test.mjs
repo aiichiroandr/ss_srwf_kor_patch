@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 class FakeClassList {
@@ -41,6 +41,7 @@ class FakeElement {
     this.textContent = "";
     this.value = 0;
     this.status = status;
+    this.validationMessage = "";
   }
 
   addEventListener() {}
@@ -97,6 +98,10 @@ class FakeElement {
     this.attributes.set(name, String(value));
   }
 
+  setCustomValidity(message) {
+    this.validationMessage = String(message);
+  }
+
   showModal() {
     this.open = true;
     this.setAttribute("open", "");
@@ -131,6 +136,8 @@ Object.defineProperty(globalThis, "navigator", {
   value: {},
 });
 globalThis.document = {
+  addEventListener() {},
+  body: new FakeElement({ tagName: "body" }),
   createElement: (tagName) => new FakeElement({ tagName }),
   createDocumentFragment: () => new FakeElement({ tagName: "fragment" }),
   createTextNode: (value) => ({ children: [], textContent: String(value) }),
@@ -155,6 +162,9 @@ console.error = () => {};
 const { __testHooks } = await import("../assets/app.mjs");
 await new Promise((resolve) => setTimeout(resolve, 0));
 console.error = initialConsoleError;
+// Include DOM lookups made by imported controllers and generated ID lists.
+// A permissive fake element must not hide missing markup in the real page.
+const initializedRuntimeIds = Object.freeze([...elements.keys()]);
 
 const STOCK_PROFILE = Object.freeze({
   gameId: "srwf-f",
@@ -309,6 +319,15 @@ const normalizeFinalManifest = (manifest) => __testHooks.normalizeReleaseManifes
   stockProfiles,
 );
 
+// 사용자에게 보이는 "STEP 1/2/3" 마법사 문구 금지. 숫자 입력의 HTML
+// step="1" 속성은 증가 단위일 뿐 마법사 단계가 아니므로 속성 형태만 제외한다.
+const WIZARD_STEP_COPY = /\bSTEP(?:\s*[123])?\b(?!\s*=)/i;
+
+// 배포 자산의 캐시 개정판은 하나뿐이다. 이 상수를 고쳐야만 고정값이 함께
+// 움직이도록 한 곳에만 적는다. 여러 시험이 각자 literal 을 들고 있으면
+// 개정판을 올릴 때 일부만 따라가서 모듈이 두 번 적재된다.
+const STATIC_ASSET_REVISION = "20261011-public1";
+
 test("public page exposes the legal and accessibility contracts", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
@@ -332,7 +351,7 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.match(html, /id="fontPreview"/);
   assert.match(html, /id="fontHelp"/);
   assert.doesNotMatch(html, /FABLE G25K/);
-  assert.doesNotMatch(html, /\bSTEP(?:\s*[123])?\b/i);
+  assert.doesNotMatch(html, WIZARD_STEP_COPY);
   assert.doesNotMatch(html, /PATCH FLOW/);
   assert.doesNotMatch(html, /data-step-/);
   assert.doesNotMatch(html, /aria-current="step"/);
@@ -353,17 +372,68 @@ test("public page exposes the legal and accessibility contracts", async () => {
   assert.doesNotMatch(html, /선택 직후 전체 파일의 SHA-256/);
 });
 
+test("the wizard-step ban still rejects visible STEP copy", () => {
+  for (const visible of [
+    '<p class="step-copy">STEP 2</p>',
+    "<span>Step 1</span>",
+    "<li>step3</li>",
+    "<h2>STEP</h2>",
+    "<p>STEP&nbsp;1 · 원본 고르기</p>".replace("&nbsp;", " "),
+  ]) {
+    assert.match(visible, WIZARD_STEP_COPY, `visible wizard copy must stay banned: ${visible}`);
+  }
+  for (const attribute of [
+    '<input id="unitHp" type="number" step="1" min="0">',
+    "<input type='number' step='10'>",
+    '<input type="number" step ="1">',
+  ]) {
+    assert.doesNotMatch(
+      attribute,
+      WIZARD_STEP_COPY,
+      `numeric input increments are not wizard copy: ${attribute}`,
+    );
+  }
+});
+
+// 캐시 꼬리표는 `?v=YYYYMMDD-<영숫자>` 형식이다. 숫자만 허용하는 정규식은
+// `20261006-editor17` 같은 꼬리표를 놓치므로 영숫자 전체를 본다.
+const CACHE_TOKEN = /\?v=([0-9]{8}-[A-Za-z0-9]+)/g;
+
+function staleCacheTokens(source, revision) {
+  return [...source.matchAll(CACHE_TOKEN)]
+    .map((match) => match[1])
+    .filter((value) => value !== revision);
+}
+
+async function shippedSourceFiles() {
+  const assetsDirectory = new URL("../assets/", import.meta.url);
+  const names = (await readdir(assetsDirectory)).filter((name) => /\.(?:mjs|css)$/.test(name)).sort();
+  return ["index.html", ...names.map((name) => `assets/${name}`)];
+}
+
 test("static entry assets share an explicit cache revision", async () => {
-  const [html, appSource, workerSource, v2Source] = await Promise.all([
-    readFile(new URL("../index.html", import.meta.url), "utf8"),
-    readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
-    readFile(new URL("../assets/patch-worker.mjs", import.meta.url), "utf8"),
-    readFile(new URL("../assets/patch-core-v2.mjs", import.meta.url), "utf8"),
-  ]);
-  const revision = "20261005-7";
+  const read = (name) => readFile(new URL(`../${name}`, import.meta.url), "utf8");
+  const [
+    html,
+    appSource,
+    workerSource,
+    v2Source,
+    editorCoreSource,
+    editorWorkerSource,
+    editorRuntimeCss,
+  ] = await Promise.all([
+    "index.html",
+    "assets/app.mjs",
+    "assets/patch-worker.mjs",
+    "assets/patch-core-v2.mjs",
+    "assets/editor-core.mjs",
+    "assets/editor-worker.mjs",
+    "assets/editor-runtime.css",
+  ].map(read));
+  const revision = STATIC_ASSET_REVISION;
   // v2 모듈은 워커와 같은 patch-core 인스턴스(같은 ?v=)를 공유해야 새 export를 찾는다.
-  assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=20261005-1`));
-  assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=20261005-1'`));
+  assert.match(workerSource, new RegExp(`patch-core-v2\\.mjs\\?v=${revision}`));
+  assert.match(v2Source, new RegExp(`from './patch-core\\.mjs\\?v=${revision}'`));
 
   assert.match(html, new RegExp(`assets/style\\.css\\?v=${revision}`));
   assert.match(html, new RegExp(`assets/app\\.mjs\\?v=${revision}`));
@@ -372,9 +442,43 @@ test("static entry assets share an explicit cache revision", async () => {
   assert.match(appSource, new RegExp(`font-revisions\\.mjs\\?v=${revision}`));
   assert.match(appSource, new RegExp(`STATIC_ASSET_REVISION = "${revision}"`));
   assert.match(appSource, /patch-worker\.mjs\?v=\$\{STATIC_ASSET_REVISION\}/);
-  assert.match(workerSource, new RegExp(`patch-core\\.mjs\\?v=20261005-1`));
-  assert.match(workerSource, new RegExp(`sha256\\.mjs\\?v=20261005-1`));
+  assert.match(workerSource, new RegExp(`patch-core\\.mjs\\?v=${revision}`));
+  assert.match(workerSource, new RegExp(`sha256\\.mjs\\?v=${revision}`));
   assert.match(appSource, /imageUrl\.searchParams\.set\("v", STATIC_ASSET_REVISION\)/);
+
+  // 편집기 모듈도 같은 개정판을 쓴다. editor-worker 와 app 이 서로 다른
+  // ?v= 로 editor-core 를 부르면 워커가 다른 인스턴스를 물어 온다.
+  assert.match(html, new RegExp(`assets/editor-runtime\\.css\\?v=${revision}`));
+  assert.match(appSource, /editor-worker\.mjs\?v=\$\{STATIC_ASSET_REVISION\}/);
+  assert.match(editorWorkerSource, new RegExp(`editor-core\\.mjs\\?v=${revision}`));
+  assert.match(editorCoreSource, new RegExp(`sha256\\.mjs\\?v=${revision}`));
+  assert.match(editorCoreSource, new RegExp(`editor-name-map\\.mjs\\?v=${revision}`));
+  assert.match(editorRuntimeCss, new RegExp(`runtime-panel-frame\\.svg\\?v=${revision}`));
+
+  // 배포되는 모든 HTML·모듈·스타일시트가 같은 개정판만 쓴다. 파일을 하나씩
+  // 고르지 않고 디렉터리를 훑으므로 새 모듈이 생겨도 낡은 꼬리표가 숨지 못한다.
+  const shipped = await shippedSourceFiles();
+  assert.ok(shipped.includes("assets/release-notes.mjs"));
+  assert.ok(shipped.includes("assets/editor-provenance.mjs"));
+  for (const name of shipped) {
+    assert.deepEqual(
+      staleCacheTokens(await read(name), revision),
+      [],
+      `${name} must use only cache revision ${revision}`,
+    );
+  }
+});
+
+test("the cache-token guard flags numeric and alphanumeric stale revisions alike", () => {
+  const revision = STATIC_ASSET_REVISION;
+  assert.deepEqual(staleCacheTokens(`a.mjs?v=${revision} b.css?v=${revision}`, revision), []);
+  assert.deepEqual(staleCacheTokens("a.mjs?v=20261005-7", revision), ["20261005-7"]);
+  assert.deepEqual(
+    staleCacheTokens("a.mjs?v=20261006-editor17 b.mjs?v=20261006-editor18", revision),
+    ["20261006-editor17", "20261006-editor18"],
+  );
+  assert.deepEqual(staleCacheTokens(`a.mjs?v=${revision}b`, revision), [`${revision}b`]);
+  assert.deepEqual(staleCacheTokens("a.mjs?v=20261007-1", revision), ["20261007-1"], "the previous revision of this branch is stale now");
 });
 
 test("every required runtime element exists in the public HTML", async () => {
@@ -382,8 +486,9 @@ test("every required runtime element exists in the public HTML", async () => {
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../assets/app.mjs", import.meta.url), "utf8"),
   ]);
-  const requiredIds = [...app.matchAll(/byId\("([^"]+)"\)/g)].map((match) => match[1]);
+  const requiredIds = [...initializedRuntimeIds, ...[...app.matchAll(/byId\("([^"]+)"\)/g)].map((match) => match[1])];
   assert.ok(requiredIds.length > 0);
+  assert.ok(initializedRuntimeIds.includes("scenarioEventPhase"), "the scenario controller must participate in the markup contract");
   for (const id of new Set(requiredIds)) {
     assert.ok(html.includes(`id="${id}"`), `missing required element #${id}`);
   }
@@ -475,7 +580,7 @@ test("prepared source enables patch execution without a separate output picker",
     userAgentData: { mobile: false },
     userAgent: "Desktop Chrome",
   });
-  assert.equal(options.mode, "readwrite");
+  assert.equal(options.mode, "read");
   assert.equal(options.id, "srwf-stock-directory");
 
   const missingDirectory = __testHooks.deriveFileControlState({
@@ -497,10 +602,10 @@ test("one folder picker discovers raw or CUE/BIN and is never reopened by patch 
     userAgentData: { mobile: false },
     userAgent: "Desktop Chrome",
   });
-  assert.deepEqual(pickerOptions, { id: "srwf-stock-directory", mode: "readwrite" });
+  assert.deepEqual(pickerOptions, { id: "srwf-stock-directory", mode: "read" });
   assert.equal((appSource.match(/showDirectoryPicker\(/g) ?? []).length, 1);
   assert.doesNotMatch(appSource, /showOpenFilePicker\(/);
-  assert.match(appSource, /showDirectoryPicker\(sourceDirectoryPickerOptions\(\)\)/);
+  assert.match(appSource, /pickWorkflowDirectory\(sourceDirectoryPickerOptions\(\)\)/);
   assert.match(
     appSource,
     /normalizeSourceDirectory\([\s\S]*directoryHandle,[\s\S]*state\.release\.source\.size,[\s\S]*state\.release\.source\.profileId,[\s\S]*\)/,
@@ -640,6 +745,50 @@ test("same-folder output creation uses the exact fixed name and refuses existing
     assert.equal(createCalls, 0, "known existing outputs must never be opened or overwritten");
   }
 
+  // 충돌을 알릴 때는 폴더에 실제로 있는 파일과 그 크기(빈 파일인지)만 함께 알린다. 기존
+  // 파일은 메타데이터만 읽고 쓰기 대상으로 열지 않는다.
+  let conflictCreateCalls = 0;
+  let conflictWritableCalls = 0;
+  const existingFile = (name, size) => ({
+    kind: "file",
+    name,
+    async getFile() {
+      return new File([new Uint8Array(size)], name);
+    },
+    async createWritable() {
+      conflictWritableCalls += 1;
+    },
+  });
+  await assert.rejects(
+    () => __testHooks.createUnusedFileHandle({
+      async *entries() {
+        yield ["stock.bin", existingFile("stock.bin", 9)];
+        yield ["patched.bin", existingFile("patched.bin", 5)];
+        yield ["Patched.Cue", existingFile("Patched.Cue", 0)];
+      },
+      async getFileHandle() {
+        conflictCreateCalls += 1;
+      },
+    }, "patched.bin", ["patched.cue"]),
+    (error) => {
+      assert.equal(error?.code, "OUTPUT_NAME_EXISTS");
+      assert.deepEqual(error.existingOutputs, [
+        { name: "patched.bin", size: 5 },
+        { name: "Patched.Cue", size: 0 },
+      ]);
+      return true;
+    },
+  );
+  assert.equal(conflictCreateCalls, 0);
+  assert.equal(conflictWritableCalls, 0);
+  assert.equal(
+    __testHooks.friendlyOutputCreationError({
+      code: "OUTPUT_NAME_EXISTS",
+      existingOutputs: [{ name: "patched.bin", size: 5 }, { name: "Patched.Cue", size: 0 }],
+    }).message,
+    "원본 폴더의 기존 BIN과 빈 CUE는 덮어쓰지 않습니다. ‘다운로드로 받기’로 BIN과 CUE를 함께 받으세요.",
+  );
+
   const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
   assert.doesNotMatch(appSource, /\.removeEntry\s*\(/);
   assert.doesNotMatch(appSource, /createOutputSuffix|\[a-f0-9\]\{24\}/);
@@ -761,6 +910,34 @@ test("output creation failures distinguish permission, space, and Android provid
     __testHooks.friendlyOutputCreationError({ code: "OUTPUT_NAME_EXISTS" }).title,
     /같은 이름/,
   );
+  // 기존 파일은 앞서 검증을 마친 결과일 수 있으므로 지우라고 하지 않는다.
+  assert.doesNotMatch(
+    __testHooks.friendlyOutputCreationError({ code: "OUTPUT_NAME_EXISTS" }).message,
+    /삭제|지우/,
+  );
+  // 그대로 써도 된다는 말은 내용 있는 BIN과 CUE를 함께 확인했을 때만 한다. 폴더 목록을
+  // 알지 못하거나 크기를 읽지 못한 파일은 온전하다고 보지 않는다.
+  const conflictMessage = (existingOutputs) => __testHooks.friendlyOutputCreationError({
+    code: "OUTPUT_NAME_EXISTS",
+    existingOutputs,
+  }).message;
+  assert.equal(
+    conflictMessage([{ name: "a.bin", size: 5 }, { name: "a.cue", size: 3 }]),
+    "원본 폴더의 기존 BIN/CUE는 덮어쓰지 않습니다. 앞서 패치를 마친 결과라면 그대로 쓰면 됩니다.",
+  );
+  for (const existingOutputs of [
+    undefined,
+    [{ name: "a.bin", size: null }, { name: "a.cue", size: null }],
+    [{ name: "a.bin", size: 5 }, { name: "a.cue", size: null }],
+    [{ name: "a.bin", size: null }, { name: "a.cue", size: 3 }],
+  ]) {
+    assert.doesNotMatch(conflictMessage(existingOutputs), /그대로 쓰면|삭제|지우/);
+    assert.match(conflictMessage(existingOutputs), /‘다운로드로 받기’로 BIN과 CUE를 함께 받으세요\.$/);
+  }
+  assert.equal(
+    conflictMessage([{ name: "a.bin", size: null }]),
+    "원본 폴더의 기존 BIN은 덮어쓰지 않습니다. ‘다운로드로 받기’로 BIN과 CUE를 함께 받으세요.",
+  );
 });
 
 test("Android output failure automatically prepares fixed-name verified BIN and CUE downloads", async () => {
@@ -817,6 +994,7 @@ test("Android output failure automatically prepares fixed-name verified BIN and 
       outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
       imageName: plan.imageName,
       cueName: plan.cueName,
+      targetSha256: V0_1_1_TARGET_SHA256,
     }, plan, 3, V0_1_1_TARGET_SHA256);
     assert.equal(element("downloadBinLink").getAttribute("href"), "blob:test-1");
     assert.equal(element("downloadBinLink").getAttribute("download"), plan.imageName);
@@ -856,6 +1034,7 @@ test("v0.3 mobile download CUE is the four-track layout that boots from a burned
       outputBlob: new Blob([new Uint8Array([1, 2, 3])]),
       imageName: plan.imageName,
       cueName: plan.cueName,
+      targetSha256: V0_3_TARGET_SHA256,
     }, plan, 3, V0_3_TARGET_SHA256);
 
     // BIN 과 CUE 두 개뿐이다. 실기용 CUE 를 따로 두지 않고 기본 CUE 가 곧 실기용이다.
@@ -1249,9 +1428,7 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.doesNotMatch(html, /id="output(?:Button|ButtonText|State|Selection|Name)"/);
   assert.doesNotMatch(html, /data-workflow-zone="(?:release|source|patch)"[^>]*hidden/);
   assert.match(css, /html,\s*\nbody\s*\{[^}]*height:\s*100%[^}]*overflow:\s*hidden/s);
-  assert.match(css, /\.patch-section\s*\{[^}]*height:\s*100%[^}]*grid-template-rows:\s*minmax\(0, 1fr\)/s);
   assert.match(css, /\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(245px,[^}]*minmax\(300px,[^}]*minmax\(320px,/s);
-  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.patch-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*grid-template-rows:\s*minmax\(128px,/s);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.file-selection\s*\{[^}]*display:\s*none\s*!important/s);
   assert.doesNotMatch(css, /\.source-support-row\s*\{/);
   assert.doesNotMatch(css, /\.station-intro\s*\{/);
@@ -1260,7 +1437,6 @@ test("the patcher is a single-screen workspace instead of a scrolling landing pa
   assert.match(css, /\.workflow-zone\.is-complete\s*\{[^}]*linear-gradient/s);
   assert.match(css, /\.workflow-zone\.is-error\s*\{[^}]*linear-gradient/s);
   assert.doesNotMatch(css, /\.workflow-zone\.is-complete\s+\.apply-actions\s*\{[^}]*display:\s*none/s);
-  assert.match(css, /\.patch-feedback \.message-panel\.is-error p\s*\{[^}]*display:\s*block[^}]*overflow:\s*visible/s);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.workflow-zone::after\s*\{[^}]*animation:\s*none\s*!important/s);
   assert.match(html, /id="sourceButtonText"/);
 });
@@ -1556,7 +1732,7 @@ test("Final patch-note comparisons create six lazy images only when opened", asy
   for (const image of images) {
     assert.equal(image.loading, "lazy");
     assert.equal(image.decoding, "async");
-    assert.match(image.src, /\?v=20261005-7$/);
+    assert.match(image.src, new RegExp(`\\?v=${STATIC_ASSET_REVISION}$`));
   }
 
   __testHooks.renderPatchNotesForRelease("srwf-f-20260815-v0-1-2");
@@ -1971,6 +2147,52 @@ test("new BIN size copy follows the selected release target size", () => {
   assert.equal(__testHooks.outputImageSizeLabel(null, "srwf-final"), "520 MB");
 });
 
+test("an export that does not fit the TSR.BIN slot is explained in Korean with the overshoot", () => {
+  const withNumbers = __testHooks.friendlyEditorError(
+    "EDITOR_TSR_GROWTH_UNSUPPORTED",
+    "The edited TSR.BIN needs 216000 bytes",
+    { packedBytes: 216000, slotBytes: 215040, writableBytes: 215040 },
+  );
+  assert.equal(withNumbers.title, "수정 데이터가 원래 공간보다 큽니다");
+  assert.match(withNumbers.message, /216,000바이트/);
+  assert.match(withNumbers.message, /215,040바이트/);
+  assert.match(withNumbers.message, /960바이트 넘습니다/);
+  assert.match(withNumbers.message, /수정본은 만들지 않았습니다/);
+  assert.match(withNumbers.message, /되돌린 뒤/);
+  for (const details of [undefined, null, {}, { packedBytes: 10, writableBytes: 20 }, { packedBytes: "x", writableBytes: 1 }]) {
+    const plain = __testHooks.friendlyEditorError("EDITOR_TSR_GROWTH_UNSUPPORTED", "", details);
+    assert.match(plain.message, /허용 공간보다 큽니다/);
+    assert.doesNotMatch(plain.message, /undefined|NaN|null/);
+    assert.match(plain.message, /수정본은 만들지 않았습니다/);
+  }
+  assert.match(__testHooks.friendlyEditorError("EDITOR_OUTPUT_INTERNAL", "English detail").title, /이미지 확인/);
+  assert.doesNotMatch(__testHooks.friendlyEditorError("EDITOR_OUTPUT_INTERNAL", "English detail").message, /English/);
+  // 모르는 코드도 워커의 영어 문장을 화면에 내지 않고 한국어 일반 문구로 막는다.
+  const unknown = __testHooks.friendlyEditorError("SOMETHING_ELSE", "details from the core");
+  assert.doesNotMatch(unknown.message, /details from the core/);
+  assert.match(unknown.message, /다시 시도해 주세요/);
+});
+
+test("the copy of a worker error message carries the numbers the worker forwards, and the new tail error has its own copy", () => {
+  const message = (error) => ({ type: "ERROR", jobId: "job-00001", error });
+  const withNumbers = __testHooks.editorErrorCopy(message({
+    code: "EDITOR_TSR_GROWTH_UNSUPPORTED",
+    message: "The edited TSR.BIN needs 216000 bytes",
+    details: { packedBytes: 216000, slotBytes: 215040, writableBytes: 215040 },
+  }));
+  assert.equal(withNumbers.title, "수정 데이터가 원래 공간보다 큽니다");
+  assert.match(withNumbers.message, /960바이트 넘습니다/);
+  const without = __testHooks.editorErrorCopy(message({ code: "EDITOR_TSR_GROWTH_UNSUPPORTED", message: "x", details: null }));
+  assert.match(without.message, /허용 공간보다 큽니다/);
+  assert.doesNotMatch(without.message, /960/);
+  assert.doesNotMatch(__testHooks.editorErrorCopy(message({ code: "SOMETHING_ELSE", message: "from the core" })).message, /from the core/);
+  assert.equal(__testHooks.editorErrorCopy({ type: "ERROR" }).title, "에디터 작업을 완료하지 못했습니다");
+  const tail = __testHooks.editorErrorCopy(message({ code: "EDITOR_TSR_TAIL_FOREIGN", message: "The bytes behind the stored stream" }));
+  assert.match(tail.title, /여백이 원본과 다릅니다/);
+  assert.match(tail.message, /원본에서 최신 패치를 다시 만들어 주세요/);
+  assert.doesNotMatch(tail.message, /bytes behind/);
+});
+
 test("v2 worker errors have Korean copy and source mismatches revoke preparation", () => {
   assert.match(__testHooks.friendlyWorkerError("COPY_SOURCE_MISMATCH").title, /원본 부분 검증/);
   assert.match(__testHooks.friendlyWorkerError("COPY_SOURCE_MISMATCH").message, /옮겨 쓸 원본 구간/);
@@ -2182,7 +2404,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     assert.equal(previewButtons().length, 3);
     assert.equal(previewImages().length, 3);
     const previewSample = previewImages()[0].src.match(
-      /assets\/font-previews\/a-dos-thin-([a-z0-9]+)\.png\?v=20261005-7$/,
+      new RegExp(`assets/font-previews/a-dos-thin-([a-z0-9]+)\\.png\\?v=${STATIC_ASSET_REVISION}$`),
     );
     assert.ok(previewSample);
     assert.ok([
@@ -2191,7 +2413,7 @@ test("font selector loads the exact revision for both games and blocks an absent
     ].includes(previewSample[1]));
     for (const [index, image] of previewImages().entries()) {
       const stem = ["a-dos-thin", "b-galmuri11", "c-mona12"][index];
-      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=20261005-7$`));
+      assert.match(image.src, new RegExp(`assets/font-previews/${stem}-${previewSample[1]}\\.png\\?v=${STATIC_ASSET_REVISION}$`));
     }
     assert.deepEqual(previewButtons().map((button) => button.getAttribute("aria-pressed")), [
       "true", "false", "false",
@@ -2231,7 +2453,7 @@ test("font selector loads the exact revision for both games and blocks an absent
   }
 });
 
-function installSyntheticFontSite(specs, defaults) {
+function installSyntheticFontSite(specs, defaults, customizeManifest = () => {}) {
   const encoder = new TextEncoder();
   const documents = new Map();
   const rows = specs.map(({ gameId, id, label }) => {
@@ -2240,6 +2462,7 @@ function installSyntheticFontSite(specs, defaults) {
     manifest.patch.url = `patches/${id}.srwfp`;
     manifest.target.filename = `${id}.bin`;
     manifest.target.cueFilename = `${id}.cue`;
+    customizeManifest(manifest, gameId);
     const bytes = encoder.encode(JSON.stringify(manifest));
     documents.set(`releases/${id}.json`, bytes);
     return makeReleaseRow({ gameId, id, label, manifest: `releases/${id}.json`,
@@ -2329,6 +2552,39 @@ test("font versions stay newest first and a missing font falls back to the game 
   }
 });
 
+test("a single public version keeps the version selector enabled and locks it only while unavailable", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalConsoleError = console.error;
+  const singleId = "srwf-f-20260822-v0-3";
+  installSyntheticFontSite([
+    { gameId: "srwf-f", id: singleId, label: "2026.08.22 · v0.3" },
+    FINAL_LEGACY_SPEC,
+  ], { "srwf-f": singleId, "srwf-final": FINAL_RELEASE_ID });
+  try {
+    const fresh = await import(`../assets/app.mjs?single-version=${Date.now()}`);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(element("releaseState").textContent, "ACCEPTED");
+    assert.deepEqual(element("releaseSelect").children.map((option) => option.value), [singleId]);
+    // 버전이 하나뿐이라는 이유만으로 회색(비활성) 칸이 되지 않는다.
+    assert.equal(element("releaseSelect").disabled, false);
+
+    // 다시 불러오는 동안에는 잠그고, 끝나면 다시 연다.
+    const reloading = fresh.__testHooks.handleReleaseChange();
+    assert.equal(element("releaseSelect").disabled, true);
+    await reloading;
+    assert.equal(element("releaseSelect").disabled, false);
+
+    // 릴리스 정보를 믿을 수 없는 차단 상태에서는 잠근다.
+    console.error = () => {};
+    fresh.__testHooks.handleIndexFailure(new Error("synthetic index failure"));
+    assert.equal(element("releaseState").textContent, "차단됨");
+    assert.equal(element("releaseSelect").disabled, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalConsoleError;
+  }
+});
+
 test("an ambiguous font group blocks the patcher at boot, including a hidden game", async () => {
   const originalFetch = globalThis.fetch;
   const originalConsoleError = console.error;
@@ -2354,6 +2610,7 @@ test("an ambiguous font group blocks the patcher at boot, including a hidden gam
       await import(`../assets/app.mjs?font-ambiguous-${index}=${Date.now()}`);
       await new Promise((resolve) => setTimeout(resolve, 0));
       assert.equal(element("releaseState").textContent, "차단됨");
+      assert.equal(element("releaseSelect").disabled, true);
       assert.equal(element("sourceButton").disabled, true);
       assert.equal(element("fontSelector").hidden, true);
     }
@@ -2505,4 +2762,1451 @@ test("a delayed F manifest cannot overwrite an accepted Final game switch", asyn
     globalThis.fetch = originalFetch;
     console.error = originalConsoleError;
   }
+});
+
+// 원본 폴더 저장부터 다운로드 재수령까지를 실제 app.mjs 상태 기계로 돌려 보는 하네스.
+// 워커와 폴더 핸들은 가짜이며, 폴더에 대한 모든 생성·쓰기 호출을 기록한다.
+class SizedTestBlob extends Blob {
+  #size;
+  #name;
+
+  constructor(size, name) {
+    super([]);
+    this.#size = size;
+    this.#name = name;
+  }
+
+  get size() {
+    return this.#size;
+  }
+
+  get name() {
+    return this.#name;
+  }
+}
+
+const FOLDER_FLOW_SPECS = Object.freeze([
+  { gameId: "srwf-f", id: "srwf-f-20260909-v0-4-a", label: "2026.09.09 · v0.4" },
+  { gameId: "srwf-f", id: "srwf-f-20260909-v0-4-b", label: "2026.09.09 · v0.4" },
+]);
+
+function installFolderPatcherHarness({ mobile = false, failCueWrite = false } = {}) {
+  const saved = {
+    navigator: globalThis.navigator,
+    window: globalThis.window,
+    FileSystemDirectoryHandle: globalThis.FileSystemDirectoryHandle,
+    Worker: globalThis.Worker,
+    fetch: globalThis.fetch,
+    createObjectURL: URL.createObjectURL,
+    revokeObjectURL: URL.revokeObjectURL,
+  };
+  const workers = [];
+  const pickerCalls = [];
+  const folderCalls = [];
+  const folderFiles = new Map();
+  const sourceName = "stock-track01.bin";
+  // 원본을 옮기거나 바꾸면 브라우저는 그 파일 핸들에서 새로 읽기를 거부한다.
+  let sourceReadable = true;
+  let sourceReads = 0;
+  // 같은 자리의 원본이 다른 크기의 파일로 바뀐 경우를 흉내 낸다.
+  let sourceSize = STOCK_PROFILE.size;
+  // 폴더 쓰기 권한 요청의 답. 거부되면 패처는 폴더 목록을 읽기 전에 다운로드로 바꾼다.
+  let writePermission = "granted";
+  // 폴더 목록 읽기가 실패하는 경우(권한 회수 등).
+  let listingFails = false;
+  // 기존 결과 파일의 크기(메타데이터)를 읽지 못하는 경우.
+  let outputSizesUnreadable = false;
+  const sourceHandle = {
+    kind: "file",
+    name: sourceName,
+    async getFile() {
+      sourceReads += 1;
+      if (!sourceReadable) {
+        throw Object.assign(new Error("A requested file or directory could not be found"), { name: "NotFoundError" });
+      }
+      return new SizedTestBlob(sourceSize, sourceName);
+    },
+  };
+  // 폴더 파일의 크기는 실제 내용 길이다. 만들기만 하고 쓰지 못한 파일은 0바이트다.
+  const contentSize = (content) => (content instanceof Blob ? content.size : String(content ?? "").length);
+  const outputFileHandle = (name) => ({
+    kind: "file",
+    name,
+    async getFile() {
+      if (outputSizesUnreadable) {
+        throw Object.assign(new Error("The file could not be read"), { name: "NotReadableError" });
+      }
+      return new SizedTestBlob(contentSize(folderFiles.get(name)), name);
+    },
+    async createWritable() {
+      folderCalls.push(`createWritable:${name}`);
+      // CUE 자동 저장만 실패하는 폴더(BIN은 이미 검증·저장됨)를 흉내 낸다.
+      if (failCueWrite && name.endsWith(".cue")) throw new Error("CUE write blocked");
+      return {
+        async write(data) {
+          folderFiles.set(name, data);
+        },
+        async close() {},
+        async abort() {},
+      };
+    },
+  });
+  const directory = {
+    kind: "directory",
+    name: "stock",
+    async *entries() {
+      if (listingFails) {
+        throw Object.assign(new Error("The directory could not be read"), { name: "NotReadableError" });
+      }
+      yield [sourceName, sourceHandle];
+      for (const name of folderFiles.keys()) yield [name, outputFileHandle(name)];
+    },
+    async getFileHandle(name, options) {
+      folderCalls.push(`getFileHandle:${name}:${options?.create === true ? "create" : "open"}`);
+      if (!folderFiles.has(name)) folderFiles.set(name, "");
+      return outputFileHandle(name);
+    },
+    async requestPermission() {
+      return writePermission;
+    },
+  };
+
+  class CapableFileSystemDirectoryHandle {}
+  CapableFileSystemDirectoryHandle.prototype.getFileHandle = async () => null;
+  CapableFileSystemDirectoryHandle.prototype.entries = async function* entries() {};
+  globalThis.FileSystemDirectoryHandle = CapableFileSystemDirectoryHandle;
+  globalThis.Worker = class FakePatchWorker {
+    constructor() {
+      this.messages = [];
+      this.listeners = [];
+      this.errorListeners = [];
+      this.terminated = false;
+      workers.push(this);
+    }
+
+    addEventListener(type, listener) {
+      if (type === "message") this.listeners.push(listener);
+      if (type === "error") this.errorListeners.push(listener);
+    }
+
+    postMessage(message) {
+      this.messages.push(message);
+    }
+
+    terminate() {
+      this.terminated = true;
+    }
+  };
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: mobile
+      ? { userAgentData: { mobile: true }, userAgent: "Mozilla/5.0 (Linux; Android 16) Mobile" }
+      : { userAgentData: { mobile: false }, userAgent: "Mozilla/5.0 (Macintosh) Chrome/140" },
+  });
+  globalThis.window = {
+    addEventListener() {},
+    isSecureContext: true,
+    location: { origin: "null" },
+    async showDirectoryPicker(options) {
+      pickerCalls.push(options);
+      return directory;
+    },
+  };
+  let nextUrl = 0;
+  URL.createObjectURL = () => `blob:folder-flow-${nextUrl += 1}`;
+  URL.revokeObjectURL = () => {};
+  installSyntheticFontSite(
+    [...FOLDER_FLOW_SPECS, FINAL_LEGACY_SPEC],
+    { "srwf-f": FOLDER_FLOW_SPECS[0].id, "srwf-final": FINAL_RELEASE_ID },
+    (manifest, gameId) => {
+      // 폴더 CUE 자동 저장은 트랙 구성이 고정된 목표 이미지에서만 된다.
+      if (gameId === "srwf-f") manifest.target.sha256 = V0_3_TARGET_SHA256;
+    },
+  );
+
+  const jobs = () => (workers.at(-1)?.messages ?? [])
+    .filter((message) => message.type !== "RESET" && message.type !== "CANCEL");
+  return {
+    sourceHandle,
+    folderCalls,
+    folderFiles,
+    pickerCalls,
+    jobs,
+    lastJob: () => jobs().at(-1),
+    reply(data) {
+      const worker = workers.at(-1);
+      const job = jobs().at(-1);
+      // 워커가 폴더의 새 BIN에 검증된 바이트를 모두 쓰고 확정한 뒤에 완료를 알린다.
+      if (job.type === "APPLY_PATCH" && data.type === "complete") {
+        folderFiles.set(job.outputHandle.name, "verified patched BIN");
+      }
+      for (const listener of worker.listeners) listener({ data: { jobId: job.jobId, ...data } });
+    },
+    setSourceReadable(readable) {
+      sourceReadable = readable;
+    },
+    setSourceSize(size) {
+      sourceSize = size;
+    },
+    setWritePermission(permission) {
+      writePermission = permission;
+    },
+    setListingFails(fails) {
+      listingFails = fails;
+    },
+    setOutputSizesUnreadable(unreadable) {
+      outputSizesUnreadable = unreadable;
+    },
+    sourceReads: () => sourceReads,
+    // 브라우저가 작업 워커를 강제로 멈춘 경우(메모리 부족 등). 워커 안의 원본 준비도 사라진다.
+    crash() {
+      const worker = workers.at(-1);
+      for (const listener of worker.errorListeners) listener({ type: "error", message: "worker crashed" });
+      return worker;
+    },
+    workerCount: () => workers.length,
+    restore() {
+      Object.defineProperty(globalThis, "navigator", { configurable: true, value: saved.navigator });
+      globalThis.window = saved.window;
+      globalThis.fetch = saved.fetch;
+      URL.createObjectURL = saved.createObjectURL;
+      URL.revokeObjectURL = saved.revokeObjectURL;
+      if (saved.FileSystemDirectoryHandle === undefined) delete globalThis.FileSystemDirectoryHandle;
+      else globalThis.FileSystemDirectoryHandle = saved.FileSystemDirectoryHandle;
+      if (saved.Worker === undefined) delete globalThis.Worker;
+      else globalThis.Worker = saved.Worker;
+    },
+  };
+}
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+async function prepareFolderSource(hooks, harness, token) {
+  hooks.state.mode = "patch"; // Exercise the retained patch engine independently of the public workflow.
+  await hooks.chooseSource();
+  assert.equal(harness.lastJob().type, "PREPARE_SOURCE");
+  harness.reply({ type: "complete", preparationToken: token });
+}
+
+function assertRunnablePatchButton(label = "패치 실행") {
+  assert.equal(element("patchButtonText").textContent, label);
+  assert.equal(element("patchButtonIcon").textContent, "→");
+  assert.equal(element("patchButton").classList.contains("is-complete"), false);
+}
+
+test("desktop folder success locks the primary button as finished and offers a folder-safe re-download", async () => {
+  const harness = installFolderPatcherHarness();
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?folder-complete=${Date.now()}`);
+    await settle();
+    const binName = "srwf-f-20260909-v0-4-a.bin";
+    const cueName = "srwf-f-20260909-v0-4-a.cue";
+    assert.equal(element("targetName").textContent, binName);
+
+    await prepareFolderSource(hooks, harness, "prep-1");
+    assert.deepEqual(harness.pickerCalls, [{ id: "srwf-stock-directory", mode: "readwrite" }]);
+    assertRunnablePatchButton();
+    assert.equal(element("patchButton").disabled, false);
+    assert.equal(element("redownloadAction").hidden, true);
+
+    await hooks.applyPatch();
+    assert.ok(harness.lastJob().outputHandle);
+    assert.deepEqual(harness.folderCalls, [`getFileHandle:${binName}:create`]);
+    harness.reply({ type: "complete", result: {} });
+    await settle();
+    // 검증된 BIN 옆에 CUE를 자동 저장한다.
+    assert.deepEqual(harness.folderCalls, [
+      `getFileHandle:${binName}:create`,
+      `getFileHandle:${cueName}:create`,
+      `createWritable:${cueName}`,
+    ]);
+    assert.match(harness.folderFiles.get(cueName), /^FILE "srwf-f-20260909-v0-4-a\.bin" BINARY\r\n/);
+    assert.equal(element("successTitle").textContent, "한국어 패치 BIN/CUE 저장을 완료했습니다");
+
+    // 주 버튼은 "패치 완료"로 잠기되, 회색 비활성이 아니라 완료 색으로 보인다.
+    assert.equal(element("applyState").textContent, "패치 완료");
+    assert.equal(element("patchButtonText").textContent, "패치 완료");
+    assert.equal(element("patchButtonIcon").textContent, "✓");
+    assert.equal(element("patchButton").disabled, true);
+    assert.equal(element("patchButton").classList.contains("is-complete"), true);
+    assert.equal(element("successPanel").hidden, false);
+    assert.equal(element("downloadActions").hidden, true);
+    assert.doesNotMatch(element("applyHint").textContent, /옮기거나 삭제/);
+    // 같은 원본 폴더·같은 릴리스는 고정 이름 때문에 다시 저장되지 않으므로 새 패치는
+    // 다른 버전이나 폰트일 때만 약속한다.
+    assert.equal(
+      element("applyHint").textContent,
+      "패치를 마쳤습니다. 다른 버전이나 폰트를 고르면 새로 패치할 수 있습니다.",
+    );
+    // 바로 아래에 짧은 안내와 보조 버튼이 나온다.
+    assert.equal(element("redownloadAction").hidden, false);
+    assert.equal(element("redownloadButton").disabled, false);
+    assert.equal(element("redownloadButtonText").textContent, "다운로드로 다시 받기");
+    assert.equal(
+      element("redownloadHelp").textContent,
+      "원본 폴더에 BIN/CUE를 저장했습니다. 버튼을 누르면 같은 BIN/CUE를 브라우저 다운로드로 다시 받습니다.",
+    );
+
+    // 완료된 주 버튼을 어떤 경로로 눌러도 폴더에 다시 쓰지 않는다.
+    const savedFolderCalls = [...harness.folderCalls];
+    const savedFolderFiles = new Map(harness.folderFiles);
+    const jobCount = harness.jobs().length;
+    await hooks.applyPatch();
+    assert.deepEqual(harness.folderCalls, savedFolderCalls);
+    assert.equal(harness.jobs().length, jobCount);
+
+    // 보조 버튼은 모바일과 같은 검증된 다운로드 경로만 탄다.
+    hooks.startFolderSafeDownload();
+    const download = harness.lastJob();
+    assert.equal(download.type, "BUILD_PATCH_DOWNLOAD");
+    assert.equal(download.preparationToken, "prep-1");
+    assert.equal(download.imageName, binName);
+    assert.equal(download.cueName, cueName);
+    assert.equal("outputHandle" in download, false);
+    assert.equal(element("redownloadAction").hidden, true, "the offer hides while the download is being built");
+    assert.equal(element("successPanel").hidden, true);
+    assert.match(element("applyHint").textContent, /^원본 폴더에 저장한 BIN\/CUE는 그대로 두고, /);
+    // 선택 사항인 다시 받기는 새 패치 실행이 아니다. "✓ 패치 완료" 옆에 "패치 실행 중"을 띄우지 않는다.
+    assert.equal(element("applyState").textContent, "다운로드 패치 준비");
+    assert.equal(element("patchButtonText").textContent, "패치 완료");
+    harness.reply({
+      type: "complete",
+      result: {
+        outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
+        targetSha256: V0_3_TARGET_SHA256,
+        imageName: download.imageName,
+        cueName: download.cueName,
+      },
+    });
+    assert.equal(element("downloadActions").hidden, false);
+    assert.equal(element("downloadBinLink").getAttribute("download"), binName);
+    assert.equal(element("downloadCueLink").getAttribute("download"), cueName);
+    assert.equal(element("successTitle").textContent, "검증 완료 · BIN/CUE 다운로드 준비");
+    // 받은 두 파일은 원본 폴더 밖 한곳에 두게 하고, 방금 저장한 파일을 지우게 하지 않는다.
+    assert.equal(
+      element("applyHint").textContent,
+      "원본 폴더에 저장한 BIN/CUE는 그대로 두세요. 아래 두 다운로드는 원본 폴더 밖 한곳에 함께 두세요.",
+    );
+    assert.equal(
+      element("downloadHelp").textContent,
+      "두 파일은 다운로드 폴더처럼 원본 폴더가 아닌 한곳에 함께 두세요. 원본 폴더에 저장한 BIN/CUE는 지우지 마세요.",
+    );
+    for (const id of ["applyHint", "successMessage", "downloadHelp"]) {
+      assert.doesNotMatch(element(id).textContent, /같은 폴더|삭제/, `${id} must not point at the saved folder files`);
+    }
+    assert.equal(element("patchButtonText").textContent, "패치 완료");
+    assert.equal(element("patchButton").disabled, true);
+    assert.equal(element("patchButton").classList.contains("is-complete"), true);
+    assert.equal(element("redownloadAction").hidden, true, "download links replace the offer once ready");
+    await settle();
+    assert.deepEqual(harness.folderCalls, savedFolderCalls, "re-download must never touch the saved folder files");
+    assert.deepEqual(harness.folderFiles, savedFolderFiles);
+
+    // 폰트를 바꾸면 주 버튼은 다시 "패치 실행"이다.
+    element("fontSelect").value = "b";
+    await hooks.handleFontChange();
+    assert.equal(element("targetName").textContent, "srwf-f-20260909-v0-4-b.bin");
+    assertRunnablePatchButton();
+    assert.equal(element("redownloadAction").hidden, true);
+    assert.equal(element("downloadActions").hidden, true);
+    assert.equal(element("successPanel").hidden, true);
+
+    // 버전을 다시 골라도 같다.
+    await prepareFolderSource(hooks, harness, "prep-2");
+    await hooks.applyPatch();
+    harness.reply({ type: "complete", result: {} });
+    await settle();
+    assert.equal(element("patchButtonText").textContent, "패치 완료");
+    await hooks.handleReleaseChange();
+    assertRunnablePatchButton();
+    assert.equal(element("redownloadAction").hidden, true);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("a desktop save that falls back to downloads before checking the folder keeps them outside the source folder", async () => {
+  const binName = "srwf-f-20260909-v0-4-a.bin";
+  const cueName = "srwf-f-20260909-v0-4-a.cue";
+  const assertOutsideSourceFolderCopy = () => {
+    assert.equal(element("downloadActions").hidden, false);
+    assert.equal(element("applyHint").textContent, "아래 두 다운로드는 원본 폴더 밖 한곳에 함께 두세요.");
+    assert.equal(
+      element("downloadHelp").textContent,
+      "두 파일은 다운로드 폴더처럼 원본 폴더가 아닌 한곳에 함께 두세요.",
+    );
+    assert.match(element("successMessage").textContent, / 아래 BIN과 CUE를 모두 받으세요\.$/);
+    for (const id of ["applyHint", "successMessage", "downloadHelp"]) {
+      assert.doesNotMatch(element(id).textContent, /같은 폴더|삭제|지우/, `${id} must not point at the source folder files`);
+    }
+  };
+  const finishDownload = (harness) => {
+    const download = harness.lastJob();
+    assert.equal(download.type, "BUILD_PATCH_DOWNLOAD");
+    assert.equal("outputHandle" in download, false);
+    harness.reply({
+      type: "complete",
+      result: {
+        outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
+        targetSha256: V0_3_TARGET_SHA256,
+        imageName: download.imageName,
+        cueName: download.cueName,
+      },
+    });
+  };
+
+  // 다음 방문. 앞서 저장·검증한 BIN/CUE가 폴더에 있는데 쓰기 권한이 거부됐다.
+  {
+    const harness = installFolderPatcherHarness();
+    try {
+      const { __testHooks: hooks } = await import(`../assets/app.mjs?fallback-later-visit=${Date.now()}`);
+      await settle();
+      harness.folderFiles.set(binName, "earlier verified BIN");
+      harness.folderFiles.set(cueName, "earlier verified CUE");
+      const earlierFiles = new Map(harness.folderFiles);
+      await prepareFolderSource(hooks, harness, "prep-1");
+      harness.setWritePermission("denied");
+      await hooks.applyPatch();
+      assert.match(element("applyHint").textContent, /브라우저 다운로드 방식으로 자동 전환/);
+      finishDownload(harness);
+      assertOutsideSourceFolderCopy();
+      // "다운로드 다시 만들기"로 다시 만들어도 같다.
+      assertRunnablePatchButton("다운로드 다시 만들기");
+      await hooks.applyPatch();
+      finishDownload(harness);
+      assertOutsideSourceFolderCopy();
+      await settle();
+      assert.deepEqual(harness.folderCalls, [], "existing outputs must never be opened");
+      assert.deepEqual(harness.folderFiles, earlierFiles);
+    } finally {
+      harness.restore();
+    }
+  }
+
+  // 이번 세션에 저장한 뒤 같은 폴더를 다시 고르고, 이번에는 쓰기 권한이 거부됐다.
+  {
+    const harness = installFolderPatcherHarness();
+    try {
+      const { __testHooks: hooks } = await import(`../assets/app.mjs?fallback-after-save=${Date.now()}`);
+      await settle();
+      await prepareFolderSource(hooks, harness, "prep-1");
+      await hooks.applyPatch();
+      harness.reply({ type: "complete", result: {} });
+      await settle();
+      assert.equal(element("successTitle").textContent, "한국어 패치 BIN/CUE 저장을 완료했습니다");
+      const savedFolderCalls = [...harness.folderCalls];
+      const savedFolderFiles = new Map(harness.folderFiles);
+      await prepareFolderSource(hooks, harness, "prep-2");
+      harness.setWritePermission("denied");
+      await hooks.applyPatch();
+      finishDownload(harness);
+      assertOutsideSourceFolderCopy();
+      await settle();
+      assert.deepEqual(harness.folderCalls, savedFolderCalls, "the saved outputs must never be reopened");
+      assert.deepEqual(harness.folderFiles, savedFolderFiles);
+    } finally {
+      harness.restore();
+    }
+  }
+
+  // 폴더 목록을 읽지 못해 기존 결과를 확인하지 못했다.
+  {
+    const harness = installFolderPatcherHarness();
+    try {
+      const { __testHooks: hooks } = await import(`../assets/app.mjs?fallback-listing-failed=${Date.now()}`);
+      await settle();
+      harness.folderFiles.set(binName, "earlier verified BIN");
+      harness.folderFiles.set(cueName, "earlier verified CUE");
+      const earlierFiles = new Map(harness.folderFiles);
+      await prepareFolderSource(hooks, harness, "prep-1");
+      harness.setListingFails(true);
+      await hooks.applyPatch();
+      finishDownload(harness);
+      assertOutsideSourceFolderCopy();
+      await settle();
+      assert.deepEqual(harness.folderCalls, []);
+      assert.deepEqual(harness.folderFiles, earlierFiles);
+    } finally {
+      harness.restore();
+    }
+  }
+});
+
+// 폴더 저장 뒤 다시 받기만 실패한 화면. 완료 표시와 다시 받기 버튼은 그대로이고, 폴더
+// 상태와 원인은 오류 안내가, 버튼이 할 일은 버튼 옆 안내가 한 번씩만 말한다.
+function assertFinishedRedownloadFailure({ message, help, sourceState, sourceMeta = null }) {
+  assert.equal(element("patchButtonText").textContent, "패치 완료");
+  assert.equal(element("patchButtonIcon").textContent, "✓");
+  assert.equal(element("patchButton").disabled, true);
+  assert.equal(element("patchButton").classList.contains("is-complete"), true);
+  assert.equal(element("applyState").textContent, "다운로드 재시도");
+  assert.equal(element("sourceState").textContent, sourceState);
+  if (sourceMeta !== null) {
+    // 저장할 때 붙인 "전체 SHA-256 일치 · 원본 보존"이 ×·불일치 옆에 남지 않는다.
+    assert.ok(
+      element("sourceMeta").textContent.endsWith(` · ${sourceMeta}`),
+      `source meta must describe the source now: ${element("sourceMeta").textContent}`,
+    );
+    assert.doesNotMatch(element("sourceMeta").textContent, /SHA-256 일치|원본 보존/);
+  }
+  assert.equal(element("errorPanel").hidden, false);
+  assert.equal(element("errorTitle").textContent, "다운로드로 다시 받지 못했습니다");
+  assert.equal(element("errorMessage").textContent, message);
+  assert.equal(element("applyHint").textContent, "패치를 마쳤습니다.");
+  assert.equal(element("redownloadAction").hidden, false);
+  assert.equal(element("redownloadButton").disabled, false);
+  assert.equal(element("redownloadButtonText").textContent, "다운로드로 다시 받기");
+  assert.equal(element("redownloadHelp").textContent, help);
+  for (const id of ["applyHint", "redownloadHelp"]) {
+    assert.doesNotMatch(element(id).textContent, /그대로|저장/, `${id} must not repeat the folder status`);
+  }
+  for (const id of ["errorTitle", "errorMessage", "applyHint", "redownloadHelp"]) {
+    assert.doesNotMatch(
+      element(id).textContent,
+      /저장을 확정하지 않았습니다|다시 선택|새로 연 뒤|패치 준비부터|다운로드 만들기|작업이 중단되었습니다|지원하는 원본이 아닙니다|삭제|지우/,
+      `${id} must keep the finished folder state honest`,
+    );
+  }
+}
+
+const SAVED_REDOWNLOAD_FAILED = "다운로드용 파일만 만들지 못했습니다. 원본 폴더에 저장한 BIN/CUE는 이미 검증을 마쳤고 그대로입니다.";
+
+test("a failed re-download keeps the finished folder state and retries only through the download path", async () => {
+  const harness = installFolderPatcherHarness();
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?folder-redownload-fail=${Date.now()}`);
+    await settle();
+    await prepareFolderSource(hooks, harness, "prep-1");
+    await hooks.applyPatch();
+    harness.reply({ type: "complete", result: {} });
+    await settle();
+    const savedFolderCalls = [...harness.folderCalls];
+
+    // 다시 받기만 실패했다. 일반 패치 실패 문구나 화면에 없는 "다운로드 만들기" 대신
+    // 저장본은 그대로라고 한 번만 알린다.
+    hooks.startFolderSafeDownload();
+    harness.reply({ type: "error", error: { code: "TARGET_HASH_MISMATCH" } });
+    assertFinishedRedownloadFailure({
+      message: SAVED_REDOWNLOAD_FAILED,
+      help: "버튼을 누르면 같은 BIN/CUE를 브라우저 다운로드로 다시 받습니다.",
+      sourceState: "크기 일치",
+    });
+
+    // 브라우저가 다운로드 링크를 만들지 못하면 메모리를 확보한 뒤 다시 받게 한다.
+    hooks.startFolderSafeDownload();
+    const download = harness.lastJob();
+    const createObjectURL = URL.createObjectURL;
+    URL.createObjectURL = () => {
+      throw new Error("out of memory");
+    };
+    try {
+      harness.reply({
+        type: "complete",
+        result: {
+          outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
+          targetSha256: V0_3_TARGET_SHA256,
+          imageName: download.imageName,
+          cueName: download.cueName,
+        },
+      });
+    } finally {
+      URL.createObjectURL = createObjectURL;
+    }
+    assertFinishedRedownloadFailure({
+      message: `${SAVED_REDOWNLOAD_FAILED} 브라우저 메모리를 확보한 뒤 다시 받아 주세요.`,
+      help: "버튼을 누르면 같은 BIN/CUE를 브라우저 다운로드로 다시 받습니다.",
+      sourceState: "크기 일치",
+    });
+    assert.equal(element("downloadActions").hidden, true);
+
+    hooks.startFolderSafeDownload();
+    assert.equal(harness.lastJob().type, "BUILD_PATCH_DOWNLOAD");
+    assert.equal(harness.lastJob().preparationToken, "prep-1");
+    await settle();
+    assert.deepEqual(harness.folderCalls, savedFolderCalls);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("a re-download that loses the prepared source keeps the finished state and re-prepares without re-picking", async () => {
+  const harness = installFolderPatcherHarness();
+  const consoleError = console.error;
+  console.error = () => {};
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?folder-redownload-lost=${Date.now()}`);
+    await settle();
+    const binName = "srwf-f-20260909-v0-4-a.bin";
+    await prepareFolderSource(hooks, harness, "prep-1");
+    await hooks.applyPatch();
+    harness.reply({ type: "complete", result: {} });
+    await settle();
+    const savedFolderCalls = [...harness.folderCalls];
+    const savedFolderFiles = new Map(harness.folderFiles);
+    const pickerCallCount = harness.pickerCalls.length;
+    const awaitingPreparation = {
+      message: SAVED_REDOWNLOAD_FAILED,
+      help: "버튼을 누르면 원본을 다시 읽어 같은 BIN/CUE를 받습니다.",
+      sourceState: "준비 필요",
+      sourceMeta: "다시 준비 필요",
+    };
+    // 같은 버튼이 원본 폴더를 다시 고르지 않고, 페이지가 들고 있는 원본 파일 핸들에서
+    // 원본을 새로 읽어 준비부터 다시 한다.
+    const assertRepreparesFromSameSource = (readsBefore) => {
+      const prepare = harness.lastJob();
+      assert.equal(prepare.type, "PREPARE_SOURCE");
+      assert.equal(prepare.sourceFile.size, STOCK_PROFILE.size);
+      assert.equal("outputHandle" in prepare, false);
+      assert.equal(harness.sourceReads(), readsBefore + 1, "the source file is read again from its handle");
+      assert.equal(harness.pickerCalls.length, pickerCallCount, "the source folder must not be picked again");
+      assert.equal(element("patchButtonText").textContent, "패치 완료");
+      assert.equal(element("redownloadAction").hidden, true);
+      assert.equal(element("errorPanel").hidden, true);
+      assert.equal(
+        element("applyHint").textContent,
+        "원본 폴더에 저장한 BIN/CUE는 그대로 두고, 원본을 다시 읽어 다운로드를 준비하고 있습니다.",
+      );
+    };
+
+    // 워커가 강제로 멈췄다(WORKER_STOPPED). 준비가 사라졌지만 완료 표시는 남는다.
+    hooks.startFolderSafeDownload();
+    assert.equal(harness.lastJob().type, "BUILD_PATCH_DOWNLOAD");
+    const crashedWorker = harness.crash();
+    assert.equal(crashedWorker.terminated, true);
+    assertFinishedRedownloadFailure(awaitingPreparation);
+
+    const workersBefore = harness.workerCount();
+    let reads = harness.sourceReads();
+    await hooks.startFolderSafeDownload();
+    assert.equal(harness.workerCount(), workersBefore + 1);
+    assertRepreparesFromSameSource(reads);
+
+    // 준비 중 네트워크가 끊겨도 완료 상태는 그대로다.
+    harness.reply({ type: "error", error: { code: "PATCH_FETCH_FAILED" } });
+    assertFinishedRedownloadFailure({
+      ...awaitingPreparation,
+      message: `${SAVED_REDOWNLOAD_FAILED} 네트워크 연결을 확인한 뒤 다시 받아 주세요.`,
+    });
+
+    // 준비를 중단해도 완료 표시와 다시 받기 버튼이 돌아온다.
+    reads = harness.sourceReads();
+    await hooks.startFolderSafeDownload();
+    assertRepreparesFromSameSource(reads);
+    harness.reply({ type: "cancelled" });
+    assert.equal(element("patchButtonText").textContent, "패치 완료");
+    assert.equal(element("patchButton").classList.contains("is-complete"), true);
+    assert.equal(element("applyState").textContent, "패치 완료");
+    assert.equal(
+      element("applyHint").textContent,
+      "다운로드 받기를 중단했습니다. 원본 폴더에 저장한 BIN/CUE는 그대로입니다.",
+    );
+    assert.equal(element("redownloadAction").hidden, false);
+    assert.equal(element("redownloadButton").disabled, false);
+    assert.equal(
+      element("redownloadHelp").textContent,
+      "원본 폴더에 BIN/CUE를 저장했습니다. 버튼을 누르면 같은 BIN/CUE를 브라우저 다운로드로 다시 받습니다.",
+    );
+
+    // 준비가 끝나면 곧바로 폴더를 건드리지 않는 다운로드 만들기로 이어간다.
+    reads = harness.sourceReads();
+    await hooks.startFolderSafeDownload();
+    assertRepreparesFromSameSource(reads);
+    harness.reply({ type: "complete", preparationToken: "prep-2" });
+    let download = harness.lastJob();
+    assert.equal(download.type, "BUILD_PATCH_DOWNLOAD");
+    assert.equal(download.preparationToken, "prep-2");
+    assert.equal("outputHandle" in download, false);
+    assert.match(element("applyHint").textContent, /^원본 폴더에 저장한 BIN\/CUE는 그대로 두고, /);
+
+    // 워커가 준비를 잃었다고 답해도(PREPARED_SOURCE_MISSING) 같다.
+    harness.reply({ type: "error", error: { code: "PREPARED_SOURCE_MISSING" } });
+    assertFinishedRedownloadFailure(awaitingPreparation);
+    reads = harness.sourceReads();
+    await hooks.startFolderSafeDownload();
+    assertRepreparesFromSameSource(reads);
+    harness.reply({ type: "complete", preparationToken: "prep-3" });
+    download = harness.lastJob();
+    assert.equal(download.type, "BUILD_PATCH_DOWNLOAD");
+    assert.equal(download.preparationToken, "prep-3");
+    harness.reply({
+      type: "complete",
+      result: {
+        outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
+        targetSha256: V0_3_TARGET_SHA256,
+        imageName: download.imageName,
+        cueName: download.cueName,
+      },
+    });
+    assert.equal(element("downloadActions").hidden, false);
+    assert.equal(element("downloadBinLink").getAttribute("download"), binName);
+    assert.equal(element("successTitle").textContent, "검증 완료 · BIN/CUE 다운로드 준비");
+    assert.equal(
+      element("downloadHelp").textContent,
+      "두 파일은 다운로드 폴더처럼 원본 폴더가 아닌 한곳에 함께 두세요. 원본 폴더에 저장한 BIN/CUE는 지우지 마세요.",
+    );
+    assert.equal(element("patchButtonText").textContent, "패치 완료");
+    await settle();
+    assert.equal(harness.pickerCalls.length, pickerCallCount);
+    assert.deepEqual(harness.folderCalls, savedFolderCalls, "re-download must never touch the saved folder files");
+    assert.deepEqual(harness.folderFiles, savedFolderFiles);
+  } finally {
+    console.error = consoleError;
+    harness.restore();
+  }
+});
+
+test("a source that changed after the folder save keeps the finished state and is read again on the next re-download", async () => {
+  const harness = installFolderPatcherHarness();
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?folder-redownload-mismatch=${Date.now()}`);
+    await settle();
+    await prepareFolderSource(hooks, harness, "prep-1");
+    await hooks.applyPatch();
+    harness.reply({ type: "complete", result: {} });
+    await settle();
+    const savedFolderCalls = [...harness.folderCalls];
+    const savedFolderFiles = new Map(harness.folderFiles);
+    const pickerCallCount = harness.pickerCalls.length;
+    // 저장한 BIN은 저장할 때 목표 SHA-256을 확인했다. 뒤에 원본이 달라져도 그 결과는
+    // 그대로이므로 완료 표시를 거두거나 원본 폴더를 다시 고르게 하지 않는다. 다시 고르면
+    // "패치 실행"이 같은 이름 충돌로 이어진다.
+    const changedSource = {
+      message: "원본이 달라져 다운로드용 파일만 만들지 못했습니다. "
+        + "원본 폴더에 저장한 BIN/CUE는 이미 검증을 마쳤고 그대로입니다. 정품 원본을 원래 자리에 되돌린 뒤 다시 받아 주세요.",
+      help: "버튼을 누르면 원본을 다시 읽어 같은 BIN/CUE를 받습니다.",
+      sourceState: "불일치",
+      sourceMeta: "저장 뒤 원본이 달라짐",
+    };
+
+    hooks.startFolderSafeDownload();
+    harness.reply({ type: "error", error: { code: "SOURCE_HASH_MISMATCH" } });
+    assertFinishedRedownloadFailure(changedSource);
+    assert.notEqual(element("applyHint").textContent, "데스크톱은 원본 폴더에 새 BIN/CUE를 만들고, 모바일은 검증 후 다운로드를 준비합니다.");
+
+    // 같은 버튼은 원본 파일을 새로 읽어 다시 시도한다. 원본 크기가 달라도 완료 표시는 남는다.
+    let reads = harness.sourceReads();
+    await hooks.startFolderSafeDownload();
+    assert.equal(harness.sourceReads(), reads + 1);
+    assert.equal(harness.lastJob().type, "PREPARE_SOURCE");
+    assert.equal(element("sourceState").textContent, "파일 확인 중");
+    assert.doesNotMatch(element("sourceMeta").textContent, /SHA-256 일치|원본 보존|달라짐/);
+    harness.reply({ type: "error", error: { code: "SOURCE_SIZE_MISMATCH" } });
+    assertFinishedRedownloadFailure(changedSource);
+
+    // 정품 원본을 되돌리면 같은 버튼으로 다시 받는다.
+    reads = harness.sourceReads();
+    await hooks.startFolderSafeDownload();
+    assert.equal(harness.sourceReads(), reads + 1);
+    harness.reply({ type: "complete", preparationToken: "prep-2" });
+    const download = harness.lastJob();
+    assert.equal(download.type, "BUILD_PATCH_DOWNLOAD");
+    assert.equal(download.preparationToken, "prep-2");
+    harness.reply({
+      type: "complete",
+      result: {
+        outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
+        targetSha256: V0_3_TARGET_SHA256,
+        imageName: download.imageName,
+        cueName: download.cueName,
+      },
+    });
+    assert.equal(element("downloadActions").hidden, false);
+    assert.equal(element("patchButtonText").textContent, "패치 완료");
+    await settle();
+    assert.equal(harness.pickerCalls.length, pickerCallCount);
+    assert.deepEqual(harness.folderCalls, savedFolderCalls);
+    assert.deepEqual(harness.folderFiles, savedFolderFiles);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("a re-download whose source can no longer be read says so and retries by reading the same file again", async () => {
+  const harness = installFolderPatcherHarness();
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?folder-redownload-unreadable=${Date.now()}`);
+    await settle();
+    await prepareFolderSource(hooks, harness, "prep-1");
+    await hooks.applyPatch();
+    harness.reply({ type: "complete", result: {} });
+    await settle();
+    const savedFolderFiles = new Map(harness.folderFiles);
+    const pickerCallCount = harness.pickerCalls.length;
+    // 원본이 옮겨져 페이지가 들고 있던 스냅숏을 끝까지 읽지 못했다. 원인을 숨기고 같은
+    // 스냅숏으로 되풀이하게 하지 않는다.
+    const unreadableSource = {
+      message: "원본 파일을 읽지 못해 다운로드용 파일만 만들지 못했습니다. "
+        + "원본 폴더에 저장한 BIN/CUE는 이미 검증을 마쳤고 그대로입니다. 원본을 원래 자리에 되돌린 뒤 다시 받아 주세요.",
+      help: "버튼을 누르면 원본을 다시 읽어 같은 BIN/CUE를 받습니다.",
+      sourceState: "읽기 실패",
+      sourceMeta: "원본을 읽지 못함",
+    };
+
+    hooks.startFolderSafeDownload();
+    harness.reply({ type: "error", error: { code: "BAD_BLOB_STREAM" } });
+    assertFinishedRedownloadFailure(unreadableSource);
+
+    // 원본이 아직 없으면 다시 읽기에서 같은 이유로 멈추고, 워커 작업은 시작하지 않는다.
+    harness.setSourceReadable(false);
+    const jobCount = harness.jobs().length;
+    await hooks.startFolderSafeDownload();
+    assert.equal(harness.jobs().length, jobCount);
+    assertFinishedRedownloadFailure(unreadableSource);
+
+    // 원본을 되돌리면 같은 버튼이 원본을 새로 읽어 준비한다. 브라우저가 옮겨진 파일의 옛
+    // 스냅숏을 NotReadableError로 거부해도 같은 안내다.
+    harness.setSourceReadable(true);
+    await hooks.startFolderSafeDownload();
+    assert.equal(harness.lastJob().type, "PREPARE_SOURCE");
+    harness.reply({ type: "complete", preparationToken: "prep-2" });
+    assert.equal(harness.lastJob().type, "BUILD_PATCH_DOWNLOAD");
+    harness.reply({
+      type: "error",
+      error: { code: "OUTPUT_PROVIDER_FAILED", name: "NotReadableError" },
+    });
+    assertFinishedRedownloadFailure(unreadableSource);
+
+    await hooks.startFolderSafeDownload();
+    harness.reply({ type: "complete", preparationToken: "prep-3" });
+    const download = harness.lastJob();
+    assert.equal(download.type, "BUILD_PATCH_DOWNLOAD");
+    harness.reply({
+      type: "complete",
+      result: {
+        outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
+        targetSha256: V0_3_TARGET_SHA256,
+        imageName: download.imageName,
+        cueName: download.cueName,
+      },
+    });
+    assert.equal(element("downloadActions").hidden, false);
+    await settle();
+    assert.equal(harness.pickerCalls.length, pickerCallCount);
+    assert.deepEqual(harness.folderFiles, savedFolderFiles);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("cancelling a re-download after a folder save keeps the finished state and the re-download offer", async () => {
+  const harness = installFolderPatcherHarness();
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?folder-redownload-cancel=${Date.now()}`);
+    await settle();
+    await prepareFolderSource(hooks, harness, "prep-1");
+    await hooks.applyPatch();
+    harness.reply({ type: "complete", result: {} });
+    await settle();
+    const savedFolderCalls = [...harness.folderCalls];
+    const savedFolderFiles = new Map(harness.folderFiles);
+
+    hooks.startFolderSafeDownload();
+    assert.equal(harness.lastJob().type, "BUILD_PATCH_DOWNLOAD");
+    assert.equal(element("redownloadAction").hidden, true);
+    harness.reply({ type: "cancelled" });
+
+    // 선택 사항인 다시 받기만 멈췄다. 완료 표시와 안내·버튼이 그대로 돌아온다.
+    assert.equal(element("applyState").textContent, "패치 완료");
+    assert.equal(element("applyState").className, "zone-state is-complete");
+    assert.equal(
+      element("applyHint").textContent,
+      "다운로드 받기를 중단했습니다. 원본 폴더에 저장한 BIN/CUE는 그대로입니다.",
+    );
+    assert.equal(element("patchButtonText").textContent, "패치 완료");
+    assert.equal(element("patchButtonIcon").textContent, "✓");
+    assert.equal(element("patchButton").disabled, true);
+    assert.equal(element("patchButton").classList.contains("is-complete"), true);
+    assert.equal(element("redownloadAction").hidden, false);
+    assert.equal(element("redownloadButton").disabled, false);
+    assert.equal(element("redownloadButtonText").textContent, "다운로드로 다시 받기");
+    assert.equal(
+      element("redownloadHelp").textContent,
+      "원본 폴더에 BIN/CUE를 저장했습니다. 버튼을 누르면 같은 BIN/CUE를 브라우저 다운로드로 다시 받습니다.",
+    );
+    assert.equal(element("errorPanel").hidden, true);
+    assert.equal(element("downloadActions").hidden, true);
+
+    // 완료된 주 버튼은 여전히 폴더에 쓰지 않고, 다시 받기는 다운로드 경로로만 간다.
+    const jobCount = harness.jobs().length;
+    await hooks.applyPatch();
+    assert.equal(harness.jobs().length, jobCount);
+    hooks.startFolderSafeDownload();
+    assert.equal(harness.lastJob().type, "BUILD_PATCH_DOWNLOAD");
+    assert.equal("outputHandle" in harness.lastJob(), false);
+    await settle();
+    assert.deepEqual(harness.folderCalls, savedFolderCalls);
+    assert.deepEqual(harness.folderFiles, savedFolderFiles);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("when only the BIN reached the folder, every re-download message says BIN, not BIN/CUE", async () => {
+  const harness = installFolderPatcherHarness({ failCueWrite: true });
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?folder-bin-only=${Date.now()}`);
+    await settle();
+    const binName = "srwf-f-20260909-v0-4-a.bin";
+    const cueName = "srwf-f-20260909-v0-4-a.cue";
+    await prepareFolderSource(hooks, harness, "prep-1");
+    await hooks.applyPatch();
+    harness.reply({ type: "complete", result: {} });
+    // CUE 자동 저장이 끝나기 전에도 성공 안내는 폴더에 실제로 있는 BIN만 말한다.
+    assert.equal(element("successTitle").textContent, "한국어 패치 BIN을 만들었습니다");
+    await settle();
+    assert.ok(harness.folderCalls.includes(`createWritable:${cueName}`));
+    assert.equal(element("errorTitle").textContent, "CUE 파일만 저장하지 못했습니다");
+    // 오류와 함께 다시 보이는 성공 안내도 BIN만 말한다.
+    assert.equal(element("successPanel").hidden, false);
+    assert.equal(element("successTitle").textContent, "한국어 패치 BIN을 만들었습니다");
+    assert.equal(
+      element("successMessage").textContent,
+      `${binName}에 기록한 전체 바이트의 크기와 SHA-256이 목표값과 일치합니다.`,
+    );
+    for (const id of ["successTitle", "successMessage"]) {
+      assert.doesNotMatch(element(id).textContent, /CUE/, `${id} must not claim a saved CUE`);
+    }
+    assert.equal(element("patchButtonText").textContent, "패치 완료");
+    assert.equal(element("redownloadAction").hidden, false);
+    // 한 화면에서 같은 말을 되풀이하지 않는다. 오류 안내는 폴더 상태를, 성공 안내는 BIN 검증
+    // 결과를, 두 버튼 옆 안내는 각 버튼이 할 일만 말한다.
+    assert.equal(element("errorMessage").textContent, "원본 폴더에 저장한 BIN은 그대로입니다.");
+    assert.equal(element("cueAction").hidden, false);
+    assert.equal(element("cueButton").hidden, false);
+    // 오류 안내는 성공 안내 뒤에 겹쳐 있으므로, 눈에 보이는 CUE 줄이 실패 사실과 할 일을 함께 말한다.
+    assert.equal(
+      element("cueStatus").textContent,
+      "CUE는 자동으로 저장하지 못했습니다. 버튼을 누르면 CUE만 원본 폴더에 다시 저장합니다.",
+    );
+    assert.equal(
+      element("redownloadHelp").textContent,
+      "버튼을 누르면 같은 BIN과 CUE를 브라우저 다운로드로 받습니다.",
+    );
+    const cueFailureTexts = ["errorTitle", "errorMessage", "successTitle", "successMessage", "cueStatus", "redownloadHelp", "applyHint"]
+      .map((id) => element(id).textContent);
+    assert.equal(new Set(cueFailureTexts).size, cueFailureTexts.length, "no message may appear twice on the CUE-failure screen");
+    assert.equal(
+      cueFailureTexts.filter((text) => /원본 폴더에 (?:저장한 BIN|BIN만)/.test(text)).length,
+      1,
+      "the folder status is said once",
+    );
+    const savedFolderCalls = [...harness.folderCalls];
+    const noSavedCueClaim = (id) => assert.doesNotMatch(
+      element(id).textContent,
+      /BIN\/CUE[는를]? 그대로|저장한 BIN\/CUE/,
+      `${id} must not claim a saved CUE`,
+    );
+
+    hooks.startFolderSafeDownload();
+    assert.match(element("applyHint").textContent, /^원본 폴더에 저장한 BIN은 그대로 두고, /);
+    noSavedCueClaim("applyHint");
+
+    // 실패 안내도 BIN만 말한다.
+    harness.reply({ type: "error", error: { code: "TARGET_HASH_MISMATCH" } });
+    assertFinishedRedownloadFailure({
+      message: "다운로드용 파일만 만들지 못했습니다. 원본 폴더에 저장한 BIN은 이미 검증을 마쳤고 그대로입니다.",
+      help: "버튼을 누르면 같은 BIN과 CUE를 브라우저 다운로드로 받습니다.",
+      sourceState: "크기 일치",
+    });
+    noSavedCueClaim("errorMessage");
+    noSavedCueClaim("applyHint");
+
+    // 중단 안내도 같다. 폴더 상태는 중단 안내가 말하므로 버튼 옆 안내는 버튼이 할 일만 말한다.
+    hooks.startFolderSafeDownload();
+    harness.reply({ type: "cancelled" });
+    assert.equal(
+      element("applyHint").textContent,
+      "다운로드 받기를 중단했습니다. 원본 폴더에 저장한 BIN은 그대로입니다.",
+    );
+    assert.equal(element("redownloadAction").hidden, false);
+    assert.equal(
+      element("redownloadHelp").textContent,
+      "버튼을 누르면 같은 BIN과 CUE를 브라우저 다운로드로 받습니다.",
+    );
+
+    // 다시 받은 뒤의 안내도 BIN만 말하고, 받은 두 파일은 원본 폴더 밖에 두게 한다.
+    hooks.startFolderSafeDownload();
+    const download = harness.lastJob();
+    harness.reply({
+      type: "complete",
+      result: {
+        outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
+        targetSha256: V0_3_TARGET_SHA256,
+        imageName: download.imageName,
+        cueName: download.cueName,
+      },
+    });
+    assert.equal(element("downloadActions").hidden, false);
+    assert.equal(
+      element("applyHint").textContent,
+      "원본 폴더에 저장한 BIN은 그대로 두세요. 아래 두 다운로드는 원본 폴더 밖 한곳에 함께 두세요.",
+    );
+    assert.equal(
+      element("downloadHelp").textContent,
+      "두 파일은 다운로드 폴더처럼 원본 폴더가 아닌 한곳에 함께 두세요. 원본 폴더에 저장한 BIN은 지우지 마세요.",
+    );
+    for (const id of ["applyHint", "successMessage", "downloadHelp"]) noSavedCueClaim(id);
+    await settle();
+    assert.deepEqual(harness.folderCalls, savedFolderCalls, "re-download must never retry the folder CUE");
+  } finally {
+    harness.restore();
+  }
+
+});
+
+test("mobile download flow is unchanged and never shows the folder completion state", async () => {
+  const harness = installFolderPatcherHarness({ mobile: true });
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?mobile-download-flow=${Date.now()}`);
+    await settle();
+    await prepareFolderSource(hooks, harness, "prep-1");
+    assert.deepEqual(harness.pickerCalls, [{ id: "srwf-stock-directory", mode: "read" }]);
+    assertRunnablePatchButton();
+
+    await hooks.applyPatch();
+    const download = harness.lastJob();
+    assert.equal(download.type, "BUILD_PATCH_DOWNLOAD");
+    assert.match(element("applyHint").textContent, /모바일 저장 호환성/);
+    harness.reply({
+      type: "complete",
+      result: {
+        outputBlob: new SizedTestBlob(STOCK_PROFILE.size, "patched"),
+        targetSha256: V0_3_TARGET_SHA256,
+        imageName: download.imageName,
+        cueName: download.cueName,
+      },
+    });
+    assert.equal(element("downloadActions").hidden, false);
+    assertRunnablePatchButton("다운로드 다시 만들기");
+    assert.equal(element("patchButton").disabled, false);
+    assert.equal(element("redownloadAction").hidden, true);
+
+    // "다운로드 다시 만들기"는 예전처럼 같은 준비로 다운로드를 다시 만든다.
+    await hooks.applyPatch();
+    assert.equal(harness.lastJob().type, "BUILD_PATCH_DOWNLOAD");
+    assert.equal(harness.lastJob().preparationToken, "prep-1");
+    assert.deepEqual(harness.folderCalls, [], "mobile never creates or writes folder files");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("the finished primary button and re-download offer are styled as success, not a grey disabled control", async () => {
+  const [html, css] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../assets/style.css", import.meta.url), "utf8"),
+  ]);
+  const applyMain = html.match(/<div class="apply-main">[\s\S]*?<\/div>\s*<div class="patch-feedback" id="patchFeedback">/)?.[0] ?? "";
+  assert.ok(
+    applyMain.indexOf('id="patchButton"') >= 0
+      && applyMain.indexOf('id="redownloadAction"') > applyMain.indexOf('id="patchButton"'),
+    "the re-download offer sits directly below the primary button",
+  );
+  assert.match(html, /<div class="redownload-action" id="redownloadAction" hidden>/);
+  assert.match(html, /<span id="patchButtonIcon" aria-hidden="true">→<\/span>/);
+  assert.match(html, /id="redownloadButton" aria-describedby="redownloadHelp"/);
+  assert.doesNotMatch(html, /r1\d\d/i, "internal revision names never reach user-facing copy");
+  const completeRule = css.match(/\.primary-button\.is-complete:disabled\s*\{([^}]*)\}/)?.[1] ?? "";
+  assert.match(completeRule, /background:\s*var\(--green\)/);
+  assert.match(completeRule, /color:\s*var\(--white\)/);
+  assert.match(completeRule, /cursor:\s*default/);
+  assert.ok(
+    css.indexOf(".primary-button.is-complete:disabled") > css.indexOf(".primary-button:disabled"),
+    "the finished style must follow the generic grey disabled style",
+  );
+  // 좁은 화면의 배치(완료 패널과 다시 받기 안내가 칸 안에 들어가는지)는 scripts/editor-layout-scan.cjs 로 브라우저에서 잰다.
+});
+
+test("the desktop finished state belongs to the patcher: switching to the editor and back never touches it", async () => {
+  const harness = installFolderPatcherHarness();
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?folder-complete-modes=${Date.now()}`);
+    await settle();
+    await prepareFolderSource(hooks, harness, "prep-1");
+    await hooks.applyPatch();
+    harness.reply({ type: "complete", result: {} });
+    await settle();
+    assert.equal(element("patchButton").classList.contains("is-complete"), true);
+    assert.equal(element("redownloadAction").hidden, false);
+    const savedFolderCalls = [...harness.folderCalls];
+    const finished = () => JSON.stringify({
+      saved: hooks.state.directoryOutputSaved,
+      cue: hooks.state.directoryCueSaved,
+      conflict: hooks.state.outputNameConflict,
+      complete: element("patchButton").classList.contains("is-complete"),
+      redownload: element("redownloadAction").hidden,
+      success: element("successPanel").hidden,
+      applyState: element("applyState").textContent,
+      sourceState: element("sourceState").textContent,
+      button: element("patchButtonText").textContent,
+      prepared: hooks.state.sourcePrepared,
+    });
+    const before = finished();
+
+    // 에디터로 바꿔도 한글 패치 쪽 완료 표시와 다시 받기 제안은 그대로 남는다(보기만 바뀐다).
+    hooks.setMode("editor");
+    assert.equal(hooks.state.mode, "editor");
+    assert.equal(finished(), before);
+    // 에디터에서 다시 받기를 시작할 수도 없다: 다시 받기는 한글 패치의 일이다.
+    assert.equal(hooks.canStartFolderSafeDownload(), true, "the patcher's own state still offers its re-download");
+    hooks.setMode("patch");
+    assert.equal(finished(), before);
+    assert.equal(element("patchButton").disabled, true, "the finished button stays a completion mark");
+    assert.deepEqual(harness.folderCalls, savedFolderCalls, "no mode switch writes to the folder");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("sprite preview trims only transparent padding while retaining all visible pixels", () => {
+  const pixels = new Uint8Array(6 * 5 * 4);
+  pixels.set([17, 29, 41, 255], (2 * 6 + 1) * 4);
+  pixels.set([53, 67, 79, 128], (4 * 6 + 3) * 4);
+  const original = pixels.slice();
+  assert.deepEqual(__testHooks.editorVisibleImageBounds({ width: 6, height: 5, pixels }), { x: 1, y: 2, width: 3, height: 3 });
+  assert.deepEqual(pixels, original, "preview sizing must never rewrite source pixels");
+  assert.deepEqual(__testHooks.editorVisibleImageBounds({ width: 2, height: 2, pixels: new Uint8Array(16) }), { x: 0, y: 0, width: 2, height: 2 });
+});
+
+
+test('unit and pilot preview replies are independent and stale selections are discarded', () => {
+  const requests = { unit: 'unit-old', pilot: 'pilot-current' };
+  assert(__testHooks.isCurrentEditorPreview(requests, { kind: 'unit', previewId: 'unit-old' }));
+  assert(__testHooks.isCurrentEditorPreview(requests, { kind: 'pilot', previewId: 'pilot-current' }));
+  requests.unit = 'unit-new';
+  assert.equal(__testHooks.isCurrentEditorPreview(requests, { kind: 'unit', previewId: 'unit-old' }), false);
+  assert(__testHooks.isCurrentEditorPreview(requests, { kind: 'pilot', previewId: 'pilot-current' }));
+  assert.equal(__testHooks.isCurrentEditorPreview({ unit: null, pilot: null }, { kind: 'unit', previewId: 'unit-new' }), false);
+  assert.equal(__testHooks.isCurrentEditorPreview(requests, { kind: 'weapon', previewId: 'unit-new' }), false);
+});
+
+
+// ---- 작업 방식(패치 만들기 / 에디터) ------------------------------------------------------------------
+
+test("the page exposes a shared folder/language/editor/save workflow and keeps the patch engine markup", async () => {
+ const html=await readFile(new URL("../index.html",import.meta.url),"utf8");
+ assert.match(html,/class="mode-switch" hidden/);
+ for(const id of ["editorSourceButton","languageKorean","languageOriginal","workflowOpenEditor","workflowSkipEditor","workflowSaveRegion","workflowSaveButton","patchButton","progressPanel","cancelButton"]) assert.match(html,new RegExp(`id="${id}"`));
+ assert.deepEqual(__testHooks.sourceDirectoryPickerOptions({userAgent:"Desktop Chrome"},"editor"),{id:"srwf-stock-directory",mode:"read"});
+});
+
+// ---- 정직한 디스크 라벨과 CUE 고정 표 ----------------------------------------------------------------
+
+test("only an exact public hash may be called matching; a personal image shows its real base", () => {
+  const base = "srwf-f-20260928-v0-5-a";
+  const accepted = __testHooks.editorDiscDescription({ kind: "accepted", baseReleaseId: base });
+  assert.equal(accepted.chip, "공개 한글 패치본으로 확인");
+  assert.equal(accepted.check, "✓");
+  assert.match(accepted.meta, /전체 SHA-256 일치/);
+  assert.match(accepted.meta, /v0\.5\(폰트 a\)/);
+
+  const stock = __testHooks.editorDiscDescription({ kind: "stock", baseReleaseId: base });
+  assert.equal(stock.chip, "정품 원본으로 확인");
+  assert.match(stock.meta, /정품 원본/);
+  assert.match(stock.meta, /한글패치 v0\.5\(폰트 a\) 적용/);
+
+  const personal = __testHooks.editorDiscDescription({ kind: "personal", baseReleaseId: base });
+  assert.match(personal.meta, /기반 v0\.5 폰트 a/);
+  assert.match(personal.meta, /공개 해시와 다름/);
+  // 수치가 조정된 BIN에는 초록 확인 표시도 "일치" 문구도 없다.
+  assert.doesNotMatch(personal.chipClass, /is-complete/);
+  assert.notEqual(personal.check, "✓");
+  assert.doesNotMatch(`${personal.chip} ${personal.meta}`, /해시.{0,3}일치/);
+  assert.equal(__testHooks.editorDiscDescription(null), null);
+  assert.equal(__testHooks.releaseTag(undefined), "확인된 공개 패치");
+  assert.equal(__testHooks.releaseTag("srwf-final-20261005-v0-3-c"), "v0.3(폰트 c)");
+  assert.deepEqual({ ...__testHooks.releaseVersionParts("srwf-f-20260814-v0-1-1") }, { version: "v0.1.1", font: null });
+});
+
+test("opening an image never rewrites the pinned CUE track table", async () => {
+  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(appSource, /PATCHED_IMAGE_CUE_TRACKS\.(?:set|delete|clear)\(/);
+
+  const registry = __testHooks.PATCHED_IMAGE_CUE_TRACKS;
+  const before = JSON.stringify([...registry]);
+  const acceptedHash = "0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d";
+  const pinned = registry.get(acceptedHash);
+  assert.ok(pinned, "the accepted release has a pinned layout");
+
+  // 사용자가 폴더에 둔 CUE는 그 세션에만 쓰인다.
+  const folderTracks = ["TRACK 01 MODE1/2352", "INDEX 01 00:00:00", "TRACK 02 AUDIO", "INDEX 01 10:00:00"];
+  const session = __testHooks.resolveEditorCueTracks(
+    { baseTargetSha256: acceptedHash, targetHash: acceptedHash },
+    folderTracks,
+  );
+  assert.deepEqual([...session], folderTracks);
+  assert.ok(Object.isFrozen(session));
+  assert.notEqual(session, folderTracks);
+  assert.equal(JSON.stringify([...registry]), before, "the pinned table is unchanged");
+  assert.equal(registry.get(acceptedHash), pinned);
+
+  // CUE가 없으면 기반 공개 버전의 고정 구성을 읽기만 한다.
+  const fallback = __testHooks.resolveEditorCueTracks({ baseTargetSha256: acceptedHash, targetHash: "f".repeat(64) }, null);
+  assert.deepEqual([...fallback], [...pinned]);
+  assert.equal(__testHooks.resolveEditorCueTracks({ baseTargetSha256: "e".repeat(64), targetHash: "f".repeat(64) }, null), null);
+
+  // 같은 세션 구성으로 만든 CUE 와, 그 뒤 일반 패치가 쓰는 고정 구성의 CUE 는 서로 다르다.
+  const sessionCue = __testHooks.buildPatchedImageCue("SRWFIN-KOR-CUSTOM-1.bin", acceptedHash, session);
+  assert.match(sessionCue, /TRACK 02 AUDIO/);
+  const normalCue = __testHooks.buildPatchedImageCue("SRWFIN-KOR-20261005-v0.3-c.bin", acceptedHash);
+  assert.match(normalCue, /TRACK 03 AUDIO/);
+  assert.doesNotMatch(normalCue, /TRACK 02 AUDIO\r\n    INDEX 01 10:00:00/);
+  assert.equal(JSON.stringify([...registry]), before);
+});
+
+// ---- 레코드 종류 -------------------------------------------------------------------------------------
+
+test("unused fillers stay out of the lists until the toggle is on, and nothing says 이름 미지정", () => {
+  const rows = [
+    { recordIndex: 1, name: "가", recordKind: "regular", editable: true, defaultVisible: true },
+    { recordIndex: 2, name: "", recordKind: "unused-filler", editable: false, defaultVisible: false },
+    { recordIndex: 3, name: "", recordKind: "regular", editable: true, defaultVisible: true },
+    { recordIndex: 4, name: "나", recordKind: "named-template-stub", editable: true, defaultVisible: true },
+  ];
+  assert.deepEqual(__testHooks.selectListRows(rows, false).map((row) => row.recordIndex), [1, 3, 4]);
+  assert.deepEqual(__testHooks.selectListRows(rows, true).map((row) => row.recordIndex), [1, 2, 3, 4]);
+  assert.equal(__testHooks.editorRowName(rows[1]), "미사용 레코드");
+  assert.equal(__testHooks.editorRowName(rows[2]), "이름 없음");
+  assert.equal(__testHooks.editorRowName(rows[0]), "가");
+  // 이름칸이 비어 있는 것과 글자를 읽지 못한 것은 따로 말한다.
+  for (const nameStatus of ["empty", "placeholder-dashes", "no-name-cell"]) {
+    assert.equal(__testHooks.editorRowName({ name: "", nameStatus, recordKind: "regular" }), "이름 없음");
+  }
+  for (const nameStatus of ["unknown-glyph", "truncated-glyph", "unterminated", "overlong", "invalid-target"]) {
+    assert.equal(__testHooks.editorRowName({ name: "", nameStatus, recordKind: "regular" }), "이름을 읽지 못함");
+  }
+  assert.equal(__testHooks.editorRowName({ name: "가", nameStatus: "decoded", recordKind: "regular" }), "가");
+  assert.equal(__testHooks.editorRowName({ name: "자리표시 숫자열", nameStatus: "decoded", recordKind: "hero-slot" }), "주인공 자리 레코드");
+  for (const row of rows) assert.doesNotMatch(__testHooks.editorRowName(row), /미지정/);
+  assert.equal(__testHooks.isLockedRecord(rows[1]), true);
+  assert.equal(__testHooks.isLockedRecord(rows[3]), false);
+  assert.equal(__testHooks.isLockedRecord(null), false);
+});
+
+test("read-only record kinds explain why, and the alias group names every id it would change", () => {
+  const notes = (type, row) => __testHooks.editorRecordNotes(type, row);
+  const unused = notes("unit", { recordKind: "unused-filler", editable: false, readOnlyReason: "unused-filler" });
+  assert.equal(unused.length, 1);
+  assert.equal(unused[0].tone, "readonly");
+  assert.equal(unused[0].title, "미사용 레코드");
+
+  const tail = notes("pilot", { recordKind: "nonstandard-tail", editable: false, readOnlyReason: "nonstandard-tail", statsValid: false });
+  assert.equal(tail[0].title, "비표준 레코드 (머리부 없음)");
+  assert.match(tail[0].body, /수정할 수 없습니다/);
+  assert.equal(__testHooks.editorRowName({ recordKind: "nonstandard-tail", name: "table name" }), "비표준 레코드 (머리부 없음)");
+
+  const alias = notes("pilot", {
+    recordIndex: 1,
+    recordKind: "alias-group",
+    editable: false,
+    readOnlyReason: "alias-group",
+    aliasIds: [312, 313, 314, 315, 316, 317, 318, 319],
+    aliasGroupIds: [0, 1, 312, 313, 314, 315, 316, 317, 318, 319],
+  });
+  assert.equal(alias[0].title, "여러 ID가 공유하는 레코드");
+  assert.match(alias[0].body, /ID 0–1, 312–319\(10개\)/);
+  assert.match(alias[0].body, /모두 바뀌므로 수정할 수 없습니다/);
+  assert.equal(__testHooks.formatIdRanges([319, 0, 1, 312, 313, 5]), "0–1, 5, 312–313, 319");
+
+  const hero = notes("pilot", { recordKind: "hero-slot", editable: false, readOnlyReason: "hero-slot" });
+  assert.equal(hero[0].title, "주인공 자리 레코드");
+  const unknownReason = notes("weapon", { recordKind: "regular", editable: false, readOnlyReason: "something-new" });
+  assert.equal(unknownReason[0].tone, "readonly");
+  assert.match(unknownReason[0].body, /읽기 전용/);
+
+  // 편집 가능한 일반 레코드에는 안내가 없고, 이름 있는 미완성 레코드와 게임이 읽지 않는 정신기 쌍은 안내만 붙는다.
+  assert.deepEqual(notes("unit", { recordKind: "regular", editable: true }), []);
+  const stub = notes("unit", { recordKind: "named-template-stub", editable: true });
+  assert.deepEqual(stub.map((note) => note.tone), ["info"]);
+  const extra = notes("pilot", {
+    recordKind: "regular",
+    editable: true,
+    extraSpirits: [{ id: 5, level: 20, name: "집중" }],
+  });
+  assert.equal(extra[0].tone, "info");
+  assert.match(extra[0].body, /집중 Lv 20/);
+  assert.match(extra[0].body, /읽지 않는 값/);
+});
+
+test("the notice and the spirit panel show the facts of a record and claim nothing more", () => {
+  __testHooks.renderEditorRecordNotice("pilot", { recordKind: "unused-filler", editable: false, readOnlyReason: "unused-filler" });
+  assert.equal(element("editorRecordNotice").hidden, false);
+  assert.equal(element("editorRecordNotice").children.length, 1);
+  assert.equal(element("editorRecordNotice").children[0].children[0].children[0].textContent, "읽기 전용");
+  __testHooks.renderEditorRecordNotice("pilot", { recordKind: "regular", editable: true });
+  assert.equal(element("editorRecordNotice").hidden, true);
+  assert.equal(element("editorRecordNotice").children.length, 0);
+
+  // 정신기가 비어 있는 파일럿: 원판에 없다는 사실만 말한다(플레이 가능 여부는 말하지 않고 Lv 도 붙이지 않는다).
+  __testHooks.renderPilotMentalCommands({
+    name: "샘플",
+    noSpiritInDisc: true,
+    spiritCommands: [{ id: 0, level: 0, name: "정신커맨드 없음", placeholder: true }],
+  });
+  const none = element("pilotMentalCommands").children;
+  assert.equal(none.length, 1);
+  assert.equal(none[0].textContent, "원판 데이터에 정신기 없음");
+  assert.doesNotMatch(none[0].textContent, /Lv|플레이|불가|가능/);
+
+  // 레벨 칸이 99를 넘는 쌍은 습득 레벨이 아니라 이벤트 플래그다.
+  __testHooks.renderPilotMentalCommands({
+    name: "샘플",
+    noSpiritInDisc: false,
+    spiritCommands: [
+      { id: 3, level: 10, eventFlag: null, name: "정신A", unresolved: false },
+      { id: 4, level: 174, eventFlag: 74, name: "정신B", unresolved: false },
+    ],
+  });
+  const slots = element("pilotMentalCommands").children;
+  assert.equal(slots.length, 6);
+  assert.equal(slots[0].children[1].textContent, "Lv 10");
+  assert.equal(slots[1].children[1].textContent, "이벤트 74");
+
+  // 머리부가 없는 비표준 블록은 목록 사본을 읽기 전용으로 보여 준다.
+  __testHooks.renderPilotMentalCommands({
+    name: "블록",
+    statsValid: false,
+    noSpiritInDisc: false,
+    spiritCommands: [],
+    listTemplate: { spiritCommands: [{ id: 7, level: 5, eventFlag: null, name: "정신C", unresolved: false }] },
+  });
+  assert.equal(element("pilotMentalCommands").children[0].children[0].textContent, "정신C");
+});
+
+// ---- 오류 안내문 -------------------------------------------------------------------------------------
+
+test("every editor error code the core and the worker can raise has natural Korean copy", async () => {
+  const names = [
+    "editor-core", "editor-worker", "editor-provenance", "editor-provenance-profiles", "editor-directory",
+    "editor-grades", "editor-weapon-links", "editor-facts",
+    "editor-rewards", "editor-terrain",
+    "editor-scenario-archive", "editor-deployments", "editor-map-archive", "editor-scenario-provenance",
+    "editor-scenario-deadlines", "editor-scenario-objectives", "editor-scenario-spawns",
+    "editor-scenario-criteria", "editor-scenario-objective-base", "editor-scenario-event-criteria", "editor-scenario-event-phase", "editor-scenario-pilot-context",
+  ];
+  const codes = new Set();
+  for (const name of names) {
+    const source = await readFile(new URL(`../assets/${name}.mjs`, import.meta.url), "utf8");
+    for (const match of source.matchAll(/["'`](EDITOR_[A-Z0-9_]+)["'`]/g)) codes.add(match[1]);
+  }
+  assert.ok(codes.size >= 30, `the scan must find the codes (found ${codes.size})`);
+  const english = "The raw English sentence of the worker.";
+  const allowed = /MODE1\/2352|SHA-256|BIN|CUE/g;
+  for (const code of codes) {
+    assert.ok(Object.hasOwn(__testHooks.EDITOR_ERROR_COPY, code), `${code} has no Korean copy`);
+    const copy = __testHooks.friendlyEditorError(code, english, { packedBytes: 216000, writableBytes: 215040 });
+    for (const part of [copy.title, copy.message]) {
+      assert.match(part, /[가-힣]/, `${code} copy must be Korean: ${part}`);
+      assert.doesNotMatch(part.replace(allowed, ""), /[A-Za-z]{3,}/, `${code} copy must not carry English words: ${part}`);
+      assert.doesNotMatch(part, /undefined|null|NaN/);
+    }
+    assert.ok(!copy.message.includes(english));
+    assert.ok(copy.title.length >= 4 && copy.message.length >= 12, `${code} copy is too short`);
+  }
+  // 표에 낡은 항목이 남지 않는다: 문구가 있는 모든 코드는 실제로 소스에 있다.
+  for (const code of Object.keys(__testHooks.EDITOR_ERROR_COPY)) {
+    assert.ok(codes.has(code), `${code} has copy but nothing raises it`);
+  }
+});
+
+test("a rejected edit and an out-of-range value are explained instead of falling through to English", () => {
+  const invalid = __testHooks.friendlyEditorError("EDITOR_EDIT_INVALID", "unit #5 is read-only (unused-filler) and cannot be changed.");
+  assert.equal(invalid.title, "수정 요청을 받아들일 수 없습니다");
+  assert.match(invalid.message, /읽기 전용 레코드/);
+  assert.doesNotMatch(invalid.message, /unit #5|read-only/);
+  const range = __testHooks.friendlyEditorError("EDITOR_VALUE_OUT_OF_RANGE", "unit #5 ground must be an integer from 0 to 4.");
+  assert.equal(range.title, "허용 범위를 벗어난 값이 있습니다");
+  assert.match(range.message, /0~4/);
+  assert.doesNotMatch(range.message, /integer/);
+  // 공간이 모자라는 오류는 필요한 크기와 허용 크기를 보여 준다.
+  const growth = __testHooks.friendlyEditorError("EDITOR_TSR_GROWTH_UNSUPPORTED", "", { packedBytes: 231763, writableBytes: 215040 });
+  assert.match(growth.message, /231,763바이트/);
+  assert.match(growth.message, /215,040바이트/);
+  assert.match(growth.message, /16,723바이트 넘습니다/);
+  assert.doesNotMatch(growth.message, /TSR\.BIN/);
+});
+
+test("unsaved edits are asked about once, and only when the editor would really lose them", () => {
+  const base = { hasSession: true, changeCount: 3, editRevision: 5, exportedRevision: 2 };
+  assert.equal(__testHooks.discardNeedsConfirmation(base), true);
+  // 세션이 없거나, 고친 값이 없거나, 마지막 수정 뒤에 이미 만들어 받았다면 묻지 않는다.
+  assert.equal(__testHooks.discardNeedsConfirmation({ ...base, hasSession: false }), false);
+  assert.equal(__testHooks.discardNeedsConfirmation({ ...base, changeCount: 0 }), false);
+  assert.equal(__testHooks.discardNeedsConfirmation({ ...base, exportedRevision: 5 }), false);
+});
+
+test("an editor folder card that fails is left looking failed, not checked and not still being checked", () => {
+  const patcherCard = { state: element("sourceState").textContent, error: element("errorPanel").hidden };
+  __testHooks.state.editorSource = { status: "working", chip: "파일 확인 중", chipClass: "zone-state is-working", name: "a.bin", meta: "1 B · 확인 중", typeLabel: "BIN", check: "…", checkClass: null, failure: null };
+  __testHooks.failEditorSource("데이터 목록이 올바르지 않습니다", "검증 결과가 선택한 릴리스와 맞지 않아 에디터를 잠갔습니다.");
+  assert.equal(element("editorSourceState").textContent, "사용할 수 없음");
+  assert.match(element("editorSourceState").className, /is-error/);
+  assert.equal(element("editorSourceCheck").textContent, "×");
+  assert.match(element("editorSourceCheck").className, /is-error/);
+  assert.equal(element("editorSourceError").hidden, false);
+  assert.equal(element("editorSourceErrorTitle").textContent, "데이터 목록이 올바르지 않습니다");
+  assert.equal(element("progressPanel").hidden, true);
+  assert.equal(__testHooks.state.editorActive, false);
+  // 한글 패치 쪽 카드는 건드리지 않는다.
+  assert.deepEqual({ state: element("sourceState").textContent, error: element("errorPanel").hidden }, patcherCard);
+  __testHooks.state.editorSource = { status: "idle", chip: null, chipClass: null, name: "", meta: "", typeLabel: null, check: "…", checkClass: null, failure: null };
+  __testHooks.renderEditorSource();
+});
+
+test("browser and worker exception sentences never reach the screen in English", async () => {
+  const appSource = await readFile(new URL("../assets/app.mjs", import.meta.url), "utf8");
+  // 화면에 내는 오류 문장은 한국어 문장만 그대로 통과시킨다.
+  assert.equal(__testHooks.koreanMessage({ message: "A requested file or directory could not be found." }, "대체 문구"), "대체 문구");
+  assert.equal(__testHooks.koreanMessage({ message: "파일이 너무 많습니다." }, "대체 문구"), "파일이 너무 많습니다.");
+  assert.equal(__testHooks.koreanMessage(undefined, "대체 문구"), "대체 문구");
+  assert.equal(__testHooks.koreanMessage({ message: 42 }, "대체 문구"), "대체 문구");
+  for (const name of ["NotFoundError", "NotReadableError", "NotAllowedError", "SecurityError", "SomethingElse"]) {
+    const text = __testHooks.friendlyDirectoryError({ name, message: "An English browser sentence." });
+    assert.match(text, /[가-힣]/);
+    assert.doesNotMatch(text, /English|browser sentence/);
+  }
+  assert.match(__testHooks.friendlyDirectoryError({ name: "NotFoundError", message: "x" }), /찾을 수 없습니다/);
+  assert.equal(__testHooks.friendlyDirectoryError(new Error("파일이 너무 많습니다. 사용할 BIN/CUE만 있는 폴더를 골라 주세요.")), "파일이 너무 많습니다. 사용할 BIN/CUE만 있는 폴더를 골라 주세요.");
+  // 편집기 오류 표시 호출은 예외의 영어 message 를 직접 화면에 내지 않는다.
+  assert.doesNotMatch(appSource, /showEditorError\([^;\n]*(?:error|event)\?\.message/);
+});
+
+test("an editor error shows its text with a close button so it never has to stay over the screen", () => {
+  __testHooks.showEditorError("수정 데이터가 원래 공간보다 큽니다", "값을 줄여 다시 시도해 주세요.");
+  const error = element("editorError");
+  assert.equal(error.hidden, false);
+  assert.equal(error.children.length, 2);
+  assert.equal(error.children[0].textContent, "수정 데이터가 원래 공간보다 큽니다 · 값을 줄여 다시 시도해 주세요.");
+  assert.equal(error.children[1].textContent, "닫기");
+  assert.equal(error.children[1].getAttribute("aria-label"), "오류 안내 닫기");
+  assert.equal(element("editorState").textContent, "수정 데이터가 원래 공간보다 큽니다");
+});
+
+// Existing result files are replaced atomically by the browser's writable stream.
+test("an existing output is reused while source handles and directory collisions are protected", async () => {
+  let creations = 0;
+  const output = { kind: "file", name: "patched.bin", createWritable() {}, isSameEntry: async () => false };
+  const directory = { async *entries() { yield [output.name, output]; }, async getFileHandle() { creations++; return output; } };
+  assert.equal(await __testHooks.createUnusedFileHandle(directory, "patched.bin", [], true), output);
+  assert.equal(creations, 0);
+  const folder = { kind: "directory", name: "patched.bin" };
+  await assert.rejects(() => __testHooks.createUnusedFileHandle({ async *entries() { yield [folder.name, folder]; } }, "patched.bin", [], true), { code: "OUTPUT_NAME_EXISTS" });
+});
+
+test("choosing the source again permits replacing the previous BIN and CUE", async () => {
+  const harness = installFolderPatcherHarness();
+  try {
+    const { __testHooks: hooks } = await import(`../assets/app.mjs?replace-output=${Date.now()}`);
+    await settle();
+    await prepareFolderSource(hooks, harness, "first");
+    const original = harness.sourceHandle;
+    await assert.rejects(() => hooks.createUnusedFileHandle({ async *entries() { yield [original.name, original]; } }, original.name, [], true), { code: "OUTPUT_SOURCE_CONFLICT" });
+    await hooks.applyPatch(); harness.reply({ type: "complete", result: {} }); await settle();
+    await prepareFolderSource(hooks, harness, "second");
+    await hooks.applyPatch();
+    assert.ok(harness.lastJob().outputHandle);
+    assert.equal(element("errorPanel").hidden, true);
+    harness.reply({ type: "complete", result: {} }); await settle();
+    assert.equal(element("patchButton").classList.contains("is-complete"), true);
+  } finally { harness.restore(); }
 });

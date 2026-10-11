@@ -12,11 +12,13 @@
     <meta name="theme-color" content="#101f2f">
     <meta
       name="description"
-      content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 정품 디스크 이미지로 새 한글 패치 BIN/CUE를 만드는 웹 패처"
+      content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 디스크 이미지를 기기 안에서 검증하고, 한글화 또는 게임 데이터 편집 후 BIN/CUE로 저장합니다."
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20261005-7">
-    <script type="module" src="assets/app.mjs?v=20261005-7"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20261011-public1">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261011-public1">
+    <script type="module" src="assets/app.mjs?v=20261011-public1"></script>
+    <script type="module" src="assets/user-guide.mjs?v=20261011-public1"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -36,6 +38,7 @@
       </a>
 
       <div class="header-status">
+        <button class="user-guide-open" id="userGuideOpen" type="button" aria-haspopup="dialog" aria-controls="userGuideDialog" aria-expanded="false">사용 가이드</button>
         <span class="compatibility" id="compatibilityBadge">
           <span aria-hidden="true">●</span>
           브라우저 확인 중
@@ -50,20 +53,42 @@
     <main id="main" tabindex="-1">
       <section class="patch-section" id="patcher" aria-label="패처">
         <div class="patch-console">
-          <div class="patch-workspace">
+          <div class="patch-workspace" id="patchWorkspace">
+            <div class="mode-bar" id="modeBar">
+              <div class="mode-switch" hidden role="group" aria-label="작업 방식">
+                <button type="button" class="mode-switch-button" id="modePatchButton" aria-pressed="true">한글 패치</button>
+                <button type="button" class="mode-switch-button" id="modeEditorButton" aria-pressed="false">에디터</button>
+              </div>
+              <div class="mode-summary" id="modeSummary" hidden>
+                <p class="origin-line" id="originLine"></p>
+                <p class="origin-note" id="originNote">저장하면 수치가 조정된 새 BIN/CUE가 만들어집니다. 원본과 패치본은 바뀌지 않습니다.</p>
+              </div>
+              <button type="button" class="mode-setup-toggle" id="setupToggle" aria-expanded="false" aria-controls="releaseRegion editorSourceRegion editorEntryRegion" hidden>
+                <span class="toggle-long" id="setupToggleText">게임·파일 설정</span>
+                <span class="toggle-short" id="setupToggleShort">설정</span>
+                <span aria-hidden="true">▾</span>
+              </button>
+            </div>
             <section
               class="release-card workflow-zone is-busy"
               id="releaseRegion"
               data-workflow-zone="release"
               data-state="busy"
               aria-labelledby="release-heading"
-              aria-describedby="releaseState"
+              aria-describedby="workflowPatchState"
               aria-busy="true"
             >
               <div class="card-heading">
-                <h3 id="release-heading">게임 · 공개 버전</h3>
-                <span class="state-chip" id="releaseState" role="status" aria-live="polite" aria-atomic="true">확인 중</span>
+                <h3 id="release-heading">2. 한글 패치 설정</h3>
+                <span class="state-chip" id="releaseState" hidden>확인 중</span>
+                <span class="zone-state" id="workflowPatchState" role="status" aria-live="polite">파일 대기</span>
               </div>
+              <fieldset class="workflow-language" id="workflowLanguage">
+                <legend>한글화 여부</legend>
+                <label title="한글 패치 적용"><input type="radio" name="workflow-language" id="languageKorean" value="korean" aria-label="한글 패치 적용" checked><span>한글 패치</span></label>
+                <label title="원본 언어 유지"><input type="radio" name="workflow-language" id="languageOriginal" value="original" aria-label="원본 언어 유지"><span>원본 유지</span></label>
+                <p id="workflowLanguageNote">폴더를 고른 뒤 적용 여부를 선택하세요.</p>
+              </fieldset>
               <div class="selector-grid">
                 <div>
                   <label class="field-label" for="gameSelect">게임</label>
@@ -93,6 +118,11 @@
                   <p id="fontHelp">이 버전은 폰트 선택을 지원하지 않습니다.</p>
                 </div>
               </div>
+              <div class="release-detected" id="releaseDetected" hidden>
+                <p class="field-label" id="detectedLabel">패치본에서 감지한 값</p>
+                <p class="detected-value" id="detectedValue"></p>
+                <p class="detected-note" id="detectedNote">패치본에서는 폰트를 바꿀 수 없습니다. 바꾸려면 정품 원본에서 시작하세요.</p>
+              </div>
               <button
                 class="patch-note-toggle"
                 type="button"
@@ -104,7 +134,7 @@
               >
                 <span>
                   <small>PATCH NOTES</small>
-                  <strong><span id="patchNotesVersion">—</span> 변경 내역</strong>
+                  <strong><span id="patchNotesVersion">—</span> 패치노트</strong>
                 </span>
                 <span id="patchNotesCount">준비 중</span>
                 <span aria-hidden="true">↗</span>
@@ -143,6 +173,7 @@
                   원본 파일이 들어 있는 폴더를 한 번만 고르세요. 합본 IMG/BIN 또는
                   CUE와 Track 1·2·3 BIN을 자동으로 찾아 순서대로 가상 결합하며 원본은 변경하지 않습니다.
                   전체 SHA-256은 패치를 실행하며 가상 결합한 원본을 한 번 읽어 검사합니다.
+                  폴더를 고를 때도 같은 SHA-256을 확인해 이미 패치했거나 수정한 파일은 받아들이지 않습니다.
                 </p>
                 <button class="file-button" type="button" id="sourceButton" disabled>
                   <span class="button-symbol" aria-hidden="true">＋</span>
@@ -155,6 +186,16 @@
                     <span id="sourceMeta"></span>
                   </div>
                   <span class="file-check" id="sourceCheck" aria-hidden="true">…</span>
+                </div>
+                <div class="card-feedback" id="sourceFeedback">
+                  <p class="card-wait" id="sourceWait" hidden></p>
+                  <section class="message-panel is-error" id="sourceError" role="alert" hidden>
+                    <span aria-hidden="true">!</span>
+                    <div>
+                      <strong id="sourceErrorTitle"></strong>
+                      <p id="sourceErrorMessage"></p>
+                    </div>
+                  </section>
                 </div>
               </div>
             </section>
@@ -177,12 +218,19 @@
                 <div class="apply-actions">
                   <button class="primary-button" type="button" id="patchButton" disabled>
                     <span id="patchButtonText">패치 실행</span>
-                    <span aria-hidden="true">→</span>
+                    <span id="patchButtonIcon" aria-hidden="true">→</span>
+                  </button>
+                </div>
+                <div class="redownload-action" id="redownloadAction" hidden>
+                  <p class="redownload-help" id="redownloadHelp">원본 폴더에 BIN/CUE를 저장했습니다. 버튼을 누르면 같은 BIN/CUE를 브라우저 다운로드로 다시 받습니다.</p>
+                  <button class="redownload-button" type="button" id="redownloadButton" aria-describedby="redownloadHelp">
+                    <span aria-hidden="true">↓</span>
+                    <span id="redownloadButtonText">다운로드로 다시 받기</span>
                   </button>
                 </div>
               </div>
 
-              <div class="patch-feedback">
+              <div class="patch-feedback" id="patchFeedback">
                 <section
                   class="progress-panel"
                   id="progressPanel"
@@ -242,10 +290,571 @@
                 </div>
               </noscript>
             </section>
+
+            <section
+              class="source-zone workflow-zone is-active"
+              id="editorSourceRegion"
+              data-state="active"
+              aria-labelledby="editor-source-heading"
+              aria-describedby="editorSourceState editorSourceHelp"
+              aria-busy="false"
+              hidden
+            >
+              <div class="source-zone-body">
+                <div class="zone-heading">
+                  <h3 id="editor-source-heading">1. 게임 폴더 열기</h3>
+                  <span class="zone-state" id="editorSourceState" role="status" aria-live="polite">선택 대기</span>
+                </div>
+                <p class="editor-source-help" id="editorSourceHelp">정품 원본·한글 패치본·기존 편집본의 폴더를 고르세요. 파일은 이 기기 안에서만 검사합니다.</p>
+                <button class="file-button" type="button" id="editorSourceButton" disabled>
+                  <span class="button-symbol" aria-hidden="true">＋</span>
+                  <span id="editorSourceButtonText">폴더 찾기</span>
+                </button>
+                <div class="file-selection" id="editorSourceSelection" hidden>
+                  <span class="file-type" aria-hidden="true">RAW</span>
+                  <div>
+                    <strong id="editorSourceName"></strong>
+                    <span id="editorSourceMeta"></span>
+                  </div>
+                  <span class="file-check" id="editorSourceCheck" aria-hidden="true">…</span>
+                </div>
+                <div class="card-feedback" id="editorSourceFeedback">
+                  <p class="card-wait" id="editorSourceWait" hidden></p>
+                  <section class="message-panel is-error" id="editorSourceError" role="alert" hidden>
+                    <span aria-hidden="true">!</span>
+                    <div>
+                      <strong id="editorSourceErrorTitle"></strong>
+                      <p id="editorSourceErrorMessage"></p>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </section>
+
+            <section
+              class="editor-entry workflow-zone is-pending"
+              id="editorEntryRegion"
+              aria-labelledby="editor-entry-heading"
+              aria-describedby="editorEntryState editorEntryNote"
+              hidden
+            >
+              <div class="zone-heading">
+                <h3 id="editor-entry-heading">3. 게임 데이터 편집</h3>
+                <span class="zone-state" id="editorEntryState" role="status" aria-live="polite">파일 대기</span>
+              </div>
+              <p class="editor-intro">
+                기체·파일럿·무기를 수정합니다.
+              </p>
+              <button class="primary-button" type="button" id="workflowOpenEditor" disabled>F 에디터 열기</button>
+              <p class="workflow-detected-summary" id="workflowDetectedSummary" hidden></p>
+              <dl class="workflow-editor-facts" id="workflowEditorFacts" hidden aria-label="편집 가능한 데이터">
+                <div><dt>기체</dt><dd id="workflowUnitCount"></dd></div>
+                <div><dt>파일럿</dt><dd id="workflowPilotCount"></dd></div>
+                <div><dt>무기</dt><dd id="workflowWeaponCount"></dd></div>
+              </dl>
+              <button class="workflow-link" type="button" id="workflowSkipEditor" disabled>편집 없이 저장으로 이동</button>
+              <p class="editor-entry-note" id="editorEntryNote">폴더 확인 후 에디터를 열거나 편집 없이 저장할 수 있습니다.</p>
+            </section>
+
+            <section class="workflow-save workflow-zone" id="workflowSaveRegion" hidden aria-labelledby="workflow-save-heading">
+              <h3 id="workflow-save-heading">4. BIN/CUE 저장</h3>
+              <p id="workflowSaveSummary" role="status"></p>
+              <div id="workflowSaveFeedback"></div>
+              <p id="workflowFolderStatus" role="status" hidden></p>
+              <button class="primary-button" type="button" id="workflowSaveButton" disabled>BIN/CUE 만들기</button>
+              <nav class="workflow-save-navigation" aria-label="저장 및 이동">
+                <button class="workflow-link" type="button" id="workflowFolderSave" title="다른 폴더에 BIN/CUE 저장" hidden>폴더에 저장</button>
+                <button class="workflow-link" type="button" id="workflowBackEditor">편집으로</button>
+                <button class="workflow-link" type="button" id="workflowBackSetup">파일·설정으로</button>
+              </nav>
+              <p class="editor-intro">저장한 BIN/CUE로 다시 편집할 수 있습니다.</p>
+            </section>
+
+            <section class="editor-region" id="editorRegion" hidden aria-label="게임 데이터 에디터">
+              <div class="editor-feedback" id="editorFeedback">
+                <section class="editor-progress" id="editorProgressPanel" aria-busy="false" hidden>
+                  <div class="editor-progress-topline">
+                    <strong id="editorProgressTitle">수정 데이터를 반영하고 있습니다</strong>
+                    <span id="editorProgressPercent">0%</span>
+                  </div>
+                  <progress id="editorProgressBar" max="100" value="0">0%</progress>
+                  <div class="editor-progress-actions">
+                    <span id="editorProgressDetail"></span>
+                    <button class="editor-cancel-button" type="button" id="editorCancelButton" hidden>중단</button>
+                  </div>
+                </section>
+                <div class="editor-error" id="editorError" role="alert" hidden></div>
+              </div>
+
+              <div class="editor-workspace" id="editorWorkspace" hidden>
+            <div class="editor-tab-bar">
+              <div class="editor-tab-row" role="tablist" aria-label="편집할 데이터 종류">
+                <button class="editor-tab" id="unitTabButton" type="button" role="tab" aria-selected="true" aria-controls="unitEditorPanel">
+                  기체
+                </button>
+                <button class="editor-tab" id="pilotTabButton" type="button" role="tab" aria-selected="false" aria-controls="pilotEditorPanel">
+                  파일럿
+                </button>
+                <button class="editor-tab" id="weaponTabButton" type="button" role="tab" aria-selected="false" aria-controls="weaponEditorPanel">
+                  무기
+                </button>
+                <button class="editor-tab" id="rewardTabButton" type="button" role="tab" aria-selected="false" aria-controls="rewardEditorPanel" aria-label="강화파츠 격추 보상"><span class="tab-long">격추 보상</span><span class="tab-short" aria-hidden="true">보상</span></button>
+                <button class="editor-tab" id="terrainTabButton" type="button" role="tab" aria-selected="false" aria-controls="terrainEditorPanel" aria-label="맵 공용 지형 효과"><span class="tab-long">지형 효과</span><span class="tab-short" aria-hidden="true">지형</span></button>
+                <button class="editor-tab" id="scenarioTabButton" type="button" role="tab" aria-selected="false" aria-controls="scenarioEditorPanel" aria-label="시나리오"><span class="tab-long">시나리오</span><span class="tab-short" aria-hidden="true">맵</span></button>
+              </div>
+              <div class="editor-record-notice" id="editorRecordNotice" role="note" hidden></div>
+              <label class="editor-unused-toggle" id="unusedToggleLabel" hidden>
+                <input type="checkbox" id="unusedToggle">
+                <span id="unusedToggleText">미사용 레코드 표시 (0)</span>
+              </label>
+            </div>
+
+            <section class="editor-reward-panel editor-effect-panel" id="rewardEditorPanel" role="tabpanel" aria-labelledby="rewardTabButton" hidden>
+              <div class="reward-toolbar">
+                <label for="rewardSelector">강화파츠 격추 보상</label>
+                <select id="rewardSelector" aria-label="격추 보상 표 선택"></select>
+                <div class="reward-pager" id="rewardPager" hidden><button type="button" id="rewardPrev" aria-label="이전 파츠">‹</button><span id="rewardPageNumber"></span><button type="button" id="rewardNext" aria-label="다음 파츠">›</button></div>
+                <button class="record-tool" id="rewardReset" type="button" title="이 BIN을 열었을 때의 값으로 되돌리기">처음 값</button>
+                <details class="reward-details"><summary>설명</summary><div class="reward-explanation"><p id="rewardScope"></p><p class="reward-timing">파츠는 기체가 맵에 생성될 때 추첨됩니다. 이미 생성된 기체는 세이브에 정해진 보상을 유지할 수 있습니다.</p></div></details>
+              </div>
+              <div class="reward-card">
+                <div id="rewardFields"></div>
+                <p id="rewardSummary" role="status"></p>
+              </div>
+            </section>
+
+            <section class="editor-terrain-panel editor-effect-panel" id="terrainEditorPanel" role="tabpanel" aria-labelledby="terrainTabButton" hidden>
+              <div class="terrain-toolbar">
+                <label for="terrainSelector">맵 공용 지형 효과</label>
+                <select id="terrainSelector" aria-label="지형 번호 선택"></select>
+                <button class="record-tool" id="terrainReset" type="button" title="이 BIN을 열었을 때의 값으로 되돌리기">처음 값</button>
+                <details class="reward-details"><summary>설명</summary><div class="reward-explanation"><p>같은 지형 번호를 쓰는 모든 맵에 적용됩니다. 기체·무기의 지형 적응과는 별도입니다.</p><p>회피·방어 보정 30%는 해당 명중 계산값·피해에 70%를 곱합니다. 지형 효과를 받는 기체 상태에서 적용됩니다.</p><p>HP·EN 회복은 최대치의 비율입니다. 특수능력·기체 상태 등 다른 회복 요인에 따라 실제 회복량이 달라질 수 있습니다.</p></div></details>
+              </div>
+              <div class="terrain-card"><div id="terrainTileExamples" class="terrain-tile-examples" role="group" aria-label="이 지형을 쓰는 타일 예시. 누르면 해당 맵을 엽니다." hidden></div><div id="terrainFields"></div><p id="terrainStatus" role="status"></p></div>
+            </section>
+
+            <section class="editor-scenario-panel editor-effect-panel" id="scenarioEditorPanel" role="tabpanel" aria-labelledby="scenarioTabButton" hidden>
+              <div class="scenario-toolbar">
+                <select id="scenarioSelector" aria-label="시나리오 데이터 선택"></select>
+                <select id="scenarioEventSelector" aria-label="초기 배치·후속 이벤트 선택" hidden></select>
+                <select id="scenarioMapSelector" aria-label="맵 선택"></select>
+                <select id="scenarioPlaneSelector" aria-label="맵 상태 선택"><option value="0">상태 1</option><option value="1">상태 2</option></select>
+                <div id="scenarioViewPager" class="scenario-view-pager" hidden><button type="button" id="scenarioMapPage" aria-pressed="true">맵</button><button type="button" id="scenarioFieldsPage" aria-pressed="false">편집값</button></div>
+                <details class="reward-details"><summary>설명</summary><div class="reward-explanation"><p id="scenarioSelectionDescription">데이터 번호는 시나리오 파일의 번호이며 게임의 몇 화인지를 뜻하지 않습니다. 같은 번호 묶음은 하나의 데이터를 공유합니다.</p><p><strong>기체·이벤트</strong> 좌표·격추 보상·턴을 바꿉니다. 지원 사건은 페이즈와 최대 3개 조건을 조합합니다. 기존 대사·분기는 유지하며, 신규 증원은 검증 중입니다.</p><p><strong>작전 목적</strong> 승리·패배마다 최대 3개 조건, 문구는 18자까지입니다. F는 현재 위치, 완결편은 지원 파일럿도 판정합니다. 기체 종류는 모든 진영을 합산합니다. 있음·없음은 현재 상태이며 격추·도착 이력이 아닙니다.</p><p><strong>맵</strong> 선택한 BIN의 타일·기본 팔레트입니다. 점은 선택한 등장 묶음, 상태 1·2는 별도 맵 데이터입니다. 밤·날씨·애니메이션은 재현하지 않습니다. 타일을 바꾸면 공용 지형 효과도 바뀝니다.</p><p><strong>저장</strong> JSON은 편집값, BIN/CUE는 게임 적용용입니다. 압축 공간을 넘으면 저장을 중단합니다. 작전 목적을 바꿨다면 해당 전투에 들어가기 전의 게임 저장부터 진행해주세요.</p></div></details>
+              </div>
+              <div class="scenario-workarea">
+                <div class="scenario-map-area">
+                  <div class="scenario-map-caption"><span id="scenarioMapSummary">지형 배치도</span><select id="scenarioZoom" aria-label="맵 확대"><option value="1">전체</option><option value="2">2배</option><option value="4">4배</option></select></div>
+                  <div class="scenario-map-viewport" id="scenarioMapViewport"><canvas id="scenarioMapCanvas" tabindex="0" role="img" aria-label="지형 배치도. 방향키로 칸을 고릅니다."></canvas></div>
+                  <p id="scenarioCellInfo"></p>
+                </div>
+                <div class="scenario-inspector">
+                  <div class="scenario-tools" role="group" aria-label="맵 편집 도구"><button type="button" id="scenarioDeploymentTool" aria-pressed="true">기체·이벤트</button><button type="button" id="scenarioTileTool" aria-pressed="false">맵 타일</button><div class="scenario-fields-pager" id="scenarioFieldsPager" hidden><button type="button" id="scenarioFieldsPrev" aria-label="이전 편집값">‹</button><span id="scenarioFieldsPosition"></span><button type="button" id="scenarioFieldsNext" aria-label="다음 편집값">›</button></div></div>
+                  <div id="scenarioDeploymentFields">
+                    <div id="scenarioSpawnChoice" class="scenario-edit-group" hidden>
+                      <select id="scenarioSpawnTemplate" aria-label="새 증원 기체 선택"></select>
+                      <div class="scenario-action-row"><span id="scenarioSpawnPilot"></span><button id="scenarioSpawnToggle" type="button">증원 추가</button><button id="scenarioSpawnReset" type="button">처음 값</button></div>
+                    </div><div id="scenarioSpawnPosition" class="scenario-edit-group" hidden>
+                      <div class="scenario-position"><label>턴<input id="scenarioSpawnTurn" type="number" min="2" max="99" step="1" inputmode="numeric"></label><label>X<input id="scenarioSpawnX" type="number" min="0" max="63" step="1" inputmode="numeric"></label><label>Y<input id="scenarioSpawnY" type="number" min="0" max="63" step="1" inputmode="numeric"></label><button id="scenarioSpawnMove" type="button">선택 칸</button></div>
+                    </div><div id="scenarioSpawnRewardGroup" class="scenario-edit-group" hidden>
+                      <label class="scenario-reward-label">격추 보상<select id="scenarioSpawnReward" aria-label="새 증원 격추 보상 표 선택"></select></label>
+                      <p class="scenario-objective-note">적군 시작 · 적군 1기, 한 번만 · 빈 출격 슬롯 필요</p>
+                    </div>
+                    <div id="scenarioObjectiveFields" class="scenario-edit-group" hidden>
+                      <div class="scenario-position"><label for="scenarioDeadline">턴 제한<input id="scenarioDeadline" type="number" min="0" max="98" step="1" inputmode="numeric"></label><span id="scenarioDeadlineRule"></span><button id="scenarioObjectiveReset" type="button" title="이 BIN을 열었을 때의 턴 제한으로 되돌리기">처음 값</button></div>
+                    </div><div id="scenarioObjectiveDescription" class="scenario-edit-group" hidden>
+                      <dl class="scenario-objective-copy"><dt>승리</dt><dd id="scenarioVictoryText"></dd><dt>패배</dt><dd id="scenarioDefeatText"></dd></dl>
+                      <p id="scenarioObjectiveNote" class="scenario-objective-note">기존 승패 우선 · 0은 추가 제한 없음</p>
+                    </div>
+                    <div id="scenarioCriteriaChoice" class="scenario-edit-group" data-scenario-criterion-group hidden>
+                      <div class="scenario-criteria-heading"><label for="scenarioObjectivePriority">동시 충족</label><select id="scenarioObjectivePriority" aria-label="승리와 패배 동시 충족 시 우선 판정"><option value="0">승리 우선</option><option value="1">패배 우선</option></select><button id="scenarioCriteriaReset" type="button" title="이 BIN을 열었을 때의 승리·패배 조건으로 되돌리기">처음 값</button></div>
+                    </div>
+                    <div id="scenarioVictoryChoice" class="scenario-edit-group" data-scenario-criterion-group hidden>
+                      <div class="scenario-criteria-heading"><label for="scenarioVictoryJoin">승리</label><select id="scenarioVictoryJoin" aria-label="승리 조건 조합"><option value="0">모두 충족</option><option value="1">하나라도 충족</option></select><button id="scenarioVictoryAdd" type="button">조건 추가</button></div>
+                    </div>
+                    <div id="scenarioVictoryRule1Group" class="scenario-edit-group" data-scenario-criterion-group hidden>
+                      <div class="scenario-criterion-row"><span>승리1</span><select id="scenarioVictoryRule1Query" aria-label="승리 조건 1 검사 대상"><option value="">대상 선택</option><option value="enemyCount">적군 수</option><option value="allyCount">아군 수</option><option value="turn">턴</option></select><select id="scenarioVictoryRule1Comparison" aria-label="승리 조건 1 비교"><option value="eq">같음</option><option value="ne">다름</option><option value="le">이하</option><option value="ge">이상</option></select><input id="scenarioVictoryRule1Value" type="number" min="0" max="74" step="1" inputmode="numeric" aria-label="승리 조건 1 기준값"><button id="scenarioVictoryRule1Remove" type="button" aria-label="승리 조건 1 삭제" title="조건 삭제">×</button></div>
+                      <div id="scenarioVictoryRule1UnitGroup" class="scenario-criterion-unit-row" hidden><select id="scenarioVictoryRule1Unit" aria-label="승리 조건 1 기체 종류 선택"></select><button id="scenarioVictoryRule1UnitInfo" type="button" aria-label="승리 조건 1 기체 종류 판정 설명" title="기체 종류 판정 설명">?</button></div>
+                    </div>
+                    <div id="scenarioVictoryRule2Group" class="scenario-edit-group" data-scenario-criterion-group hidden>
+                      <div class="scenario-criterion-row"><span>승리2</span><select id="scenarioVictoryRule2Query" aria-label="승리 조건 2 검사 대상"><option value="">대상 선택</option><option value="enemyCount">적군 수</option><option value="allyCount">아군 수</option><option value="turn">턴</option></select><select id="scenarioVictoryRule2Comparison" aria-label="승리 조건 2 비교"><option value="eq">같음</option><option value="ne">다름</option><option value="le">이하</option><option value="ge">이상</option></select><input id="scenarioVictoryRule2Value" type="number" min="0" max="74" step="1" inputmode="numeric" aria-label="승리 조건 2 기준값"><button id="scenarioVictoryRule2Remove" type="button" aria-label="승리 조건 2 삭제" title="조건 삭제">×</button></div>
+                      <div id="scenarioVictoryRule2UnitGroup" class="scenario-criterion-unit-row" hidden><select id="scenarioVictoryRule2Unit" aria-label="승리 조건 2 기체 종류 선택"></select><button id="scenarioVictoryRule2UnitInfo" type="button" aria-label="승리 조건 2 기체 종류 판정 설명" title="기체 종류 판정 설명">?</button></div>
+                    </div>
+                    <div id="scenarioVictoryRule3Group" class="scenario-edit-group" data-scenario-criterion-group hidden>
+                      <div class="scenario-criterion-row"><span>승리3</span><select id="scenarioVictoryRule3Query" aria-label="승리 조건 3 검사 대상"><option value="">대상 선택</option><option value="enemyCount">적군 수</option><option value="allyCount">아군 수</option><option value="turn">턴</option></select><select id="scenarioVictoryRule3Comparison" aria-label="승리 조건 3 비교"><option value="eq">같음</option><option value="ne">다름</option><option value="le">이하</option><option value="ge">이상</option></select><input id="scenarioVictoryRule3Value" type="number" min="0" max="74" step="1" inputmode="numeric" aria-label="승리 조건 3 기준값"><button id="scenarioVictoryRule3Remove" type="button" aria-label="승리 조건 3 삭제" title="조건 삭제">×</button></div>
+                      <div id="scenarioVictoryRule3UnitGroup" class="scenario-criterion-unit-row" hidden><select id="scenarioVictoryRule3Unit" aria-label="승리 조건 3 기체 종류 선택"></select><button id="scenarioVictoryRule3UnitInfo" type="button" aria-label="승리 조건 3 기체 종류 판정 설명" title="기체 종류 판정 설명">?</button></div>
+                    </div>
+                    <div id="scenarioDefeatChoice" class="scenario-edit-group" data-scenario-criterion-group hidden>
+                      <div class="scenario-criteria-heading"><label for="scenarioDefeatJoin">패배</label><select id="scenarioDefeatJoin" aria-label="패배 조건 조합"><option value="0">모두 충족</option><option value="1">하나라도 충족</option></select><button id="scenarioDefeatAdd" type="button">조건 추가</button></div>
+                    </div>
+                    <div id="scenarioDefeatRule1Group" class="scenario-edit-group" data-scenario-criterion-group hidden>
+                      <div class="scenario-criterion-row"><span>패배1</span><select id="scenarioDefeatRule1Query" aria-label="패배 조건 1 검사 대상"><option value="">대상 선택</option><option value="enemyCount">적군 수</option><option value="allyCount">아군 수</option><option value="turn">턴</option></select><select id="scenarioDefeatRule1Comparison" aria-label="패배 조건 1 비교"><option value="eq">같음</option><option value="ne">다름</option><option value="le">이하</option><option value="ge">이상</option></select><input id="scenarioDefeatRule1Value" type="number" min="0" max="74" step="1" inputmode="numeric" aria-label="패배 조건 1 기준값"><button id="scenarioDefeatRule1Remove" type="button" aria-label="패배 조건 1 삭제" title="조건 삭제">×</button></div>
+                      <div id="scenarioDefeatRule1UnitGroup" class="scenario-criterion-unit-row" hidden><select id="scenarioDefeatRule1Unit" aria-label="패배 조건 1 기체 종류 선택"></select><button id="scenarioDefeatRule1UnitInfo" type="button" aria-label="패배 조건 1 기체 종류 판정 설명" title="기체 종류 판정 설명">?</button></div>
+                    </div>
+                    <div id="scenarioDefeatRule2Group" class="scenario-edit-group" data-scenario-criterion-group hidden>
+                      <div class="scenario-criterion-row"><span>패배2</span><select id="scenarioDefeatRule2Query" aria-label="패배 조건 2 검사 대상"><option value="">대상 선택</option><option value="enemyCount">적군 수</option><option value="allyCount">아군 수</option><option value="turn">턴</option></select><select id="scenarioDefeatRule2Comparison" aria-label="패배 조건 2 비교"><option value="eq">같음</option><option value="ne">다름</option><option value="le">이하</option><option value="ge">이상</option></select><input id="scenarioDefeatRule2Value" type="number" min="0" max="74" step="1" inputmode="numeric" aria-label="패배 조건 2 기준값"><button id="scenarioDefeatRule2Remove" type="button" aria-label="패배 조건 2 삭제" title="조건 삭제">×</button></div>
+                      <div id="scenarioDefeatRule2UnitGroup" class="scenario-criterion-unit-row" hidden><select id="scenarioDefeatRule2Unit" aria-label="패배 조건 2 기체 종류 선택"></select><button id="scenarioDefeatRule2UnitInfo" type="button" aria-label="패배 조건 2 기체 종류 판정 설명" title="기체 종류 판정 설명">?</button></div>
+                    </div>
+                    <div id="scenarioDefeatRule3Group" class="scenario-edit-group" data-scenario-criterion-group hidden>
+                      <div class="scenario-criterion-row"><span>패배3</span><select id="scenarioDefeatRule3Query" aria-label="패배 조건 3 검사 대상"><option value="">대상 선택</option><option value="enemyCount">적군 수</option><option value="allyCount">아군 수</option><option value="turn">턴</option></select><select id="scenarioDefeatRule3Comparison" aria-label="패배 조건 3 비교"><option value="eq">같음</option><option value="ne">다름</option><option value="le">이하</option><option value="ge">이상</option></select><input id="scenarioDefeatRule3Value" type="number" min="0" max="74" step="1" inputmode="numeric" aria-label="패배 조건 3 기준값"><button id="scenarioDefeatRule3Remove" type="button" aria-label="패배 조건 3 삭제" title="조건 삭제">×</button></div>
+                      <div id="scenarioDefeatRule3UnitGroup" class="scenario-criterion-unit-row" hidden><select id="scenarioDefeatRule3Unit" aria-label="패배 조건 3 기체 종류 선택"></select><button id="scenarioDefeatRule3UnitInfo" type="button" aria-label="패배 조건 3 기체 종류 판정 설명" title="기체 종류 판정 설명">?</button></div>
+                    </div>
+                    <div id="scenarioEventChoice" class="scenario-edit-group" hidden>
+                      <select id="scenarioConditionSelector" aria-label="편집할 턴 조건"></select>
+                    </div><div id="scenarioEventFields" class="scenario-edit-group" hidden>
+                      <div class="scenario-position"><label for="scenarioTurn">턴<input id="scenarioTurn" type="number" min="1" max="99" step="1" inputmode="numeric"></label><span id="scenarioConditionRule"></span><button id="scenarioEventReset" type="button" title="이 BIN을 열었을 때의 턴으로 되돌리기">처음 값</button></div>
+                    </div>
+                    <div id="scenarioEventPhaseGroup" class="scenario-edit-group" data-scenario-event-criterion-group hidden>
+                      <div class="scenario-criteria-heading"><label for="scenarioEventPhase">검사</label><select id="scenarioEventPhase" aria-label="사건 검사 페이즈"><option value="0">적군 시작</option><option value="1">아군 시작</option></select><span id="scenarioEventPhaseHint" hidden>2~99턴 · 같음</span></div>
+                    </div>
+                    <div id="scenarioEventCriteriaChoice" class="scenario-edit-group" data-scenario-event-criterion-group hidden>
+                      <div class="scenario-criteria-heading"><label for="scenarioEventJoin">사건</label><select id="scenarioEventJoin" aria-label="사건 조건 조합"><option value="0">모두 충족</option><option value="1">하나라도 충족</option></select><button id="scenarioEventAdd" type="button" aria-label="사건 턴 조건 추가" title="턴 조건 추가">＋</button><button id="scenarioEventCriteriaReset" type="button" title="이 BIN을 열었을 때의 사건 조건으로 되돌리기">처음 값</button></div>
+                    </div>
+                    <div id="scenarioEventRule1Group" class="scenario-edit-group" data-scenario-event-criterion-group hidden><div class="scenario-criterion-row"><span>턴</span><input id="scenarioEventRule1Value" type="number" min="1" max="99" step="1" inputmode="numeric" aria-label="사건 조건 1 턴"><select id="scenarioEventRule1Comparison" aria-label="사건 조건 1 비교"><option value="eq">같음</option><option value="ne">아님</option><option value="le">이하</option><option value="ge">이상</option></select><button id="scenarioEventRule1Remove" type="button" aria-label="사건 조건 1 삭제" title="조건 삭제">−</button></div></div>
+                    <div id="scenarioEventRule2Group" class="scenario-edit-group" data-scenario-event-criterion-group hidden><div class="scenario-criterion-row"><span>턴</span><input id="scenarioEventRule2Value" type="number" min="1" max="99" step="1" inputmode="numeric" aria-label="사건 조건 2 턴"><select id="scenarioEventRule2Comparison" aria-label="사건 조건 2 비교"><option value="eq">같음</option><option value="ne">아님</option><option value="le">이하</option><option value="ge">이상</option></select><button id="scenarioEventRule2Remove" type="button" aria-label="사건 조건 2 삭제" title="조건 삭제">−</button></div></div>
+                    <div id="scenarioEventRule3Group" class="scenario-edit-group" data-scenario-event-criterion-group hidden><div class="scenario-criterion-row"><span>턴</span><input id="scenarioEventRule3Value" type="number" min="1" max="99" step="1" inputmode="numeric" aria-label="사건 조건 3 턴"><select id="scenarioEventRule3Comparison" aria-label="사건 조건 3 비교"><option value="eq">같음</option><option value="ne">아님</option><option value="le">이하</option><option value="ge">이상</option></select><button id="scenarioEventRule3Remove" type="button" aria-label="사건 조건 3 삭제" title="조건 삭제">−</button></div></div>
+                    <div class="scenario-edit-group">
+                    <select id="scenarioDeploymentSelector" aria-label="배치할 기체 선택"></select>
+                    </div><div class="scenario-edit-group">
+                    <div class="scenario-position"><label>X<input id="scenarioX" type="number" inputmode="numeric" min="0" max="63" step="1" aria-label="배치 X 좌표"></label><label>Y<input id="scenarioY" type="number" inputmode="numeric" min="0" max="63" step="1" aria-label="배치 Y 좌표"></label><button type="button" id="scenarioMove">선택 칸으로 이동</button></div>
+                    </div><div class="scenario-edit-group">
+                    <label class="scenario-reward-label">격추 보상<select id="scenarioReward" aria-label="배치 기체 격추 보상 표 선택"></select></label>
+                    </div><div class="scenario-edit-group">
+                    <div class="scenario-action-row"><span id="scenarioPilotName"></span><button type="button" id="scenarioDeploymentReset">처음 값</button></div>
+                    </div>
+                  </div>
+                  <div id="scenarioTileFields" hidden>
+                    <div class="scenario-edit-group">
+                    <div class="scenario-tile-choice"><canvas id="scenarioTilePreview" role="img" aria-label="교체할 타일 미리보기" hidden></canvas><select id="scenarioTileSelector" aria-label="교체할 타일 선택"></select></div>
+                    </div><div class="scenario-edit-group">
+                    <div class="scenario-position"><button type="button" id="scenarioApplyTile">선택 칸에 적용</button><button type="button" id="scenarioBrush" aria-pressed="false">연속 칠하기</button></div>
+                    </div><div class="scenario-edit-group">
+                    <div class="scenario-action-row"><button type="button" id="scenarioTerrainLink">지형 효과 보기</button><button type="button" id="scenarioTileReset">이 칸 처음 값</button></div>
+                    </div>
+                  </div>
+                  <p id="scenarioStatus" role="status"></p>
+                </div>
+              </div>
+            </section>
+
+            <section class="editor-data-panel" id="unitEditorPanel" role="tabpanel" aria-labelledby="unitTabButton" data-editor-type="unit" data-page="main">
+              <div class="record-bar">
+                <span class="record-bar-label">유닛능력</span>
+                <button class="record-nav" type="button" id="unitPrevButton" aria-label="이전 기체" aria-controls="unitRecordList"><span aria-hidden="true">‹</span></button>
+                <h3 class="record-title" id="unitStatsHeading">기체</h3>
+                <button class="record-nav" type="button" id="unitNextButton" aria-label="다음 기체" aria-controls="unitRecordList"><span aria-hidden="true">›</span></button>
+                <span class="record-position" id="unitPosition" aria-hidden="true">0 / 0</span>
+              </div>
+              <div class="editor-page-switch" role="group" aria-label="기체 화면 구역">
+                <button class="editor-page-button" type="button" data-editor-page="list" aria-pressed="false">목록</button>
+                <button class="editor-page-button" type="button" data-editor-page="main" aria-pressed="true">능력치</button>
+                <button class="editor-page-button" type="button" data-editor-page="aux" aria-pressed="false">특수능력</button>
+                <button class="editor-page-button" type="button" data-editor-page="extra" aria-pressed="false">기체 무장 <span class="editor-page-count" id="unitWeaponPageCount"></span></button>
+              </div>
+              <div class="editor-panel-body">
+                <aside class="record-pane" data-editor-section="list" aria-label="기체 찾기">
+                  <label class="sr-only" for="unitSearch">기체 검색</label>
+                  <div class="record-search-row"><input class="editor-search" id="unitSearch" type="search" autocomplete="off" enterkeyhint="search" aria-label="기체 이름 또는 번호로 검색" placeholder="이름·번호"><button class="record-tool" id="unitFilterButton" type="button" aria-haspopup="dialog" aria-controls="editorSearchDialog">조건</button></div>
+                  <div class="record-filter-chips" id="unitFilterChips" hidden></div>
+                  <div class="record-bulk-note" id="unitBulkNote" hidden></div>
+                  <div class="record-list" id="unitRecordList" role="listbox" tabindex="0" aria-label="기체 목록" aria-describedby="unitListCount"></div>
+                  <div class="record-actions"><p class="record-count" id="unitListCount"></p><button class="record-tool" id="unitBulkButton" type="button" aria-haspopup="dialog" aria-controls="editorSearchDialog" disabled>일괄 편집</button></div>
+                </aside>
+                <div class="game-screen-shell">
+                  <div class="editor-game-screen unit-game-screen" id="unitStatsForm">
+                    <section class="game-panel unit-info-panel" data-editor-section="aux" aria-label="기체 특수능력">
+                      <h4>
+                        <span>특수능력</span>
+                        <button class="panel-toggle" id="unitFlagToggle" type="button" aria-pressed="false" aria-controls="unitSpecialAbilities" title="조건 플래그 번호 칸 보기 (0 = 이벤트 제한 없음)">플래그 칸</button>
+                      </h4>
+                      <div class="unit-special-list" id="unitSpecialAbilities" aria-live="polite"></div>
+                    </section>
+                    <figure class="editor-visual game-panel unit-image-panel" data-editor-section="main" id="unitPreview" aria-live="polite">
+                      <canvas id="unitPreviewImage" width="144" height="112" aria-label="선택한 기체의 실제 게임 이미지"></canvas>
+                      <figcaption id="unitPreviewCaption">기체 이미지를 불러옵니다</figcaption>
+                    </figure>
+                    <section class="game-panel unit-weapons-panel" data-editor-section="extra" aria-label="이 기체가 가진 무기">
+                      <h4><span>기체 무장</span><span class="panel-count" id="unitWeaponTotal"></span></h4>
+                      <p class="panel-note" id="unitWeaponNote"></p>
+                      <div class="unit-weapon-list" id="unitWeaponList" role="list"></div>
+                    </section>
+                    <section class="game-panel unit-vitals-panel" data-editor-section="main" aria-label="기체 HP와 EN">
+                      <h4>HP / EN</h4>
+                      <div class="unit-vitals-grid">
+                        <label class="unit-vital-row"><span class="editor-field-name">HP</span><input type="number" data-editor-field="hp" min="0" max="65535" step="1" inputmode="numeric"><span class="unit-runtime-gauge" aria-hidden="true"><span></span></span></label>
+                        <label class="unit-vital-row"><span class="editor-field-name">EN</span><input type="number" data-editor-field="en" min="0" max="65535" step="1" inputmode="numeric"><span class="unit-runtime-gauge" aria-hidden="true"><span></span></span></label>
+                      </div>
+                      <div class="unit-flag-grid is-stacked">
+                        <label>실드<select data-editor-field="shield"></select></label>
+                        <label>베어내기 가능<select data-editor-field="parry"></select></label>
+                      </div>
+                    </section>
+                    <section class="game-panel unit-core-panel" data-editor-section="main" aria-label="기체 능력">
+                      <h4>기체능력</h4>
+                      <div class="unit-core-grid">
+                        <label>이동력<input type="number" data-editor-field="move" min="0" max="255" step="1" inputmode="numeric"></label>
+                        <label>운동성<input type="number" data-editor-field="speed" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>장갑<input type="number" data-editor-field="armor" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>한계반응<input type="number" data-editor-field="limit" min="0" max="65535" step="1" inputmode="numeric"></label>
+                      </div>
+                    </section>
+                    <section class="game-panel unit-terrain-panel" data-editor-section="main" aria-label="기체 지형 적응도">
+                      <h4 id="unitTerrainHeading">기체 지형 적응</h4>
+                      <div class="terrain-grid" id="unitTerrainGrid" data-grade-kind="unit"></div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="editor-data-panel" id="pilotEditorPanel" role="tabpanel" aria-labelledby="pilotTabButton" data-editor-type="pilot" data-page="main" hidden>
+              <div class="record-bar">
+                <span class="record-bar-label">파일럿능력</span>
+                <button class="record-nav" type="button" id="pilotPrevButton" aria-label="이전 파일럿" aria-controls="pilotRecordList"><span aria-hidden="true">‹</span></button>
+                <h3 class="record-title" id="pilotStatsHeading">파일럿</h3>
+                <button class="record-nav" type="button" id="pilotNextButton" aria-label="다음 파일럿" aria-controls="pilotRecordList"><span aria-hidden="true">›</span></button>
+                <span class="record-position" id="pilotPosition" aria-hidden="true">0 / 0</span>
+              </div>
+              <div class="editor-page-switch" role="group" aria-label="파일럿 화면 구역">
+                <button class="editor-page-button" type="button" data-editor-page="list" aria-pressed="false">목록</button>
+                <button class="editor-page-button" type="button" data-editor-page="main" aria-pressed="true">능력</button>
+                <button class="editor-page-button" type="button" data-editor-page="aux" aria-pressed="false">성장·지형</button>
+                <button class="editor-page-button" type="button" data-editor-page="extra" aria-pressed="false">정신·특수</button>
+              </div>
+              <div class="editor-panel-body">
+                <aside class="record-pane" data-editor-section="list" aria-label="파일럿 찾기">
+                  <label class="sr-only" for="pilotSearch">파일럿 검색</label>
+                  <div class="record-search-row"><input class="editor-search" id="pilotSearch" type="search" autocomplete="off" enterkeyhint="search" aria-label="파일럿 이름 또는 번호로 검색" placeholder="이름·번호"><button class="record-tool" id="pilotFilterButton" type="button" aria-haspopup="dialog" aria-controls="editorSearchDialog">조건</button></div>
+                  <div class="record-filter-chips" id="pilotFilterChips" hidden></div>
+                  <div class="record-bulk-note" id="pilotBulkNote" hidden></div>
+                  <div class="record-list" id="pilotRecordList" role="listbox" tabindex="0" aria-label="파일럿 목록" aria-describedby="pilotListCount"></div>
+                  <div class="record-actions"><p class="record-count" id="pilotListCount"></p><button class="record-tool" id="pilotBulkButton" type="button" aria-haspopup="dialog" aria-controls="editorSearchDialog" disabled>일괄 편집</button></div>
+                </aside>
+                <div class="game-screen-shell">
+                  <div class="editor-game-screen pilot-game-screen" id="pilotStatsForm">
+                    <figure class="editor-visual is-portrait game-panel pilot-portrait-panel" data-editor-section="main" id="pilotPreview" aria-live="polite">
+                      <canvas id="pilotPreviewImage" width="40" height="40" aria-label="선택한 파일럿의 실제 얼굴 이미지"></canvas>
+                      <figcaption id="pilotPreviewCaption">파일럿 얼굴을 불러옵니다</figcaption>
+                    </figure>
+                    <section class="game-panel pilot-combat-panel" data-editor-section="main" aria-label="파일럿 전투 능력">
+                      <h4>능력</h4>
+                      <div class="pilot-combat-grid is-stacked">
+                        <label>격투<input type="number" data-editor-field="atk" min="0" max="255" step="1" inputmode="numeric"></label>
+                        <label>사격<input type="number" data-editor-field="shot" min="0" max="255" step="1" inputmode="numeric"></label>
+                        <label>회피<input type="number" data-editor-field="agi" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>명중<input type="number" data-editor-field="hit" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>기량<input type="number" data-editor-field="tech" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>반응<input type="number" data-editor-field="cnt" min="0" max="65535" step="1" inputmode="numeric"></label>
+                      </div>
+                    </section>
+                    <section class="game-panel pilot-points-panel" data-editor-section="main" aria-label="파일럿 정신 포인트와 초기 경험치">
+                      <h4>SP / EXP</h4>
+                      <div class="pilot-points-grid">
+                        <label>정신P<input type="number" data-editor-field="mp" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>초기 경험치<input type="number" data-editor-field="exp" min="0" max="255" step="1" inputmode="numeric"></label>
+                      </div>
+                    </section>
+                    <div class="pilot-lower-panel">
+                      <section class="game-panel pilot-mental-panel" data-editor-section="extra" aria-label="파일럿 정신커맨드와 습득 레벨">
+                        <h4><span>정신커맨드</span><span class="panel-count" id="pilotSpiritRoom"></span></h4>
+                        <div class="pilot-mental-grid" id="pilotMentalCommands" aria-live="polite"></div>
+                      </section>
+                      <section class="game-panel pilot-special-panel" data-editor-section="extra" aria-label="파일럿 특수능력">
+                        <h4><span>특수능력</span><button class="pilot-skill-schedule-button" id="pilotSkillScheduleButton" type="button" aria-label="특수능력 추가·삭제와 습득 레벨 변경">추가·삭제</button></h4>
+                        <div class="pilot-runtime-skills" id="pilotRuntimeSkills" aria-live="polite"></div>
+                      </section>
+                      <section class="game-panel pilot-growth-panel" data-editor-section="aux" aria-label="파일럿 성장 보정 수치">
+                        <h4>성장 보정</h4>
+                        <div class="pilot-growth-grid is-stacked">
+                          <label>격투<input type="number" data-editor-field="attackGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                          <label>사격<input type="number" data-editor-field="shotGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                          <label>명중<input type="number" data-editor-field="hitGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                          <label>기량<input type="number" data-editor-field="techGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                          <label>회피<input type="number" data-editor-field="agiGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                          <label>반응<input type="number" data-editor-field="cntGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                          <label>정신<input type="number" data-editor-field="mindGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                          <label>동조<input type="number" data-editor-field="syncGrowth" min="0" max="15" step="1" inputmode="numeric"></label>
+                        </div>
+                      </section>
+                      <section class="game-panel pilot-terrain-panel" data-editor-section="aux" aria-label="파일럿 지형 적응도">
+                        <h4 id="pilotTerrainHeading">지형</h4>
+                        <div class="terrain-grid is-stacked" id="pilotTerrainGrid" data-grade-kind="pilot"></div>
+                      </section>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="editor-data-panel" id="weaponEditorPanel" role="tabpanel" aria-labelledby="weaponTabButton" data-editor-type="weapon" data-page="main" hidden>
+              <div class="record-bar">
+                <span class="record-bar-label">전체 무기 목록</span>
+                <button class="record-nav" type="button" id="weaponPrevButton" aria-label="이전 무기" aria-controls="weaponRecordList"><span aria-hidden="true">‹</span></button>
+                <h3 class="record-title" id="weaponStatsHeading">무기</h3>
+                <button class="record-nav" type="button" id="weaponNextButton" aria-label="다음 무기" aria-controls="weaponRecordList"><span aria-hidden="true">›</span></button>
+                <span class="record-position" id="weaponPosition" aria-hidden="true">0 / 0</span>
+              </div>
+              <div class="editor-page-switch" role="group" aria-label="무기 화면 구역">
+                <button class="editor-page-button" type="button" data-editor-page="list" aria-pressed="false">목록</button>
+                <button class="editor-page-button" type="button" data-editor-page="main" aria-pressed="true">무기 수치</button>
+                <button class="editor-page-button" type="button" data-editor-page="extra" aria-pressed="false">지형·사용 기체</button>
+              </div>
+              <div class="editor-panel-body">
+                <aside class="record-pane is-weapons" data-editor-section="list" aria-label="무기 찾기">
+                  <label class="sr-only" for="weaponSearch">무기 검색</label>
+                  <div class="record-search-row"><input class="editor-search" id="weaponSearch" type="search" autocomplete="off" enterkeyhint="search" aria-label="무기 이름, 번호 또는 사용 기체 이름으로 검색" placeholder="무기·기체"><button class="record-tool" id="weaponFilterButton" type="button" aria-haspopup="dialog" aria-controls="editorSearchDialog">조건</button></div>
+                  <div class="record-filter-chips" id="weaponFilterChips" hidden></div>
+                  <div class="record-bulk-note" id="weaponBulkNote" hidden></div>
+                  <div class="record-list" id="weaponRecordList" role="listbox" tabindex="0" aria-label="전체 무기 목록" aria-describedby="weaponListCount"></div>
+                  <div class="record-actions"><p class="record-count" id="weaponListCount"></p><button class="record-tool" id="weaponBulkButton" type="button" aria-haspopup="dialog" aria-controls="editorSearchDialog" disabled>일괄 편집</button></div>
+                </aside>
+                <div class="game-screen-shell">
+                  <div class="editor-game-screen weapon-game-screen" id="weaponStatsForm">
+                    <p class="weapon-scope-note" data-editor-section="main">게임 전체의 무기 데이터입니다. 기체마다 쓰는 무기는 기체 탭의 ‘무기’ 구역에서 봅니다.</p>
+                    <section class="game-panel weapon-detail-panel" data-editor-section="main" aria-label="선택한 무기 수치">
+                      <h4>무기 수치</h4>
+                      <div class="weapon-detail-grid is-stacked">
+                        <label>공격력<input type="number" data-editor-field="attack" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>명중 보정<input type="number" data-editor-field="hit" min="-128" max="127" step="1" inputmode="numeric"></label>
+                        <label>크리티컬<input type="number" data-editor-field="critical" min="0" max="15" step="1" inputmode="numeric"></label>
+                        <label>최소 사거리<input type="number" data-editor-field="minRange" min="0" max="255" step="1" inputmode="numeric"></label>
+                        <label>최대 사거리<input type="number" data-editor-field="maxRange" min="0" max="255" step="1" inputmode="numeric"></label>
+                        <label>소비 EN<input type="number" data-editor-field="energy" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>탄수<input type="number" data-editor-field="ammo" min="1" max="255" step="1" inputmode="numeric"><output class="editor-field-info" hidden></output></label>
+                        <label>필요 기력<input type="number" data-editor-field="requiredMorale" min="0" max="150" step="1" inputmode="numeric"></label>
+                        <label>필요 기능<select data-editor-field="requiredSkill"></select></label>
+                      </div>
+                    </section>
+                    <section class="game-panel weapon-terrain-panel" data-editor-section="extra" aria-label="무기 지형 적응도">
+                      <h4 id="weaponTerrainHeading">무기 지형 적응</h4>
+                      <div class="terrain-grid" id="weaponTerrainGrid" data-grade-kind="weapon"></div>
+                    </section>
+                    <section class="game-panel weapon-owner-panel" data-editor-section="extra" aria-label="이 무기를 가진 기체">
+                      <h4><span>사용 기체</span><span class="panel-count" id="weaponOwnerCount"></span></h4>
+                      <p class="panel-note" id="weaponOwnerNote"></p>
+                      <div class="owner-chip-list" id="weaponOwnerList" role="list"></div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+                <div class="editor-footer">
+                  <button class="editor-status editor-changes-button" type="button" id="editorChangesButton" aria-haspopup="dialog" aria-controls="editorChangesDialog" title="바뀐 값 목록 보기"><span id="editorState">변경 없음</span></button>
+                  <span class="sr-only" id="editorStateLive" role="status" aria-live="polite"></span>
+                  <div class="editor-preset-file-actions" role="group" aria-label="편집값 파일">
+                    <button class="editor-preset-file-button" type="button" id="editorPresetSaveButton" title="이번에 바꾼 값을 JSON 파일로 저장" aria-label="편집값 저장" disabled><span class="preset-long">편집값 저장</span><span class="preset-short" aria-hidden="true">값 저장</span></button>
+                    <button class="editor-preset-file-button" type="button" id="editorPresetLoadButton" title="저장한 편집값 JSON 파일 불러오기" aria-label="편집값 불러오기" aria-haspopup="dialog" aria-controls="editorChangesDialog" disabled><span class="preset-long">편집값 불러오기</span><span class="preset-short" aria-hidden="true">값 불러오기</span></button>
+                    <input type="file" id="editorPresetFile" accept=".json,application/json" hidden>
+                  </div>
+                  <div class="editor-download-actions" id="editorDownloadActions" hidden>
+                    <a class="download-link is-bin" id="editorDownloadBinLink">BIN 다운로드</a>
+                    <a class="download-link is-cue" id="editorDownloadCueLink">CUE 다운로드</a>
+                    <span id="editorDownloadSummary"></span>
+                    <button type="button" class="workflow-copy-hash" id="workflowCopyHash">검증값 복사</button>
+                  </div>
+                  <button class="editor-primary-button" type="button" id="editorExportButton" disabled>
+                    BIN/CUE 저장
+                  </button>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </section>
     </main>
+
+    <dialog class="user-guide-dialog" id="userGuideDialog" aria-labelledby="userGuideTitle" aria-describedby="userGuideDescription">
+      <div class="user-guide-shell">
+        <header class="user-guide-header">
+          <h2 id="userGuideTitle">사용 가이드</h2>
+          <button class="user-guide-close" id="userGuideClose" type="button" autofocus>닫기 <span aria-hidden="true">×</span></button>
+        </header>
+        <label class="user-guide-route" for="userGuideRoute">
+          <span>시작할 파일</span>
+          <select id="userGuideRoute">
+            <option value="stock">원본 · 한글 패치 적용</option>
+            <option value="native">원본 · 원본 언어 유지</option>
+            <option value="patched">최신 한글 패치본</option>
+            <option value="personal">기존 편집본</option>
+          </select>
+        </label>
+        <nav class="user-guide-steps" aria-label="사용 가이드 단계">
+          <button type="button" data-guide-step="0">폴더</button>
+          <button type="button" data-guide-step="1">작업</button>
+          <button type="button" data-guide-step="2">편집</button>
+          <button type="button" data-guide-step="3">편집값</button>
+          <button type="button" data-guide-step="4">BIN/CUE</button>
+        </nav>
+        <label class="user-guide-route user-guide-topic" id="userGuideTopicRow" for="userGuideTopic" hidden>
+          <span>편집 안내</span>
+          <select id="userGuideTopic">
+            <option value="edit">목록·검색</option>
+            <option value="unit">수치 변경·되돌리기</option>
+            <option value="unit-terrain">기체 지형 적응</option>
+            <option value="unit-abilities">기체 특수능력</option>
+            <option value="pilot">파일럿 능력·성장</option>
+            <option value="spirits">정신커맨드</option>
+            <option value="skills">파일럿 특수능력</option>
+            <option value="weapon">무기 수치</option>
+            <option value="weapon-terrain">무기 지형 적응</option>
+            <option value="changes">변경 목록</option>
+          </select>
+        </label>
+        <div class="user-guide-copy" aria-live="polite" aria-atomic="true">
+          <h3 id="userGuideHeading"></h3>
+          <p id="userGuideDescription"></p>
+        </div>
+        <figure class="user-guide-figure">
+          <picture id="userGuidePicture">
+            <source id="userGuideMobileImage" media="(max-width: 760px)">
+            <img id="userGuideImage" alt="" decoding="async">
+          </picture>
+          <p id="userGuideImageError" role="status" hidden>화면 캡처를 불러오지 못했습니다. 위 안내를 확인해 주세요.</p>
+          <figcaption>현재 UI · 설명용 예시 데이터</figcaption>
+        </figure>
+        <footer class="user-guide-footer">
+          <button id="userGuidePrevious" type="button">‹ 이전</button>
+          <span id="userGuidePosition" aria-label="가이드 위치"></span>
+          <button id="userGuideNext" type="button">다음 ›</button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog class="pilot-skill-dialog" id="pilotSkillDialog" aria-labelledby="pilotSkillDialogTitle" aria-describedby="pilotSkillDialogNote">
+      <div class="pilot-skill-dialog-shell">
+        <header class="pilot-skill-dialog-header">
+          <div>
+            <span>특수능력 추가·삭제</span>
+            <h2 id="pilotSkillDialogTitle">파일럿 특수능력 편집</h2>
+          </div>
+          <button class="pilot-skill-dialog-close" id="pilotSkillDialogClose" type="button">닫기</button>
+        </header>
+        <p class="pilot-skill-dialog-note" id="pilotSkillDialogNote"></p>
+        <div class="pilot-skill-status" id="pilotSkillStatus" role="status" aria-live="polite"></div>
+        <p class="pilot-skill-warning" id="pilotSkillWarning" role="alert" hidden></p>
+        <div class="pilot-skill-schedule" id="pilotSkillSchedule" role="list" aria-label="현재 특수능력 목록"></div>
+        <div class="pilot-skill-add" id="pilotSkillAdd" role="group" aria-label="특수능력 추가">
+          <label class="pilot-skill-add-choice">
+            <span>능력</span>
+            <select id="pilotSkillAddSelect" aria-label="추가할 특수능력"></select>
+          </label>
+          <label class="pilot-skill-add-level">
+            <span>습득 Lv</span>
+            <input id="pilotSkillAddLevel" type="number" min="1" max="99" step="1" value="1" inputmode="numeric" aria-label="새 특수능력의 습득 레벨 (1~99)">
+          </label>
+          <button class="pilot-skill-add-button" id="pilotSkillAddButton" type="button" data-skill-add>추가</button>
+        </div>
+        <p class="pilot-skill-add-hint" id="pilotSkillAddHint" role="status" aria-live="polite"></p>
+        <div class="pilot-skill-actions">
+          <button class="pilot-skill-revert" id="pilotSkillRevertButton" type="button" data-skill-revert>원래 목록으로 되돌리기</button>
+        </div>
+        <details class="pilot-skill-dialog-footnote"><summary>편집 규칙</summary>
+          저장하면 이 목록 전체가 파일럿 기록의 원래 자리 안에 다시 쓰입니다. 같은 계열(뉴타입·강화인간 같은 단계 능력)은
+          낮은 단계부터 저장되며, 파일럿 한 명이 동시에 쓰는 능력은 계열마다 하나씩 모두 4가지까지입니다.
+        </details>
+      </div>
+    </dialog>
 
     <dialog
       class="patch-note-dialog"
@@ -270,7 +879,7 @@
         </header>
         <div class="patch-note-body" id="patchNotesBody">
         <div class="patch-note-summary" id="patchNotesSummary">
-          선택한 공개 버전의 변경 내역을 불러오는 중입니다.
+          선택한 공개 버전의 패치노트를 불러오는 중입니다.
         </div>
         <div class="patch-note-list" id="patchNotesList" role="list"></div>
         </div>
@@ -289,6 +898,49 @@
       </header>
       <div class="patch-image-stage" id="patchImageStage">
         <img id="patchImageContent" alt="" decoding="async">
+      </div>
+    </dialog>
+
+    <dialog class="editor-search-dialog" id="editorSearchDialog" aria-labelledby="editorSearchTitle" aria-describedby="editorSearchSummary">
+      <div class="editor-search-shell">
+        <header class="editor-search-header"><h2 id="editorSearchTitle">검색 조건</h2><button type="button" id="editorSearchClose" aria-label="닫기">✕</button></header>
+        <p class="editor-search-summary" id="editorSearchSummary"></p>
+        <section id="editorFilterPanel">
+          <div class="editor-filter-conditions" id="editorFilterConditions"></div>
+          <div class="editor-search-pager" id="editorFilterPager" hidden></div>
+          <div class="editor-filter-tools"><button type="button" id="editorAddCondition">+ 조건 추가</button><button type="button" id="editorClearConditions">조건 비우기</button></div>
+        </section>
+        <section id="editorBulkPanel" hidden>
+          <div class="editor-bulk-fields"><label>변경할 항목<select id="editorBulkField"></select></label><label>적용할 값<span id="editorBulkValue"></span></label></div>
+          <p class="editor-bulk-summary" id="editorBulkSummary" role="status" aria-live="polite"></p>
+          <div class="editor-bulk-preview-heading"><span id="editorBulkPreviewLabel">적용 전 → 적용 후</span><button type="button" id="editorBulkTargetsToggle" aria-expanded="false">대상 확인·선택</button></div>
+          <div id="editorBulkChooseTools" class="editor-bulk-choose-tools" hidden><button type="button" id="editorBulkSelectAll">모두 선택</button><button type="button" id="editorBulkSelectNone">선택 비우기</button></div>
+          <div class="editor-bulk-targets" id="editorBulkTargets"></div>
+          <div class="editor-search-pager" id="editorBulkPager" hidden></div>
+        </section>
+        <p class="editor-search-error" id="editorSearchError" role="alert" hidden></p>
+        <div class="editor-search-actions"><button type="button" id="editorSearchCancel">취소</button><button type="button" class="is-primary" id="editorSearchSubmit">결과 보기</button></div>
+      </div>
+    </dialog>
+
+    <dialog class="editor-changes-dialog" id="editorChangesDialog" aria-labelledby="editorChangesTitle">
+      <div class="editor-changes-shell">
+        <header class="editor-changes-header">
+          <h2 id="editorChangesTitle">바뀐 값</h2>
+          <button class="editor-changes-close" type="button" id="editorChangesClose" aria-label="닫기">✕</button>
+        </header>
+        <p class="editor-changes-message" id="editorChangesMessage" role="status" aria-live="polite" hidden></p>
+        <div class="editor-changes-list" id="editorChangesList"></div>
+        <section class="editor-preset-summary" id="editorPresetSummary" aria-labelledby="editorChangesTitle" hidden>
+          <p class="editor-preset-file" id="editorPresetSummaryText"></p>
+          <ul class="editor-preset-counts" id="editorPresetCounts"></ul>
+          <details class="editor-preset-details" id="editorPresetDetails" hidden></details>
+          <div class="editor-preset-actions">
+            <button class="editor-changes-tool is-primary" type="button" id="editorPresetApplyAll">모두 적용</button>
+            <button class="editor-changes-tool" type="button" id="editorPresetApplyMatching">원래 값이 같은 것만 적용</button>
+            <button class="editor-changes-tool" type="button" id="editorPresetCancel">취소</button>
+          </div>
+        </section>
       </div>
     </dialog>
 

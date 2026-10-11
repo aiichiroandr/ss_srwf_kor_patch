@@ -1,17 +1,19 @@
 import {
   PATCH_LIMITS,
+  Sha256,
   applyPatchToWritable,
   buildVerifiedPatchedBlob,
   parsePatch,
-} from "./patch-core.mjs?v=20261005-1";
+  verifySourceBlob,
+} from "./patch-core.mjs?v=20261011-public1";
 import {
   PATCH_FORMAT_V2,
   PATCH_V2_LIMITS,
   applyPatchV2ToWritable,
   buildVerifiedPatchedBlobV2,
   parsePatchV2,
-} from "./patch-core-v2.mjs?v=20261005-1";
-import { sha256Hex } from "./sha256.mjs?v=20261005-1";
+} from "./patch-core-v2.mjs?v=20261011-public1";
+import { sha256Hex } from "./sha256.mjs?v=20261011-public1";
 
 let activeJob = null;
 let preparedSource = null;
@@ -36,12 +38,16 @@ const PATCH_ENGINES = new Map([
     parse: parsePatch,
     applyToWritable: applyPatchToWritable,
     buildDownload: buildVerifiedPatchedBlob,
+    // Whole-image SHA-256 and every record preimage in one pass; a source that already carries the patched bytes fails at
+    // its first record.
+    verifySource: verifySourceBlob,
   })],
   [PATCH_FORMAT_V2, Object.freeze({
     magic: "SRWFKP2\0",
     parse: parsePatchV2,
     applyToWritable: applyPatchV2ToWritable,
     buildDownload: buildVerifiedPatchedBlobV2,
+    verifySource: verifySourceHash,
   })],
 ]);
 const SAFE_IMAGE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.bin$/;
@@ -129,6 +135,19 @@ async function prepareSource(message, signal) {
   );
   throwIfAborted(signal);
 
+  // The page asks for this when a person chooses a folder: only the exact pinned stock image may be accepted as the source,
+  // so the whole-image SHA-256 is checked now instead of at the end of the patch run. An already patched or edited image
+  // is refused here with the same codes the patch run would end with.
+  const sourceVerified = message.verifySource === true;
+  if (sourceVerified) {
+    postPhase(message.jobId, "source-verify");
+    await patchEngineFor(message.descriptor).verifySource(message.sourceFile, parsedPatch, {
+      signal,
+      onProgress: createProgressReporter(message.jobId, "source-verify", message.descriptor.sourceSize, signal),
+    });
+    throwIfAborted(signal);
+  }
+
   const preparationToken = createToken();
   preparedSource = {
     token: preparationToken,
@@ -143,7 +162,45 @@ async function prepareSource(message, signal) {
     jobId: message.jobId,
     operation: "PREPARE_SOURCE",
     preparationToken,
+    ...(sourceVerified ? { sourceVerified: true } : {}),
   });
+}
+
+// A growth (v2) patch has no source-only pass of its own. The whole-image SHA-256 against the pinned stock value is the
+// identity check, and this reads the source once to compute it.
+async function verifySourceHash(blob, parsedPatch, { signal, onProgress }) {
+  const hasher = new Sha256();
+  const reader = blob.stream().getReader();
+  let processed = 0;
+  let finished = false;
+  try {
+    while (true) {
+      throwIfAborted(signal);
+      const { done, value } = await reader.read();
+      if (done) {
+        finished = true;
+        break;
+      }
+      hasher.update(value);
+      processed += value.byteLength;
+      onProgress({ processed, total: blob.size });
+    }
+  } finally {
+    if (!finished) {
+      try {
+        await reader.cancel();
+      } catch {
+        // The error or cancellation that stopped the read stays authoritative.
+      }
+    }
+    reader.releaseLock();
+  }
+  if (processed !== blob.size) {
+    throw new WorkerPatcherError("SOURCE_SIZE_MISMATCH", "Source stream length does not match its Blob size");
+  }
+  if (hasher.hex() !== parsedPatch.sourceSha256) {
+    throw new WorkerPatcherError("SOURCE_HASH_MISMATCH", "Source SHA-256 does not match the release");
+  }
 }
 
 async function writePatchedImage(message, signal) {
