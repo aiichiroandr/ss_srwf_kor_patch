@@ -347,6 +347,11 @@ body[data-mode="editor"] #patchRegion {
   flex-direction: row;
 }
 
+.card-feedback #progressPercent {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .card-feedback .cancel-button {
   white-space: nowrap;
 }
@@ -1006,7 +1011,7 @@ body[data-view="editor"] .editor-region {
 
   .patch-workspace:has(#patchRegion:is(.is-busy, .is-complete, .is-error)) .release-card :is(.font-preview-row, .patch-note-toggle),
   body[data-mode="patch"] .patch-workspace:has(#sourceRegion .card-feedback > :not([hidden])) .release-card :is(.font-preview-row, .patch-note-toggle),
-  body[data-mode="editor"] .patch-workspace:has(#editorSourceRegion .card-feedback > :not([hidden])) .release-card :is(.font-preview-row, .patch-note-toggle) {
+  body[data-mode="editor"] .patch-workspace:has(#editorSourceRegion .card-feedback > :not([hidden])) .release-card:not([data-patch-choices="true"]) :is(.font-preview-row, .patch-note-toggle) {
     display: none;
   }
 
@@ -1205,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261011-public1');
+  --frame: url('./runtime-panel-frame.svg?v=20261011-public2');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;

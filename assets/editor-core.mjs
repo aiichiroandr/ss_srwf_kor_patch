@@ -1,29 +1,30 @@
-import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261011-public1';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public1';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public1';
-import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261011-public1";
-import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261011-public1";
-import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261011-public1";
-import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261011-public1";
-import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261011-public1";
-import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261011-public1";
-import { Sha256 } from "./sha256.mjs?v=20261011-public1";
-import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261011-public1";
-import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261011-public1";
-import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261011-public1";
-import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261011-public1";
-import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261011-public1";
-import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261011-public1";
-import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261011-public1";
-import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261011-public1";
-import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261011-public1";
-import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261011-public1";
-import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261011-public1";
-import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261011-public1";
+import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261011-public2';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public2';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public2';
+import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261011-public2";
+import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261011-public2";
+import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261011-public2";
+import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261011-public2";
+import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261011-public2";
+import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261011-public2";
+import { Sha256 } from "./sha256.mjs?v=20261011-public2";
+import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261011-public2";
+import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261011-public2";
+import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261011-public2";
+import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261011-public2";
+import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261011-public2";
+import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261011-public2";
+import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261011-public2";
+import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261011-public2";
+import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261011-public2";
+import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261011-public2";
+import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261011-public2";
+import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261011-public2";
 
 const SECTOR_SIZE = 2352;
 const SECTOR_USER_OFFSET = 16;
 const SECTOR_USER_SIZE = 2048;
+const EXTENT_READ_SECTORS = 128;
 const MAX_TSR_BYTES = 16 * 1024 * 1024;
 const MAX_DECOMPRESSED_TSR_BYTES = 8 * 1024 * 1024;
 const MAX_DIRECTORY_BYTES = 32 * 1024 * 1024;
@@ -305,17 +306,50 @@ function sectorAtOffset(blob, lba) {
   return offset;
 }
 
+function validateCdSector(sector, mode, checksum) {
+  if (mode === 1) {
+    if (!isMode1Sync(sector)) {
+      fail("EDITOR_SECTOR_UNSUPPORTED", "The game data is not stored in supported MODE1/2352 sectors.");
+    }
+    if (checksum && !verifyMode1Sector(sector)) {
+      fail("EDITOR_SECTOR_CHECKSUM", "A MODE1 sector checksum is invalid; editing was stopped.");
+    }
+  } else {
+    if (mode !== 2) fail("EDITOR_SECTOR_UNSUPPORTED", "Only MODE1 and MODE2 Form 1 data extents are supported.");
+    if (!isMode2Form1(sector)) fail("EDITOR_SECTOR_UNSUPPORTED", "The scenario extent is not consistent MODE2 Form 1 data.");
+    if (checksum && !verifyMode2Form1Sector(sector)) fail("EDITOR_SECTOR_CHECKSUM", "A MODE2 Form 1 sector checksum is invalid.");
+  }
+  return sector;
+}
+
 async function readMode1Sector(blob, lba, { signal, checksum = false } = {}) {
   checkAbort(signal);
   const offset = sectorAtOffset(blob, lba);
   const sector = new Uint8Array(await blob.slice(offset, offset + SECTOR_SIZE).arrayBuffer());
-  if (!isMode1Sync(sector)) {
-    fail("EDITOR_SECTOR_UNSUPPORTED", "The game data is not stored in supported MODE1/2352 sectors.");
+  checkAbort(signal);
+  return validateCdSector(sector, 1, checksum);
+}
+
+async function readCdExtentData(blob, lba, byteLength, mode, { signal, checksum = false } = {}) {
+  const result = new Uint8Array(byteLength);
+  const count = Math.ceil(byteLength / SECTOR_USER_SIZE);
+  const userOffset = mode === 1 ? SECTOR_USER_OFFSET : 24;
+  for (let first = 0; first < count; first += EXTENT_READ_SECTORS) {
+    checkAbort(signal);
+    const sectors = Math.min(EXTENT_READ_SECTORS, count - first);
+    const offset = sectorAtOffset(blob, lba + first);
+    const end = sectorAtOffset(blob, lba + first + sectors - 1) + SECTOR_SIZE;
+    const block = new Uint8Array(await blob.slice(offset, end).arrayBuffer());
+    checkAbort(signal);
+    for (let index = 0; index < sectors; index += 1) {
+      checkAbort(signal);
+      const sector = validateCdSector(block.subarray(index * SECTOR_SIZE, (index + 1) * SECTOR_SIZE), mode, checksum);
+      const written = (first + index) * SECTOR_USER_SIZE;
+      const take = Math.min(SECTOR_USER_SIZE, byteLength - written);
+      result.set(sector.subarray(userOffset, userOffset + take), written);
+    }
   }
-  if (checksum && !verifyMode1Sector(sector)) {
-    fail("EDITOR_SECTOR_CHECKSUM", "A MODE1 sector checksum is invalid; editing was stopped.");
-  }
-  return sector;
+  return result;
 }
 
 async function readMode1UserExtent(blob, lba, byteLength, options = {}) {
@@ -325,16 +359,7 @@ async function readMode1UserExtent(blob, lba, byteLength, options = {}) {
     || byteLength > MAX_DIRECTORY_BYTES) {
     fail("EDITOR_ISO_MALFORMED", "An ISO9660 directory exceeds the local inspection limit.");
   }
-  const result = new Uint8Array(byteLength);
-  let written = 0;
-  const count = Math.ceil(byteLength / SECTOR_USER_SIZE);
-  for (let index = 0; index < count; index += 1) {
-    const sector = await readMode1Sector(blob, lba + index, options);
-    const take = Math.min(SECTOR_USER_SIZE, byteLength - written);
-    result.set(sector.subarray(SECTOR_USER_OFFSET, SECTOR_USER_OFFSET + take), written);
-    written += take;
-  }
-  return result;
+  return readCdExtentData(blob, lba, byteLength, 1, options);
 }
 
 function readIsoRecord(bytes, offset, lba, label = "ISO9660 record") {
@@ -2650,7 +2675,7 @@ async function createProfile(trust, session, options = {}) {
   rawMasks.push([file.recordLba * SECTOR_SIZE + MODE1_EDC_OFFSET, SECTOR_SIZE - MODE1_EDC_OFFSET, 255]);
   rawMasks.sort((a, b) => a[0] - b[0]);
   const scenario = session.scenario;
-  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261011-public1') : null;
+  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261011-public2') : null;
   const completeRawMasks = scenario ? scenarioModule.mergeFullByteMasks([...rawMasks,
     ...scenarioModule.scenarioRawMasks(scenario.files, scenario.inspected)]) : rawMasks;
   const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId);
@@ -2894,6 +2919,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
   // Preserve the original ISO/TSR diagnostics for foreign images. Extended
   // tables are required only for a supported disc geometry; provenance still
   // rejects every foreign image after the bounded reads below.
+  onProgress?.({ phase: "editor-data", indeterminate: true });
   const scenarioEnabled = trust.scenarioEditing && Object.values(trust.targets)
     .some(target => target.gameId === descriptor.gameId && target.size === blob.size);
   const files = await locateIsoFiles(blob, signal, scenarioEnabled
@@ -2910,6 +2936,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
   const { units, pilots, pilotAliases, weapons, unitAbilityNames, pilotAbilityNames, rewards, partNames, terrains } = buildEditorRows(
     root, decoded, descriptor.gameId, ownEntry(trust.lockLayouts, descriptor.gameId) ?? null,
   );
+  if (scenarioEnabled) onProgress?.({ phase: "scenario-data", indeterminate: true });
   const scenario = scenarioEnabled ? await inspectDiscScenario(trust, blob, actualHash, descriptor.gameId, files, units, pilots, signal) : null;
   const provenance = await establishEditorProvenance(trust, blob, actualHash, descriptor, receipts, file, decoded, root, streamEnd, scenario, { signal, onProgress });
   const baseIdentity = ownEntry(trust.targets, provenance.baseTargetSha256);
@@ -3024,7 +3051,7 @@ function scenarioFileIdentity(files) {
 }
 
 async function inspectDiscScenario(trust, blob, actualHash, gameId, files, units, pilots, signal) {
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public1');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public2');
   const identity = scenarioFileIdentity(files), target = ownEntry(trust.targets, actualHash);
   let scenarioLayout;
   if (target) scenarioLayout = target.kind === 'stock' ? 'stock' : 'latest';
@@ -3193,9 +3220,8 @@ async function readCdSector(blob, lba, mode, signal, checksum) {
   checkAbort(signal);
   const offset = sectorAtOffset(blob, lba);
   const sector = new Uint8Array(await blob.slice(offset, offset + SECTOR_SIZE).arrayBuffer());
-  if (!isMode2Form1(sector)) fail("EDITOR_SECTOR_UNSUPPORTED", "The scenario extent is not consistent MODE2 Form 1 data.");
-  if (checksum && !verifyMode2Form1Sector(sector)) fail("EDITOR_SECTOR_CHECKSUM", "A MODE2 Form 1 sector checksum is invalid.");
-  return sector;
+  checkAbort(signal);
+  return validateCdSector(sector, mode, checksum);
 }
 
 // These bounded extent operations also serve SCEDATA. They do not reinterpret an
@@ -3206,14 +3232,7 @@ export async function readCdUserExtent(blob, lba, byteLength, { mode = 1, signal
     || !Number.isSafeInteger(byteLength) || byteLength <= 0 || byteLength > MAX_DIRECTORY_BYTES) {
     fail("EDITOR_ISO_MALFORMED", "Invalid bounded CD data extent.");
   }
-  const output = new Uint8Array(byteLength);
-  const userOffset = mode === 1 ? 16 : 24;
-  for (let written = 0; written < byteLength; written += SECTOR_USER_SIZE) {
-    const sector = await readCdSector(blob, lba + written / SECTOR_USER_SIZE, mode, signal, checksum);
-    const take = Math.min(SECTOR_USER_SIZE, byteLength - written);
-    output.set(sector.subarray(userOffset, userOffset + take), written);
-  }
-  return output;
+  return readCdExtentData(blob, lba, byteLength, mode, { signal, checksum });
 }
 
 export async function rewriteCdUserExtent(blob, file, bytes, { mode = 1, signal } = {}) {
@@ -3521,7 +3540,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   if (session.scenario && (deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || mapEdits.length)) {
     const current = session.scenario, gameId = session.descriptor.gameId;
     const [{ repackScenarioDeployments }, { repackMapTiles }] = await Promise.all([
-      import('./editor-deployments.mjs?v=20261011-public1'), import('./editor-map-archive.mjs?v=20261011-public1'),
+      import('./editor-deployments.mjs?v=20261011-public2'), import('./editor-map-archive.mjs?v=20261011-public2'),
     ]);
     [scenarioChange, mapChange] = await Promise.all([
       deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length ? repackScenarioDeployments(current.scenarioBytes, gameId, current.inspected.maps, current.tables,
@@ -3566,7 +3585,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
     outputBlob = result.outputBlob; changedSectors.push(...result.changedSectors);
   }
   bytesChanged += new Set(changedSectors).size * SECTOR_SIZE;
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public1');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public2');
   const checked = inspectScenarioScopes({ gameId: session.descriptor.gameId,
     scenarioBytes: scenarioChange?.bytes ?? current.scenarioBytes, mapBytes: mapChange?.bytes ?? current.mapBytes,
     bankBytes: current.bankBytes, tables: current.tables, sectorMode: current.inspected.scope.scenario.sectorMode,

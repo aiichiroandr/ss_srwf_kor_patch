@@ -182,6 +182,43 @@ test('progress is clamped to whole numbers inside its total', async () => {
   ]);
 });
 
+test('chunk progress is coalesced without losing phase transitions or completion', async () => {
+  const run = harness({
+    inspectPatchedImage: async (blob, descriptor, { onProgress }) => {
+      for (let processed = 0; processed <= 10000; processed++) {
+        onProgress({ phase: 'target-hash', processed, total: 10000 });
+      }
+      onProgress({ phase: 'editor-data', indeterminate: true });
+      onProgress({ phase: 'scenario-data', indeterminate: true });
+      return { session: { sessionToken: 's' }, view: {} };
+    },
+  });
+  await run.send(job('INSPECT'));
+  const progress = run.posts.map(post => post.message).filter(message => message.type === 'PROGRESS');
+  assert.equal(progress.length, 103, '101 visible percentages and two subsequent phases');
+  assert.equal(progress[0].processed, 0);
+  assert.equal(progress[100].processed, 10000, '100% is always delivered');
+  assert.deepEqual(progress.slice(-2).map(({ phase, indeterminate }) => [phase, indeterminate]),
+    [['editor-data', true], ['scenario-data', true]]);
+  assert.equal(run.last().type, 'INSPECT_COMPLETE');
+});
+
+test('a new job and a restarted phase have independent progress', async () => {
+  const run = harness({
+    inspectPatchedImage: async (blob, descriptor, { onProgress }) => {
+      for (const processed of [501, 502, 500, 1000]) onProgress({ phase: 'target-hash', processed, total: 1000 });
+      return { session: { sessionToken: 's' }, view: {} };
+    },
+  });
+  await run.send(job('INSPECT'));
+  await run.send({ type: 'INSPECT', jobId: 'job-00002' });
+  const progress = run.posts.map(post => post.message).filter(message => message.type === 'PROGRESS');
+  assert.deepEqual(progress.map(({ jobId, processed }) => [jobId, processed]), [
+    ['job-00001', 501], ['job-00001', 500], ['job-00001', 1000],
+    ['job-00002', 501], ['job-00002', 500], ['job-00002', 1000],
+  ]);
+});
+
 test('previews need the session of the current image and send their pixels as a transfer', async () => {
   const pixels = new Uint8ClampedArray(8);
   const { send, posts, last } = harness({ previewEditorRecord: async (session, kind, recordIndex) => ({ kind, recordIndex, image: { width: 2, height: 1, pixels } }) });

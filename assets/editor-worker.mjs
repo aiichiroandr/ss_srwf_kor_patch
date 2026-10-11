@@ -2,7 +2,7 @@ import {
   exportEditedImage,
   inspectPatchedImage,
   previewEditorRecord,
-} from "./editor-core.mjs?v=20261011-public1";
+} from "./editor-core.mjs?v=20261011-public2";
 
 // The worker body takes its scope and the three core operations so that a test can drive it with a fake scope and fake
 // operations. The page's worker starts it below with the real ones.
@@ -97,7 +97,24 @@ export function createEditorWorker(scope, api) {
         throw controller.signal.reason ?? abortError();
       }
     };
-    const onProgress = (progress) => { if (live()) postProgress(message.jobId, progress); };
+    // Blob streams can produce thousands of chunks per image. Send the first
+    // update of each phase and each visible percentage instead of asking the
+    // page to rebuild its progress panel for every chunk. This is job-local;
+    // cancellation and a new job cannot inherit an earlier job's progress.
+    let lastProgress = null;
+    const onProgress = (progress) => {
+      if (!live()) return;
+      const total = Number.isSafeInteger(progress?.total) && progress.total > 0 ? progress.total : 1;
+      const processed = Number.isSafeInteger(progress?.processed) && progress.processed >= 0
+        ? Math.min(progress.processed, total) : 0;
+      const percent = Math.floor(processed * 100 / total);
+      const indeterminate = progress?.indeterminate === true;
+      if (lastProgress && lastProgress.phase === progress?.phase && lastProgress.total === total
+        && lastProgress.indeterminate === indeterminate && lastProgress.percent === percent
+        && processed >= lastProgress.processed) return;
+      lastProgress = { phase: progress?.phase, total, processed, percent, indeterminate };
+      postProgress(message.jobId, { ...progress, processed, total });
+    };
     try {
       if (message.type === "INSPECT") {
         // The session of the image that is open stays until another image has been opened: a refused or cancelled
@@ -157,6 +174,7 @@ export function createEditorWorker(scope, api) {
       phase: progress?.phase === "compress" ? "compress" : progress?.phase,
       processed,
       total,
+      ...(progress?.indeterminate === true ? { indeterminate: true } : {}),
     });
   }
 

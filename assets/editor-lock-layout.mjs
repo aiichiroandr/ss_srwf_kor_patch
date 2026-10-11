@@ -7,7 +7,7 @@
 //
 // Entries: [ability id, slot (0-based), condition flag number, [unit numbers]]. The ability ids the census covers are
 // listed in LOCK_CENSUS_IDS; 12 and 13 are covered although no unit carries them, so that a unit that gains one differs.
-import { createLockLayout } from "./editor-locks.mjs?v=20261011-public1";
+import { createLockLayout } from "./editor-locks.mjs?v=20261011-public2";
 
 export const LOCK_CENSUS_IDS = Object.freeze([11, 12, 13, 15, 16, 17, 18]);
 
