@@ -1,4 +1,4 @@
-import { REWARD_FIELDS, REWARD_PART_MAX, rewardTotal, rewardValueAllowed } from "./editor-rewards.mjs?v=20261011-public4";
+import { REWARD_FIELDS, REWARD_PART_MAX, rewardTotal, rewardValueAllowed } from "./editor-rewards.mjs?v=20261011-public5";
 
 const node = (tag, text, className = "") => {
   const element = document.createElement(tag);

@@ -1,8 +1,8 @@
 // TSR root 32: 48 selectors, each pointing to [part id, percent] pairs terminated by FF FF.
 // The executable chooses one outcome when the unit is created, with the remainder yielding no part.
 // Preserve selector aliases, pair count and terminators; this module never relocates a record.
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public4";
-import { Sha256 } from "./sha256.mjs?v=20261011-public4";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public5";
+import { Sha256 } from "./sha256.mjs?v=20261011-public5";
 
 export const REWARD_FIELDS = Object.freeze(["part1", "chance1", "part2", "chance2"]);
 export const REWARD_PART_MAX = 22;

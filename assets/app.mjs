@@ -1,9 +1,10 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public4';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public4';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public4";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public4";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public4";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public4";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public5';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public5';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public5";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public5";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public5";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public5";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public5";
 import {
   canStep,
   filterRecords,
@@ -12,7 +13,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public4";
+} from "./editor-list.mjs?v=20261011-public5";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -23,17 +24,20 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public4";
+} from "./editor-grades.mjs?v=20261011-public5";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
   addBlock,
   addSkill,
-  availableSkills,
+  groupedSkillCatalog,
   isFlagGated,
   removeSkill,
+  replaceSkill,
   setLevel,
   skillCatalog,
+  skillGroups,
+  skillReplaceBlock,
   sameList as sameSkillList,
   skillDiff,
   skillRequest,
@@ -54,27 +58,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public4";
+} from "./editor-skill-list.mjs?v=20261011-public5";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public4";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public4";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public4";
+} from "./editor-facts.mjs?v=20261011-public5";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public5";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public5";
 import { sha256Hex, Sha256 } from "./sha256.mjs";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public4";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public4";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public4";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public4";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public4";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public4";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public4";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public4";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public4";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public4";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public5";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public5";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public5";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public5";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public5";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public5";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public5";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public5";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public5";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public5";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -82,14 +86,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public4";
+} from "./font-revisions.mjs?v=20261011-public5";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public4";
+} from "./release-notes.mjs?v=20261011-public5";
 
-const STATIC_ASSET_REVISION = "20261011-public4";
+const STATIC_ASSET_REVISION = "20261011-public5";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -335,9 +339,18 @@ const elements = {
   pilotSkillDialogNote: byId("pilotSkillDialogNote"),
   pilotSkillDialogClose: byId("pilotSkillDialogClose"),
   pilotSkillSchedule: byId("pilotSkillSchedule"),
+  pilotSkillPager: byId("pilotSkillPager"),
+  pilotSkillPrevious: byId("pilotSkillPrevious"),
+  pilotSkillNext: byId("pilotSkillNext"),
+  pilotSkillPagePosition: byId("pilotSkillPagePosition"),
   pilotSkillStatus: byId("pilotSkillStatus"),
   pilotSkillWarning: byId("pilotSkillWarning"),
+  pilotSkillAdd: byId("pilotSkillAdd"),
   pilotSkillAddSelect: byId("pilotSkillAddSelect"),
+  pilotSkillAddRank: byId("pilotSkillAddRank"),
+  pilotSkillAddRankField: byId("pilotSkillAddRankField"),
+  pilotSkillAddTarget: byId("pilotSkillAddTarget"),
+  pilotSkillReplaceTitle: byId("pilotSkillReplaceTitle"),
   pilotSkillAddLevel: byId("pilotSkillAddLevel"),
   pilotSkillAddButton: byId("pilotSkillAddButton"),
   pilotSkillAddHint: byId("pilotSkillAddHint"),
@@ -638,7 +651,16 @@ EDITOR_SOURCE.button.addEventListener("click", () => chooseSource());
 elements.editorCancelButton.addEventListener("click", cancelEditorOperation);
 elements.pilotSkillScheduleButton.addEventListener("click", openPilotSkillDialog);
 elements.pilotSkillDialogClose.addEventListener("click", () => elements.pilotSkillDialog.close());
-elements.pilotSkillDialog.addEventListener("close", closeGameplayHelp);
+elements.pilotSkillDialog.addEventListener("close", () => {
+  closeGameplayHelp();
+  if (state.editorTab === "pilot" && !elements.editorWorkspace.hidden && typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => {
+      const target = elements.pilotRuntimeSkills.querySelector(".pilot-runtime-skill") ?? elements.pilotRuntimeSkills.querySelector(".pilot-special-empty");
+      if (target) editorLayouts.get("pilot")?.reveal(target);
+      elements.pilotSkillScheduleButton.focus({ preventScroll: true });
+    });
+  }
+});
 elements.unusedToggle.addEventListener("change", handleUnusedToggle);
 elements.unitTabButton.addEventListener("click", () => selectEditorTab("unit"));
 elements.pilotTabButton.addEventListener("click", () => selectEditorTab("pilot"));
@@ -648,16 +670,26 @@ elements.rewardTabButton.addEventListener("click", () => selectEditorTab("reward
 elements.scenarioTabButton.addEventListener("click", () => selectEditorTab("scenario"));
 elements.pilotSkillDialog.addEventListener("click", handleSkillDialogClick);
 elements.pilotSkillSchedule.addEventListener("input", handleSkillLevelInput);
+elements.pilotSkillSchedule.addEventListener("change", handleSkillRankChange);
 elements.pilotMentalCommands.addEventListener("change", handleSpiritSelect);
 elements.pilotMentalCommands.addEventListener("input", handleSpiritLevelInput);
 elements.pilotMentalCommands.addEventListener("click", handleSpiritClick);
-elements.pilotSkillAddSelect.addEventListener("change", refreshSkillAddControls);
+elements.pilotSkillAddSelect.addEventListener("change", () => { renderSkillAddRanks(); refreshSkillAddControls(); });
+elements.pilotSkillAddRank.addEventListener("change", refreshSkillAddControls);
 elements.pilotSkillAddLevel.addEventListener("input", refreshSkillAddControls);
 elements.pilotSkillAddLevel.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     addPilotSkillFromDialog();
   }
+});
+const pilotSkillPagination = createSkillPagination({
+  dialog: elements.pilotSkillDialog,
+  schedule: elements.pilotSkillSchedule,
+  pager: elements.pilotSkillPager,
+  previous: elements.pilotSkillPrevious,
+  next: elements.pilotSkillNext,
+  position: elements.pilotSkillPagePosition,
 });
 const editorLayouts = new Map();
 for (const type of EDITOR_TYPES) {
@@ -6108,9 +6140,8 @@ function skillAddBlockText(code, summary) {
     case "no-choice": return "추가할 능력을 고르세요.";
     case "held": return "이미 가진 능력입니다.";
     case "level": return `습득 레벨은 ${SKILL_LEVEL_MIN}~${SKILL_LEVEL_MAX} 사이의 정수여야 합니다.`;
-    case "capacity": return summary.shared
-      ? "남은 자리가 없습니다. 특수능력이나 정신커맨드를 하나 지우면 자리가 생깁니다."
-      : `남은 자리가 없습니다. 이 기록에는 능력이 최대 ${summary.capacity}개 들어가므로 하나를 삭제한 뒤 추가해 주세요.`;
+    case "capacity": return "빈자리 0 · 기존 항목은 ‘교체’로 바꿀 수 있습니다.";
+    case "event-gated": return "이벤트 조건이 있는 항목은 그대로 유지합니다.";
     case "consumers": return `한 파일럿이 동시에 쓰는 능력은 ${summary.limit}가지까지입니다(같은 계열은 하나로 셉니다). 새 계열을 더하려면 먼저 다른 능력을 삭제해 주세요.`;
     default: return "";
   }
@@ -6147,116 +6178,139 @@ function renderPilotSkillButton(record) {
   elements.pilotSkillScheduleButton.title = summary?.editable ? `특수능력 추가·삭제와 습득 레벨 변경 · 남은 자리 ${summary.free}` : skillReasonText(summary?.reason);
 }
 
-function skillOptionLabel(entry) {
-  return skillDisplayName(entry);
+let skillReplaceIndex = null;
+
+function skillEditChoices(record = pilotRowForSkills()) {
+  return record ? groupedSkillCatalog(record, state.editorGameId, record.specialAbilities, { excludeIndex: skillReplaceIndex }) : [];
+}
+
+function selectedSkillChoice() {
+  const group = skillEditChoices().find((item) => item.key === elements.pilotSkillAddSelect.value);
+  if (!group) return null;
+  return group.ranked ? group.choices.find((entry) => entry.id === Number(elements.pilotSkillAddRank.value)) ?? null : group.choices[0];
 }
 
 function renderPilotSkillSchedule(record) {
   const gameId = state.editorGameId;
   const summary = record ? skillSummary(record, gameId) : null;
   const list = record?.specialAbilities ?? [];
-  const supported = Boolean(summary?.supported);
-  // 고칠 수 있는지는 코어가 행마다 알려 주는 skillEditable 하나로 정한다. 그 값이 없는 행은 잠근다.
   const mayChange = Boolean(summary?.editable);
-  elements.pilotSkillDialogTitle.textContent = record
-    ? editorRowName(record)
-    : "파일럿 특수능력 편집";
+  elements.pilotSkillDialogTitle.textContent = record ? editorRowName(record) : "파일럿 특수능력 편집";
   elements.pilotSkillDialogTitle.title = elements.pilotSkillDialogTitle.textContent;
-  if (!record) {
-    elements.pilotSkillDialogNote.textContent = "";
-  } else if (summary.editable) {
-    elements.pilotSkillDialogNote.textContent = summary.shared
-      ? "정신커맨드와 빈자리를 공유합니다."
-      : `특수능력을 최대 ${summary.capacity}개 저장할 수 있습니다.`;
-  } else {
-    elements.pilotSkillDialogNote.textContent = `${skillReasonText(summary.reason)} 고칠 수 없고 지금 목록만 보여 줍니다.`;
+  if (!record) elements.pilotSkillDialogNote.textContent = "";
+  else if (!mayChange) elements.pilotSkillDialogNote.textContent = `${skillReasonText(summary.reason)} 고칠 수 없고 지금 목록만 보여 줍니다.`;
+  else {
+    const rankNote = document.createElement("span");
+    rankNote.textContent = "능력 단계 = 특수능력의 단계";
+    const learnNote = document.createElement("span");
+    learnNote.textContent = "습득 Lv = 배우는 파일럿 레벨";
+    elements.pilotSkillDialogNote.replaceChildren(rankNote, learnNote);
   }
   const original = record?.originalSkillEntries ?? [];
   const originalIds = new Set(original.map((entry) => entry.id));
   const originalLevel = new Map(original.map((entry) => [entry.id, entry.level]));
-  const rows = list.map((entry, index) => {
-    const item = document.createElement("div");
-    item.className = "pilot-skill-row";
-    item.setAttribute("role", "listitem");
-    const gated = isFlagGated(entry);
-    const added = !originalIds.has(entry.id);
-    const changed = !added && originalLevel.get(entry.id) !== entry.level;
-    item.classList.toggle("is-new", added);
-    item.classList.toggle("is-modified", changed);
-    item.classList.toggle("is-locked", gated || !mayChange);
-    const position = document.createElement("span");
-    position.className = "pilot-skill-index";
-    position.textContent = String(index + 1).padStart(2, "0");
-    const name = document.createElement("span");
-    name.className = "pilot-skill-name";
-    name.textContent = skillDisplayName(entry);
-    name.append(gameplayHelpButton(() => withPilotEventCondition(
-      gameplayHelp("pilot", entry.name || "특수능력", { gameId: state.editorGameId, id: entry.id }), entry,
-    )));
-    const notes = [];
-    if (added) notes.push("새로 추가");
-    if (gated) {
-      const condition = eventFlagInfo(gameId, entry.eventFlag ?? entry.level - 100);
-      notes.push(`${condition.summary} · 플래그 ${condition.flag} (고정)`);
+  const groups = skillGroups(gameId, list).map((group) => {
+    const section = document.createElement("section");
+    section.className = "pilot-skill-group";
+    section.dataset.skillGroup = group.key;
+    const header = document.createElement("div");
+    header.className = "pilot-skill-group-header";
+    const name = document.createElement("strong");
+    name.className = "pilot-skill-group-name";
+    name.textContent = group.name || skillDisplayName(group.entries[0].entry);
+    const highest = group.entries.at(-1).entry;
+    const help = gameplayHelpButton(() => withPilotEventCondition(gameplayHelp("pilot", highest.name || "특수능력", { gameId: state.editorGameId, id: highest.id }), highest));
+    const count = document.createElement("small");
+    count.textContent = group.ranked ? `습득 시점 ${group.entries.length}개` : "단일 능력";
+    header.append(name, help, count);
+    const columns = document.createElement("div");
+    columns.className = "pilot-skill-columns";
+    columns.setAttribute("aria-hidden", "true");
+    for (const text of ["능력 단계", "습득 Lv", "", ""]) {
+      const cell = document.createElement("span"); cell.textContent = text; columns.append(cell);
     }
-    if (entry.ignoredByGame) notes.push("게임이 읽지 않는 번호");
-    if (entry.unresolved) notes.push("이름을 읽지 못함");
-    if (notes.length) {
-      const meta = document.createElement("small");
-      meta.className = "pilot-skill-meta";
-      meta.textContent = notes.join(" · ");
-      name.append(meta);
-    }
-    const levelLabel = document.createElement("label");
-    levelLabel.className = "pilot-skill-level-field";
-    const levelName = document.createElement("span");
-    levelName.textContent = "Lv";
-    const level = document.createElement("input");
-    level.type = "number";
-    // 열었을 때의 레벨이 범위 밖이어도(0 같은 저장값) 그대로 두는 것은 오류가 아니다.
-    level.min = String(Math.min(SKILL_LEVEL_MIN, entry.level));
-    level.max = String(SKILL_LEVEL_MAX);
-    level.step = "1";
-    level.inputMode = "numeric";
-    level.dataset.skillLevel = String(index);
-    level.value = String(entry.level);
-    level.disabled = gated || !mayChange;
-    level.setAttribute("aria-label", `${skillDisplayName(entry)} 습득 레벨`);
-    level.classList.toggle("is-modified", changed);
-    levelLabel.append(levelName, level);
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "pilot-skill-remove";
-    remove.dataset.skillRemove = String(index);
-    remove.textContent = "삭제";
-    remove.disabled = gated || !mayChange;
-    remove.setAttribute("aria-label", `${skillDisplayName(entry)} 삭제`);
-    item.append(position, name, levelLabel, remove);
-    return item;
+    const rows = group.entries.map(({ entry, index, rank }) => {
+      const item = document.createElement("div");
+      item.className = "pilot-skill-row";
+      item.dataset.skillIndex = String(index);
+      item.setAttribute("role", "listitem");
+      const gated = isFlagGated(entry);
+      const added = !originalIds.has(entry.id);
+      const changed = !added && originalLevel.get(entry.id) !== entry.level;
+      item.classList.toggle("is-new", added);
+      item.classList.toggle("is-modified", changed);
+      item.classList.toggle("is-locked", gated || !mayChange);
+      const accessibleName = document.createElement("span");
+      accessibleName.className = "pilot-skill-name";
+      accessibleName.hidden = true;
+      const accessibleText = document.createElement("span"); accessibleText.textContent = skillDisplayName(entry);
+      accessibleName.append(accessibleText);
+      const rankField = document.createElement("div");
+      rankField.className = "pilot-skill-rank-field";
+      if (group.ranked) {
+        const select = document.createElement("select");
+        select.dataset.skillRank = String(index);
+        select.setAttribute("aria-label", `${group.name} 능력 단계`);
+        const choices = groupedSkillCatalog(record, gameId, list, { excludeIndex: index }).find((candidate) => candidate.key === group.key)?.choices ?? [];
+        for (const choice of choices) {
+          const option = document.createElement("option"); option.value = String(choice.id); option.textContent = `${choice.rank}단계`; select.append(option);
+        }
+        if (!choices.some((choice) => choice.id === entry.id)) {
+          const option = document.createElement("option"); option.value = String(entry.id); option.textContent = `${rank}단계`; select.append(option);
+        }
+        select.value = String(entry.id);
+        select.disabled = gated || !mayChange;
+        rankField.append(select);
+      } else rankField.textContent = "—";
+      const levelLabel = document.createElement("label");
+      levelLabel.className = "pilot-skill-level-field";
+      const level = document.createElement("input");
+      level.type = "number";
+      level.min = String(Math.min(SKILL_LEVEL_MIN, entry.level));
+      level.max = String(SKILL_LEVEL_MAX); level.step = "1"; level.inputMode = "numeric";
+      level.dataset.skillLevel = String(index); level.value = String(entry.level);
+      level.disabled = gated || !mayChange; level.hidden = gated;
+      level.setAttribute("aria-label", `${skillDisplayName(entry)} 습득 파일럿 레벨`);
+      level.classList.toggle("is-modified", changed);
+      levelLabel.append(level);
+      if (gated) { const fixed = document.createElement("span"); fixed.textContent = "이벤트"; levelLabel.append(fixed); }
+      const replace = document.createElement("button");
+      replace.type = "button"; replace.className = "pilot-skill-replace"; replace.dataset.skillReplace = String(index);
+      replace.textContent = "교체"; replace.disabled = gated || !mayChange;
+      replace.setAttribute("aria-label", `${skillDisplayName(entry)} 다른 능력으로 교체`);
+      const remove = document.createElement("button");
+      remove.type = "button"; remove.className = "pilot-skill-remove"; remove.dataset.skillRemove = String(index);
+      remove.textContent = "삭제"; remove.disabled = gated || !mayChange;
+      remove.setAttribute("aria-label", `${skillDisplayName(entry)} 삭제`);
+      item.append(accessibleName, rankField, levelLabel, replace, remove);
+      const notes = [];
+      if (added) notes.push("새로 추가");
+      if (gated) { const condition = eventFlagInfo(gameId, entry.eventFlag ?? entry.level - 100); notes.push(`${condition.summary} · 플래그 ${condition.flag} (고정)`); }
+      if (entry.ignoredByGame) notes.push("게임이 읽지 않는 번호");
+      if (entry.unresolved) notes.push("이름을 읽지 못함");
+      if (notes.length) {
+        const meta = document.createElement("small"); meta.className = "pilot-skill-meta"; meta.textContent = notes.join(" · ");
+        item.append(meta);
+      }
+      return item;
+    });
+    section.append(header, columns, ...rows);
+    return section;
   });
-  if (rows.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "pilot-skill-schedule-empty";
-    empty.textContent = "지금 특수능력이 없습니다.";
-    rows.push(empty);
-  }
-  elements.pilotSkillSchedule.replaceChildren(...rows);
-  // 남은 자리와 서로 다른 능력 수, 한도를 넘는 목록은 경고로.
-  if (!summary) {
-    elements.pilotSkillStatus.textContent = "";
-  } else if (supported) {
-    elements.pilotSkillStatus.textContent = `사용 ${summary.count}/${summary.capacity} · 빈자리 ${summary.free} · 계열 ${summary.consumers}/${summary.limit}`;
-  } else {
-    elements.pilotSkillStatus.textContent = `특수능력 ${list.length}개`;
-  }
+  if (!groups.length) { const empty = document.createElement("p"); empty.className = "pilot-skill-schedule-empty"; empty.textContent = "지금 특수능력이 없습니다."; groups.push(empty); }
+  elements.pilotSkillSchedule.replaceChildren(...groups);
+  if (!summary) elements.pilotSkillStatus.textContent = "";
+  else if (summary.supported) {
+    const storage = document.createElement("span"); storage.textContent = `습득 항목 ${summary.count}/${summary.capacity} · 빈자리 ${summary.free}`;
+    const kinds = document.createElement("span"); kinds.textContent = `능력 종류 ${summary.consumers}/${summary.limit}`;
+    elements.pilotSkillStatus.replaceChildren(storage, kinds);
+    elements.pilotSkillStatus.title = "습득 항목마다 저장 공간을 하나씩 사용합니다. 정신커맨드와 공유하며, 같은 계열은 동시에 적용되는 능력 한 종류로 셉니다.";
+  } else elements.pilotSkillStatus.textContent = `특수능력 ${list.length}개`;
   const over = Boolean(summary) && summary.consumers > summary.limit;
   elements.pilotSkillWarning.hidden = !over;
-  elements.pilotSkillWarning.textContent = over
-    ? `서로 다른 능력이 ${summary.consumers}가지입니다. 한 파일럿이 동시에 쓰는 능력은 ${summary.limit}가지까지(같은 계열은 하나)라서 이 목록은 저장할 수 없습니다. 능력을 삭제해 ${summary.limit}가지 이하로 줄여 주세요.`
-    : "";
+  elements.pilotSkillWarning.textContent = over ? `서로 다른 능력이 ${summary.consumers}가지입니다. 한 파일럿이 동시에 쓰는 능력은 ${summary.limit}가지까지(같은 계열은 하나)라서 이 목록은 저장할 수 없습니다. 능력을 삭제해 ${summary.limit}가지 이하로 줄여 주세요.` : "";
   const diff = skillDiff(list, original);
-  const changes = diff.added.length + diff.removed.length + diff.changed.length;
-  elements.pilotSkillRevertButton.disabled = changes === 0;
+  elements.pilotSkillRevertButton.disabled = diff.added.length + diff.removed.length + diff.changed.length === 0;
   elements.pilotSkillRevertButton.textContent = "원래 목록으로 되돌리기";
   elements.pilotSkillRevertButton.title = `추가 ${diff.added.length} · 삭제 ${diff.removed.length} · 변경 ${diff.changed.length}`;
   renderSkillAddControls(record, summary);
@@ -6265,50 +6319,59 @@ function renderPilotSkillSchedule(record) {
 function renderSkillAddControls(record, summary) {
   const select = elements.pilotSkillAddSelect;
   const previous = select.value;
-  const options = record && summary?.editable ? availableSkills(record) : [];
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = options.length ? "능력을 고르세요" : "추가할 수 있는 능력이 없습니다";
-  select.replaceChildren(placeholder, ...options.map((entry) => {
-    const option = document.createElement("option");
-    option.value = String(entry.id);
-    option.textContent = skillOptionLabel(entry);
-    return option;
+  const options = record && summary?.editable ? skillEditChoices(record) : [];
+  const placeholder = document.createElement("option"); placeholder.value = "";
+  placeholder.textContent = options.length ? "능력을 고르세요" : "선택할 수 있는 능력이 없습니다";
+  select.replaceChildren(placeholder, ...options.map((group) => {
+    const option = document.createElement("option"); option.value = group.key; option.textContent = group.name || `능력 #${group.choices[0].id}`; return option;
   }));
-  select.value = options.some((entry) => String(entry.id) === previous) ? previous : "";
+  select.value = options.some((group) => group.key === previous) ? previous : "";
+  renderSkillAddRanks();
   refreshSkillAddControls();
 }
 
-// 고른 능력과 레벨로 지금 추가할 수 있는지 알아보고, 못 하면 이유를 힌트에 쓴다.
+function renderSkillAddRanks(preferredId = Number(elements.pilotSkillAddRank.value)) {
+  const group = skillEditChoices().find((item) => item.key === elements.pilotSkillAddSelect.value);
+  const choices = group?.ranked ? group.choices : [];
+  elements.pilotSkillAddRankField.hidden = !group?.ranked;
+  elements.pilotSkillAddRank.replaceChildren(...choices.map((choice) => {
+    const option = document.createElement("option"); option.value = String(choice.id); option.textContent = `${choice.rank}`; return option;
+  }));
+  elements.pilotSkillAddRank.value = String(choices.some((entry) => entry.id === preferredId) ? preferredId : choices[0]?.id ?? "");
+}
+
 function refreshSkillAddControls() {
   const record = pilotRowForSkills();
   const summary = record ? skillSummary(record, state.editorGameId) : null;
-  const id = elements.pilotSkillAddSelect.value === "" ? Number.NaN : Number(elements.pilotSkillAddSelect.value);
+  const choice = selectedSkillChoice();
+  const id = choice?.id ?? Number.NaN;
   const level = elements.pilotSkillAddLevel.value === "" ? Number.NaN : Number(elements.pilotSkillAddLevel.value);
+  const replacing = skillReplaceIndex !== null;
   const mayEdit = Boolean(summary?.editable);
-  const block = !record ? "read-only" : addBlock(record, state.editorGameId, id, level);
+  elements.pilotSkillAdd.hidden = mayEdit && summary.free <= 0 && !replacing;
+  let block = !record ? "read-only" : replacing ? skillReplaceBlock(record, state.editorGameId, skillReplaceIndex, id) : addBlock(record, state.editorGameId, id, level);
+  if (block === null && (!Number.isInteger(level) || level < SKILL_LEVEL_MIN || level > SKILL_LEVEL_MAX)) block = "level";
   elements.pilotSkillAddSelect.disabled = !mayEdit;
+  elements.pilotSkillAddRank.disabled = !mayEdit;
   elements.pilotSkillAddLevel.disabled = !mayEdit;
   elements.pilotSkillAddButton.disabled = block !== null;
-  // 고르기 전에도 알 수 있는 이유(자리 없음, 읽기 전용, 미지원)는 먼저 말하고, 고른 뒤에는 그 선택의 이유를 말한다.
-  const early = !record ? null : !summary.editable ? "read-only" : summary.free <= 0 ? "capacity" : null;
+  elements.pilotSkillAddButton.textContent = replacing ? "교체 적용" : "추가";
+  elements.pilotSkillAddTarget.hidden = !replacing;
+  elements.pilotSkillReplaceTitle.textContent = replacing && record?.specialAbilities[skillReplaceIndex] ? `${skillDisplayName(record.specialAbilities[skillReplaceIndex])} 교체` : "";
+  const early = !record ? null : !mayEdit ? "read-only" : !replacing && summary.free <= 0 ? "capacity" : null;
   const code = early ?? (block === "no-choice" ? null : block);
   let hint = code ? skillAddBlockText(code, summary ?? { reason: "unsupported", capacity: 0, limit: 4 }) : "";
-  if (!hint && block === null) hint = "선택한 능력은 목록 끝에 들어갑니다(같은 계열이면 낮은 단계부터).";
-  if (!hint && block === "no-choice") {
-    hint = summary && summary.consumers >= summary.limit
-      ? `서로 다른 능력이 이미 ${summary.limit}가지입니다. 새 계열은 더할 수 없고, 이미 가진 계열의 다른 단계만 더할 수 있습니다.`
-      : "추가할 능력을 고르세요.";
-  }
-  if (mayEdit && record.noSpiritInDisc && record.specialAbilities.length === 0 && block === null) {
-    hint += " 이 파일럿은 원본에 정신커맨드가 없는 자리 표시 기록입니다. 능력을 넣으면 그 표시가 능력 쌍으로 바뀝니다(표시를 읽는 다른 코드가 있는지는 확인하지 못했습니다).";
-  }
+  if (!hint && block === null) hint = replacing ? "선택한 항목만 바꿉니다. 추가 공간은 쓰지 않습니다." : "단계별 성장 시점을 추가합니다. 처음부터 9단계라면 9단계 항목 하나면 됩니다.";
+  if (!hint && block === "no-choice") hint = summary && summary.consumers >= summary.limit ? `서로 다른 능력이 이미 ${summary.limit}가지입니다. 새 계열은 더할 수 없고, 이미 가진 계열의 다른 단계만 더할 수 있습니다.` : "능력을 고르고, 배우는 파일럿 레벨을 설정하세요.";
+  if (mayEdit && record.noSpiritInDisc && record.specialAbilities.length === 0 && block === null) hint += " 이 파일럿은 원본에 정신커맨드가 없는 자리 표시 기록입니다. 능력을 넣으면 그 표시가 능력 쌍으로 바뀝니다(표시를 읽는 다른 코드가 있는지는 확인하지 못했습니다).";
   elements.pilotSkillAddHint.textContent = hint;
   elements.pilotSkillAddHint.classList.toggle("is-caution", Boolean(code));
+  pilotSkillPagination.refresh();
 }
 
 // 목록을 바꾼 뒤 화면 곳곳을 맞춘다: 습득표 창, 능력 요약, 변경 표시, 아래 줄.
 function commitSkillList(record, list, message) {
+  skillReplaceIndex = null;
   record.specialAbilities = list;
   renderPilotRuntimeSkills(record);
   renderPilotSkillSchedule(record);
@@ -6407,8 +6470,51 @@ function handleSkillDialogClick(event) {
   const target = event.target.closest?.("button");
   if (!target) return;
   if (target.dataset.skillRemove !== undefined) removePilotSkillAt(Number(target.dataset.skillRemove));
+  else if (target.dataset.skillReplace !== undefined) beginPilotSkillReplace(Number(target.dataset.skillReplace));
+  else if (target.dataset.skillReplaceCancel !== undefined) {
+    const focusIndex = skillReplaceIndex;
+    skillReplaceIndex = null;
+    const record = pilotRowForSkills();
+    renderSkillAddControls(record, record ? skillSummary(record, state.editorGameId) : null);
+    pilotSkillPagination.refresh({ focusIndex }).then(() => {
+      elements.pilotSkillSchedule.querySelector(`button[data-skill-replace="${focusIndex}"]`)?.focus({ preventScroll: true });
+    });
+  }
   else if (target.dataset.skillAdd !== undefined) addPilotSkillFromDialog();
   else if (target.dataset.skillRevert !== undefined) revertPilotSkills();
+}
+
+function beginPilotSkillReplace(index) {
+  const record = pilotRowForSkills();
+  const entry = record?.specialAbilities[index];
+  if (!entry || record.skillEditable !== true || isFlagGated(entry)) return;
+  skillReplaceIndex = index;
+  renderSkillAddControls(record, skillSummary(record, state.editorGameId));
+  const group = skillEditChoices(record).find((candidate) => candidate.choices.some((choice) => choice.id === entry.id));
+  elements.pilotSkillAddSelect.value = group?.key ?? "";
+  elements.pilotSkillAddLevel.value = String(entry.level);
+  renderSkillAddRanks(entry.id);
+  refreshSkillAddControls();
+  elements.pilotSkillAddSelect.focus({ preventScroll: true });
+}
+
+function handleSkillRankChange(event) {
+  const select = event.target;
+  if (select.dataset?.skillRank === undefined) return;
+  const record = pilotRowForSkills();
+  const index = Number(select.dataset.skillRank);
+  const id = Number(select.value);
+  if (!record || skillReplaceBlock(record, state.editorGameId, index, id) !== null) {
+    if (record?.specialAbilities[index]) select.value = String(record.specialAbilities[index].id);
+    return;
+  }
+  const next = replaceSkill(record, state.editorGameId, index, id);
+  if (next === record.specialAbilities) return;
+  commitSkillList(record, next, `${skillDisplayName(next.find((entry) => entry.id === id))}로 단계를 변경했습니다.`);
+  const focusIndex = next.findIndex((entry) => entry.id === id);
+  pilotSkillPagination.refresh({ focusIndex }).then(() => {
+    elements.pilotSkillSchedule.querySelector(`select[data-skill-rank="${focusIndex}"]`)?.focus({ preventScroll: true });
+  });
 }
 
 function removePilotSkillAt(index) {
@@ -6418,19 +6524,39 @@ function removePilotSkillAt(index) {
   const next = removeSkill(record.specialAbilities, index);
   if (next === record.specialAbilities) return;
   commitSkillList(record, next, `${skillDisplayName(removed)}을 삭제했습니다. 남은 자리 ${skillSummary(record, state.editorGameId, next).free}`);
+  const focusIndex = Math.min(index, next.length - 1);
+  if (focusIndex >= 0) pilotSkillPagination.refresh({ focusIndex }).then(() => {
+    elements.pilotSkillSchedule.querySelector(`button[data-skill-remove="${focusIndex}"]`)?.focus({ preventScroll: true });
+  });
+  else elements.pilotSkillAddSelect.focus({ preventScroll: true });
 }
 
 function addPilotSkillFromDialog() {
   const record = selectedEditorRow("pilot");
   if (!record) return;
-  const id = Number(elements.pilotSkillAddSelect.value);
-  const level = Number(elements.pilotSkillAddLevel.value);
-  if (elements.pilotSkillAddSelect.value === "" || addBlock(record, state.editorGameId, id, level) !== null) return;
-  const next = addSkill(record, state.editorGameId, id, level);
+  const choice = selectedSkillChoice();
+  const id = choice?.id;
+  const level = elements.pilotSkillAddLevel.value === "" ? Number.NaN : Number(elements.pilotSkillAddLevel.value);
+  if (!choice || !Number.isInteger(level) || level < SKILL_LEVEL_MIN || level > SKILL_LEVEL_MAX) return;
+  const replacing = skillReplaceIndex !== null;
+  let next;
+  if (replacing) {
+    if (skillReplaceBlock(record, state.editorGameId, skillReplaceIndex, id) !== null) return;
+    next = replaceSkill(record, state.editorGameId, skillReplaceIndex, id);
+    next = setLevel(next, next.findIndex((entry) => entry.id === id), level, record.originalSkillEntries ?? []);
+  } else {
+    if (addBlock(record, state.editorGameId, id, level) !== null) return;
+    next = addSkill(record, state.editorGameId, id, level);
+  }
   const added = next.find((entry) => entry.id === id);
-  commitSkillList(record, next, `${skillDisplayName(added)}을 추가했습니다. 남은 자리 ${skillSummary(record, state.editorGameId, next).free}`);
+  commitSkillList(record, next, `${skillDisplayName(added)}${replacing ? "로 교체했습니다." : "을 추가했습니다."} 남은 자리 ${skillSummary(record, state.editorGameId, next).free}`);
   elements.pilotSkillAddSelect.value = "";
+  renderSkillAddRanks();
   refreshSkillAddControls();
+  const focusIndex = next.findIndex((entry) => entry.id === id);
+  pilotSkillPagination.refresh({ focusIndex }).then(() => {
+    elements.pilotSkillSchedule.querySelector(`input[data-skill-level="${focusIndex}"]`)?.focus({ preventScroll: true });
+  });
 }
 
 function handleSkillLevelInput(event) {
@@ -6446,10 +6572,12 @@ function handleSkillLevelInput(event) {
     // 같은 값이면 그대로이고, 범위 밖이면 이유를 알리고 목록은 건드리지 않는다.
     if (!Number.isInteger(value) || (record.specialAbilities[index] && value !== record.specialAbilities[index].level)) {
       input.setCustomValidity(`습득 레벨은 ${SKILL_LEVEL_MIN}부터 ${SKILL_LEVEL_MAX} 사이의 정수여야 합니다.`);
+      input.setAttribute("aria-invalid", "true");
       setEditorStatus("특수능력 습득 레벨의 범위를 확인해 주세요.");
     }
     return;
   }
+  input.removeAttribute("aria-invalid");
   record.specialAbilities = next;
   const original = record.originalSkillEntries ?? [];
   const entry = next[index];
@@ -6461,9 +6589,8 @@ function handleSkillLevelInput(event) {
   const diff = skillDiff(next, original);
   const count = diff.added.length + diff.removed.length + diff.changed.length;
   elements.pilotSkillRevertButton.disabled = count === 0;
-  elements.pilotSkillRevertButton.textContent = count === 0
-    ? "원래 목록으로 되돌리기"
-    : `원래 목록으로 되돌리기 (추가 ${diff.added.length} · 삭제 ${diff.removed.length} · 변경 ${diff.changed.length})`;
+  elements.pilotSkillRevertButton.textContent = "원래 목록으로 되돌리기";
+  elements.pilotSkillRevertButton.title = `추가 ${diff.added.length} · 삭제 ${diff.removed.length} · 변경 ${diff.changed.length}`;
   renderPilotRuntimeSkills(record);
   refreshRecordOption("pilot", record);
   updateEditorStatus("pilot", record);
@@ -6478,8 +6605,10 @@ function revertPilotSkills() {
 function openPilotSkillDialog() {
   const record = pilotRowForSkills();
   if (!record) return;
+  skillReplaceIndex = null;
   renderPilotSkillSchedule(record);
   elements.pilotSkillDialog.showModal();
+  pilotSkillPagination.refresh({ reset: true });
 }
 
 // ---- 정신커맨드 여섯 칸 ----------------------------------------------------------------------------------------

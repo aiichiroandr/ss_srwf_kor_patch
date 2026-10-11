@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
+import { choosePilotSkill, indexedSkillRows, assertSkillStatus, offeredPilotSkillIds } from "./helpers/pilot-skill-controls.mjs";
 
 // The page's own markup in a small DOM, then the page module on top of it. Layout (sizes, fonts, hit areas) is measured in
 // a real browser; these tests pin the structure, the state and the keyboard behaviour that the layout hangs on.
@@ -830,14 +831,9 @@ function openSkillDialog(recordIndex, gameId = "srwf-final") {
   hooks.selectEditorRecord("pilot", recordIndex);
   hooks.openPilotSkillDialog();
 }
-const skillRows = () => byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-row");
+const skillRows = () => indexedSkillRows(byId);
 const skillNames = () => skillRows().map((row) => row.querySelector(".pilot-skill-name").children[0].textContent);
-const chooseSkill = (id, level = 1) => {
-  byId("pilotSkillAddSelect").value = String(id);
-  byId("pilotSkillAddSelect").dispatchEvent({ type: "change", target: byId("pilotSkillAddSelect") });
-  byId("pilotSkillAddLevel").value = String(level);
-  byId("pilotSkillAddLevel").dispatchEvent({ type: "input", target: byId("pilotSkillAddLevel") });
-};
+const chooseSkill = (id, level = 1) => choosePilotSkill(byId, state.editorGameId, id, level);
 
 test("the skill dialog lists the skills with a level box and a delete button, and says how much room is left", () => {
   openSkillDialog(1);
@@ -847,17 +843,20 @@ test("the skill dialog lists the skills with a level box and a delete button, an
   const [first] = skillRows();
   assert.equal(first.getAttribute("role"), "listitem");
   assert.equal(first.querySelector("input").value, "1");
-  assert.equal(first.querySelector("input").getAttribute("aria-label"), "능력33 습득 레벨");
+  assert.equal(first.querySelector("input").getAttribute("aria-label"), "능력33 습득 파일럿 레벨");
   assert.equal(first.querySelector(".pilot-skill-remove").textContent, "삭제");
   assert.equal(first.querySelector(".pilot-skill-remove").getAttribute("aria-label"), "능력33 삭제");
-  assert.equal(byId("pilotSkillStatus").textContent, "사용 2/4 · 빈자리 2 · 계열 1/4");
+  assertSkillStatus(byId, 2, 4, 2, 1, 4);
   assert.equal(byId("pilotSkillStatus").getAttribute("role"), "status");
-  assert.match(byId("pilotSkillDialogNote").textContent, /최대 4개/);
+  assert.deepEqual(byId("pilotSkillDialogNote").children.map((part) => part.textContent), ["능력 단계 = 특수능력의 단계", "습득 Lv = 배우는 파일럿 레벨"]);
   assert.equal(byId("pilotSkillScheduleButton").textContent, "추가·삭제");
   assert.equal(byId("pilotSkillWarning").hidden, true);
   assert.equal(byId("pilotSkillSchedule").getAttribute("role"), "list");
   assert.equal(byId("pilotSkillAddButton").disabled, true, "nothing is chosen yet");
-  assert.equal(byId("pilotSkillAddSelect").options.length, 1 + 49, "the two held skills are not offered");
+  assert.deepEqual(offeredPilotSkillIds(byId), Array.from({ length: 51 }, (_, index) => 33 + index).filter((id) => ![33, 34].includes(id)), "the two held ranks are not offered");
+  assert.equal(byId("pilotSkillAddSelect").options.length, 1 + 5 + 6, "each of the five rank families appears once beside the six single skills");
+  assert.equal(byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-group").length, 1, "two Newtype ranks share one ability group");
+  assert.equal(skillRows().every((row) => row.querySelector("select[data-skill-rank]")), true, "every learning milestone exposes its ability rank separately");
   assert.equal(byId("pilotSkillRevertButton").disabled, true, "nothing to revert");
 });
 
@@ -865,13 +864,13 @@ test("choosing a skill and a level adds it to the end; the room, the request and
   openSkillDialog(1);
   chooseSkill(50, 7);
   assert.equal(byId("pilotSkillAddButton").disabled, false);
-  assert.match(byId("pilotSkillAddHint").textContent, /목록 끝에 들어갑니다/);
+  assert.match(byId("pilotSkillAddHint").textContent, /처음부터 9단계라면 9단계 항목 하나면 됩니다/);
   byId("pilotSkillAddButton").click();
   assert.deepEqual(skillNames(), ["능력33", "능력34", "능력50"]);
   assert.equal(skillRows()[2].classList.contains("is-new"), true);
   assert.match(skillRows()[2].querySelector(".pilot-skill-meta").textContent, /새로 추가/);
-  assert.equal(byId("pilotSkillStatus").textContent, "사용 3/4 · 빈자리 1 · 계열 2/4");
-  assert.equal(byId("pilotSkillAddSelect").options.some((option) => option.value === "50"), false, "an added skill is no longer offered");
+  assertSkillStatus(byId, 3, 4, 1, 2, 4);
+  assert.equal(offeredPilotSkillIds(byId).includes(50), false, "an added skill is no longer offered");
   assert.equal(byId("pilotSkillAddSelect").value, "", "the choice is cleared");
   assert.match(byId("liveRegion").textContent, /능력50을 추가했습니다\. 남은 자리 1/);
   const row = state.editorPilots[0];
@@ -892,16 +891,17 @@ test("a full list refuses another skill with the reason; deleting makes room and
   byId("pilotSkillAddButton").click();
   chooseSkill(51, 1);
   byId("pilotSkillAddButton").click();
-  assert.equal(byId("pilotSkillStatus").textContent.startsWith("사용 4/4 · 빈자리 0"), true);
+  assertSkillStatus(byId, 4, 4, 0, 3);
   chooseSkill(52, 1);
   assert.equal(byId("pilotSkillAddButton").disabled, true);
-  assert.match(byId("pilotSkillAddHint").textContent, /남은 자리가 없습니다.*최대 4개.*삭제한 뒤 추가/);
+  assert.match(byId("pilotSkillAddHint").textContent, /빈자리 0.*교체/);
   assert.equal(byId("pilotSkillAddHint").classList.contains("is-caution"), true);
-  assert.equal(byId("pilotSkillAddSelect").disabled === false, true, "the box stays open so the choice can wait");
+  assert.equal(byId("pilotSkillAdd").hidden, true, "a full record saves screen height by hiding the unavailable add form");
   skillRows()[2].querySelector(".pilot-skill-remove").click();
   assert.deepEqual(skillNames(), ["능력33", "능력34", "능력51"]);
   assert.match(byId("liveRegion").textContent, /능력50을 삭제했습니다\. 남은 자리 1/);
-  assert.equal(byId("pilotSkillAddSelect").options.some((option) => option.value === "50"), true, "the deleted skill is offered again");
+  assert.equal(byId("pilotSkillAdd").hidden, false, "deleting a learning milestone reveals the now-available add form");
+  assert.equal(offeredPilotSkillIds(byId).includes(50), true, "the deleted skill is offered again");
   chooseSkill(50, 2);
   assert.equal(byId("pilotSkillAddButton").disabled, false);
 });
@@ -947,7 +947,7 @@ test("an event-flag skill is shown and kept: its level and its delete button are
 
 test("help inside a modal belongs to that modal and closes with it, then can move back to the editor", () => {
   openSkillDialog(2);
-  const button = skillRows()[0].querySelector('.editor-help-button');
+  const button = byId("pilotSkillSchedule").querySelector(".pilot-skill-group .editor-help-button");
   const clickHelp = (target) => target.dispatchEvent({ type: 'click', target, preventDefault() {}, stopPropagation() {} });
   clickHelp(button);
   const panel = byId('pilotSkillDialog').querySelector('#editorGameplayHelp');
@@ -1014,7 +1014,7 @@ test("a pilot with no room, a locked pilot and a row without the core's skill fi
 
 test("the fifth distinct skill is refused before it is added, and a new rank of a held family is welcome", () => {
   openSkillDialog(4);
-  assert.equal(byId("pilotSkillStatus").textContent, "사용 4/9 · 빈자리 5 · 계열 4/4");
+  assertSkillStatus(byId, 4, 9, 5, 4, 4);
   assert.match(byId("pilotSkillAddHint").textContent, /서로 다른 능력이 이미 4가지입니다.*이미 가진 계열의 다른 단계만/);
   chooseSkill(51, 1);
   assert.equal(byId("pilotSkillAddButton").disabled, true);
@@ -1055,7 +1055,7 @@ test("reverting restores the list the record had when it was opened, names inclu
   assert.equal(byId("pilotSkillRevertButton").disabled, true);
   assert.equal(byId("pilotRecordList").children[0].classList.contains("is-modified"), false);
   assert.match(byId("liveRegion").textContent, /원래대로 되돌렸습니다/);
-  assert.equal(byId("pilotSkillStatus").textContent, "사용 2/4 · 빈자리 2 · 계열 1/4");
+  assertSkillStatus(byId, 2, 4, 2, 1, 4);
 });
 
 test("a placeholder pilot without spirit commands is told what adding does to its marker", () => {
@@ -1069,7 +1069,7 @@ test("a placeholder pilot without spirit commands is told what adding does to it
 
 test("the dialog's controls are named for assistive technology and all of them are real controls", () => {
   assert.equal(byId("pilotSkillAddSelect").getAttribute("aria-label"), "추가할 특수능력");
-  assert.match(byId("pilotSkillAddLevel").getAttribute("aria-label"), /습득 레벨 \(1~99\)/);
+  assert.match(byId("pilotSkillAddLevel").getAttribute("aria-label"), /습득 파일럿 레벨 \(1~99\)/);
   assert.equal(byId("pilotSkillAdd").getAttribute("role"), "group");
   assert.equal(byId("pilotSkillAdd").getAttribute("aria-label"), "특수능력 추가");
   assert.equal(byId("pilotSkillAddHint").getAttribute("aria-live"), "polite");

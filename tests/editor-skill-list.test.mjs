@@ -6,15 +6,19 @@ import {
   availableSkills,
   consumerKey,
   countConsumers,
+  groupedSkillCatalog,
   hasSkillEditing,
   isFlagGated,
   isValidLevel,
   orderLadders,
   removeSkill,
+  replaceSkill,
   sameList,
   setLevel,
   skillCatalog,
   skillDiff,
+  skillGroups,
+  skillReplaceBlock,
   skillRequest,
   skillSummary,
 } from "../assets/editor-skill-list.mjs";
@@ -160,4 +164,95 @@ test("the choices keep what was held when the record was opened, so a deleted sk
   assert.equal(availableSkills(afterDelete).some((choice) => choice.id === 33), false);
   assert.equal(availableSkills(frozen).some((choice) => choice.id === 50), false, "held skills are not offered");
   assert.equal(addBlock(afterDelete, FINAL, 50, 3), null);
+});
+
+test("held rank ladders are one named growth group while display indices still address the original pairs", () => {
+  const list = [
+    entry(41, 60, { name: "뉴타입Ｌ９", rank: 1 }),
+    entry(78, 1, { name: "저력" }),
+    entry(33, 10, { name: "뉴타입 Lv1" }),
+    entry(34, 175, { name: "뉴타입 레벨 2", eventFlag: 75 }),
+    entry(69, 30, { name: "베어내기 L1" }),
+  ];
+  const groups = skillGroups(FINAL, list);
+  assert.deepEqual(groups.map(({ key, name, ranked }) => ({ key, name, ranked })), [
+    { key: "family-newtype", name: "뉴타입", ranked: true },
+    { key: "id-78", name: "저력", ranked: false },
+    { key: "family-cut-down", name: "베어내기", ranked: true },
+  ]);
+  assert.deepEqual(groups[0].entries.map(({ index, rank, entry: item }) => ({ index, rank, level: item.level })), [
+    { index: 2, rank: 1, level: 10 },
+    { index: 3, rank: 2, level: 175 },
+    { index: 0, rank: 9, level: 60 },
+  ], "ability rank comes from the verified id, independently of the pilot acquisition level");
+  assert.equal(groups[0].entries[1].entry, list[3], "event conditions and all original entry metadata stay available");
+  assert.deepEqual(list.map((item) => item.id), [41, 78, 33, 34, 69], "display grouping never rearranges stored data");
+  assert.deepEqual(skillGroups(FINAL, []), []);
+});
+
+test("a grouped catalog offers one family with separate remaining ranks, and its replacement choices keep only the own id", () => {
+  const held = [entry(33), entry(34), entry(78)];
+  const prepared = row(held);
+  const addGroups = groupedSkillCatalog(prepared, FINAL);
+  const newtype = addGroups.find((group) => group.key === "family-newtype");
+  assert.deepEqual(newtype.choices.map(({ id, rank }) => ({ id, rank })),
+    Array.from({ length: 7 }, (_, index) => ({ id: 35 + index, rank: 3 + index })));
+  assert.equal(addGroups.some((group) => group.key === "id-78"), false, "an already held singleton is omitted");
+  assert.equal(addGroups.filter((group) => group.ranked).length, 5, "nine catalog records become one family choice each");
+  const replaceGroups = groupedSkillCatalog(prepared, FINAL, held, { excludeIndex: 0 });
+  assert.deepEqual(replaceGroups.find((group) => group.key === "family-newtype").choices.map((choice) => choice.id),
+    [33, 35, 36, 37, 38, 39, 40, 41], "the current rank stays, but a different row's rank cannot be selected twice");
+  const fullLadder = Array.from({ length: 9 }, (_, index) => entry(33 + index));
+  assert.equal(groupedSkillCatalog(row(fullLadder), FINAL).some((group) => group.key === "family-newtype"), false,
+    "a family with no remaining rank is not an empty option");
+  const fUnused = skillGroups(F, [entry(82), entry(83)]);
+  assert.deepEqual(fUnused.map(({ key, ranked }) => ({ key, ranked })), [{ key: "id-82", ranked: false }, { key: "id-83", ranked: false }],
+    "F's shared unused support consumer is not presented as a verified growth ladder");
+});
+
+test("a full pilot record can replace one skill with rank nine at the same acquisition level without nine growth pairs", () => {
+  const list = [entry(69, 30), entry(70, 38), entry(78, 1)];
+  const prepared = row(list, { skillCapacity: 3 });
+  assert.equal(skillSummary(prepared, FINAL).free, 0);
+  assert.equal(addBlock(prepared, FINAL, 41, 1), "capacity");
+  assert.equal(skillReplaceBlock(prepared, FINAL, 2, 41), null);
+  const replaced = replaceSkill(prepared, FINAL, 2, 41);
+  assert.deepEqual(skillRequest(replaced), [{ id: 69, level: 30 }, { id: 70, level: 38 }, { id: 41, level: 1 }]);
+  assert.equal(replaced[2].familyId, "newtype");
+  assert.equal(replaced[2].rank, 9);
+  assert.equal(replaced[2].eventFlag, null);
+  assert.equal(replaced[0], list[0], "unaffected pairs keep their metadata");
+  assert.deepEqual(skillRequest(list), [{ id: 69, level: 30 }, { id: 70, level: 38 }, { id: 78, level: 1 }], "the source is untouched");
+  assert.equal(replaceSkill(prepared, FINAL, 2, 78), list, "choosing the same ability is a no-op");
+});
+
+test("rank replacement moves each acquisition level with its pair into the safe ascending ladder order", () => {
+  const list = [entry(35, 40), entry(78, 1), entry(34, 20)];
+  const next = replaceSkill(row(list), FINAL, 2, 33);
+  assert.deepEqual(skillRequest(next), [{ id: 33, level: 20 }, { id: 78, level: 1 }, { id: 35, level: 40 }]);
+  assert.equal(next[1], list[1], "the separate skill keeps its position");
+});
+
+test("replacement blocks duplicate ranks, a fifth family, changed event conditions and invalid newly copied levels", () => {
+  const four = [entry(33), entry(34), entry(42), entry(82), entry(83)];
+  const prepared = row(four);
+  assert.equal(skillReplaceBlock(prepared, FINAL, 1, 33), "held");
+  assert.equal(skillReplaceBlock(prepared, FINAL, 1, 51), "consumers", "another new family cannot replace a rank while the old family remains");
+  assert.equal(skillReplaceBlock(prepared, FINAL, 2, 51), null, "swapping the only rank of one family keeps four families");
+  assert.equal(replaceSkill(prepared, FINAL, 1, 51), four);
+  assert.equal(skillReplaceBlock(prepared, FINAL, 1, 500), "no-choice");
+  assert.equal(skillReplaceBlock(prepared, FINAL, 1, Number.NaN), "no-choice");
+  assert.equal(skillReplaceBlock(prepared, FINAL, -1, 51), "missing");
+  assert.equal(skillReplaceBlock(prepared, FINAL, 100, 51), "missing");
+  assert.equal(skillReplaceBlock({ ...prepared, skillEditable: false }, FINAL, 1, 51), "read-only");
+  assert.equal(skillReplaceBlock({ ...prepared, skillCapacity: 1 }, FINAL, 2, 51), "capacity");
+  for (const flagEntry of [entry(33, 175, { eventFlag: 75 }), entry(33, 100), entry(33, 1, { eventFlag: 0 })]) {
+    const list = [flagEntry];
+    assert.equal(skillReplaceBlock(row(list), FINAL, 0, 41), "event-gated");
+    assert.equal(replaceSkill(row(list), FINAL, 0, 41), list);
+  }
+  const odd = [entry(33, 0)];
+  assert.equal(skillReplaceBlock(row(odd), FINAL, 0, 33), null, "an unchanged stored level zero stays allowed");
+  assert.equal(skillReplaceBlock(row(odd), FINAL, 0, 41), "level", "level zero must not be transferred to a new id");
+  assert.equal(replaceSkill(row(odd), FINAL, 0, 41), odd);
 });

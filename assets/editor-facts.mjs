@@ -16,7 +16,7 @@
 // "verified" means the game's own executable (or a real game screen) was read and the address or screen is written down
 // in docs/EDITOR_FACTS.md. An id with no entry is shown as unknown with its raw number (see factOrUnknown).
 
-import { ownEntry } from "./editor-own.mjs?v=20261011-public4";
+import { ownEntry } from "./editor-own.mjs?v=20261011-public5";
 
 export const GAME_IDS = Object.freeze(["srwf-f", "srwf-final"]);
 export const FACT_KINDS = Object.freeze(["unit", "pilot", "spirit"]);

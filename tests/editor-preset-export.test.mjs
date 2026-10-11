@@ -10,6 +10,7 @@ import { exportEditedImage, previewEditorRecord } from "../assets/editor-core.mj
 import { createEditorWorker } from "../assets/editor-worker.mjs";
 import { parsePreset } from "../assets/editor-preset.mjs";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
+import { choosePilotSkill, indexedSkillRows } from "./helpers/pilot-skill-controls.mjs";
 import { F_GAME, GAME, makeBase } from "./helpers/synthetic-game.mjs";
 import { CELL, skillTable } from "./helpers/synthetic-pilots.mjs";
 
@@ -125,14 +126,13 @@ function editSkills(recordIndex, change) {
   byId("pilotSkillDialog").close();
 }
 function addSkill(id, level) {
-  byId("pilotSkillAddSelect").value = String(id);
-  byId("pilotSkillAddLevel").value = String(level);
+  choosePilotSkill(byId, state.editorGameId, id, level);
   hooks.addPilotSkillFromDialog();
 }
 function removeSkill(recordIndex, id) {
   const index = rowOf("pilot", recordIndex).specialAbilities.findIndex((entry) => entry.id === id);
   assert.ok(index >= 0, `skill ${id} is held`);
-  byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-row")[index].querySelector(".pilot-skill-remove").click();
+  indexedSkillRows(byId)[index].querySelector(".pilot-skill-remove").click();
 }
 
 function makeEdits() {
