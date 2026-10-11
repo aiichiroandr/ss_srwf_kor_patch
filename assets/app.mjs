@@ -1,9 +1,9 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public3';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public3';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public3";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public3";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public3";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public3";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public4';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public4';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public4";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public4";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public4";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public4";
 import {
   canStep,
   filterRecords,
@@ -12,7 +12,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public3";
+} from "./editor-list.mjs?v=20261011-public4";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -23,7 +23,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public3";
+} from "./editor-grades.mjs?v=20261011-public4";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -54,27 +54,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public3";
+} from "./editor-skill-list.mjs?v=20261011-public4";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public3";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public3";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public3";
+} from "./editor-facts.mjs?v=20261011-public4";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public4";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public4";
 import { sha256Hex, Sha256 } from "./sha256.mjs";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public3";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public3";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public3";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public3";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public3";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public3";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public3";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public3";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public3";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public3";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public4";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public4";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public4";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public4";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public4";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public4";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public4";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public4";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public4";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public4";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -82,14 +82,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public3";
+} from "./font-revisions.mjs?v=20261011-public4";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public3";
+} from "./release-notes.mjs?v=20261011-public4";
 
-const STATIC_ASSET_REVISION = "20261011-public3";
+const STATIC_ASSET_REVISION = "20261011-public4";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -734,14 +734,15 @@ const editorChanges = createEditorChanges({
   preparePreset: preset => state.editorScenario.preparePreset(preset),
   announce: (text) => announce(text),
 });
-const rewardEditor = createRewardEditor({
-  rows: () => state.editorRewards,
-  partName: (id) => {
+const editorPartName = id => {
     const name = normaliseGameAbilityName(state.editorPartNames[id]);
     // Both authenticated stock tables name id 21 リペアキットＳ. The accepted Final translation
     // points this label at a UI sentence; correct the editor label without rewriting accepted bytes.
     return id === 21 && name === "변경할 수 있습니다." ? "리페어 키트 S" : name || `파츠 #${id}`;
-  },
+};
+const rewardEditor = createRewardEditor({
+  rows: () => state.editorRewards,
+  partName: editorPartName,
   canEdit: () => Boolean(state.editorSessionToken) && !anyJobBusy(),
   onChange: (row) => updateEditorStatus("reward", row),
   open: () => selectEditorTab("reward", { render: false }),
@@ -758,6 +759,8 @@ const terrainEditor = createTerrainEditor({
 const scenarioEditor = createScenarioEditor({
   model: () => state.editorScenario,
   rewardRows: () => state.editorRewards,
+  partName: editorPartName,
+  openReward: id => { const target=state.editorRewards.find(row=>row.aliases.includes(id));if(target){selectEditorTab("reward",{render:false});rewardEditor.focus(target.recordIndex);} },
   terrainName: id => normaliseGameAbilityName(state.editorTerrains.find(row => row.recordIndex === id)?.name ?? '') || `지형 #${id}`,
   canEdit: () => Boolean(state.editorSessionToken) && !anyJobBusy(),
   onChange: (kind, row) => updateEditorStatus(kind, row),

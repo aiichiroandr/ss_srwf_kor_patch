@@ -12,7 +12,7 @@ Object.getPrototypeOf(document.root).contains=function(target){for(let node=targ
 for(const select of document.root.querySelectorAll('select'))for(const item of select.options)if(item.hasAttribute('value'))item.value=item.getAttribute('value');
 const logger=console.error;console.error=()=>{};
 const {__testHooks:hooks}=await import('../assets/app.mjs');await new Promise(r=>setTimeout(r,0));console.error=logger;
-const $=id=>document.getElementById(id),set=(id,value)=>{const el=$(id);el.value=String(value);el.dispatchEvent({type:el.tagName==='INPUT'?'input':'change',target:el});};
+const $=id=>document.getElementById(id),set=(id,value)=>{const el=$(id);if(id==='scenarioEventSelector'){const mode=String(value).startsWith('objective:')?'scenarioObjectiveTool':String(value).startsWith('event:')||String(value).startsWith('reinforcement:')?'scenarioEventTool':'scenarioDeploymentTool';$(mode).click();}el.value=String(value);el.dispatchEvent({type:el.tagName==='INPUT'?'input':'change',target:el});};
 const deployment={recordIndex:'0:64',physicalIndex:0,mapIndex:0,scenarioSlots:[0,1],width:6,height:4,name:'테스트 기체',pilotName:'테스트 파일럿',unitId:1,pilotId:1,x:2,y:1,rewardSelector:1,editable:true,identity:`deployment:1:${'a'.repeat(64)}`};
 function setup(withObjectives=false,withReinforcements=false,withCriteria=false){Object.assign(hooks.state,{mode:'editor',editorGameId:'srwf-f',editorSessionToken:'scenario-token',editorBusy:false,busy:false,cueSaving:false,editorSetupOpen:false});$('editorWorkspace').hidden=false;
  hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[{recordIndex:4,name:'지형4'}],rewards:[{recordIndex:1,name:'보상 표1',aliases:[1],capacity:1,editable:true,part1:1,chance1:50}],
@@ -31,9 +31,9 @@ test('320px compact selectors retain both source and independent event text befo
     await page.setContent(`<style>${css}</style><body data-view="editor" style="margin:0;font-family:sans-serif">
      <section class="editor-scenario-panel" data-compact="true" data-paged="${paged}" data-tool="deployment" data-page="fields" style="width:296px;margin:0 12px;box-sizing:border-box">
       <div class="scenario-toolbar"><select id="scenarioSelector"><option>공유 자료 #1 · 23개</option></select>
-       <select id="scenarioEventSelector"><option>1. 적군 99턴 이상</option></select>
-       <select id="scenarioMapSelector"><option>맵 #26</option></select><select id="scenarioPlaneSelector"><option>상태 1</option></select>
-       <div class="scenario-view-pager"${paged?'':' hidden'}><button>맵</button><button>편집값</button></div><details><summary>설명</summary></details>
+       <div class="scenario-mode-row"><button>기체 배치</button><button>이벤트</button><button>승리·패배</button><button>타일</button></div><div class="scenario-context-row"><select id="scenarioEventSelector"><option>1. 적군 99턴 이상</option></select>
+
+       <div class="scenario-view-pager"${paged?'':' hidden'}><button>맵</button><button>편집값</button></div><details><summary>도움말</summary></details><details><summary>맵 자료</summary></details></div>
       </div></section></body>`);
     const measured=await page.locator('#scenarioSelector,#scenarioEventSelector').evaluateAll(selects=>selects.map(select=>{
      const style=getComputedStyle(select),context=document.createElement('canvas').getContext('2d');context.font=style.font;
@@ -130,7 +130,7 @@ test('scenario controls retain focus, reject invalid coordinates and combine pla
  const request=hooks.buildEditorExportRequest();assert.deepEqual(request.deploymentEdits,[{recordIndex:'0:64',x:3,y:1,rewardSelector:1}]);assert.deepEqual(request.mapEdits,[{mapIndex:0,plane:0,x:0,y:0,tileId:1000}]);
  $('editorChangesButton').click();const entry=$('editorChangesList').querySelector('[data-change-kind="deployment"]');entry.click();assert.equal(hooks.state.editorTab,'scenario');assert.equal(document.activeElement,input);
  $('scenarioDeploymentReset').click();assert.equal(document.activeElement,input);assert.equal($('scenarioDeploymentReset').disabled,true);
- $('editorChangesButton').click();$('editorChangesList').querySelector('[data-change-kind="map"]').click();$('scenarioTileReset').click();assert.equal(hooks.countEditorChanges(),0);assert.equal(document.activeElement,$('scenarioTileSelector'));
+ $('editorChangesButton').click();$('editorChangesList').querySelector('[data-change-kind="map"]').click();$('scenarioTileReset').click();assert.equal(hooks.countEditorChanges(),0);assert.equal(document.activeElement,$('scenarioTilePickerOpen'));
 });
 test('placement resets focus the coordinate or reward that changed and allow another edit immediately',()=>{
  const m=setup();
@@ -187,13 +187,13 @@ test('turn and reinforcement controls preserve focus, block invalid navigation, 
   {recordIndex:'0:100',initial:true,root:4,mapIndex:0,guards:[],placements:[initial]},
   {recordIndex:'0:197',initial:false,root:5,mapIndex:0,phase:'enemy-start',guards:[{recordIndex:'0:150',taken:true}],placements:[reinforcement]},
  ]}]});$('scenarioTabButton').click();const m=hooks.state.editorScenario;
- set('scenarioEventSelector','0:197');assert.equal($('scenarioDeploymentSelector').children.length,1);assert.equal($('scenarioTurn').value,'5');
- const input=$('scenarioTurn');input.focus();set('scenarioTurn',6);assert.equal(document.activeElement,input);assert.equal(m.events[0].turn,6);assert.equal(hooks.countEditorChanges(),1);
- set('scenarioX',3);assert.equal(hooks.countEditorChanges(),2);
+ set('scenarioEventSelector','0:197');assert.equal($('scenarioDeploymentSelector').children.length,1);assert.equal($('scenarioEventFields').hidden,true);set('scenarioX',3);assert.equal(m.deployments[1].x,3);set('scenarioEventSelector','event:0:150');assert.equal($('scenarioTurn').value,'5');
+ const input=$('scenarioTurn');input.focus();set('scenarioTurn',6);assert.equal(document.activeElement,input);assert.equal(m.events[0].turn,6);assert.equal(hooks.countEditorChanges(),2);
+ assert.equal(hooks.countEditorChanges(),2);
  assert.deepEqual(hooks.buildEditorExportRequest().eventEdits,[{recordIndex:'0:150',turn:6}]);
  const preset=parsePreset(JSON.stringify(buildPreset({gameId:'srwf-f'},{event:m.events,deployment:m.deployments})));
  m.events[0].turn=5;m.deployments[1].x=4;assert.equal(applyPreset(preset,session(m),'matching').applied,2);
- set('scenarioTurn',100);set('scenarioEventSelector','0:100');assert.equal($('scenarioEventSelector').value,'0:197');assert.equal(input.getAttribute('aria-invalid'),'true');
+ set('scenarioTurn',100);$('scenarioDeploymentTool').click();assert.equal($('scenarioEventSelector').value,'event:0:150');assert.equal($('scenarioEditorPanel').dataset.mode,'events');assert.equal(input.getAttribute('aria-invalid'),'true');
  set('scenarioTurn',6);$('editorChangesButton').click();$('editorChangesList').querySelector('[data-change-kind="event"]').click();assert.equal(document.activeElement,input);
  $('scenarioEventReset').click();assert.equal(m.events[0].turn,5);assert.equal(m.deployments[1].x,3);assert.equal(hooks.countEditorChanges(),1);assert.equal(document.activeElement,input);assert.equal(input.disabled,false);assert.equal($('scenarioEventReset').disabled,true);
  hooks.state.editorBusy=true;set('scenarioTurn',9);assert.equal(m.events[0].turn,5);hooks.state.editorBusy=false;
@@ -389,4 +389,40 @@ test('pilot conditions use authenticated ordinary heads, named selections and a 
  $('scenarioCriteriaReset').click();assert.equal(hooks.countEditorChanges(),0);assert.equal(document.activeElement,$('scenarioObjectivePriority'));assert.equal($('scenarioStatus').textContent,'');
  install(false);$('scenarioTabButton').click();set('scenarioEventSelector','objective:0:300');
  assert.equal($(prefix+'Query').options.some(option=>option.value==='pilotLookup'),false);
+});
+
+test('task switching separates deployment, turn and purpose fields and blocks abandoning an invalid draft',()=>{
+ const m0=setup(true,false,true),event={recordIndex:'0:150',physicalIndex:0,scenarioSlots:[0,1],turn:5,comparison:'eq',phase:'enemy-start',editable:true};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[{recordIndex:1,aliases:[1],editable:true}],deployments:[deployment],events:[event],objectives:m0.objectives,maps:m0.maps,mapBanks:m0.banks,scenarios:[{...m0.scenarios[0],conditions:[event]}]});$('scenarioTabButton').click();
+ const m=hooks.state.editorScenario;
+ assert.equal($('scenarioEditorPanel').dataset.mode,'placement');assert.equal($('scenarioEventFields').hidden,true);assert.equal($('scenarioObjectiveDescription').hidden,true);
+ $('scenarioEventTool').click();assert.equal($('scenarioEditorPanel').dataset.mode,'events');assert.deepEqual($('scenarioEventSelector').options.map(o=>o.value),['event:0:150']);
+ assert.equal($('scenarioX').parentNode.parentNode.parentNode.hidden,true);assert.equal($('scenarioEventFields').hidden,false);
+ set('scenarioTurn',100);$('scenarioTileTool').click();assert.equal($('scenarioEditorPanel').dataset.mode,'events');assert.equal($('scenarioTurn').getAttribute('aria-invalid'),'true');assert.equal(m.events[0].turn,5);
+ set('scenarioTurn',6);$('scenarioObjectiveTool').click();assert.equal($('scenarioEditorPanel').dataset.mode,'objective');assert.equal($('scenarioEventFields').hidden,true);assert.equal($('scenarioObjectiveDescription').hidden,false);
+ assert.deepEqual($('scenarioEventSelector').options.map(o=>o.value),['objective:0:300']);assert.equal(m.events[0].turn,6);assert.deepEqual(m.exportDeployments(),[]);
+ $('scenarioDeploymentTool').click();assert.equal($('scenarioEditorPanel').dataset.mode,'placement');assert.equal($('scenarioObjectiveDescription').hidden,true);
+});
+
+test('advanced shared-map selection enters tile editing without merging other scenarios placement targets',()=>{
+ const m=setup();set('scenarioMapSelector',1);
+ assert.equal($('scenarioSelector').value,'');assert.equal($('scenarioEditorPanel').dataset.mode,'tile');
+ assert.equal($('scenarioEventSelector').hidden,true);assert.equal($('scenarioDeploymentFields').hidden,true);assert.equal($('scenarioDeploymentTool').disabled,true);
+ assert.equal($('scenarioEventTool').disabled,true);assert.equal($('scenarioObjectiveTool').disabled,true);
+ set('scenarioTileSelector',12);$('scenarioApplyTile').click();assert.equal(m.cell(0,0,0,0).tileId,12);assert.deepEqual(m.exportDeployments(),[]);
+ set('scenarioSelector',0);$('scenarioDeploymentTool').click();assert.equal($('scenarioEditorPanel').dataset.mode,'placement');assert.equal($('scenarioDeploymentTool').disabled,false);
+});
+
+test('returning to initial placement restores its map and advanced selector after a wave on another map',()=>{
+ const m0=setup(),initial={...deployment,waveIndex:'0:100'},later={...deployment,recordIndex:'0:200',mapIndex:2,waveIndex:'0:197',name:'후속 기체',x:4,y:2};
+ const otherMap={...m0.maps[0],mapIndex:2,mapSlots:[2]};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[{recordIndex:1,aliases:[1],editable:true}],deployments:[initial,later],maps:[...m0.maps,otherMap],mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:[initial,later],waves:[
+  {recordIndex:'0:100',initial:true,mapIndex:0,guards:[],placements:[initial]},
+  {recordIndex:'0:197',initial:false,mapIndex:2,guards:[],placements:[later]},
+ ]}]});$('scenarioTabButton').click();set('scenarioEventSelector','0:197');
+ assert.equal($('scenarioMapSelector').value,'2');assert.equal($('scenarioDeploymentSelector').value,'0:200');
+ $('scenarioTileTool').click();$('scenarioDeploymentTool').click();
+ assert.equal($('scenarioEventSelector').value,'0:100');assert.equal($('scenarioMapSelector').value,'0');
+ assert.equal($('scenarioDeploymentSelector').value,'0:64');assert.match($('scenarioDeploymentSelector').options[0].textContent,/테스트 기체/);
+ assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
 });

@@ -1,17 +1,17 @@
 // The legacy root-4 boundary evidence accompanies the bounded root-4/root-5
 // event reader. No placement or condition is discovered by byte scanning.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261011-public3';
-import { readScenarioArchive, repackScenarioBodies } from './editor-scenario-archive.mjs?v=20261011-public3';
-import { readScenarioEvents } from './editor-scenario-events.mjs?v=20261011-public3';
-import { normalizeScenarioDeadlines, updateScenarioObjectiveBody } from './editor-scenario-deadlines.mjs?v=20261011-public3';
-import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261011-public3';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261011-public4';
+import { readScenarioArchive, repackScenarioBodies } from './editor-scenario-archive.mjs?v=20261011-public4';
+import { readScenarioEvents } from './editor-scenario-events.mjs?v=20261011-public4';
+import { normalizeScenarioDeadlines, updateScenarioObjectiveBody } from './editor-scenario-deadlines.mjs?v=20261011-public4';
+import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261011-public4';
 
-import { EVENT_CRITERIA_FIELDS, inspectEventCriteriaHook, snapshotEventCriteria, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261011-public3';
-import { EVENT_PHASE_FIELDS, inspectPhaseEventHook, snapshotPhaseEvent, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261011-public3';
-import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public3';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public3';
+import { EVENT_CRITERIA_FIELDS, inspectEventCriteriaHook, snapshotEventCriteria, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261011-public4';
+import { EVENT_PHASE_FIELDS, inspectPhaseEventHook, snapshotPhaseEvent, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261011-public4';
+import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public4';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public4';
 
-import {buildRegionContexts,objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261011-public3';
+import {buildRegionContexts,objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261011-public4';
 const FIXED = new Map([[0x05, 3], [0x6f, 7]]);
 const SUB = new Map([
   [0x80, new Map([[0, 3], [1, 2], [2, 2]])], [0x81, new Map([[0, 2]])],
