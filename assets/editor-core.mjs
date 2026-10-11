@@ -2202,6 +2202,25 @@ export async function catalogEditorBattleAssets(session, request, { signal } = {
     pageSize: ownData(request, 'pageSize') ?? 16 });
 }
 
+// Authoring starts from the authenticated weapon record, never a caller's
+// animation selector or a catalog guess. This read does not grant disc writes.
+export async function inspectEditorWeaponAnimation(session, request, { signal } = {}) {
+  const cache=battleCache(session),weaponIndex=ownData(request,'weaponIndex');
+  if(!Number.isSafeInteger(weaponIndex)||weaponIndex<1)fail('EDITOR_PREVIEW_INVALID','Invalid weapon selection.');
+  if(!cache.rows)cache.rows=buildEditorRows(session.root,session.decoded,session.descriptor.gameId);
+  const weapon=cache.rows.weapons.find(row=>row.recordIndex===weaponIndex);
+  if(!weapon?.editable||!weapon.owners?.length)fail('EDITOR_PREVIEW_INVALID','The weapon has no verified editable owner.');
+  const data=session.root[29].bytes,selector=readU16BE(data,weapon.byteOffset+3);
+  const bytes=await readBattleFile(session,'D_ANIME.BIN',signal);
+  const {inspectWeaponAnimation}=await import('./editor-weapon-authoring.mjs?v=20261012-battle1');
+  const inspection=inspectWeaponAnimation(bytes,selector);
+  checkAbort(signal);
+  const sharedWeapons=cache.rows.weapons.filter(row=>row.owners?.length&&readU16BE(data,row.byteOffset+3)===selector)
+    .map(row=>({recordIndex:row.recordIndex,name:row.name}));
+  return {...inspection,gameId:session.descriptor.gameId,weaponIndex,sharedWeapons,
+    editScope:'local-authoring-investigation',exportSupported:false};
+}
+
 export async function previewEditorBattleAsset(session, request, { signal } = {}) {
   battleCache(session);
   const fileName = ownData(request, 'fileName'), assetKey = ownData(request, 'assetKey');
