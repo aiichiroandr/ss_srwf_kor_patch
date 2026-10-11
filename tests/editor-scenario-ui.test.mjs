@@ -413,7 +413,7 @@ test('advanced shared-map selection enters tile editing without merging other sc
  set('scenarioSelector',0);$('scenarioDeploymentTool').click();assert.equal($('scenarioEditorPanel').dataset.mode,'placement');assert.equal($('scenarioDeploymentTool').disabled,false);
 });
 
-test('returning to initial placement restores its map and advanced selector after a wave on another map',()=>{
+test('returning to the placement overview restores the starting map after a wave on another map',()=>{
  const m0=setup(),initial={...deployment,waveIndex:'0:100'},later={...deployment,recordIndex:'0:200',mapIndex:2,waveIndex:'0:197',name:'후속 기체',x:4,y:2};
  const otherMap={...m0.maps[0],mapIndex:2,mapSlots:[2]};
  hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[{recordIndex:1,aliases:[1],editable:true}],deployments:[initial,later],maps:[...m0.maps,otherMap],mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:[initial,later],waves:[
@@ -422,7 +422,119 @@ test('returning to initial placement restores its map and advanced selector afte
  ]}]});$('scenarioTabButton').click();set('scenarioEventSelector','0:197');
  assert.equal($('scenarioMapSelector').value,'2');assert.equal($('scenarioDeploymentSelector').value,'0:200');
  $('scenarioTileTool').click();$('scenarioDeploymentTool').click();
- assert.equal($('scenarioEventSelector').value,'0:100');assert.equal($('scenarioMapSelector').value,'0');
+ assert.equal($('scenarioEventSelector').value,'all');assert.equal($('scenarioMapSelector').value,'0');
  assert.equal($('scenarioDeploymentSelector').value,'0:64');assert.match($('scenarioDeploymentSelector').options[0].textContent,/테스트 기체/);
+ assert.equal($('scenarioDeploymentSelector').options.length,2);
+ set('scenarioDeploymentSelector','0:200');assert.equal($('scenarioMapSelector').value,'2');assert.equal($('scenarioX').value,'4');
+ assert.equal($('scenarioEventSelector').value,'all');
  assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
+});
+
+test('placement overview keeps physical scenes isolated, follows map aliases, and allows readonly entries to be inspected',()=>{
+ const m0=setup(),initial={...deployment,mapIndex:1,waveIndex:'0:100'},later={...deployment,recordIndex:'0:200',mapIndex:2,waveIndex:'0:197',name:'읽기 전용 기체',editable:false,readOnlyReason:'위치 편집 미지원',x:4,y:2},foreign={...deployment,physicalIndex:1,recordIndex:'1:64',waveIndex:'1:100'};
+ const otherMap={...m0.maps[0],mapIndex:2,mapSlots:[2]};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:[initial,later,foreign],maps:[...m0.maps,otherMap],mapBanks:m0.banks,scenarios:[
+  {physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:[initial,later],waves:[{recordIndex:'0:100',initial:true,mapIndex:1,guards:[],placements:[initial]},{recordIndex:'0:197',initial:false,mapIndex:2,guards:[],placements:[later]}]},
+  {physicalIndex:1,scenarioSlots:[2],mapIndex:0,placements:[foreign],waves:[]},
+ ]});$('scenarioTabButton').click();
+ assert.equal($('scenarioEventSelector').value,'all');
+ assert.deepEqual($('scenarioDeploymentSelector').options.map(item=>item.value),['0:64','0:200']);
+ assert.equal($('scenarioMapLegend').hidden,false);assert.match($('scenarioMapLegend').textContent,/배치 1기/);
+ set('scenarioDeploymentSelector','0:200');assert.equal($('scenarioMapSelector').value,'2');assert.equal($('scenarioX').disabled,true);
+ assert.equal($('scenarioDeploymentSelector').disabled,false);assert.match($('scenarioStatus').textContent,/위치 편집 미지원/);
+ set('scenarioDeploymentSelector','0:64');assert.equal($('scenarioMapSelector').value,'0');assert.equal($('scenarioX').disabled,false);
+ set('scenarioEventSelector','0:197');assert.deepEqual($('scenarioDeploymentSelector').options.map(item=>item.value),['0:200']);assert.equal($('scenarioDeploymentSelector').disabled,false);
+ assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
+});
+
+test('a turn event exposes its linked placement and validates drafts before navigating to the wave',()=>{
+ const m0=setup(),initial={...deployment,waveIndex:'0:100'},later={...deployment,recordIndex:'0:200',waveIndex:'0:197',name:'증원 기체',x:4,y:2};
+ const event={recordIndex:'0:150',physicalIndex:0,scenarioSlots:[0,1],turn:5,comparison:'eq',phase:'enemy-start',editable:true};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:[initial,later],events:[event],maps:m0.maps,mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:[initial,later],conditions:[event],waves:[
+  {recordIndex:'0:100',initial:true,mapIndex:0,guards:[],placements:[initial]},
+  {recordIndex:'0:197',initial:false,mapIndex:0,phase:'enemy-start',guards:[{recordIndex:event.recordIndex,taken:true}],placements:[later]},
+ ]}]});$('scenarioTabButton').click();
+ assert.match($('scenarioEventSelector').options.find(item=>item.value==='0:197').textContent,/증원 1.*5턴.*1기/);
+ set('scenarioEventSelector','event:0:150');assert.equal($('scenarioRelatedDeploymentButton').hidden,false);assert.equal($('scenarioRelatedDeploymentButton').textContent,'배치 1기');
+ assert.equal($('scenarioMapLegend').hidden,false);assert.equal($('scenarioMapLegend').textContent,'● 연계 배치 1기');assert.match($('scenarioMapLegend').title,/초기 진영/);
+ set('scenarioTurn',100);$('scenarioRelatedDeploymentButton').click();assert.equal($('scenarioEditorPanel').dataset.mode,'events');assert.equal($('scenarioTurn').getAttribute('aria-invalid'),'true');
+ set('scenarioTurn',6);$('scenarioRelatedDeploymentButton').click();assert.equal($('scenarioEditorPanel').dataset.mode,'placement');assert.equal($('scenarioEventSelector').value,'0:197');assert.equal($('scenarioDeploymentSelector').value,'0:200');
+ assert.equal($('scenarioX').value,'4');assert.equal($('scenarioY').value,'2');assert.equal($('scenarioRelatedDeploymentButton').hidden,true);
+ assert.match($('scenarioCellInfo').textContent,/\(4, 2\)/);assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
+ const input=$('scenarioX');input.focus();set('scenarioX',3);assert.equal(document.activeElement,input);assert.equal(hooks.state.editorScenario.deployments[1].x,3);
+ $('scenarioDeploymentReset').click();assert.equal(hooks.state.editorScenario.deployments[1].x,4);assert.equal(document.activeElement,input);
+});
+
+test('unread placement commands are described as unsupported rather than an empty battle',()=>{
+ const m0=setup(),chapter={source:'user-bin-scenario-chapter',gameId:'srwf-f',name:'읽기 미지원 작전',scenarioSlot:3,episodes:[3],routeCode:'real',part:1,totalParts:1,order:3};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:[],maps:m0.maps,mapBanks:m0.banks,scenarios:[{physicalIndex:3,scenarioSlots:[3],mapIndex:0,chapter,placements:[],conditions:[],waves:[],frontiers:[{root:4,reason:'unknown-command'}]}]});$('scenarioTabButton').click();set('scenarioSelector',3);
+ assert.equal($('scenarioDeploymentTool').disabled,true);assert.match($('scenarioDeploymentTool').title,/읽기 미지원/);
+ assert.match($('scenarioDeploymentSelector').options[0].textContent,/읽기 미지원/);assert.doesNotMatch($('scenarioDeploymentSelector').options[0].textContent,/기체 없음/);
+ assert.match($('scenarioStatus').textContent,/배치 읽기 미지원/);assert.match($('scenarioSelectionDescription').textContent,/기체가 없다는 뜻이 아닙니다/);
+ assert.equal($('scenarioTileTool').disabled,false);assert.equal($('scenarioRelatedDeploymentButton').hidden,true);
+});
+
+test('map clicks cannot select a different map occupant at the same coordinates in the overview',()=>{
+ const m0=setup(),initial={...deployment,waveIndex:'0:100'},other={...deployment,recordIndex:'0:200',mapIndex:2,waveIndex:'0:197',name:'다른 맵 기체'};
+ const otherMap={...m0.maps[0],mapIndex:2,mapSlots:[2]};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:[initial,other],maps:[...m0.maps,otherMap],mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:[initial,other],waves:[{recordIndex:'0:100',initial:true,mapIndex:0,guards:[],placements:[initial]},{recordIndex:'0:197',initial:false,mapIndex:2,guards:[],placements:[other]}]}]});$('scenarioTabButton').click();
+ const canvas=$('scenarioMapCanvas'),saved=canvas.getBoundingClientRect;canvas.getBoundingClientRect=()=>({left:0,top:0,width:600,height:400});
+ try{canvas.dispatchEvent({type:'click',clientX:250,clientY:150});}finally{canvas.getBoundingClientRect=saved;}
+ assert.equal($('scenarioDeploymentSelector').value,'0:64');assert.equal($('scenarioMapSelector').value,'0');
+ set('scenarioX',3);assert.equal(hooks.state.editorScenario.deployments[0].x,3);assert.equal(hooks.state.editorScenario.deployments[1].x,2);
+});
+
+test('read-only sortie references retain runtime names, unknown positions and uncertain script stages',()=>{
+ const m0=setup(),first={...deployment,waveIndex:'0:100'},reference={...deployment,recordIndex:'0:220',waveIndex:'0:210',placementKind:'roster-reference',placementStage:'scenario-script',name:undefined,unitName:'편성 기체',unitId:null,pilotId:null,pilotName:'게임 실행 시 결정',rosterReference:0xc001,x:undefined,y:undefined,rewardSelector:null,editable:false,readOnlyReason:'편성 참조는 게임 실행 시 결정되며 편집하지 않습니다.'};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:[first,reference],maps:m0.maps,mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:[first,reference],waves:[{recordIndex:'0:100',initial:true,mapIndex:0,guards:[],placements:[first]},{recordIndex:'0:210',initial:false,placementStage:'scenario-script',mapIndex:0,guards:[],placements:[reference]}]}]});$('scenarioTabButton').click();
+ const choice=$('scenarioEventSelector').options.find(item=>item.value==='0:210');assert.match(choice.textContent,/시나리오 배치 1/);assert.doesNotMatch(choice.textContent,/증원/);assert.match(choice.title,/초기·증원 구분은 아직 확인하지 못했습니다/);
+ set('scenarioDeploymentSelector','0:220');assert.match($('scenarioDeploymentSelector').selectedOptions[0].textContent,/편성 기체 · 위치 미확인/);assert.match($('scenarioDeploymentSelector').selectedOptions[0].title,/편성 참조 0xC001/);
+ assert.equal($('scenarioX').value,'');assert.equal($('scenarioY').value,'');assert.equal($('scenarioX').disabled,true);assert.equal($('scenarioPilotName').textContent,'게임 실행 시 결정');assert.equal($('scenarioReward').value,'unknown');
+ assert.equal($('scenarioDeploymentSelector').disabled,false);assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
+ assert.equal($('scenarioX').closest('.scenario-edit-group').hidden,true);assert.equal($('scenarioReward').closest('.scenario-edit-group').hidden,true);assert.equal($('scenarioMove').hidden,true);assert.equal($('scenarioDeploymentReset').hidden,true);
+ assert.match($('scenarioMapLegend').textContent,/배치 1기/);
+});
+
+test('initial faction filters use verified constructor metadata and preserve uncertain roster entries',()=>{
+ const m0=setup(),rows=['player','enemy','other','unknown','player'].map((faction,i)=>({...deployment,recordIndex:`0:${64+i*12}`,x:i,y:1,faction,waveIndex:'0:100',factionSource:i<3?'ca02-group-selector':null,placementKind:i===3?'roster-reference':'fixed-unit',editable:i!==3}));
+ const wave={recordIndex:'0:100',initial:true,mapIndex:0,guards:[],placements:rows};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:rows,maps:m0.maps,mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:rows,waves:[wave]}]});$('scenarioTabButton').click();
+ assert.equal($('scenarioFactionSelector').hidden,false);assert.equal($('scenarioFactionSelector').value,'all');assert.equal($('scenarioDeploymentSelector').options.length,5);
+ for(const [faction,indices]of [['player',[0]],['enemy',[1]],['other',[2]],['unknown',[3,4]]]){
+  set('scenarioFactionSelector',faction);assert.deepEqual($('scenarioDeploymentSelector').options.map(item=>item.value),indices.map(i=>rows[i].recordIndex));
+  assert.match($('scenarioEventSelector').selectedOptions[0].textContent,new RegExp(`${indices.length}기`));
+ }
+ assert.match($('scenarioDeploymentSelector').options[1].title,/초기 진영 미확인/);
+ set('scenarioFactionSelector','enemy');set('scenarioX',9);set('scenarioFactionSelector','other');assert.equal($('scenarioFactionSelector').value,'enemy');assert.equal($('scenarioX').getAttribute('aria-invalid'),'true');
+ set('scenarioX',1);set('scenarioFactionSelector','other');assert.equal($('scenarioFactionSelector').value,'other');assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
+ hooks.state.editorBusy=true;set('scenarioFactionSelector','player');assert.equal($('scenarioFactionSelector').value,'other');hooks.state.editorBusy=false;
+ set('scenarioSelector',0);assert.equal($('scenarioFactionSelector').value,'all');assert.equal($('scenarioDeploymentSelector').options.length,5);
+ $('scenarioTileTool').click();assert.equal($('scenarioFactionSelector').hidden,true);
+});
+
+test('stacked placement clicks cycle every entry and cannot discard an invalid coordinate draft',()=>{
+ const m0=setup(),rows=[64,76,88].map(offset=>({...deployment,recordIndex:`0:${offset}`}));
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:rows,maps:m0.maps,mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:rows,waves:[]}]});$('scenarioTabButton').click();
+ const canvas=$('scenarioMapCanvas'),saved=canvas.getBoundingClientRect;canvas.getBoundingClientRect=()=>({left:0,top:0,width:600,height:400});
+ const click=()=>canvas.dispatchEvent({type:'click',clientX:250,clientY:150});
+ try{
+  set('scenarioX',9);click();assert.equal($('scenarioDeploymentSelector').value,'0:64');assert.equal($('scenarioX').value,'9');assert.equal($('scenarioX').getAttribute('aria-invalid'),'true');
+  set('scenarioX',2);for(const id of ['0:76','0:88','0:64']){click();assert.equal($('scenarioDeploymentSelector').value,id);}
+ }finally{canvas.getBoundingClientRect=saved;}
+ assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
+});
+
+test('a readonly appearance can open its independently verified shared reward table without enabling placement writes',()=>{
+ const m0=setup(),current={...deployment,editable:false,readOnlyReason:'맵 연결 미확인'};
+ hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[...hooks.state.editorRewards],deployments:[current],maps:m0.maps,mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:[current],waves:[]}]});$('scenarioTabButton').click();set('scenarioSelector',0);$('scenarioDeploymentTool').click();
+ assert.equal($('scenarioReward').disabled,true);assert.equal($('scenarioRewardDetail').disabled,false);assert.equal($('scenarioX').disabled,true);
+ $('scenarioRewardDetail').click();assert.equal(hooks.state.editorTab,'reward');assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
+});
+
+test('display-reader frontiers keep partial coverage explicit independently of the writable reader',()=>{
+ const m0=setup();
+ for(const reason of ['display-unknown-command','display-budget','unknown-leaf']){
+  hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:[deployment],maps:m0.maps,mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0,1],mapIndex:0,placements:[deployment],waves:[],frontiers:[],coverage:{frontiers:[{root:4,reason}]}}]});$('scenarioTabButton').click();
+  assert.match($('scenarioStatus').textContent,/일부 배치 읽기 미지원/);assert.match($('scenarioSelectionDescription').textContent,/읽은 배치 1기만 표시/);assert.match($('scenarioSelectionDescription').textContent,/일부 명령은 아직 읽지 못해/);
+ }
 });

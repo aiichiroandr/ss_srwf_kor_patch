@@ -1,13 +1,14 @@
-import { packMeasuredGroups } from './editor-layout.mjs?v=20261011-public8';
-import { createScenarioTilePicker } from './editor-scenario-tile-picker.mjs?v=20261011-public8';
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public8';
-import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261011-public8';
-import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption, sortScenarioSelections } from './editor-scenario-labels.mjs?v=20261011-public8';
-import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public8';
-import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public8';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261011-public8';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public8';
-import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261011-public8';
+import { packMeasuredGroups } from './editor-layout.mjs?v=20261011-public9';
+import { createScenarioTilePicker } from './editor-scenario-tile-picker.mjs?v=20261011-public9';
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public9';
+import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261011-public9';
+import { rewardOutcomeLabel } from './editor-rewards.mjs?v=20261011-public9';
+import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption, sortScenarioSelections } from './editor-scenario-labels.mjs?v=20261011-public9';
+import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public9';
+import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public9';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261011-public9';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public9';
+import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261011-public9';
 const eventRuleControls=[1,2,3].map(n=>({field:`eventRule${n}`,prefix:`scenarioEventRule${n}`}));
 const eventCriteriaIds=['scenarioEventPhaseGroup','scenarioEventPhase','scenarioEventPhaseHint','scenarioEventCriteriaChoice','scenarioEventJoin','scenarioEventAdd','scenarioEventCriteriaReset',...eventRuleControls.flatMap(({prefix})=>['Group','Comparison','Value','Remove'].map(suffix=>prefix+suffix))];
 const ruleControls = ['Victory','Defeat'].flatMap(outcome => [1,2,3].map(n => ({field:`${outcome.toLowerCase()}Rule${n}`,prefix:`scenario${outcome}Rule${n}`})));
@@ -16,6 +17,7 @@ const $ = id => document.getElementById(id);
 const option = (value, text) => { const el = document.createElement('option'); el.value = String(value); el.textContent = text; return el; };
 const modified = (row, fields) => row && fields.some(field => row[field] !== row.original[field]);
 const aliasText = ids => ids.length > 2 ? `${ids[0]} 외 ${ids.length - 1}개` : ids.join('·');
+const containsElement=(container,target)=>{for(let node=target;node;node=node.parentNode)if(node===container)return true;return false;};
 
 export function createScenarioEditor(host) {
   const ui = Object.fromEntries(['scenarioEditorPanel', 'scenarioSelector', 'scenarioMapSelector', 'scenarioPlaneSelector',
@@ -27,20 +29,37 @@ export function createScenarioEditor(host) {
     'scenarioFieldsPager', 'scenarioFieldsPrev', 'scenarioFieldsNext', 'scenarioFieldsPosition',
     'scenarioSpawnChoice','scenarioSpawnPosition','scenarioSpawnRewardGroup','scenarioSpawnTemplate','scenarioSpawnPilot','scenarioSpawnToggle','scenarioSpawnReset','scenarioSpawnTurn','scenarioSpawnX','scenarioSpawnY','scenarioSpawnMove','scenarioSpawnReward',
     'scenarioObjectiveFields','scenarioObjectiveDescription','scenarioDeadline','scenarioDeadlineRule','scenarioObjectiveReset','scenarioVictoryText','scenarioDefeatText',
-    ...criteriaIds,...eventCriteriaIds,'scenarioObjectiveNote','scenarioEventSelector','scenarioEventFields','scenarioEventChoice','scenarioConditionSelector','scenarioTurn','scenarioConditionRule','scenarioEventReset'].map(id => [id, $(id)]));
+    ...criteriaIds,...eventCriteriaIds,'scenarioObjectiveNote','scenarioEventSelector','scenarioFactionSelector','scenarioRelatedDeploymentButton','scenarioEventFields','scenarioEventChoice','scenarioConditionSelector','scenarioTurn','scenarioConditionRule','scenarioEventReset'].map(id => [id, $(id)]));
   let mapIndex = null, planeIndex = 0, selected = null, scenarioIndex = null, tool = 'deployment', mode = 'placement';
   let x = 0, y = 0, brush = false, paintedTile = 0, zoom = 1, page = 'map';
   let fieldsPage = 0, fieldsPaged = false;
   let fieldsPages = [];
   let explanationContent, explanationPager, explanationPrevious, explanationNext, explanationPosition;
   let explanationPages = [], explanationPage = 0, explanationSource;
-  let eventIndex=null,conditionIndex=null;
+  let eventIndex=null,conditionIndex=null,faction='all';
+  const factionNames={player:'아군',enemy:'적군',other:'기타 진영',unknown:'미확인'};
+  const factionColors={player:'#66c7ff',enemy:'#ff8e8e',other:'#c6baff',unknown:'#e6f9ff'};
+  const initialFaction=item=>item.factionSource==='ca02-group-selector'&&Object.hasOwn(factionNames,item.faction)?item.faction:'unknown';
+  const inFaction=item=>faction==='all'||initialFaction(item)===faction;
   const texture = document.createElement('canvas');
   const model = () => host.model(), map = () => model().mapFor(mapIndex), plane = () => map()?.planes[planeIndex];
-  const placements = () => model().deployments.filter(row => map()?.mapSlots.includes(row.mapIndex)
-    && (scenarioIndex === null || row.physicalIndex === scenarioIndex)
-    && (eventIndex===null || eventIndex==='all' || row.waveIndex===eventIndex));
   const scene=()=>model().scenarios.find(item=>item.physicalIndex===scenarioIndex);
+  const onMap=item=>map()?.mapSlots.includes(item.mapIndex);
+  const scenePlacements=()=>scenarioIndex===null?[]:model().deployments.filter(item=>item.physicalIndex===scenarioIndex);
+  const relatedWaves=()=>mode==='events'&&eventIndex?.startsWith('event:')
+    ?(scene()?.waves??[]).filter(item=>item.guards?.some(guard=>guard.recordIndex===eventIndex.slice(6))):[];
+  const placements=()=>scenePlacements().filter(item=>inFaction(item)&&(eventIndex===null||eventIndex==='all'
+    ||eventIndex==='later'&&(scene()?.waves??[]).some(w=>!w.initial&&w.placementStage!=='scenario-script'&&w.recordIndex===item.waveIndex)
+    ||item.waveIndex===eventIndex));
+  const relatedPlacements=()=>scenePlacements().filter(item=>inFaction(item)&&relatedWaves().some(w=>w.recordIndex===item.waveIndex));
+  const positioned=item=>Number.isInteger(item.x)&&Number.isInteger(item.y);
+  const shownPlacements=()=>((mode==='placement'?placements():relatedPlacements())).filter(item=>onMap(item)&&positioned(item)&&item.x>=0&&item.y>=0&&item.x<plane()?.width&&item.y<plane()?.height);
+  const unreadPlacements=()=>Boolean(scene()&&!scenePlacements().length);
+  const incompletePlacements=()=>Array.isArray(scene()?.coverage?.frontiers)?scene().coverage.frontiers.length>0
+    :Boolean(scene()?.frontiers?.some(item=>/unknown-command|state-limit|budget|boundary-conflict/u.test(item.reason)));
+  const placementName=item=>item.name||item.unitName||(item.placementKind==='sortie-position'?'출격 선택 기체':'편성 기체');
+  const placementLabel=(item,index)=>`${index+1}. ${placementName(item)} · ${positioned(item)?`(${item.x}, ${item.y})`:'위치 미확인'}`;
+  const placementDescription=item=>`${placementName(item)} · ${item.pilotName||'파일럿 미확인'} · ${positioned(item)?`(${item.x}, ${item.y})`:'위치 미확인'} · 초기 진영 ${factionNames[initialFaction(item)]}${Number.isInteger(item.rosterReference)?` · 편성 참조 0x${item.rosterReference.toString(16).toUpperCase()}`:''}${onMap(item)?'':model().mapFor(item.mapIndex)?' · 다른 맵':' · 맵 연결 미확인'}${item.readOnlyReason?' · '+item.readOnlyReason:''}`;
   const condition=()=>model().events.find(item=>item.recordIndex===conditionIndex);
   const reinforcement=()=>model().reinforcements.find(item=>item.physicalIndex===scenarioIndex);
   const spawnMode=()=>Boolean(eventIndex?.startsWith('reinforcement:'));
@@ -79,7 +98,7 @@ export function createScenarioEditor(host) {
   const cell = () => map() ? model().cell(map().mapIndex, planeIndex, x, y) : null;
   const terrainId = tileId => model().bankFor(map())?.terrainIds[tileId];
   const terrainName = id => host.terrainName(id) || `지형 #${id}`;
-  function say(text = '') { ui.scenarioStatus.textContent = text; requestAnimationFrame(measure); }
+  function say(text = '',description=text) { ui.scenarioStatus.textContent = text;ui.scenarioStatus.title=description; requestAnimationFrame(measure); }
 
   function draw() {
     const current = plane(), viewport = ui.scenarioMapViewport;
@@ -103,15 +122,16 @@ export function createScenarioEditor(host) {
       if (!graphic) { ctx.fillStyle = `hsl(${(terrain * 137.508) % 360} 24% ${34 + (terrain % 3) * 6}%)`; ctx.fillRect(cx * size, cy * size, size + .5, size + .5); }
       if (size >= 20) { ctx.strokeStyle = '#ffffff18'; ctx.lineWidth = .5; ctx.strokeRect(cx * size, cy * size, size, size); }
     }
-    // Dots are placement entries, not faction markers. Keep all occupants;
-    // selecting one in a stack uses the explicit entry selector below.
-    const shown = mode==='placement' ? placements() : [];
-    if (planeIndex === 0) for (const [index, item] of shown.entries()) {
+    // Only proved CA02 constructors provide an initial faction. Runtime
+    // roster references remain unknown; keep every occupant in a stack.
+    const shown = shownPlacements(), list = mode==='placement'?placements():relatedPlacements();
+    if (planeIndex === 0) for (const item of shown) {
       if (item.x >= current.width || item.y >= current.height) continue;
       const active = item.recordIndex === selected;
-      ctx.fillStyle = active ? '#ffe39e' : '#e6f9ff';
+      ctx.fillStyle = factionColors[initialFaction(item)];
       ctx.beginPath(); ctx.arc((item.x + .5) * size, (item.y + .5) * size, Math.max(1.5, size * .28), 0, Math.PI * 2); ctx.fill();
-      if (size >= 23) { ctx.fillStyle = '#07192d'; ctx.font = `bold ${Math.min(14, size * .42)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(index + 1), (item.x + .5) * size, (item.y + .5) * size); }
+      if(active){ctx.strokeStyle='#ffe39e';ctx.lineWidth=Math.max(1,size*.06);ctx.stroke();}
+      if (size >= 23) { ctx.fillStyle = '#07192d'; ctx.font = `bold ${Math.min(14, size * .42)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(list.indexOf(item) + 1), (item.x + .5) * size, (item.y + .5) * size); }
     }
     if(spawnMode()&&reinforcement()?.enabled&&planeIndex===0){
       const added=reinforcement();ctx.fillStyle='#ff9689';ctx.beginPath();ctx.arc((added.x+.5)*size,(added.y+.5)*size,Math.max(2,size*.32),0,Math.PI*2);ctx.fill();
@@ -131,13 +151,18 @@ export function createScenarioEditor(host) {
   }
 
   function describeCell() {
-    if (ui.scenarioSelectionDescription) ui.scenarioSelectionDescription.textContent = scenarioSelectionDescription(scene());
+    if (ui.scenarioSelectionDescription) ui.scenarioSelectionDescription.textContent = `${scenarioSelectionDescription(scene())}${scene()?unreadPlacements()
+      ?' 이 시나리오의 배치 명령을 아직 읽지 못했습니다. 기체가 없다는 뜻이 아닙니다.'
+      :` 읽은 배치 ${scenePlacements().length}기만 표시합니다.${incompletePlacements()?' 일부 명령은 아직 읽지 못해 초기 배치나 다른 증원이 빠질 수 있습니다.':''} 초기 진영이 확인된 고정 기체만 아군·적군·기타로 구분합니다. 출격 편성 참조의 기체·파일럿은 게임 실행 시 결정됩니다. 게임 중 진영 변경은 반영하지 않습니다.`:''}`;
     const current = plane();
     if (!current) { ui.scenarioCellInfo.textContent = '맵 데이터가 없습니다'; return; }
     const tileId = model().tile(mapIndex, planeIndex, x, y), terrain = terrainId(tileId);
     ui.scenarioCellInfo.textContent = `선택 칸 (${x}, ${y}) · ${terrainName(terrain)} · #${tileId}`;
     ui.scenarioCellInfo.title = `X는 왼쪽부터, Y는 위쪽부터 0으로 셉니다. 선택 칸 (${x}, ${y}), ${terrainName(terrain)}, 타일 #${tileId}.`;
-    ui.scenarioMapLegend.hidden = mode!=='placement'||planeIndex!==0||!placements().length;
+    const shown=shownPlacements();
+    ui.scenarioMapLegend.hidden = planeIndex!==0||!shown.length;
+    ui.scenarioMapLegend.textContent=mode==='events'?`● 연계 배치 ${shown.length}기`:faction==='all'?`● 배치 ${shown.length}기`:`● ${factionNames[faction]} ${shown.length}기`;
+    ui.scenarioMapLegend.title=`아군 파랑 · 적군 빨강 · 기타 진영 보라 · 미확인 흰색 · 선택 노란 테두리. 기체 생성 시 초기 진영이며 게임 중 변경은 별도입니다.${mode==='events'?' 선택한 사건에 연결된 배치입니다. 점을 누르거나 ‘배치 보기’로 편집합니다.':''}`;
     const bank=model().bankFor(map()),orientation=current.orientations?.[y*current.width+x]??0;
     ui.scenarioCurrentTilePreview.hidden=!paintTilePreview(ui.scenarioCurrentTilePreview,bank&&model().graphics.tile(bank,tileId,orientation));
     ui.scenarioCurrentTileName.textContent=terrainName(terrain);ui.scenarioCurrentTileName.title=`${terrainName(terrain)} · #${tileId}`;
@@ -165,10 +190,10 @@ export function createScenarioEditor(host) {
   }
   function focusAfterReset(...controls) {
     const groups = fieldGroups();
-    const control = controls.find(input => input && !input.disabled && groups.some(group => group.contains(input)));
+    const control = controls.find(input => input && !input.disabled && groups.some(group => containsElement(group,input)));
     if (!control) return;
     measure();
-    const next = fieldsPages.findIndex(pageGroups => pageGroups.some(group => group.contains(control)));
+    const next = fieldsPages.findIndex(pageGroups => pageGroups.some(group => containsElement(group,control)));
     if (next >= 0) fieldsPage = next;
     showFieldsPage(); showPage('fields'); control.focus({ preventScroll: true });
   }
@@ -182,7 +207,11 @@ export function createScenarioEditor(host) {
       &&(!eventCriteriaGroups().includes(group)||eventCriteriaActive()&&(group!==ui.scenarioEventPhaseGroup||condition().eventPhaseEditable)&&(group!==ui.scenarioEventCriteriaChoice||!condition().eventExactTurnOnly)&&!eventRuleControls.some(({field,prefix})=>group===ui[prefix+'Group']&&!condition()[field]&&!pendingEventCriteria.has(field)))
       &&(group!==ui.scenarioEventFields||Boolean(condition())&&!eventCriteriaActive())
       &&(group!==ui.scenarioEventChoice||ui.scenarioConditionSelector.children.length>1));
-    return groups.filter(group=>!spawnGroups().includes(group)&&!criteriaGroups().includes(group)&&!eventGroups.includes(group)&&group!==ui.scenarioObjectiveFields&&group!==ui.scenarioObjectiveDescription);
+    const current=row();
+    return groups.filter(group=>!spawnGroups().includes(group)&&!criteriaGroups().includes(group)&&!eventGroups.includes(group)&&group!==ui.scenarioObjectiveFields&&group!==ui.scenarioObjectiveDescription
+      &&(containsElement(group,ui.scenarioDeploymentSelector)||Boolean(current))
+      &&(!containsElement(group,ui.scenarioX)||positioned(current))
+      &&(!containsElement(group,ui.scenarioReward)||current?.rewardSelector!==null));
   }
   function measureExplanation() {
     const popup = ui.scenarioSelectionDescription?.closest?.('.reward-explanation');
@@ -262,7 +291,7 @@ export function createScenarioEditor(host) {
     panel.dataset.paged = 'false'; ui.scenarioViewPager.hidden = true;
     const inspector = panel.querySelector('.scenario-inspector'), work = panel.querySelector('.scenario-workarea');
     const groups = fieldGroups();
-    const focused = groups.findIndex(group => group.contains(document.activeElement));
+    const focused = groups.findIndex(group => containsElement(group,document.activeElement));
     for(const group of [...ui.scenarioDeploymentFields.children,...ui.scenarioTileFields.children])group.hidden=!groups.includes(group);
     ui.scenarioFieldsPager.hidden = true;
     const stackHeight=(element,minimumChild=null)=>{
@@ -295,7 +324,7 @@ export function createScenarioEditor(host) {
     fieldsPaged = fieldsPaged && fieldsPages.length > 1;
     if (focused >= 0) fieldsPage = fieldsPages.findIndex(pageGroups => pageGroups.includes(groups[focused]));
     showFieldsPage();
-    if (paged && inspector.contains(document.activeElement)) page = 'fields';
+    if (paged && containsElement(inspector,document.activeElement)) page = 'fields';
     showPage(page);
     measureExplanation();
     draw();
@@ -305,9 +334,11 @@ export function createScenarioEditor(host) {
     for(const [next,id]of Object.entries(modeButtons))ui[id].disabled=!editable||!modeEntries(next).length;
     if(!editable&&regionPicker){regionPicker=null;say();draw();}
     for (const id of ['scenarioSelector', 'scenarioMapSelector', 'scenarioPlaneSelector', 'scenarioZoom']) ui[id].disabled = !editable || !map();
-    for (const id of ['scenarioDeploymentSelector', 'scenarioX', 'scenarioY', 'scenarioMove', 'scenarioReward']) ui[id].disabled = !editable || !current?.editable || planeIndex !== 0;
+    ui.scenarioDeploymentSelector.disabled=!editable||mode!=='placement'||!placements().length||planeIndex!==0;
+    for (const id of ['scenarioX', 'scenarioY', 'scenarioMove', 'scenarioReward']) ui[id].disabled = !editable || !current?.editable || planeIndex !== 0;
+    ui.scenarioMove.hidden=!current?.editable;ui.scenarioDeploymentReset.hidden=!current?.editable;
     for (const id of ['scenarioTileSelector', 'scenarioTilePickerOpen', 'scenarioApplyTile', 'scenarioBrush', 'scenarioTerrainLink']) ui[id].disabled = !editable || !map();
-    ui.scenarioRewardDetail.disabled=!editable||!current?.editable||!host.rewardRows().some(item=>item.editable&&item.aliases.includes(current.rewardSelector));
+    ui.scenarioRewardDetail.disabled=!editable||!current||!host.rewardRows().some(item=>item.editable&&item.aliases.includes(current.rewardSelector));
     ui.scenarioDeploymentReset.disabled = !editable || !current?.editable || !modified(current, ['x', 'y', 'rewardSelector']);
     ui.scenarioTileReset.disabled = !editable || !modified(cell(), ['tileId']);
     const spawn=reinforcement();
@@ -331,6 +362,8 @@ export function createScenarioEditor(host) {
       }
     }
     ui.scenarioEventSelector.disabled=!editable;
+    if(ui.scenarioFactionSelector){ui.scenarioFactionSelector.hidden=!scene()||!['placement','events'].includes(mode);ui.scenarioFactionSelector.disabled=!editable;ui.scenarioFactionSelector.value=faction;}
+    if(ui.scenarioRelatedDeploymentButton)ui.scenarioRelatedDeploymentButton.disabled=!editable||!relatedPlacements().some(item=>positioned(item)&&model().mapFor(item.mapIndex));
     ui.scenarioConditionSelector.disabled=!editable;
     ui.scenarioTurn.disabled=!editable||!condition()?.editable;
     ui.scenarioEventReset.disabled=!editable||!condition()?.editable||!modified(condition(),['turn']);
@@ -358,33 +391,39 @@ export function createScenarioEditor(host) {
     ui.scenarioDeploymentFields.dataset.spawnOnly=String(spawnMode());
     ui.scenarioDeploymentFields.dataset.eventOnly=String(mode==='events'&&!spawnMode());
     ui.scenarioDeploymentFields.dataset.objectiveOnly=String(Boolean(eventIndex?.startsWith('objective:')));
-    if (!rows.some(item => item.recordIndex === selected)) selected = rows.find(item => item.editable)?.recordIndex ?? rows[0]?.recordIndex ?? null;
-    ui.scenarioDeploymentSelector.replaceChildren(...rows.map((item, i) => option(item.recordIndex, `${i + 1}. ${item.name} · (${item.x}, ${item.y})`)));
-    if (!rows.length) ui.scenarioDeploymentSelector.append(option('', '확인된 등장 기체 없음'));
+    if (!rows.some(item => item.recordIndex === selected)) selected = rows.find(item => item.editable&&onMap(item))?.recordIndex ?? rows.find(onMap)?.recordIndex ?? rows.find(item=>item.editable)?.recordIndex ?? rows[0]?.recordIndex ?? null;
+    ui.scenarioDeploymentSelector.replaceChildren(...rows.map((item, i) => {const choice=option(item.recordIndex,placementLabel(item,i));choice.title=placementDescription(item);return choice;}));
+    if (!rows.length) ui.scenarioDeploymentSelector.append(option('', unreadPlacements()?'배치 데이터 읽기 미지원':faction==='all'?'이 선택에서 읽은 배치 0기':`${factionNames[faction]} · 읽은 배치 0기`));
     ui.scenarioDeploymentSelector.value = selected ?? '';
     const current = row();
     for (const [field, input] of [['x', ui.scenarioX], ['y', ui.scenarioY]]) {
-      input.value = current ? String(current[field]) : ''; input.max = String((current?.[field === 'x' ? 'width' : 'height'] ?? 64) - 1);
+      input.value = current&&Number.isInteger(current[field]) ? String(current[field]) : ''; input.max = String((current?.[field === 'x' ? 'width' : 'height'] ?? 64) - 1);
       input.setCustomValidity(''); input.removeAttribute('aria-invalid');
     }
     ui.scenarioReward.replaceChildren(option(255, '보상 없음'), ...host.rewardRows().flatMap(item => item.aliases.map(id => {
-      const parts=Array.from({length:item.capacity??0},(_,i)=>`${host.partName?.(item[`part${i+1}`])||`파츠 #${item[`part${i+1}`]}`} ${item[`chance${i+1}`]}%`);
-      const choice=option(id,item.editable?`#${id} · ${host.partName?.(item.part1)||`파츠 #${item.part1}`}`:`#${id} · 보상 없음`);
-      choice.title=parts.length?`${parts.join(' / ')} · 남은 확률은 보상 없음`:'보상 없음';return choice;
+      const choice=option(id,rewardOutcomeLabel(item,host.partName,{compact:true}));
+      choice.title=`${rewardOutcomeLabel(item,host.partName)}${item.capacity?' · 남은 확률은 보상 없음':''}`;return choice;
     })));
     ui.scenarioReward.title=ui.scenarioReward.selectedOptions?.[0]?.title??'';
-    if(current&&!Array.from(ui.scenarioReward.options).some(item=>Number(item.value)===current.rewardSelector))ui.scenarioReward.append(option(current.rewardSelector,`표 #${current.rewardSelector} · 현재 보상`));
-    ui.scenarioReward.value = String(current?.rewardSelector ?? 255);
+    if(current&&!Array.from(ui.scenarioReward.options).some(item=>Number(item.value)===current.rewardSelector))ui.scenarioReward.append(option(current.rewardSelector??'unknown',current.rewardSelector===null?'게임 실행 시 결정':'현재 보상(명칭 미확인)'));
+    ui.scenarioReward.value = String(current?current.rewardSelector??'unknown':255);
     ui.scenarioReward.title=ui.scenarioReward.selectedOptions?.[0]?.title??'';
     ui.scenarioPilotName.textContent = current ? current.pilotName : '';
     ui.scenarioPilotName.title = current?.pilotName ?? '';
-    say(mode==='placement'?(current?.readOnlyReason || (planeIndex !== 0 ? '기체 배치는 맵 데이터 1에서 편집합니다.' : '')):'');
+    const readOnlyHint=current?.readOnlyReason&&(current.placementKind==='roster-reference'?'출격 편성 참조 · 읽기 전용':current.placementKind==='sortie-position'?'출격 목표 위치 · 읽기 전용':current.placementStage==='scenario-script'?'등장 시점·맵 연결 미확인 · 읽기 전용':current.readOnlyReason);
+    say(mode==='placement'?(readOnlyHint || (planeIndex !== 0 ? '기체 배치는 맵 데이터 1에서 편집합니다.' : !rows.length&&faction!=='all'?'선택 진영에서 읽은 배치 0기':incompletePlacements()?'일부 배치 읽기 미지원 · 도움말 확인':'')):mode==='tile'&&unreadPlacements()?'배치 읽기 미지원 · 도움말 확인':'',current?.readOnlyReason);
     const visible=fieldGroups();for(const group of [...ui.scenarioDeploymentFields.children,...ui.scenarioTileFields.children])group.hidden=!visible.includes(group);
     sync();
   }
   function waveLabel(item){
-    const others=(scene()?.waves??[]).filter(w=>!w.initial),number=others.indexOf(item)+1;
-    return `${item.initial?'초기 배치':`후속 등장 ${number}`} · ${item.placements.length}기`;
+    const script=item.placementStage==='scenario-script',others=(scene()?.waves??[]).filter(w=>script?w.placementStage==='scenario-script':!w.initial&&w.placementStage!=='scenario-script'),number=others.indexOf(item)+1;
+    const guards=(item.guards??[]).flatMap(guard=>{const event=model().events.find(row=>row.recordIndex===guard.recordIndex);return event?[eventConditionLabel(event,guard.taken).split(' · ')[0]]:[];});
+    const count=scenePlacements().filter(row=>row.waveIndex===item.recordIndex&&inFaction(row)).length;
+    return `${script?`시나리오 배치 ${number}`:item.initial?'초기':`증원 ${number}`}${guards.length?' · '+(guards.length>1?`턴 조건 ${guards.length}개`:guards[0]):''} · ${count}기`;
+  }
+  function waveDescription(item){
+    const rules=(item.guards??[]).flatMap(guard=>{const event=model().events.find(row=>row.recordIndex===guard.recordIndex);return event?[`${eventConditionLabel(event,guard.taken)}${eventPhaseName(event)?' · '+eventPhaseName(event)+' 시작 검사':''}`]:[];});
+    return `${waveLabel(item)}${rules.length?'. '+rules.join(' + ')+'. 다른 플래그·분기 조건도 유지됩니다.':item.placementStage==='scenario-script'?' · 초기·증원 구분은 아직 확인하지 못했습니다.':item.initial?' · 시나리오 시작 명령에서 읽은 배치':' · 출현 조건을 아직 확인하지 못했습니다.'}`;
   }
   const eventRules=row=>eventRuleControls.map(({field})=>row?.[field]?decodeObjectiveRule(row[field]):null).filter(Boolean);
   const eventRuleText=c=>`${c.value}턴${({eq:'',ne:' 외',le:' 이하',ge:' 이상'}[c.comparison])??''}`;
@@ -397,24 +436,33 @@ export function createScenarioEditor(host) {
   function standaloneDescription(row,index){
     const text=row.eventCriteriaEditable?eventRules(row).map(eventRuleText).join(row.eventJoin?' 또는 ':' + '):eventConditionLabel(row);
     const impossible=row.eventCriteriaEditable&&eventCriteriaTurnSummary(eventCriteriaFields(row))?.possible===false;
-    const related=(scene()?.waves??[]).flatMap(item=>{const guard=item.guards.find(g=>g.recordIndex===row.recordIndex);return guard?[`${waveLabel(item)} (${eventConditionLabel(row,guard.taken)})`]:[];});
+    const related=(scene()?.waves??[]).flatMap(item=>{const guard=item.guards?.find(g=>g.recordIndex===row.recordIndex);return guard?[`${waveLabel(item)} (${eventConditionLabel(row,guard.taken)})`]:[];});
     return `${text}${impossible?' · 함께 충족되는 턴 없음':''}${eventPhaseName(row)?' · '+eventPhaseName(row)+' 시작 검사':''} · 사건 ${index+1}${related.length?`. 연결: ${related.join(' / ')}. 다른 플래그와 조건도 유지됩니다.`:''}`;
   }
   function describeEventSelection(){
     const selected=ui.scenarioEventSelector.selectedOptions?.[0]??ui.scenarioEventSelector.options[ui.scenarioEventSelector.selectedIndex];
     const text=selected?.title||selected?.textContent||'';
     ui.scenarioEventSelector.title=text;
+    const related=relatedPlacements();
+    if(ui.scenarioRelatedDeploymentButton){
+      ui.scenarioRelatedDeploymentButton.hidden=!related.length;
+      ui.scenarioRelatedDeploymentButton.textContent=`배치 ${related.length}기`;
+      ui.scenarioRelatedDeploymentButton.title='연결된 초기·증원 기체의 위치와 격추 보상 편집';
+    }
     if(mode==='events'&&eventIndex?.startsWith('event:')){
-      const related=(scene()?.waves??[]).filter(item=>item.guards.some(guard=>guard.recordIndex===eventIndex.slice(6)));
-      const first=related[0],name=first?(first.initial?'초기 배치':`후속 등장 ${(scene().waves??[]).filter(w=>!w.initial).indexOf(first)+1}`):'';
-      ui.scenarioTaskHint.textContent=name?`턴 검사 편집 · ${name}${related.length>1?' 등':''} 연결`:'턴 검사 편집 · 다른 이벤트 조건 유지';
+      ui.scenarioTaskHint.textContent=related.length?`턴 검사 · 연결 배치 ${related.length}기`:'턴 검사 편집 · 다른 이벤트 조건 유지';
     }
     ui.scenarioEventSelector.setAttribute('aria-label',`등장·사건 선택${text?`. ${text}`:''}`);
   }
   const modeButtons={placement:'scenarioDeploymentTool',events:'scenarioEventTool',objective:'scenarioObjectiveTool',tile:'scenarioTileTool'};
   function modeEntries(next){
     const current=scene(),waves=(current?.waves??[]).filter(w=>w.placements.length),events=model().events.filter(row=>row.physicalIndex===scenarioIndex);
-    if(next==='placement')return waves.length?waves.map(item=>[item.recordIndex,waveLabel(item)]):current?.placements.length?[['all',`기체 배치 · ${current.placements.length}기`]]:[];
+    if(next==='placement'){
+      const rows=scenePlacements(),later=waves.filter(item=>!item.initial&&item.placementStage!=='scenario-script'),scripts=waves.filter(item=>item.placementStage==='scenario-script');
+      if(!rows.length)return [];
+      const all=['all',`전체 · ${rows.filter(inFaction).length}기`,`읽은 초기·증원 배치 ${rows.length}기. 다른 맵의 기체를 고르면 그 맵으로 이동합니다.${incompletePlacements()?' 아직 읽지 못한 명령이 있어 실제 전체 배치 수는 다를 수 있습니다.':''}`];
+      return waves.length?[...(waves.length>1?[all]:[]),...waves.filter(item=>item.initial&&item.placementStage!=='scenario-script').map(item=>[item.recordIndex,waveLabel(item),waveDescription(item)]),...(later.length>1?[['later',`증원 전체 · ${rows.filter(row=>inFaction(row)&&later.some(item=>item.recordIndex===row.waveIndex)).length}기`]]:[]),...later.map(item=>[item.recordIndex,waveLabel(item),waveDescription(item)]),...scripts.map(item=>[item.recordIndex,waveLabel(item),waveDescription(item)])]:[all];
+    }
     if(next==='events')return [...events.map((item,i)=>[`event:${item.recordIndex}`,standaloneLabel(item,i),standaloneDescription(item,i)]),...(reinforcement()?.editable?[[`reinforcement:${reinforcement().recordIndex}`,'새 증원 · 적군 시작']]:[])];
     if(next==='objective')return objective()?.editable?[[`objective:${objective().recordIndex}`,objective().criteriaEditable?'승리·패배 조건':'추가 턴 제한']]:[];
     return map()?[['tile','타일']]:[];
@@ -425,7 +473,7 @@ export function createScenarioEditor(host) {
     for(const [next,id]of Object.entries(modeButtons)){
       const available=modeEntries(next).length>0;
       ui[id].disabled=!host.canEdit()||!available;ui[id].setAttribute('aria-pressed',String(next===mode));
-      ui[id].title=available?({placement:'기체의 위치와 격추 보상 편집',events:'확인된 턴 검사 편집',objective:'이 시나리오에서 지원하는 승리·패배 조건 편집',tile:'지도 한 칸의 그림과 지형 교체'}[next]):'이 시나리오에서 확인된 편집 대상이 없습니다';
+      ui[id].title=available?({placement:'읽은 초기·증원 기체의 위치와 격추 보상 편집',events:'확인된 턴 검사 편집',objective:'이 시나리오에서 지원하는 승리·패배 조건 편집',tile:'지도 한 칸의 그림과 지형 교체'}[next]):next==='placement'&&scene()?'배치 명령 읽기 미지원 · 기체가 없다는 뜻은 아닙니다':'이 시나리오에서 확인된 편집 대상이 없습니다';
     }
     ui.scenarioTaskHint.textContent=({placement:'기체 선택 → 지도에서 칸 선택 → 이동',events:'턴 검사 편집 · 다른 이벤트 조건 유지',objective:objective()?.criteriaEditable?'승리·패배 조건을 조합하세요':'기존 승패에 추가할 턴 제한을 정하세요',tile:'칸 선택 → 타일 고르기 → 교체'}[mode]);
     ui.scenarioDeploymentFields.hidden=tool!=='deployment';ui.scenarioTileFields.hidden=tool!=='tile';
@@ -438,6 +486,12 @@ export function createScenarioEditor(host) {
     ui.scenarioEventSelector.replaceChildren(...entries.map(([id,label,description])=>{const item=option(id,label);item.title=description??label;return item;}));
     ui.scenarioEventSelector.value=eventIndex??'';
     if(mode==='placement'&&wave()&&model().mapFor(wave().mapIndex))mapIndex=wave().mapIndex;
+    else if(mode==='placement'&&placements().length&&!placements().some(onMap)){
+      const first=placements().find(item=>model().mapFor(item.mapIndex));if(first)mapIndex=first.mapIndex;
+    }
+    else if(mode==='events'&&relatedWaves().length&&!relatedPlacements().some(onMap)){
+      const first=relatedWaves().find(item=>model().mapFor(item.mapIndex));if(first){mapIndex=first.mapIndex;planeIndex=0;}
+    }
     ui.scenarioMapSelector.value=String(model().mapFor(mapIndex)?.mapIndex??'');ui.scenarioPlaneSelector.value=String(planeIndex);
     ui.scenarioEventSelector.hidden=!entries.length||mode==='objective';
     describeEventSelection();
@@ -458,7 +512,7 @@ export function createScenarioEditor(host) {
       ui[id].value=String(current?.[field]??'');ui[id].setCustomValidity('');ui[id].removeAttribute('aria-invalid');
     }
     ui.scenarioSpawnX.max=String((current?.width??64)-1);ui.scenarioSpawnY.max=String((current?.height??64)-1);
-    ui.scenarioSpawnReward.replaceChildren(option(255,'보상 없음'),...host.rewardRows().flatMap(item=>item.aliases.map(id=>option(id,`표 #${id}${item.editable?'':' · 보상 없음'}`))));
+    ui.scenarioSpawnReward.replaceChildren(option(255,'보상 없음'),...host.rewardRows().flatMap(item=>item.aliases.map(id=>{const choice=option(id,rewardOutcomeLabel(item,host.partName,{compact:true}));choice.title=rewardOutcomeLabel(item,host.partName);return choice;})));
     ui.scenarioSpawnReward.value=String(current?.rewardSelector??255);
   }
   function acceptSpawn({report=false}={}){
@@ -575,7 +629,7 @@ export function createScenarioEditor(host) {
     const turn=input.value===''?NaN:Number(input.value);
     if(!Number.isInteger(turn)||turn<1||turn>99){
       input.setCustomValidity('턴은 1~99의 정수로 입력해주세요.');input.setAttribute('aria-invalid','true');say('턴은 1~99의 정수로 입력해주세요.');
-      if(report){host.open();chooseTool('deployment');fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(input)));showFieldsPage();showPage('fields');input.reportValidity();}
+      if(report){host.open();chooseTool('deployment');fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,input)));showFieldsPage();showPage('fields');input.reportValidity();}
       return false;
     }
     if(current.turn!==turn){current.turn=turn;host.onChange('event',current);}
@@ -608,7 +662,7 @@ export function createScenarioEditor(host) {
     const deadline=input.value===''?NaN:Number(input.value);
     if(!Number.isInteger(deadline)||deadline<0||deadline>98){
       input.setCustomValidity('추가 턴 제한은 0~98의 정수입니다.');input.setAttribute('aria-invalid','true');say('추가 턴 제한은 0~98의 정수입니다.');
-      if(report){host.open();chooseTool('deployment');fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(input)));showFieldsPage();showPage('fields');input.reportValidity();}
+      if(report){host.open();chooseTool('deployment');fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,input)));showFieldsPage();showPage('fields');input.reportValidity();}
       return false;
     }
     if(customCriteria(current)){try{criteriaPurpose(criteriaFields(current),deadline,objectiveContext());}catch{return criteriaError(input,'목적 문구가 18자를 넘습니다. 조건을 줄이거나 간단하게 해주세요.',report);}}
@@ -654,7 +708,7 @@ export function createScenarioEditor(host) {
   }
   function criteriaError(input,text,report){
     input.setCustomValidity(text);input.setAttribute('aria-invalid','true');say(text);
-    if(report){host.open();chooseTool('deployment');fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(input)));showFieldsPage();showPage('fields');input.focus();input.reportValidity();}
+    if(report){host.open();chooseTool('deployment');fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,input)));showFieldsPage();showPage('fields');input.focus();input.reportValidity();}
     return false;
   }
   function validateCriteria(wanted,input,report=false){
@@ -713,7 +767,7 @@ export function createScenarioEditor(host) {
     }else pendingCriteria.add(chosen.field);
     renderCriteria();describeObjective();say(remove?'':'검사 대상과 기준값을 입력해주세요.');sync();measure();
     const control=remove?ui[`scenario${outcome}Add`]:ui[chosen.prefix+'Query'];
-    fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(control)));showFieldsPage();showPage('fields');control.focus();
+    fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,control)));showFieldsPage();showPage('fields');control.focus();
   }
   function validateAll(){return acceptSpawn({report:true})&&acceptCriteria({report:true})&&acceptDeadline({report:true})&&acceptTurn({report:true})&&accept({report:true});}
   function chooseTool(next){
@@ -726,7 +780,7 @@ export function createScenarioEditor(host) {
   function chooseMode(next){
     if(next===mode||!modeEntries(next).length||!host.canEdit()||!validateAll())return;
     regionPicker=null;mode=next;eventIndex=conditionIndex=selected=null;fieldsPage=0;brush=false;ui.scenarioBrush.setAttribute('aria-pressed','false');
-    if(next==='placement')planeIndex=0;
+    if(next==='placement'){planeIndex=0;if(model().mapFor(scene()?.mapIndex))mapIndex=scene().mapIndex;}
     ui.scenarioPlaneSelector.value=String(planeIndex);renderEvents();renderMap();
     if(next==='events'||next==='objective')showPage('fields');else showPage('map');
   }
@@ -778,7 +832,7 @@ export function createScenarioEditor(host) {
     if (invalid) {
       invalid.setCustomValidity('맵 범위 안의 정수를 입력해주세요.'); invalid.setAttribute('aria-invalid', 'true');
       say('맵 범위 안의 정수를 입력해주세요.');
-      if (report) { host.open(); chooseTool('deployment'); fieldsPage = fieldsPages.findIndex(groups => groups.some(group => group.contains(invalid))); showFieldsPage(); showPage('fields'); invalid.reportValidity(); }
+      if (report) { host.open(); chooseTool('deployment'); fieldsPage = fieldsPages.findIndex(groups => groups.some(group => containsElement(group,invalid))); showFieldsPage(); showPage('fields'); invalid.reportValidity(); }
       return false;
     }
     wanted.rewardSelector = Number(ui.scenarioReward.value);
@@ -786,7 +840,7 @@ export function createScenarioEditor(host) {
     const changed = Object.keys(wanted).some(field => current[field] !== wanted[field]);
     Object.assign(current, wanted);ui.scenarioReward.title=ui.scenarioReward.selectedOptions?.[0]?.title??'';say(); sync(); draw();
     const chosen = ui.scenarioDeploymentSelector.querySelector(`option[value="${current.recordIndex}"]`);
-    if (chosen) chosen.textContent = `${placements().indexOf(current) + 1}. ${current.name} · (${current.x}, ${current.y})`;
+    if (chosen) {chosen.textContent = placementLabel(current,placements().indexOf(current));chosen.title=placementDescription(current);}
     if (changed) host.onChange('deployment', current);
     return true;
   }
@@ -805,12 +859,34 @@ export function createScenarioEditor(host) {
     const current = plane(); if (!current) return;
     x = Math.max(0, Math.min(current.width - 1, cx)); y = Math.max(0, Math.min(current.height - 1, cy));
     if(clicked&&regionPicker){describeCell();selectRegionPoint();return;}
+    if(clicked&&mode==='events'&&planeIndex===0){
+      const target=shownPlacements().find(item=>item.x===x&&item.y===y);
+      if(target){openRelatedDeployment(target,true);return;}
+    }
     if (clicked && mode === 'placement' && planeIndex === 0 && !eventIndex?.startsWith('objective:')) {
-      const occupied = placements().filter(item => item.x === x && item.y === y);
-      if (occupied.length) { selected = occupied.find(item => item.recordIndex !== selected)?.recordIndex ?? occupied[0].recordIndex; renderDeployment(); }
+      const occupied = shownPlacements().filter(item => item.x === x && item.y === y);
+      if (occupied.length) {
+        if(!validateAll())return;
+        const next=(occupied.findIndex(item=>item.recordIndex===selected)+1)%occupied.length;
+        selected=occupied[next].recordIndex;renderDeployment();
+      }
     }
     describeCell(); previewTile(); if (clicked && tool === 'tile' && brush) applyTile(); draw();
   }
+  function openRelatedDeployment(target=relatedPlacements().find(item=>positioned(item)&&model().mapFor(item.mapIndex)),edit=false){
+    if(!target||!positioned(target)||!host.canEdit()||!model().mapFor(target.mapIndex)||!validateAll())return;
+    mode='placement';eventIndex=target.waveIndex??'all';conditionIndex=null;selected=target.recordIndex;
+    mapIndex=target.mapIndex;planeIndex=0;x=target.x;y=target.y;fieldsPage=0;regionPicker=null;
+    brush=false;ui.scenarioBrush.setAttribute('aria-pressed','false');renderEvents();renderMap();
+    if(edit&&target.editable)focusAfterReset(ui.scenarioX);
+    else{showPage('map');ui.scenarioMapCanvas.focus({preventScroll:true});}
+  }
+  ui.scenarioRelatedDeploymentButton?.addEventListener('click',()=>openRelatedDeployment());
+  ui.scenarioFactionSelector?.addEventListener('change',()=>{
+    const wanted=ui.scenarioFactionSelector.value;
+    if(!host.canEdit()||wanted!=='all'&&!Object.hasOwn(factionNames,wanted)||!validateAll()){ui.scenarioFactionSelector.value=faction;return;}
+    faction=wanted;selected=null;renderEvents();renderMap();
+  });
   function startRegionPick(control){
     if(!criteriaActive()||!regionAvailable()||!host.canEdit())return;
     const target=objectiveContext().regionContext;if(!target||!model().mapFor(target.mapIndex))return;
@@ -852,11 +928,12 @@ export function createScenarioEditor(host) {
     scenarioIndex = ui.scenarioSelector.value === '' ? null : Number(ui.scenarioSelector.value);
     const scene = model().scenarios.find(item => item.physicalIndex === scenarioIndex);
     if (scene && model().mapFor(scene.mapIndex)) { mapIndex = scene.mapIndex; planeIndex = 0; selected = null; x = y = 0; }
-    eventIndex=conditionIndex=null;refresh();
+    eventIndex=conditionIndex=null;faction='all';refresh();
   });
   ui.scenarioEventSelector.addEventListener('change',()=>{
     if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioEventSelector.value=eventIndex??'';return;}
     eventIndex=ui.scenarioEventSelector.value;conditionIndex=selected=null;const current=wave();if(current&&model().mapFor(current.mapIndex))mapIndex=current.mapIndex;
+    else if(mode==='placement'&&eventIndex==='all'&&model().mapFor(scene()?.mapIndex))mapIndex=scene().mapIndex;
     renderEvents();renderMap();
   });
   for(const id of ['scenarioSpawnTemplate','scenarioSpawnTurn','scenarioSpawnX','scenarioSpawnY','scenarioSpawnReward'])for(const type of ['input','change'])ui[id].addEventListener(type,()=>acceptSpawn());
@@ -897,7 +974,12 @@ export function createScenarioEditor(host) {
   ui.scenarioEventReset.addEventListener('click',()=>{const current=condition();if(!current?.editable||!host.canEdit())return;current.turn=current.original.turn;renderEvents();say();sync();host.onChange('event',current);focusAfterReset(ui.scenarioTurn);});
   ui.scenarioMapSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioMapSelector.value=String(mapIndex);return;}mapIndex = Number(ui.scenarioMapSelector.value); scenarioIndex = null;mode='tile';eventIndex=conditionIndex=null;selected = null; x = y = 0; refresh();ui.scenarioMapSelector.closest?.('details')?.removeAttribute('open'); });
   ui.scenarioPlaneSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioPlaneSelector.value=String(planeIndex);return;}regionPicker=null;planeIndex = Number(ui.scenarioPlaneSelector.value); if(planeIndex!==0&&mode==='placement'){mode='tile';eventIndex=conditionIndex=null;renderEvents();}brush = false; ui.scenarioBrush.setAttribute('aria-pressed', 'false'); renderMap(); });
-  ui.scenarioDeploymentSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioDeploymentSelector.value=selected??'';return;}selected = ui.scenarioDeploymentSelector.value; renderDeployment(); if (row()) { x = row().x; y = row().y; } describeCell(); draw(); });
+  ui.scenarioDeploymentSelector.addEventListener('change', () => {
+    if(!validateAll()){ui.scenarioDeploymentSelector.value=selected??'';return;}
+    selected=ui.scenarioDeploymentSelector.value;const target=row();
+    if(target){if(positioned(target)){x=target.x;y=target.y;}if(model().mapFor(target.mapIndex)){mapIndex=target.mapIndex;ui.scenarioMapSelector.value=String(map().mapIndex);}}
+    renderMap();
+  });
   for (const input of [ui.scenarioX, ui.scenarioY, ui.scenarioReward]) { input.addEventListener('input', () => accept()); input.addEventListener('change', () => accept()); }
   ui.scenarioMove.addEventListener('click', move);
   ui.scenarioRewardDetail.addEventListener('click',()=>{if(host.canEdit()&&row()&&validateAll())host.openReward?.(row().rewardSelector);});
@@ -930,14 +1012,15 @@ export function createScenarioEditor(host) {
   return Object.freeze({ refresh, sync, measure, validate: () => acceptSpawn({report:true})&&acceptCriteria({report:true})&&acceptDeadline({report:true})&&acceptTurn({report:true})&&accept({ report: true }),
     openCell: target => { mode='tile';mapIndex = target.mapIndex; planeIndex = target.plane; scenarioIndex = null; selected = null;
       x = target.x; y = target.y; refresh(); chooseTool('tile'); showPage('map'); ui.scenarioMapCanvas.focus(); },
-    reset: () => { mode='placement';regionPicker=null;pendingCriteria.clear();pendingEventCriteria.clear();mapIndex = selected = scenarioIndex = eventIndex=conditionIndex=null; planeIndex = 0; x = y = 0; brush = false; zoom = 1; ui.scenarioZoom.value = '1'; page = 'map'; chooseTool('deployment'); refresh(); },
+    reset: () => { mode='placement';faction='all';regionPicker=null;pendingCriteria.clear();pendingEventCriteria.clear();mapIndex = selected = scenarioIndex = eventIndex=conditionIndex=null; planeIndex = 0; x = y = 0; brush = false; zoom = 1; ui.scenarioZoom.value = '1'; page = 'map'; chooseTool('deployment'); refresh(); },
     focus: (kind, id, fields = []) => {
+      if(['deployment','event','reinforcement'].includes(kind))faction='all';
       if(kind==='reinforcement'){mode='events';
         const target=model().reinforcements.find(item=>item.recordIndex===id);if(!target)return false;
         scenarioIndex=target.physicalIndex;mapIndex=target.mapIndex;planeIndex=0;eventIndex=`reinforcement:${id}`;conditionIndex=selected=null;
         refresh();chooseTool('deployment');showPage('fields');
         const control=({turn:ui.scenarioSpawnTurn,x:ui.scenarioSpawnX,y:ui.scenarioSpawnY,rewardSelector:ui.scenarioSpawnReward,templateOffset:ui.scenarioSpawnTemplate}[fields[0]]??ui.scenarioSpawnToggle);
-        fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(control)));showFieldsPage();control.focus();
+        fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,control)));showFieldsPage();control.focus();
       }else if(kind==='objective'){mode='objective';
         const target=model().objectives.find(item=>item.recordIndex===id);if(!target)return false;
         scenarioIndex=target.physicalIndex;mapIndex=scene()?.mapIndex;planeIndex=0;eventIndex=`objective:${id}`;conditionIndex=selected=null;
@@ -946,16 +1029,16 @@ export function createScenarioEditor(host) {
         const selectedKind=selectedRule&&target[selectedRule.field]?decodeObjectiveRule(target[selectedRule.field],objectiveContext())?.query:null;
         const control=selectedRule?(selectedKind==='factionRegion'?regionControls.get(selectedRule.field).inputs.x0:ui[selectedRule.prefix+(target[selectedRule.field]?(entityQuery(selectedKind)?'Unit':'Value'):'Query')]):({objectivePriority:ui.scenarioObjectivePriority,victoryJoin:ui.scenarioVictoryJoin,defeatJoin:ui.scenarioDefeatJoin}[fields[0]]??ui.scenarioDeadline);
         const activeControl=selectedRule&&!target[selectedRule.field]?ui[`scenario${selectedRule.field.startsWith('victory')?'Victory':'Defeat'}Add`]:control;
-        fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(activeControl)));showFieldsPage();activeControl.focus();
+        fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,activeControl)));showFieldsPage();activeControl.focus();
       }else if(kind==='event'){mode='events';const target=model().events.find(item=>item.recordIndex===id);if(!target)return false;scenarioIndex=target.physicalIndex;
         const current=scene();mapIndex=current.mapIndex;planeIndex=0;eventIndex=`event:${id}`;conditionIndex=id;selected=null;
         refresh();conditionIndex=id;ui.scenarioConditionSelector.value=id;renderCondition();chooseTool('deployment');showPage('fields');
         const eventControl=eventCriteriaActive()?(fields[0]==='eventPhase'&&target.eventPhaseEditable?ui.scenarioEventPhase:fields[0]==='eventJoin'?ui.scenarioEventJoin:ui[(eventRuleControls.find(c=>c.field===fields[0])?.prefix??'scenarioEventRule1')+'Value']):ui.scenarioTurn;
-        fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>group.contains(eventControl)));showFieldsPage();eventControl.focus();
+        fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,eventControl)));showFieldsPage();eventControl.focus();
       }else if (kind === 'deployment') { mode='placement';const target = model().deployments.find(item => item.recordIndex === id); if (!target) return false;
         mapIndex = target.mapIndex; planeIndex = 0; scenarioIndex = target.physicalIndex;eventIndex=target.waveIndex??null;conditionIndex=null; selected = id; x = target.x; y = target.y; refresh(); chooseTool('deployment'); showPage('fields');
         const control = ({ x: ui.scenarioX, y: ui.scenarioY, rewardSelector: ui.scenarioReward }[fields[0]] ?? ui.scenarioDeploymentSelector);
-        fieldsPage = fieldsPages.findIndex(groups => groups.some(group => group.contains(control))); showFieldsPage(); control.focus();
+        fieldsPage = fieldsPages.findIndex(groups => groups.some(group => containsElement(group,control))); showFieldsPage(); control.focus();
       } else { mode='tile';const target = model().rows('map').find(item => item.recordIndex === id); if (!target) return false;
         mapIndex = target.mapIndex; planeIndex = target.plane; scenarioIndex = null; x = target.x; y = target.y; refresh(); chooseTool('tile'); showPage('fields'); ui.scenarioTilePickerOpen.focus(); }
       return true;

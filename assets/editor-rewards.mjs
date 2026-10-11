@@ -1,12 +1,58 @@
 // TSR root 32: 48 selectors, each pointing to [part id, percent] pairs terminated by FF FF.
 // The executable chooses one outcome when the unit is created, with the remainder yielding no part.
 // Preserve selector aliases, pair count and terminators; this module never relocates a record.
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public8";
-import { Sha256 } from "./sha256.mjs?v=20261011-public8";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public9";
+import { Sha256 } from "./sha256.mjs?v=20261011-public9";
 
 export const REWARD_FIELDS = Object.freeze(["part1", "chance1", "part2", "chance2"]);
 export const REWARD_PART_MAX = 22;
 export const REWARD_SELECTOR_COUNT = 48;
+
+const displayName = value => typeof value === "string" ? value.replace(/\u3000/gu, " ").replace(/\s+/gu, " ").trim() : "";
+
+// Display the stored, mutually exclusive outcomes, rather than the selector
+// number or the pair's storage position. Zero-percent candidates stay visible
+// so a saved configuration can still be selected and enabled again.
+export function rewardOutcomeLabel(row, partName = () => "", { compact = false } = {}) {
+  if (!row?.capacity) return "보상 없음";
+  const outcomes = Array.from({ length: row.capacity }, (_, i) => {
+    const slot = i + 1;
+    const name = displayName(partName(row[`part${slot}`])) || "명칭 미확인 강화파츠";
+    return { id: row[`part${slot}`], chance: row[`chance${slot}`], name, label: `${name} ${row[`chance${slot}`]}%` };
+  });
+  if (!compact) return outcomes.map(item => item.label).join(" / ");
+  const first = outcomes[0];
+  const firstChance = outcomes.filter(item => item.id === first.id).reduce((total, item) => total + item.chance, 0);
+  const otherIds = new Set(outcomes.slice(1).map(item => item.id).filter(id => id !== first.id));
+  return `${first.name} ${firstChance}%${otherIds.size ? ` 외 ${otherIds.size}종` : ""}`;
+}
+
+// A reward belongs to a scenario appearance, not to a unit's base stats. This
+// is a list of inspected appearances currently pointing at the shared record;
+// it does not claim to cover unparsed commands or all possible game routes.
+export function rewardReferences(row, model = {}) {
+  const aliases = new Set(row?.aliases ?? []);
+  const deployments = model.deployments ?? model.rows?.("deployment") ?? [];
+  const reinforcements = model.reinforcements ?? model.rows?.("reinforcement") ?? [];
+  const references = [];
+  for (const appearance of deployments) {
+    if (!aliases.has(appearance.rewardSelector)) continue;
+    references.push({ kind: "deployment", recordIndex: appearance.recordIndex,
+      physicalIndex: appearance.physicalIndex, scenarioSlots: appearance.scenarioSlots,
+      unitId: appearance.unitId, name: displayName(appearance.name) || "기체 이름 확인 불가",
+      x: appearance.x, y: appearance.y, editable: appearance.editable });
+  }
+  for (const appearance of reinforcements) {
+    if (appearance.enabled !== 1 || !aliases.has(appearance.rewardSelector)) continue;
+    const template = appearance.templates?.find(item => item.byteOffset === appearance.templateOffset);
+    if (!template) continue;
+    references.push({ kind: "reinforcement", recordIndex: appearance.recordIndex,
+      physicalIndex: appearance.physicalIndex, scenarioSlots: appearance.scenarioSlots,
+      unitId: template.unitId, name: displayName(template.name) || "기체 이름 확인 불가",
+      x: appearance.x, y: appearance.y, turn: appearance.turn, editable: appearance.editable });
+  }
+  return references;
+}
 
 function fail(message) {
   const error = new Error(message);
@@ -39,7 +85,7 @@ export function readRewardTable(segment) {
   for (const start of starts) {
     const limit = starts.find(p => p > start) ?? bytes.length;
     const aliases = targets.flatMap((p, id) => p === start ? [id] : []);
-    const row = { recordIndex: aliases[0], byteOffset: start, aliases, capacity: 0, name: `보상 표 ${aliases[0]}`, statsValid: true };
+    const row = { recordIndex: aliases[0], byteOffset: start, aliases, capacity: 0, name: "강화파츠 격추 보상", statsValid: true };
     let cursor = start;
     while (cursor + 2 <= limit && bytes[cursor] !== 255 && bytes[cursor + 1] !== 255) {
       if (++row.capacity > 2) fail("The reward list exceeds its verified capacity.");
@@ -49,6 +95,7 @@ export function readRewardTable(segment) {
     }
     if (cursor + 2 !== limit || bytes[cursor] !== 255 || bytes[cursor + 1] !== 255) fail("Malformed reward terminator or record boundary.");
     row.editable = rewardValueAllowed(row);
+    if (!row.capacity) row.name = "보상 없음";
     if (row.capacity && !row.editable) fail("Invalid reward parts or probability total.");
     row.identity = `reward:1:${new Sha256().update(new TextEncoder().encode(`reward:${aliases.join(",")}:${row.capacity}`)).hex()}`;
     rows.push(row);

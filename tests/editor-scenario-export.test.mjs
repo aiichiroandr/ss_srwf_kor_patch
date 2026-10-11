@@ -13,8 +13,14 @@ import { recordTable } from './helpers/synthetic-tsr.mjs';
 import { makeScenarioArchive, makeMapArchives } from './helpers/synthetic-scenario.mjs';
 import { buildDisc, packGreedy, echoRequest, differingSectors, sectorOf, referenceMode1Problems, referenceMode2Form1Problems } from './helpers/synthetic-iso.mjs';
 
-async function baseFor(gameId, { stock = false, withEvents=false, withDeadline=false,withReinforcement=false } = {}) {
+async function baseFor(gameId, { stock = false, withEvents=false, withDeadline=false,withReinforcement=false,withRoster=false } = {}) {
   const sce = makeScenarioArchive(gameId, { scenarioLayout: stock ? 'stock' : 'latest', withEvents, withDeadline,withReinforcement }), map = makeMapArchives(gameId);
+  if(withRoster) {
+    const body=readScenarioArchive(sce.bytes,gameId,{scenarioLayout:stock?'stock':'latest'}).bodies[0];
+    const decoded=body.decoded.slice();decoded.set([0xca,1,2,3,0,12,255,255,0xea],95);
+    const packed=packGreedy(decoded);assert.ok(packed.length<=body.end-body.start);
+    sce.bytes.fill(0,body.start,body.end);sce.bytes.set(packed,body.start);
+  }
   const game = buildGame({ units: 12, rewardTable: recordTable(Array(48).fill(0), [Uint8Array.of(1,50,255,255)]) });
   const disc = buildDisc({ slot: packGreedy(game), product: gameId === 'srwf-f' ? '20610G' : '20612G', extraFiles: [
     { name: 'SCEDATA.BIN', bytes: sce.bytes, mode: gameId === 'srwf-final' && !stock ? 2 : 1 },
@@ -28,6 +34,24 @@ async function baseFor(gameId, { stock = false, withEvents=false, withDeadline=f
   const inspector = createEditorInspector({...trust, profiles:[profile]});
   return {disc,opened,profile,descriptor,inspector,sce,map};
 }
+
+test('Final original-language sessions retain the verified reader while unverified supplemental grammar stays closed',async()=>{
+  for(const stock of [false,true]) {
+    const b=await baseFor('srwf-final',{stock,withEvents:true,withRoster:true});
+    const original=b.opened.session.scenario.inspected.deployments.rows;
+    const roster=b.opened.view.deployments.filter(r=>r.placementKind==='roster-reference');
+    assert.equal(roster.length,stock?0:1);
+    if(stock)assert.deepEqual(b.opened.view.deployments.map(r=>r.recordIndex),original.map(r=>r.recordIndex));
+    const writable=b.opened.view.deployments.find(r=>r.editable),request=echoRequest(b.opened.session,b.opened.view);
+    request.deploymentEdits=[{recordIndex:writable.recordIndex,x:0}];
+    const output=await exportEditedImage(b.opened.session,request);
+    const reopened=await b.inspector.inspectPatchedImage(output.outputBlob,b.descriptor);
+    assert.equal(reopened.view.baseImageKind,stock?'stock':'korean');
+    assert.equal(reopened.view.deployments.find(r=>r.recordIndex===writable.recordIndex).x,0);
+    assert.equal(reopened.view.deployments.filter(r=>r.placementKind==='roster-reference').length,stock?0:1);
+    assert.deepEqual(reopened.session.scenario.inspected.scope,b.opened.session.scenario.inspected.scope);
+  }
+});
 
 for(const gameId of ['srwf-f','srwf-final'])test(`${gameId} unproved new actors are not exposed or writable; existing placement and deadline export still reopen`,async()=>{
   const b=await baseFor(gameId,{withReinforcement:true,withDeadline:true}),objective=b.opened.view.objectives[0],deployment=b.opened.view.deployments[0];

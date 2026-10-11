@@ -88,7 +88,7 @@ test('native binding name and object remain distinct; source hints never turn in
 test('private DOM reuses existing popup paragraph; no title added toselect or mapcaption text',async()=>{
  const html=await readFile(new URL('../index.html',import.meta.url),'utf8'),ui=await readFile(new URL('../assets/editor-scenario-ui.mjs',import.meta.url),'utf8'),css=await readFile(new URL('../assets/editor-runtime.css',import.meta.url),'utf8');
  assert.equal((html.match(/id="scenarioSelectionDescription"/g)??[]).length,1);assert.match(html,/<div class="reward-explanation">\s*<p id="scenarioSelectionDescription">/);
- assert.match(ui,/if \(ui\.scenarioSelectionDescription\) ui\.scenarioSelectionDescription\.textContent = scenarioSelectionDescription\(scene\(\)\);/);
+ assert.match(ui,/if \(ui\.scenarioSelectionDescription\) ui\.scenarioSelectionDescription\.textContent = `\$\{scenarioSelectionDescription\(scene\(\)\)\}/);
  assert.match(ui,/option\(scene\.physicalIndex, scenarioSelectionLabel\(scene\)\)/);
  assert.match(css,/#scenarioSelectionDescription \{ overflow-wrap: anywhere; \}/);
  assert.match(css,/\.reward-explanation \{ position: absolute;[^}]*max-height:[^}]*overflow-y: auto;/);

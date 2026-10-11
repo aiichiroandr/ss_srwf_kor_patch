@@ -36,7 +36,7 @@ function actionDirection(body,gameId,p) {
 }
 function invalid(message) { const e=new Error(message);e.code='EDITOR_DEPLOYMENT_INVALID';throw e; }
 
-function decode(bytes, p, start, end, gameId) {
+export function decodeScenarioInstruction(bytes, p, start, end, gameId) {
   const opcode=bytes[p], sub=bytes[p+1];
   if (opcode===0xe9) return { length:1, resume:true };
   if (opcode===0xea || opcode===0x00) return { length:1, terminal:true };
@@ -71,6 +71,7 @@ function decode(bytes, p, start, end, gameId) {
     // not. Retaining a producer across an unknown command is never allowed.
     query:[0xc0,0xc1,0xc2,0xd0].includes(opcode)};
 }
+const decode=decodeScenarioInstruction;
 
 // Source templates must be reached by the original linear initialization
 // path, before its first branch, yield or unknown instruction. This exposes

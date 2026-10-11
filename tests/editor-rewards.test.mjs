@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readRewardTable, updateRewardRecords, rewardDecodedMasks } from '../assets/editor-rewards.mjs';
+import { readRewardTable, updateRewardRecords, rewardDecodedMasks, rewardOutcomeLabel, rewardReferences } from '../assets/editor-rewards.mjs';
 import { buildPreset, parsePreset, serializePreset, applyPreset, planPresetApplication } from '../assets/editor-preset.mjs';
 import { exportEditedImage, editorDecodedMasks, splitRootSegments } from '../assets/editor-core.mjs';
 import { makeBase, descriptorFor } from './helpers/synthetic-game.mjs';
@@ -21,6 +21,35 @@ test('reward pointers preserve shared selectors, the empty row and exact pair ca
  const after=readRewardTable(segment); assert.equal(after[1].chance1,0); assert.equal(after[2].chance2,50);
  const changed=Array.from(segment.bytes.keys()).filter(i=>before[i]!==segment.bytes[i]); assert.ok(changed.every(i=>[194,195,198,199,201].includes(i)));
  assert.equal(after[2].identity,rows[2].identity);
+ assert.equal(rows[0].name,'보상 없음');assert.equal(rows[1].name,'강화파츠 격추 보상');
+});
+
+test('reward descriptions name the mutually exclusive part outcomes and retain zero-percent candidates', () => {
+ const name=id=>({3:'초밤　아머',4:'리페어　키트 S'}[id]);
+ assert.equal(rewardOutcomeLabel({capacity:0},name),'보상 없음');
+ assert.equal(rewardOutcomeLabel({capacity:1,part1:3,chance1:100},name),'초밤 아머 100%');
+ assert.equal(rewardOutcomeLabel({capacity:2,part1:3,chance1:60,part2:4,chance2:0},name),'초밤 아머 60% / 리페어 키트 S 0%');
+ assert.equal(rewardOutcomeLabel({capacity:2,part1:3,chance1:60,part2:4,chance2:0},name,{compact:true}),'초밤 아머 60% 외 1종');
+ assert.equal(rewardOutcomeLabel({capacity:2,part1:3,chance1:90,part2:3,chance2:10},name,{compact:true}),'초밤 아머 100%');
+ assert.equal(rewardOutcomeLabel({capacity:2,part1:3,chance1:90,part2:4,chance2:10},()=> '같은 표시 이름',{compact:true}),'같은 표시 이름 90% 외 1종');
+ assert.equal(rewardOutcomeLabel({capacity:1,part1:22,chance1:25},name),'명칭 미확인 강화파츠 25%');
+});
+
+test('shared reward usage follows current scenario appearances and enabled reinforcement templates without changing them', () => {
+ const row={aliases:[16,17],capacity:2};
+ const deployments=[{recordIndex:'0:64',physicalIndex:0,name:'가베라　테트라',unitId:107,rewardSelector:16,original:{rewardSelector:1},x:2,y:3,editable:true},
+  {recordIndex:'0:76',physicalIndex:0,name:'도벤울프',unitId:119,rewardSelector:17,x:4,y:5,editable:false},
+  {recordIndex:'1:64',physicalIndex:1,name:'다른 기체',rewardSelector:1}];
+ const reinforcements=[{recordIndex:'0:200',physicalIndex:0,enabled:1,rewardSelector:17,templateOffset:64,turn:5,x:1,y:2,templates:[{byteOffset:64,name:'게마르크',unitId:120}]},
+  {recordIndex:'0:210',enabled:0,rewardSelector:17,templateOffset:64,templates:[{byteOffset:64,name:'비활성 증원'}]},
+  {recordIndex:'0:220',enabled:1,rewardSelector:17,templateOffset:65,templates:[{byteOffset:64,name:'미확인 연결'}]}];
+ const model={deployments,reinforcements},before=structuredClone(model);
+ const uses=rewardReferences(row,model);
+ assert.deepEqual(uses.map(x=>[x.kind,x.recordIndex,x.name]),[['deployment','0:64','가베라 테트라'],['deployment','0:76','도벤울프'],['reinforcement','0:200','게마르크']]);
+ assert.equal(uses[2].turn,5);assert.deepEqual(model,before);
+ deployments[0].rewardSelector=1;
+ assert.deepEqual(rewardReferences(row,{rows:kind=>kind==='deployment'?deployments:reinforcements}).map(x=>x.recordIndex),['0:76','0:200']);
+ assert.deepEqual(rewardReferences(row),[]);
 });
 
 test('invalid reward edits refuse the entire request before changing bytes', () => {
