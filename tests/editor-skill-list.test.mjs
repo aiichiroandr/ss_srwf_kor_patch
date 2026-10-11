@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   addBlock,
   addSkill,
+  addSpirit,
   availableSkills,
   consumerKey,
   countConsumers,
@@ -11,6 +12,7 @@ import {
   isFlagGated,
   isValidLevel,
   orderLadders,
+  pairRoom,
   planSkillAdd,
   removeSkill,
   replaceSkill,
@@ -23,6 +25,8 @@ import {
   skillRoomChoices,
   skillRequest,
   skillSummary,
+  spiritSummary,
+  syncPilotExpansionBudget,
 } from "../assets/editor-skill-list.mjs";
 
 const FINAL = "srwf-final";
@@ -274,119 +278,290 @@ function freezePilot(prepared) {
   return Object.freeze(prepared);
 }
 
-test("room choices name only ordinary skills and spirit slots that can actually be removed", () => {
-  const skills = [entry(33), entry(34, 175, { eventFlag: 75 }), entry(78)];
-  const spirits = [entry(1), entry(2, 175, { eventFlag: 75 }), entry(3)];
-  const prepared = freezePilot(sharedPilot(skills, spirits, 6));
-  const choices = skillRoomChoices(prepared, F);
-  assert.deepEqual(choices.map(({ key, kind, index }) => ({ key, kind, index })), [
-    { key: "skill-0", kind: "skill", index: 0 },
-    { key: "skill-2", kind: "skill", index: 2 },
-    { key: "spirit-2", kind: "spirit", index: 2 },
-  ], "a spirit before an event-locked slot is excluded because deleting it would shift that event");
-  assert.equal(choices[0].entry, skills[0]);
-  assert.equal(choices[2].entry, spirits[2]);
+test("adding never offers a spirit command or an existing skill as disposable room", () => {
+  const prepared = freezePilot(sharedPilot([entry(33), entry(34, 175, { eventFlag: 75 }), entry(78)], sixSpirits(), 9));
+  assert.deepEqual(skillRoomChoices(prepared, F), []);
   assert.deepEqual(skillRoomChoices({ ...prepared, skillEditable: false }, F), []);
   assert.deepEqual(skillRoomChoices(null, F), []);
-  const lastSpirit = sharedPilot([], [entry(1)], 1);
-  assert.deepEqual(skillRoomChoices(lastSpirit, F), [], "F's last spirit command is not offered as free space");
 });
 
-test("a Bright-shaped full six-spirit record with no skills can atomically exchange one chosen spirit for Newtype rank 9", () => {
+test("a Bright-shaped full six-spirit record refuses additions without changing either original list", () => {
   for (const gameId of [F, FINAL]) {
-    const spirits = sixSpirits();
-    const prepared = freezePilot(sharedPilot([], spirits, 6, { spiritMinimum: gameId === F ? 1 : 0 }));
+    const prepared = freezePilot(sharedPilot([], sixSpirits(), 6, { spiritMinimum: gameId === F ? 1 : 0 }));
     assert.equal(skillSummary(prepared, gameId).free, 0);
-    assert.equal(skillRoomChoices(prepared, gameId).length, 6);
-    const plan = planSkillAdd(prepared, gameId, { id: 41, level: 1, freePair: { kind: "spirit", index: 4 } });
-    assert.equal(plan.block, null);
-    assert.deepEqual(skillRequest(plan.skills), [{ id: 41, level: 1 }], "one rank-9 milestone suffices; lower ranks are not manufactured");
-    assert.deepEqual(plan.spirits.map(({ id, level }) => ({ id, level })), spirits.filter((_, index) => index !== 4).map(({ id, level }) => ({ id, level })));
-    assert.deepEqual({ key: plan.removed.key, kind: plan.removed.kind, index: plan.removed.index }, { key: "spirit-4", kind: "spirit", index: 4 });
-    assert.equal(plan.removed.entry, spirits[4]);
-    assert.equal(plan.spirits[0], spirits[0], "untouched entries keep their names and acquisition metadata");
-    assert.equal(prepared.spirits.length, 6);
-    assert.deepEqual(prepared.specialAbilities, [], "planning neither removes the spirit nor installs the skill in the source row");
-    assert.equal(skillSummary({ ...prepared, spirits: plan.spirits, specialAbilities: plan.skills }, gameId).free, 0);
+    assert.equal(skillSummary(prepared, gameId).reservedSpiritCount, 6);
+    for (const freePair of [null, { kind: "spirit", index: 4 }, { kind: "skill", index: 0 }]) {
+      const plan = planSkillAdd(prepared, gameId, { id: 41, level: 1, freePair });
+      assert.equal(plan.block, freePair === null ? "capacity" : "invalid-removal");
+      assert.equal(plan.skills, prepared.specialAbilities);
+      assert.equal(plan.spirits, prepared.spirits);
+      assert.equal(plan.removed, null);
+      assert.equal(prepared.spirits.length, 6);
+      assert.deepEqual(prepared.specialAbilities, []);
+    }
   }
 });
 
-test("a Kouji-shaped full six-plus-three record can use either an existing learning entry or one spirit for its new skill", () => {
+test("a Kouji-shaped full record retains every learning milestone and all six spirits when an addition is refused", () => {
   for (const gameId of [F, FINAL]) {
-    const skills = [entry(69, 30), entry(70, 38), entry(78, 1)];
-    const spirits = sixSpirits();
-    const prepared = freezePilot(sharedPilot(skills, spirits, 9));
-    const bySkill = planSkillAdd(prepared, gameId, { id: 41, level: 1, freePair: { kind: "skill", index: 1 } });
-    assert.equal(bySkill.block, null);
-    assert.deepEqual(skillRequest(bySkill.skills), [{ id: 69, level: 30 }, { id: 78, level: 1 }, { id: 41, level: 1 }]);
-    assert.equal(bySkill.spirits, spirits, "choosing an ability milestone preserves every spirit slot");
-    assert.equal(bySkill.removed.entry, skills[1]);
-    const bySpirit = planSkillAdd(prepared, gameId, { id: 41, level: 1, freePair: { kind: "spirit", index: 2 } });
-    assert.equal(bySpirit.block, null);
-    assert.deepEqual(skillRequest(bySpirit.skills), [...skillRequest(skills), { id: 41, level: 1 }]);
-    assert.equal(bySpirit.spirits.length, 5);
-    assert.equal(bySpirit.skills[0], skills[0]);
-    assert.deepEqual(skillRequest(prepared.specialAbilities), skillRequest(skills));
+    const prepared = freezePilot(sharedPilot([entry(69, 30), entry(70, 38), entry(78, 1)], sixSpirits(), 9));
+    for (const freePair of [null, { kind: "skill", index: 1 }, { kind: "spirit", index: 2 }]) {
+      const plan = planSkillAdd(prepared, gameId, { id: 41, level: 1, freePair });
+      assert.equal(plan.block, freePair === null ? "capacity" : "invalid-removal");
+      assert.equal(plan.skills, prepared.specialAbilities);
+      assert.equal(plan.spirits, prepared.spirits);
+      assert.equal(plan.removed, null);
+    }
+    assert.deepEqual(skillRequest(prepared.specialAbilities), [{ id: 69, level: 30 }, { id: 70, level: 38 }, { id: 78, level: 1 }]);
     assert.equal(prepared.spirits.length, 6);
   }
 });
 
-test("failed room-and-add plans never remove either selected list, including duplicate ids and the four-kind limit", () => {
-  const prepared = freezePilot(sharedPilot([entry(33), entry(42), entry(51), entry(60)], sixSpirits(), 10));
-  const refused = (request, expected, source = prepared, gameId = FINAL) => {
-    const plan = planSkillAdd(source, gameId, request);
+test("invalid additions and stale removal requests always preserve both original arrays", () => {
+  const prepared = freezePilot(sharedPilot([entry(33), entry(42), entry(51), entry(60)], sixSpirits(), 12));
+  const refused = (request, expected, source = prepared) => {
+    const plan = planSkillAdd(source, FINAL, request);
     assert.equal(plan.block, expected);
-    assert.equal(plan.skills, source.specialAbilities, "a refusal retains the original skill array");
-    assert.equal(plan.spirits, source.spirits, "a refusal retains the original spirit array");
+    assert.equal(plan.skills, source.specialAbilities);
+    assert.equal(plan.spirits, source.spirits);
     assert.equal(plan.removed, null);
   };
-  refused({ id: 78, level: 1 }, "missing-removal");
-  for (const freePair of [{ kind: "unknown", index: 0 }, { kind: "skill", index: -1 }, { kind: "spirit", index: 8 }, { kind: "spirit", index: 1.5 }, "spirit-0"]) {
+  for (const freePair of [{ kind: "skill", index: 0 }, { kind: "spirit", index: 0 }, { kind: "unknown", index: 0 },
+    { kind: "skill", index: -1 }, { kind: "spirit", index: 8 }, { kind: "spirit", index: 1.5 }, "spirit-0", {}]) {
     refused({ id: 78, level: 1, freePair }, "invalid-removal");
   }
-  refused({ id: 999, level: 1, freePair: { kind: "spirit", index: 0 } }, "no-choice");
-  for (const level of [0, 100, 1.5, Number.NaN]) refused({ id: 78, level, freePair: { kind: "spirit", index: 0 } }, "level");
-  refused({ id: 33, level: 1, freePair: { kind: "spirit", index: 0 } }, "held");
-  refused({ id: 78, level: 1, freePair: { kind: "spirit", index: 0 } }, "consumers", prepared);
-  refused({ id: 78, level: 1, freePair: { kind: "skill", index: 0 } }, "read-only", { ...prepared, skillEditable: false });
-  const freesKind = planSkillAdd(prepared, FINAL, { id: 78, level: 1, freePair: { kind: "skill", index: 0 } });
-  assert.equal(freesKind.block, null, "giving up the only rank of an old family permits a different fourth kind");
-  assert.equal(countConsumers(FINAL, freesKind.skills), 4);
-  const sameFamily = planSkillAdd(prepared, FINAL, { id: 34, level: 10, freePair: { kind: "spirit", index: 0 } });
-  assert.equal(sameFamily.block, null, "giving up a spirit frees a pair for another rank of a held family");
+  refused({ id: 999, level: 1 }, "no-choice");
+  for (const level of [0, 100, 1.5, Number.NaN]) refused({ id: 78, level }, "level");
+  refused({ id: 33, level: 1 }, "held");
+  refused({ id: 78, level: 1 }, "consumers");
+  refused({ id: 78, level: 1 }, "read-only", { ...prepared, skillEditable: false });
+  const sameFamily = planSkillAdd(prepared, FINAL, { id: 34, level: 10 });
+  assert.equal(sameFamily.block, null);
+  assert.equal(sameFamily.spirits, prepared.spirits);
+  assert.equal(sameFamily.removed, null);
   assert.equal(countConsumers(FINAL, sameFamily.skills), 4);
-  const overfull = { ...prepared, pairCapacity: 9 };
-  refused({ id: 78, level: 1, freePair: { kind: "skill", index: 0 } }, "capacity", overfull);
+  assert.ok(prepared.specialAbilities.every((old) => sameFamily.skills.includes(old)), "all old acquisition entries remain present");
 });
 
-test("event slots and the final required F spirit cannot be used by an atomic addition", () => {
-  const spirits = [entry(1), entry(2, 175, { eventFlag: 75 }), entry(3)];
-  const skills = [entry(33, 175, { eventFlag: 75 })];
-  const prepared = freezePilot(sharedPilot(skills, spirits, 4));
-  for (const freePair of [{ kind: "spirit", index: 0 }, { kind: "spirit", index: 1 }, { kind: "skill", index: 0 }]) {
-    const plan = planSkillAdd(prepared, F, { id: 41, level: 1, freePair });
-    assert.equal(plan.block, "event-gated");
-    assert.equal(plan.skills, skills);
-    assert.equal(plan.spirits, spirits);
-    assert.equal(plan.removed, null);
+test("a removed spirit leaves its reserved slot available for a spirit rather than a new skill", () => {
+  for (const gameId of [F, FINAL]) {
+    const spirits = sixSpirits();
+    const prepared = freezePilot(sharedPilot([entry(69, 30), entry(70, 38), entry(78)], spirits.slice(0, 5), 9));
+    const summary = skillSummary(prepared, gameId);
+    assert.equal(summary.capacity, 4, "physical space still describes the existing record");
+    assert.equal(summary.reservedSpiritCount, 6);
+    assert.equal(summary.free, 0, "the deleted sixth spirit slot is not advertised as skill room");
+    assert.equal(addBlock(prepared, gameId, 41, 1), "capacity");
+    const plan = planSkillAdd(prepared, gameId, { id: 41, level: 1 });
+    assert.equal(plan.block, "capacity");
+    assert.equal(plan.spirits, prepared.spirits);
+    assert.equal(plan.skills, prepared.specialAbilities);
   }
-  const last = freezePilot(sharedPilot([], [entry(1)], 1));
-  const plan = planSkillAdd(last, F, { id: 41, level: 1, freePair: { kind: "spirit", index: 0 } });
-  assert.equal(plan.block, "minimum");
-  assert.equal(plan.spirits, last.spirits);
-  assert.equal(plan.skills, last.specialAbilities);
 });
 
-test("an obsolete removal choice never removes an existing pair after another action made real room", () => {
-  const skills = [entry(69, 30)];
-  const spirits = sixSpirits();
-  const prepared = freezePilot(sharedPilot(skills, spirits, 8));
-  for (const freePair of [{ kind: "spirit", index: 0 }, { kind: "skill", index: 0 }, { kind: "spirit", index: 999 }, null]) {
-    const plan = planSkillAdd(prepared, F, { id: 41, level: 1, freePair });
-    assert.equal(plan.block, null);
-    assert.equal(plan.removed, null);
-    assert.equal(plan.spirits, spirits, "an actual free pair avoids any spirit removal");
-    assert.deepEqual(skillRequest(plan.skills), [{ id: 69, level: 30 }, { id: 41, level: 1 }], "the old skill is kept despite an obsolete choice");
-    assert.equal(prepared.specialAbilities, skills);
+test("short original spirit blocks preserve their existing skill edits while reserving six slots for new skills", () => {
+  const prepared = freezePilot(sharedPilot([entry(69), entry(70), entry(78)], [entry(1)], 4));
+  assert.equal(skillSummary(prepared, F).capacity, 3);
+  assert.equal(skillSummary(prepared, F).free, 0);
+  assert.equal(skillReplaceBlock(prepared, F, 2, 41), null, "a replacement does not enlarge the original short record");
+  assert.deepEqual(skillRequest(replaceSkill(prepared, F, 2, 41)), [{ id: 69, level: 1 }, { id: 70, level: 1 }, { id: 41, level: 1 }]);
+  assert.deepEqual(skillRequest(removeSkill(prepared.specialAbilities, 1)), [{ id: 69, level: 1 }, { id: 78, level: 1 }]);
+  assert.equal(addBlock({ ...prepared, specialAbilities: [] }, F, 41, 1), "capacity", "removing original skills does not bypass the six-spirit reserve");
+  const extra = sharedPilot([entry(69)], sixSpirits().slice(0, 4), 9, { extraSpirits: [entry(7), entry(8)] });
+  assert.equal(skillSummary(extra, F).free, 0, "overflow spirit pairs remain counted in addition to the six reserved slots");
+});
+
+test("an actual unreserved free pair adds one skill while preserving every previous entry", () => {
+  const prepared = freezePilot(sharedPilot([entry(69, 30)], sixSpirits().slice(0, 5), 8));
+  assert.equal(skillSummary(prepared, F).free, 1, "the sixth reserved slot is excluded from the two physically free pairs");
+  const plan = planSkillAdd(prepared, F, { id: 41, level: 1 });
+  assert.equal(plan.block, null);
+  assert.equal(plan.removed, null);
+  assert.equal(plan.spirits, prepared.spirits);
+  assert.ok(plan.skills.includes(prepared.specialAbilities[0]));
+  assert.deepEqual(skillRequest(plan.skills), [{ id: 69, level: 30 }, { id: 41, level: 1 }]);
+  for (const freePair of [{ kind: "skill", index: 0 }, { kind: "spirit", index: 0 }, { kind: "spirit", index: 999 }]) {
+    const refused = planSkillAdd(prepared, F, { id: 41, level: 1, freePair });
+    assert.equal(refused.block, "invalid-removal", "stale removal requests cannot silently sacrifice any pair even with free room");
+    assert.equal(refused.spirits, prepared.spirits);
+    assert.equal(refused.skills, prepared.specialAbilities);
   }
+});
+
+test("fixtures without shared spirit metadata retain their existing skill-only capacity contract", () => {
+  const prepared = freezePilot(row([entry(69, 30)], { skillCapacity: 2 }));
+  const summary = skillSummary(prepared, F);
+  assert.equal(summary.shared, false);
+  assert.equal(summary.reservedSpiritCount, null);
+  assert.equal(summary.free, 1);
+  const plan = planSkillAdd(prepared, F, { id: 41, level: 1 });
+  assert.equal(plan.block, null);
+  assert.deepEqual(skillRequest(plan.skills), [{ id: 69, level: 30 }, { id: 41, level: 1 }]);
+});
+
+test("bounded donor padding permits Bright and Kouji to add rank nine with every existing pair preserved", () => {
+  for (const gameId of [F, FINAL]) {
+    for (const skills of [[], [entry(69, 30), entry(70, 38), entry(78, 1)]]) {
+      const prepared = freezePilot(sharedPilot(skills, sixSpirits(), 6 + skills.length, { skillExpansionPairs: 1 }));
+      assert.equal(skillSummary(prepared, gameId).free, 1);
+      const plan = planSkillAdd(prepared, gameId, { id: 41, level: 1 });
+      assert.equal(plan.block, null);
+      assert.equal(plan.spirits, prepared.spirits);
+      assert.equal(plan.removed, null);
+      assert.ok(skills.every((old) => plan.skills.includes(old)));
+      assert.deepEqual(skillRequest(plan.skills), [...skillRequest(skills), { id: 41, level: 1 }]);
+    }
+  }
+});
+
+test("donor expansion first covers missing reserved spirit slots before allowing a new skill", () => {
+  const original = sharedPilot([entry(69)], [entry(1)], 2);
+  const insufficient = freezePilot({ ...original, skillExpansionPairs: 5 });
+  assert.equal(skillSummary(insufficient, F).free, 0, "five donor pairs cover only the five missing spirit slots");
+  assert.equal(planSkillAdd(insufficient, F, { id: 41, level: 1 }).block, "capacity");
+  const sufficient = freezePilot({ ...original, skillExpansionPairs: 6 });
+  assert.equal(skillSummary(sufficient, F).free, 1);
+  const plan = planSkillAdd(sufficient, F, { id: 41, level: 1 });
+  assert.equal(plan.block, null);
+  assert.equal(plan.spirits, sufficient.spirits);
+  assert.deepEqual(skillRequest(plan.skills), [{ id: 69, level: 1 }, { id: 41, level: 1 }]);
+});
+
+test("invalid or missing expansion metadata cannot open otherwise full records", () => {
+  for (const skillExpansionPairs of [undefined, null, -1, 0.5, "1", Number.NaN, Number.POSITIVE_INFINITY]) {
+    const prepared = freezePilot(sharedPilot([], sixSpirits(), 6, { skillExpansionPairs }));
+    assert.equal(skillSummary(prepared, FINAL).free, 0);
+    const plan = planSkillAdd(prepared, FINAL, { id: 41, level: 1 });
+    assert.equal(plan.block, "capacity");
+    assert.equal(plan.spirits, prepared.spirits);
+    assert.equal(plan.skills, prepared.specialAbilities);
+  }
+});
+
+function budgetPilot(skills, spirits, capacity, pool, external, group = "span-2-301") {
+  return sharedPilot(skills.slice(), spirits.slice(), capacity, {
+    originalSkillEntries: skills.slice(), original: { spirits: spirits.slice() },
+    pilotExpansionGroup: group, pilotExpansionPairs: pool, sharedPilotPairFree: pool, skillExpansionPairs: external,
+  });
+}
+
+test("shared expansion budgets count own padding use and retain debt to prevent a second pilot spending it twice", () => {
+  const donor = budgetPilot([entry(69)], sixSpirits(), 8, 1, 0);
+  const receiver = budgetPilot([], sixSpirits(), 6, 1, 1);
+  syncPilotExpansionBudget([donor, receiver]);
+  assert.equal(skillSummary(donor, F).free, 1);
+  assert.equal(skillSummary(receiver, F).free, 1);
+  receiver.specialAbilities = [entry(41)];
+  syncPilotExpansionBudget([donor, receiver]);
+  assert.equal(donor.skillExpansionPairs, -1, "the receiver consumed the donor's own padding");
+  assert.equal(skillSummary(donor, F).capacity, 2, "existing physical entries stay editable despite the debt");
+  assert.equal(skillSummary(donor, F).free, 0);
+  assert.equal(planSkillAdd(donor, F, { id: 41, level: 1 }).block, "capacity");
+  assert.equal(skillSummary(receiver, F).free, 0);
+  receiver.specialAbilities = [];
+  syncPilotExpansionBudget([donor, receiver]);
+  assert.equal(donor.skillExpansionPairs, 0, "undo restores the original budget rather than accumulating prior debt");
+  assert.equal(skillSummary(donor, F).free, 1);
+});
+
+test("shared budgets protect deleted spirit slots even on a pilot with no abilities, including reopened personal edits", () => {
+  const bright = budgetPilot([], sixSpirits(), 6, 1, 1);
+  const donor = budgetPilot([entry(69)], sixSpirits(), 8, 1, 0);
+  bright.spirits = bright.spirits.slice(0, 5);
+  syncPilotExpansionBudget([bright, donor]);
+  assert.equal(donor.skillExpansionPairs, 0, "Bright's removed sixth spirit does not enlarge the pool");
+  const reopened = budgetPilot([], sixSpirits().slice(0, 5), 6, 1, 1);
+  reopened.pilotSpiritReserve = 6;
+  syncPilotExpansionBudget([reopened, donor]);
+  assert.equal(donor.skillExpansionPairs, 0, "canonical reserve survives reopening the five-spirit personal image");
+});
+
+test("shared budgets cover missing six-spirit reservation before new skills and allow explicit ability deletions to return room", () => {
+  const empty = budgetPilot([], [], 1, 7, 6);
+  const donor = budgetPilot([entry(69), entry(70)], sixSpirits(), 14, 7, 1);
+  syncPilotExpansionBudget([empty, donor]);
+  assert.equal(donor.skillExpansionPairs, 1, "an untouched empty donor does not reserve six spirit slots automatically");
+  empty.specialAbilities = [entry(41)];
+  syncPilotExpansionBudget([empty, donor]);
+  assert.equal(donor.skillExpansionPairs, -6, "the first skill costs six reserved spirit slots plus its own pair");
+  assert.equal(skillSummary(donor, F).free, 0);
+  donor.specialAbilities = [entry(69)];
+  syncPilotExpansionBudget([empty, donor]);
+  assert.equal(skillSummary(empty, F).free, 1, "an explicit skill deletion can return its own pair without deleting a spirit");
+  assert.equal(empty.spirits.length, 0, "reservation does not manufacture spirit command entries");
+});
+
+test("independent spans do not share padding and inconsistent pool facts fail closed", () => {
+  const first = budgetPilot([], sixSpirits(), 6, 1, 1, "first");
+  const second = budgetPilot([], sixSpirits(), 6, 2, 2, "second");
+  first.specialAbilities = [entry(41)];
+  syncPilotExpansionBudget([first, second]);
+  assert.equal(skillSummary(second, F).free, 2);
+  const inconsistent = budgetPilot([], sixSpirits(), 6, 3, 3, "second");
+  syncPilotExpansionBudget([second, inconsistent]);
+  assert.equal(skillSummary(second, F).free, 0);
+  assert.equal(skillSummary(inconsistent, F).free, 0);
+});
+
+test("verified expansion restores the sixth spirit of a full legacy record while preserving all existing abilities", () => {
+  for (const gameId of [F, FINAL]) {
+    for (const skills of [[entry(69), entry(70), entry(78)], [entry(69), entry(70), entry(78), entry(41)]]) {
+      const prepared = freezePilot(sharedPilot(skills, sixSpirits().slice(0, 5), 5 + skills.length, {
+        skillExpansionPairs: 1, pilotSpiritReserve: 6, spiritChoices: Array.from({ length: 30 }, (_, index) => entry(index + 1)),
+      }));
+      assert.deepEqual(pairRoom(prepared), { capacity: 6 + skills.length, used: 5 + skills.length, free: 1 });
+      assert.equal(spiritSummary(prepared).canAdd, true);
+      const restored = addSpirit(prepared, prepared.spirits, 6, 1);
+      assert.deepEqual(restored.slice(0, 5), prepared.spirits);
+      assert.deepEqual(restored.at(-1), { id: 6, level: 1, name: "능력6", unresolved: false, eventFlag: null });
+      assert.equal(prepared.specialAbilities, skills);
+      assert.equal(restored.length, 6);
+      assert.equal(spiritSummary({ ...prepared, spirits: restored }).canAdd, false, "the pool never permits a seventh spirit");
+      assert.equal(skillSummary(prepared, gameId).free, 0, "this one available pair belongs to the sixth spirit rather than a fifth skill pair");
+    }
+  }
+});
+
+test("another pilot spending the shared pool prevents sixth-spirit restoration without losing the pending five spirits", () => {
+  const receiver = budgetPilot([entry(69), entry(70), entry(78)], sixSpirits().slice(0, 5), 8, 1, 1);
+  receiver.pilotSpiritReserve = 6;
+  receiver.spiritChoices = Array.from({ length: 30 }, (_, index) => entry(index + 1));
+  const donor = budgetPilot([entry(69)], sixSpirits(), 8, 1, 0);
+  syncPilotExpansionBudget([receiver, donor]);
+  assert.equal(spiritSummary(receiver).canAdd, true);
+  donor.specialAbilities = [...donor.specialAbilities, entry(41)];
+  syncPilotExpansionBudget([receiver, donor]);
+  assert.equal(spiritSummary(receiver).canAdd, false);
+  assert.equal(addSpirit(receiver, receiver.spirits, 6), receiver.spirits);
+  assert.deepEqual(skillRequest(receiver.specialAbilities), [{ id: 69, level: 1 }, { id: 70, level: 1 }, { id: 78, level: 1 }]);
+  assert.deepEqual(pairRoom(receiver), { capacity: 8, used: 8, free: 0 });
+  donor.specialAbilities = donor.originalSkillEntries.slice();
+  syncPilotExpansionBudget([receiver, donor]);
+  assert.equal(spiritSummary(receiver).canAdd, true, "undoing the other addition makes the verified pair available again");
+});
+
+test("a reopened personal image's reserved sixth slot cannot be donated but remains available for spirit restoration", () => {
+  const reopened = budgetPilot([entry(69), entry(70), entry(78)], sixSpirits().slice(0, 5), 9, 0, 0);
+  reopened.pilotSpiritReserve = 6;
+  reopened.spiritChoices = Array.from({ length: 30 }, (_, index) => entry(index + 1));
+  const other = budgetPilot([], sixSpirits(), 6, 0, 0);
+  syncPilotExpansionBudget([reopened, other]);
+  assert.equal(skillSummary(reopened, FINAL).free, 0);
+  assert.equal(skillSummary(other, FINAL).free, 0);
+  assert.equal(spiritSummary(reopened).canAdd, true);
+  const restored = addSpirit(reopened, reopened.spirits, 6);
+  assert.equal(restored.length, 6);
+  assert.equal(spiritSummary({ ...reopened, spirits: restored }).canAdd, false);
+});
+
+test("spirit expansion preserves legacy capacity and F's no-spirit-block lock", () => {
+  const legacy = sharedPilot([entry(69)], sixSpirits().slice(0, 5), 6);
+  assert.deepEqual(pairRoom(legacy), { capacity: 6, used: 6, free: 0 });
+  assert.equal(spiritSummary(legacy).canAdd, false);
+  const locked = sharedPilot([], [], 0, { skillExpansionPairs: 20, spiritEditable: false, spiritEditReason: "no-spirit-block" });
+  assert.equal(spiritSummary(locked).editable, false);
+  assert.equal(spiritSummary(locked).canAdd, false);
+  assert.equal(addSpirit(locked, locked.spirits, 1), locked.spirits);
+  const debt = { ...legacy, skillExpansionPairs: -3 };
+  assert.deepEqual(pairRoom(debt), { capacity: 6, used: 6, free: 0 }, "debt never hides existing stored pairs or creates negative room");
 });

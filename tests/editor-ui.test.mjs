@@ -864,7 +864,7 @@ test("choosing a skill and a level adds it to the end; the room, the request and
   openSkillDialog(1);
   chooseSkill(50, 7);
   assert.equal(byId("pilotSkillAddButton").disabled, false);
-  assert.match(byId("pilotSkillAddHint").textContent, /처음부터 9단계라면 9단계 항목 하나면 됩니다/);
+  assert.match(byId("pilotSkillAddHint").textContent, /9단계 · 파일럿 Lv 7부터 적용/);
   byId("pilotSkillAddButton").click();
   assert.deepEqual(skillNames(), ["능력33", "능력34", "능력50"]);
   assert.equal(skillRows()[2].classList.contains("is-new"), true);
@@ -875,8 +875,8 @@ test("choosing a skill and a level adds it to the end; the room, the request and
   assert.match(byId("liveRegion").textContent, /능력50을 추가했습니다\. 남은 자리 1/);
   const row = state.editorPilots[0];
   assert.deepEqual(row.specialAbilities.map(({ id, level }) => [id, level]), [[33, 1], [34, 5], [50, 7]]);
-  assert.equal(byId("pilotSkillRevertButton").textContent, "원래 목록으로 되돌리기");
-  assert.match(byId("pilotSkillRevertButton").title, /추가 1 · 삭제 0 · 변경 0/);
+  assert.equal(byId("pilotSkillRevertButton").textContent, "이번 추가 되돌리기");
+  assert.match(byId("pilotSkillRevertButton").title, /이번에 추가한 능력/);
   assert.equal(byId("pilotSkillRevertButton").disabled, false);
   assert.equal(byId("pilotSkillScheduleButton").textContent, "추가·삭제");
   assert.equal(hooks.skillChangeCount(row), 1);
@@ -894,16 +894,13 @@ test("a full list refuses another skill with the reason; deleting makes room and
   assertSkillStatus(byId, 4, 4, 0, 3);
   chooseSkill(52, 1);
   assert.equal(byId("pilotSkillAddButton").disabled, true);
-  assert.match(byId("pilotSkillAddHint").textContent, /저장 공간.*비울 항목/);
+  assert.match(byId("pilotSkillAddHint").textContent, /공간이 부족.*정신커맨드 6칸과 기존 능력은 유지/);
   assert.equal(byId("pilotSkillAddHint").classList.contains("is-caution"), true);
   assert.equal(byId("pilotSkillAdd").hidden, false, "a full record keeps the add catalog visible");
-  assert.equal(byId("pilotSkillRoomField").hidden, false, "making room is offered within the add flow");
-  assert.equal(byId("pilotSkillRoomSelect").value, "", "no existing milestone is removed automatically");
   skillRows()[2].querySelector(".pilot-skill-remove").click();
   assert.deepEqual(skillNames(), ["능력33", "능력34", "능력51"]);
   assert.match(byId("liveRegion").textContent, /능력50을 삭제했습니다\. 남은 자리 1/);
   assert.equal(byId("pilotSkillAdd").hidden, false, "the add form stays available after deleting a learning milestone");
-  assert.equal(byId("pilotSkillRoomField").hidden, true, "an actual free pair needs no removal choice");
   assert.equal(offeredPilotSkillIds(byId).includes(50), true, "the deleted skill is offered again");
   chooseSkill(50, 2);
   assert.equal(byId("pilotSkillAddButton").disabled, false);

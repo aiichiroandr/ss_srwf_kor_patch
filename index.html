@@ -15,10 +15,10 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 디스크 이미지를 기기 안에서 검증하고, 한글화 또는 게임 데이터 편집 후 BIN/CUE로 저장합니다."
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20261011-public7">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261011-public7">
-    <script type="module" src="assets/app.mjs?v=20261011-public7"></script>
-    <script type="module" src="assets/user-guide.mjs?v=20261011-public7"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20261011-public8">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261011-public8">
+    <script type="module" src="assets/app.mjs?v=20261011-public8"></script>
+    <script type="module" src="assets/user-guide.mjs?v=20261011-public8"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -856,7 +856,7 @@
         </div>
         <div class="pilot-skill-add" id="pilotSkillAdd" role="group" aria-label="특수능력 추가">
           <label class="pilot-skill-add-choice">
-            <span>능력</span>
+            <span>추가할 능력</span>
             <select id="pilotSkillAddSelect" aria-label="추가할 특수능력"></select>
           </label>
           <label class="pilot-skill-add-rank" id="pilotSkillAddRankField" hidden>
@@ -869,19 +869,14 @@
           </label>
           <button class="pilot-skill-add-button" id="pilotSkillAddButton" type="button" data-skill-add>추가</button>
         </div>
-        <label class="pilot-skill-room-field" id="pilotSkillRoomField" hidden>
-          <span>비울 항목</span>
-          <select id="pilotSkillRoomSelect" aria-label="새 특수능력을 넣기 위해 비울 항목"></select>
-        </label>
         <p class="pilot-skill-add-hint" id="pilotSkillAddHint" role="status" aria-live="polite"></p>
         <div class="pilot-skill-actions">
           <button class="pilot-skill-revert" id="pilotSkillRevertButton" type="button" data-skill-revert>원래 목록으로 되돌리기</button>
         </div>
         <details class="pilot-skill-dialog-footnote"><summary>편집 규칙</summary>
           처음부터 뉴타입 9단계를 원하면 능력은 뉴타입, 단계는 9, 습득 Lv는 1인 항목 하나만 설정하세요.
-          같은 게임에서는 파일럿마다 선택 가능한 능력 종류가 같고, 저장 자리 수는 다릅니다.
-          점차 성장시키려면 단계별 습득 시점을 추가하세요. 각 시점은 저장 공간을 하나씩 쓰며 정신커맨드와 공간을 공유합니다.
-          빈자리가 없으면 비울 항목을 직접 고른 뒤 추가합니다. 정신커맨드나 성장 항목을 지우면 기존 습득 과정이 바뀝니다.
+          같은 게임에서는 파일럿마다 선택 가능한 능력 종류가 같습니다.
+          점차 성장시키려면 단계별 습득 시점을 추가하세요. 정신커맨드 6칸은 특수능력을 추가해도 유지합니다.
           같은 계열은 습득한 가장 높은 단계만 적용되고, 동시에 적용되는 능력 종류는 최대 4가지입니다.
         </details>
       </div>
