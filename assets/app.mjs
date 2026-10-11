@@ -1,10 +1,11 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public13';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public13';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public13";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public13";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public13";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public13";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public13";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-battle1';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-battle1';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261012-battle1";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261012-battle1";
+import { createBattlePreview } from "./editor-battle-preview.mjs?v=20261012-battle1";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261012-battle1";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261012-battle1";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261012-battle1";
 import {
   canStep,
   filterRecords,
@@ -13,7 +14,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public13";
+} from "./editor-list.mjs?v=20261012-battle1";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -24,7 +25,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public13";
+} from "./editor-grades.mjs?v=20261012-battle1";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -58,27 +59,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public13";
+} from "./editor-skill-list.mjs?v=20261012-battle1";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public13";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public13";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public13";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public13";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public13";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public13";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public13";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public13";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public13";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public13";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public13";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public13";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public13";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public13";
+} from "./editor-facts.mjs?v=20261012-battle1";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261012-battle1";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261012-battle1";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261012-battle1";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261012-battle1";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261012-battle1";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261012-battle1";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261012-battle1";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261012-battle1";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261012-battle1";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261012-battle1";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261012-battle1";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261012-battle1";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261012-battle1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -86,14 +87,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public13";
+} from "./font-revisions.mjs?v=20261012-battle1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public13";
+} from "./release-notes.mjs?v=20261012-battle1";
 
-const STATIC_ASSET_REVISION = "20261011-public13";
+const STATIC_ASSET_REVISION = "20261012-battle1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -399,6 +400,7 @@ const elements = {
   pilotHeroTargets: byId("pilotHeroTargets"),
   pilotHeroLinksNote: byId("pilotHeroLinksNote"),
   pilotHeroReturnButton: byId("pilotHeroReturnButton"),
+  weaponBattlePreview: byId("weaponBattlePreview"),
   liveRegion: byId("liveRegion"),
 };
 
@@ -587,6 +589,37 @@ const EDITOR_TYPES = Object.freeze(["unit", "pilot", "weapon"]);
 const optionNodes = { unit: new Map(), pilot: new Map(), weapon: new Map() };
 const rowIndexMaps = { unit: new Map(), pilot: new Map(), weapon: new Map() };
 const listNeedsBuild = { unit: false, pilot: false, weapon: false };
+const battlePreviewRequests = new Map();
+const weaponBattlePreview = createBattlePreview({ container: elements.weaponBattlePreview,
+  requestPreview: requestBattlePreview });
+
+function clearBattlePreview() {
+  weaponBattlePreview.clear();
+  for (const pending of battlePreviewRequests.values()) pending.cancel();
+  battlePreviewRequests.clear();
+}
+
+function requestBattlePreview({ signal, ...request }) {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted || !state.editorSessionToken || !state.editorWorker) {
+      reject(new DOMException("Preview cancelled", "AbortError")); return;
+    }
+    const previewId = `battle-${++state.editorPreviewSequence}`;
+    const worker = state.editorWorker, sessionToken = state.editorSessionToken;
+    const cleanup = () => { battlePreviewRequests.delete(previewId); signal.removeEventListener("abort", cancel); };
+    const cancel = () => {
+      cleanup();
+      worker.postMessage({ type: "BATTLE_PREVIEW_CANCEL", previewId });
+      reject(new DOMException("Preview cancelled", "AbortError"));
+    };
+    battlePreviewRequests.set(previewId, { sessionToken, cancel,
+      resolve: result => { cleanup(); resolve(result); },
+      reject: error => { cleanup(); reject(error); } });
+    signal.addEventListener("abort", cancel, { once: true });
+    try { worker.postMessage({ type: "BATTLE_PREVIEW", previewId, sessionToken, request }); }
+    catch (error) { cleanup(); reject(error); }
+  });
+}
 const EDITOR_UI = Object.freeze({
   unit: Object.freeze({
     panel: elements.unitEditorPanel, search: elements.unitSearch, list: elements.unitRecordList,
@@ -838,6 +871,7 @@ window.addEventListener("resize", updatePatchImageWidth);
 window.addEventListener("resize", () => { for (const layout of editorLayouts.values()) layout.schedule(); });
 if (typeof ResizeObserver === "function") {
   new ResizeObserver(() => { for (const layout of editorLayouts.values()) layout.schedule(); }).observe(elements.editorWorkspace);
+  new ResizeObserver(() => editorLayouts.get("weapon")?.schedule()).observe(elements.weaponBattlePreview);
 }
 document.fonts?.ready.then(() => { for (const layout of editorLayouts.values()) layout.schedule(); });
 window.addEventListener("beforeunload", warnWhileBusy);
@@ -3313,6 +3347,7 @@ function clearEditorDownloads() {
 // 에디터 쪽 상태를 처음으로 되돌린다: 열린 세션, 폴더 카드, 진행 중인 확인 작업. 게임·버전·폰트를 바꾸거나 페이지가 막혔을 때만 쓴다
 // (모드 전환은 지우지 않는다).
 function clearEditorState() {
+  clearBattlePreview();
   editorSearchTools.reset();
   state.workflowStage = "setup";
   state.workflowStockSelection = null;
@@ -3353,6 +3388,7 @@ function clearEditorState() {
   state.editorWeapons = [];
   state.editorRewards = [];
   state.editorTerrains = [];
+  terrainEditor.reset();
   state.editorScenario = createScenarioModel();
   state.editorPartNames = [];
   state.editorPilotAliases = [];
@@ -3993,6 +4029,7 @@ function beginEditorInspection(imageBlob, {
 
 // 편집 세션이 사라졌을 때(오류·작업 스레드 종료) 화면에 남은 편집 데이터를 모두 치운다.
 function dropEditorSession() {
+  clearBattlePreview();
   state.editorSessionToken = null;
   state.editorPreviewRequests = { unit: null, pilot: null };
   state.editorGameId = null;
@@ -4002,6 +4039,7 @@ function dropEditorSession() {
   state.editorWeapons = [];
   state.editorRewards = [];
   state.editorTerrains = [];
+  terrainEditor.reset();
   state.editorScenario = createScenarioModel();
   state.editorPartNames = [];
   state.editorPilotAliases = [];
@@ -4044,6 +4082,13 @@ const INSPECT_STAGES = Object.freeze({
 function handleEditorWorkerMessage(event) {
   const message = event.data;
   if (!message) return;
+  if (message.type === "BATTLE_PREVIEW_COMPLETE" || message.type === "BATTLE_PREVIEW_ERROR") {
+    const pending = battlePreviewRequests.get(message.previewId);
+    if (!pending || pending.sessionToken !== state.editorSessionToken || message.sessionToken !== pending.sessionToken) return;
+    if (message.type === "BATTLE_PREVIEW_COMPLETE") pending.resolve(message.result);
+    else pending.reject(Object.assign(new Error(message.error?.message ?? "Preview unavailable"), { code: message.error?.code }));
+    return;
+  }
   if (message.type === "PREVIEW_COMPLETE" || message.type === "PREVIEW_ERROR") {
     if (!isCurrentEditorPreview(state.editorPreviewRequests, message)) return;
     renderEditorPreview(message);
@@ -4126,6 +4171,7 @@ function handleEditorWorkerMessage(event) {
     clearEditorDownloads();
     state.editorLocalImage = Boolean(context.localImage);
     state.editorInputSize = context.inputSize;
+    clearBattlePreview();
     state.editorSessionToken = view.sessionToken;
     state.editorGameId = view.gameId;
     state.editorTargetHash = view.targetHash;
@@ -4369,6 +4415,7 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_EDIT_INVALID: ["수정 요청을 받아들일 수 없습니다", "고친 내용이 현재 열린 데이터와 맞지 않거나 읽기 전용 레코드를 바꾸려 해서 수정본을 만들지 않았습니다. 읽기 전용 레코드는 목록에서 이유가 안내됩니다. 디스크를 다시 열어 처음부터 시도해 주세요."],
   EDITOR_VALUE_OUT_OF_RANGE: ["허용 범위를 벗어난 값이 있습니다", "저장할 수 없는 크기의 값이 있어 수정본을 만들지 않았습니다. 지형 적응도는 A~E에 해당하는 0~4만 저장할 수 있고, 다른 칸도 칸마다 정해진 범위 안이어야 합니다. 값을 확인한 뒤 다시 시도해 주세요."],
   EDITOR_PREVIEW_INVALID: ["그림을 불러오지 못했습니다", "선택한 항목의 그림 정보를 확인할 수 없습니다. 다른 항목을 골랐다가 다시 선택해 주세요."],
+  EDITOR_BATTLE_PREVIEW_FAILED: ["무기 그림을 읽지 못했습니다", "상태를 다시 선택해 주세요. 같은 문제가 계속되면 디스크 폴더를 다시 열어 주세요."],
   EDITOR_OUTPUT_INTERNAL: ["만든 이미지 확인에 실패했습니다", "수정본을 다시 읽어 확인하는 단계에서 문제가 생겨 결과를 제공하지 않았습니다. 디스크를 다시 열어 처음부터 시도해 주세요."],
   EDITOR_SESSION_MISSING: ["에디터 세션이 만료되었습니다", "디스크를 다시 열어 주세요."],
   EDITOR_TERRAIN_INVALID: ["지형 효과를 반영할 수 없습니다", "회피·방어 보정과 HP·EN 회복은 0~100 범위의 정수여야 합니다. 지원하는 지형 표의 구조인지도 확인해주세요."],
@@ -7071,7 +7118,14 @@ function isCurrentEditorPreview(requests, message) {
 }
 
 function requestEditorPreview(type, record) {
-  if (type === "weapon") return;
+  if (type === "weapon") {
+    if (!record || !state.editorSessionToken) { weaponBattlePreview.clear(); return; }
+    const owners = [...new Set((record.owners ?? []).map(owner => owner.unit))]
+      .map(unitIndex => ({ unitIndex, name: unitNameForOwner(unitIndex) }));
+    void weaponBattlePreview.select({ sessionToken: state.editorSessionToken, gameId: state.editorGameId,
+      weaponIndex: record.recordIndex, weaponName: editorRowName(record), owners });
+    return;
+  }
   const image = type === "unit" ? elements.unitPreviewImage : elements.pilotPreviewImage;
   const caption = type === "unit" ? elements.unitPreviewCaption : elements.pilotPreviewCaption;
   const label = type === "unit" ? "기체" : "파일럿";
@@ -8336,6 +8390,7 @@ function sourceSelectionMeta(source, suffix) {
 }
 
 function updateControls() {
+  weaponBattlePreview.setBusy(anyJobBusy());
   const releaseReady = state.availability === "ready" && Boolean(state.release);
   const interactionBusy = state.busy || state.cueSaving;
   // 어느 모드의 작업이든 하나라도 돌고 있으면 게임·버전·폰트와 모든 폴더 줄을 잠근다(작업은 하나씩 한다).

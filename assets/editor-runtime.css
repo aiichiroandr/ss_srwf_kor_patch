@@ -1210,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261011-public13');
+  --frame: url('./runtime-panel-frame.svg?v=20261012-battle1');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -2478,17 +2478,114 @@ body[data-view="editor"] .editor-region {
   cursor: not-allowed;
 }
 
+/* Battle picture preview: only this new region owns its sizing and controls. */
+.weapon-preview-panel { min-width: 0; min-height: 0; }
+.battle-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  font-family: var(--runtime-korean-face, sans-serif);
+}
+.battle-preview [hidden] { display: none !important; }
+.battle-preview-context { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.battle-preview-context:has(> :not([hidden])) { margin-bottom: 1px; }
+.battle-preview-context select {
+  flex: 1 1 95px;
+  min-width: 0;
+  width: 0;
+  max-width: 100%;
+}
+.battle-preview-pager { display: flex; align-items: center; gap: 3px; margin-left: auto; }
+.battle-preview-pager button {
+  min-width: 28px;
+  min-height: 34px;
+  padding: 0 4px;
+  border: 1px solid #41745b;
+  border-radius: 3px;
+  color: #e3f3d5;
+  background: #081c24;
+  font-size: 18px;
+  cursor: pointer;
+}
+.battle-preview-pager button:disabled { opacity: .45; cursor: default; }
+.battle-preview-pager button:focus-visible { outline: 2px solid #b6f3ef; outline-offset: 1px; }
+.battle-preview-count { min-width: 34px; text-align: center; color: #afc5b7; font-size: 10px; white-space: nowrap; }
+.battle-preview-modes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; min-width: 0; }
+.battle-preview-modes button,
+.battle-preview select {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 34px;
+  margin: 0;
+  padding: 3px 4px;
+  border: 1px solid #41745b;
+  border-radius: 3px;
+  background: #081c24;
+  color: #e3f3d5;
+  font: 500 clamp(11px, 1.2vw, 13px) / 1.2 var(--runtime-korean-face, sans-serif);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.battle-preview-defense { width: 100%; }
+.battle-preview-modes button[aria-pressed="true"],
+.battle-preview-defense[data-selected="true"] { border-color: #e0de92; background: #21453c; color: #fff9c1; }
+.battle-preview-modes button:focus-visible,
+.battle-preview select:focus-visible { outline: 2px solid #b6f3ef; outline-offset: 1px; }
+.battle-preview-modes button:disabled,
+.battle-preview select:disabled { opacity: .6; cursor: default; }
+.battle-preview-status,
+.battle-preview-note {
+  margin: 0;
+  min-width: 0;
+  color: #b8cebd;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.battle-preview-status { padding: 3px 1px; }
+.battle-preview-note { color: #829b92; }
+.battle-preview-gallery {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  scrollbar-color: #41785a #06101a;
+}
+.battle-preview-gallery[data-view="all"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.battle-preview-gallery[data-view="single"] figcaption { display: none; }
+.battle-preview-picture { min-width: 0; margin: 0; border: 1px solid #294c40; background: #061218; }
+.battle-preview-picture-frame {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  padding: 4px;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.battle-preview-canvas { display: block; flex: 0 0 auto; max-width: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+.battle-preview-caption { padding: 2px 4px; color: #a4b8ac; font-size: 10px; line-height: 1.2; }
+
 /* Weapon screen ----------------------------------------------------------------------------------- */
 
 .weapon-game-screen {
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   grid-template-areas:
     "note note"
+    "preview preview"
     "detail terrain"
     "owners owners";
 }
 
+.weapon-preview-panel { grid-area: preview; }
 .weapon-detail-panel { grid-area: detail; }
 .weapon-terrain-panel { grid-area: terrain; }
 .weapon-owner-panel { grid-area: owners; }
@@ -2546,6 +2643,7 @@ body[data-view="editor"] .editor-region {
 
 @media (max-width: 1099px), (max-height: 719px) {
   .editor-page-switch { display: flex; }
+  .weapon-scope-note { display: none; }
   .editor-data-panel:not([data-auto-pages]):not([data-page="main"]):not([data-page="list"]) [data-editor-section="main"],
   .editor-data-panel:not([data-auto-pages]):not([data-page="aux"]) [data-editor-section="aux"],
   .editor-data-panel:not([data-auto-pages]):not([data-page="extra"]) [data-editor-section="extra"] {
@@ -2632,6 +2730,7 @@ body[data-view="editor"] .editor-region {
     grid-template-rows: auto;
     grid-template-areas:
       "note"
+      "preview"
       "detail"
       "terrain"
       "owners";

@@ -2,7 +2,10 @@ import {
   exportEditedImage,
   inspectPatchedImage,
   previewEditorRecord,
-} from "./editor-core.mjs?v=20261011-public13";
+  previewEditorBattle,
+  catalogEditorBattleAssets,
+  previewEditorBattleAsset,
+} from "./editor-core.mjs?v=20261012-battle1";
 
 // The worker body takes its scope and the three core operations so that a test can drive it with a fake scope and fake
 // operations. The page's worker starts it below with the real ones.
@@ -16,9 +19,14 @@ import {
 export function createEditorWorker(scope, api) {
   let activeJob = null;
   let editorSession = null;
+  let battlePreview = null;
 
   const abortError = () => new DOMException("Operation aborted", "AbortError");
   const abortJob = (job) => { if (!job.controller.signal.aborted) job.controller.abort(abortError()); };
+  const cancelBattlePreview = () => {
+    if (battlePreview) abortJob(battlePreview);
+    battlePreview = null;
+  };
 
   scope.addEventListener("message", (event) => {
     const message = event.data;
@@ -30,6 +38,7 @@ export function createEditorWorker(scope, api) {
     }
     if (message.type === "RESET") {
       if (activeJob) abortJob(activeJob);
+      cancelBattlePreview();
       activeJob = null;
       editorSession = null;
       return;
@@ -41,7 +50,43 @@ export function createEditorWorker(scope, api) {
     if (message.type === "PREVIEW") {
       void runPreview(message);
     }
+    if (["BATTLE_PREVIEW", "BATTLE_CATALOG", "BATTLE_ASSET_PREVIEW"].includes(message.type)) {
+      void runBattlePreview(message);
+    }
+    if (message.type === "BATTLE_PREVIEW_CANCEL" && message.previewId === battlePreview?.previewId) {
+      cancelBattlePreview();
+    }
   });
+
+  async function runBattlePreview(message) {
+    cancelBattlePreview();
+    const session = editorSession;
+    const controller = new AbortController();
+    const job = { previewId: message.previewId, controller };
+    battlePreview = job;
+    const live = () => battlePreview === job && editorSession === session && !controller.signal.aborted;
+    try {
+      if (typeof message.previewId !== "string" || message.previewId.length > 128
+        || !session || message.sessionToken !== session.sessionToken) {
+        throw makeError("EDITOR_SESSION_MISSING", "The authenticated editor session is no longer available.");
+      }
+      const operation = message.type === "BATTLE_CATALOG" ? api.catalogEditorBattleAssets
+        : message.type === "BATTLE_ASSET_PREVIEW" ? api.previewEditorBattleAsset : api.previewEditorBattle;
+      const result = await operation(session, message.request, { signal: controller.signal });
+      if (!live()) return;
+      const images = message.type === "BATTLE_ASSET_PREVIEW" ? [result] : result.assets ?? [];
+      const buffers = [...new Set(images.filter(image => image.pixels instanceof Uint8Array || image.pixels instanceof Uint8ClampedArray)
+        .map(image => image.pixels.buffer))];
+      scope.postMessage({ type: "BATTLE_PREVIEW_COMPLETE", previewId: message.previewId,
+        sessionToken: session.sessionToken, result }, buffers);
+    } catch (error) {
+      if (live()) scope.postMessage({ type: "BATTLE_PREVIEW_ERROR", previewId: message.previewId,
+        sessionToken: session?.sessionToken, error: { code: error?.code ?? "EDITOR_BATTLE_PREVIEW_FAILED",
+          message: typeof error?.message === "string" ? error.message : "Battle preview is unavailable." } });
+    } finally {
+      if (battlePreview === job) battlePreview = null;
+    }
+  }
 
   async function runPreview(message) {
     // The preview belongs to the session it was asked for: when that session is reset or replaced while the picture is
@@ -124,6 +169,7 @@ export function createEditorWorker(scope, api) {
           onProgress,
         });
         requireLive();
+        cancelBattlePreview();
         scope.postMessage({
           type: "INSPECT_COMPLETE",
           jobId: message.jobId,
@@ -211,5 +257,6 @@ function makeError(code, message) {
 }
 
 if (typeof self !== "undefined" && typeof self.addEventListener === "function") {
-  createEditorWorker(self, { exportEditedImage, inspectPatchedImage, previewEditorRecord });
+  createEditorWorker(self, { exportEditedImage, inspectPatchedImage, previewEditorRecord,
+    previewEditorBattle, catalogEditorBattleAssets, previewEditorBattleAsset });
 }
