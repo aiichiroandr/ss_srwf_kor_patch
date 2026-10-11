@@ -424,3 +424,28 @@ test("cancelling the output picker releases the busy lock without clearing the r
   assert.equal(state.workflowOutput, output);
   assert.equal(byId("workflowFolderStatus").hidden, true);
 });
+
+
+test("patch download, validation and application report the current stage without opening the editor early", async () => {
+  reset(); await openSession("stock", nativeView());
+  state.release.patch.size = 3_718_378;
+  hooks.prepareWorkflow("editor");
+  const build = workerNamed("srwf-local-editor-build");
+  const jobId = build.last("PREPARE_SOURCE").jobId;
+  build.emit({type: "phase", jobId, phase: "patch-download"});
+  assert.equal(byId("progressTitle").textContent, "한글 패치 받는 중");
+  assert.match(byId("progressDetail").textContent, /3\.5 MB/);
+  build.emit({type: "progress", jobId, processed: 100, total: 400});
+  assert.equal(byId("progressPercent").textContent, "25%");
+  build.emit({type: "phase", jobId, phase: "patch-parse"});
+  assert.equal(byId("progressTitle").textContent, "한글 패치 검사 중");
+  assert.equal(byId("editorRegion").hidden, true);
+  assert.equal(byId("workflowOpenEditor").disabled, true);
+  build.emit({type: "phase", jobId, phase: "toString"});
+  assert.equal(byId("progressTitle").textContent, "한글 패치 검사 중");
+  build.emit({type: "phase", jobId, phase: "source-apply"});
+  assert.match(byId("progressTitle").textContent, /한글패치를 적용/);
+  build.emit({type: "phase", jobId, phase: "output-verify"});
+  assert.match(byId("progressTitle").textContent, /적용 결과/);
+  assert.equal(byId("editorRegion").hidden, true);
+});

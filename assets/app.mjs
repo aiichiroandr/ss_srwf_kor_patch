@@ -1,10 +1,10 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public5';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public5';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public5";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public5";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public5";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public5";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public5";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public6';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public6';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public6";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public6";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public6";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public6";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public6";
 import {
   canStep,
   filterRecords,
@@ -13,7 +13,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public5";
+} from "./editor-list.mjs?v=20261011-public6";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -24,7 +24,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public5";
+} from "./editor-grades.mjs?v=20261011-public6";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -58,27 +58,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public5";
+} from "./editor-skill-list.mjs?v=20261011-public6";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public5";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public5";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public5";
-import { sha256Hex, Sha256 } from "./sha256.mjs";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public5";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public5";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public5";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public5";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public5";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public5";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public5";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public5";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public5";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public5";
+} from "./editor-facts.mjs?v=20261011-public6";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public6";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public6";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public6";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public6";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public6";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public6";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public6";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public6";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public6";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public6";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public6";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public6";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public6";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -86,14 +86,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public5";
+} from "./font-revisions.mjs?v=20261011-public6";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public5";
+} from "./release-notes.mjs?v=20261011-public6";
 
-const STATIC_ASSET_REVISION = "20261011-public5";
+const STATIC_ASSET_REVISION = "20261011-public6";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -2694,8 +2694,22 @@ function handleEditorBuildMessage(event) {
   const build = state.editorBuild;
   if (!message || !build || message.jobId !== build.jobId) return;
   if (message.type === "phase") {
-    const stage = message.phase === "source-apply" ? "build" : message.phase === "output-verify" ? "verify" : null;
-    if (stage) showEditorProgress(EDITOR_STAGES[stage]);
+    const patchSize = build.release.patch?.size;
+    const stages = {
+      "patch-download": {
+        title: "한글 패치 받는 중",
+        detail: Number.isSafeInteger(patchSize) && patchSize > 0
+          ? `${editorGameLabel(build.release.gameId)} ${releaseTag(build.release.id)} · ${formatBytes(patchSize)}`
+          : "이 사이트에 공개된 패치 데이터를 받고 있습니다.",
+      },
+      "patch-parse": {
+        title: "한글 패치 검사 중",
+        detail: "패치 파일의 해시와 변경 항목을 확인합니다.",
+      },
+      "source-apply": EDITOR_STAGES.build,
+      "output-verify": EDITOR_STAGES.verify,
+    };
+    if (Object.hasOwn(stages, message.phase)) showEditorProgress(stages[message.phase]);
     return;
   }
   if (message.type === "progress") {
@@ -6140,7 +6154,7 @@ function skillAddBlockText(code, summary) {
     case "no-choice": return "추가할 능력을 고르세요.";
     case "held": return "이미 가진 능력입니다.";
     case "level": return `습득 레벨은 ${SKILL_LEVEL_MIN}~${SKILL_LEVEL_MAX} 사이의 정수여야 합니다.`;
-    case "capacity": return "빈자리 0 · 기존 항목은 ‘교체’로 바꿀 수 있습니다.";
+    case "capacity": return "빈자리 0 · 다른 능력은 ‘교체’에서 선택하세요.";
     case "event-gated": return "이벤트 조건이 있는 항목은 그대로 유지합니다.";
     case "consumers": return `한 파일럿이 동시에 쓰는 능력은 ${summary.limit}가지까지입니다(같은 계열은 하나로 셉니다). 새 계열을 더하려면 먼저 다른 능력을 삭제해 주세요.`;
     default: return "";

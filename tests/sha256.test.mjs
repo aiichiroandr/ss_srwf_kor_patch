@@ -37,3 +37,27 @@ test('finalized digests remain immutable and reject additional stream data', () 
   assert.throws(() => hash.update(new Uint8Array()), /finalized/);
   assert.throws(() => new Sha256().update('abc'), TypeError);
 });
+
+
+test('multi-block SHA-256 stays exact with irregular chunks and distinct buffer offsets', () => {
+  for (const seed of [0x12345678, 0x7fffffff, 0xabcdef01]) {
+    const backing = new Uint8Array(2 * 1024 * 1024 + 91);
+    let word = seed;
+    for (let i = 0; i < backing.length; i += 1) {
+      word ^= word << 13; word ^= word >>> 17; word ^= word << 5;
+      backing[i] = word & 255;
+    }
+    const bytes = backing.subarray(19, backing.length - 23);
+    const digest = expected(bytes);
+    assert.equal(sha256Hex(bytes), digest);
+    const hash = new Sha256();
+    for (let offset = 0; offset < bytes.length;) {
+      word ^= word << 13; word ^= word >>> 17; word ^= word << 5;
+      const end = Math.min(bytes.length, offset + 1 + ((word >>> 0) % 8191));
+      hash.update(bytes.subarray(offset, end));
+      offset = end;
+    }
+    assert.equal(hash.hex(), digest);
+    assert.equal(hash.hex(), digest);
+  }
+});

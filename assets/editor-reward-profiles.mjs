@@ -1,7 +1,7 @@
 // Derived from all six latest accepted TSR profiles and the two exact stock profiles.
 // Only verified root-32 part/probability bytes are additionally mutable. Old profiles remain supported.
-import { EDITOR_PROVENANCE_PROFILES } from './editor-provenance-profiles.mjs?v=20261011-public5';
-import { STOCK_EDITOR_PROFILES } from './editor-stock-profiles.mjs?v=20261011-public5';
+import { EDITOR_PROVENANCE_PROFILES } from './editor-provenance-profiles.mjs?v=20261011-public6';
+import { STOCK_EDITOR_PROFILES } from './editor-stock-profiles.mjs?v=20261011-public6';
 const pins = [
   {
     "baseTargetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",

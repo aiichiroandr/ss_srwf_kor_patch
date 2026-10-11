@@ -143,17 +143,6 @@ export class Sha256 {
   _compress(view, offset) {
     const words = this._words;
 
-    for (let index = 0; index < 16; index += 1) {
-      words[index] = view.getUint32(offset + index * 4, false);
-    }
-    for (let index = 16; index < 64; index += 1) {
-      const word15 = words[index - 15];
-      const word2 = words[index - 2];
-      const sigma0 = rotateRight(word15, 7) ^ rotateRight(word15, 18) ^ (word15 >>> 3);
-      const sigma1 = rotateRight(word2, 17) ^ rotateRight(word2, 19) ^ (word2 >>> 10);
-      words[index] = (words[index - 16] + sigma0 + words[index - 7] + sigma1) >>> 0;
-    }
-
     let a = this._state[0];
     let b = this._state[1];
     let c = this._state[2];
@@ -163,10 +152,23 @@ export class Sha256 {
     let g = this._state[6];
     let h = this._state[7];
 
+    // Generate the message word when its round uses it, avoiding a second
+    // full pass through the schedule on every streamed 64-byte block.
     for (let index = 0; index < 64; index += 1) {
+      let roundWord;
+      if (index < 16) {
+        roundWord = view.getUint32(offset + index * 4, false);
+      } else {
+        const word15 = words[index - 15];
+        const word2 = words[index - 2];
+        const sigma0 = rotateRight(word15, 7) ^ rotateRight(word15, 18) ^ (word15 >>> 3);
+        const sigma1 = rotateRight(word2, 17) ^ rotateRight(word2, 19) ^ (word2 >>> 10);
+        roundWord = (words[index - 16] + sigma0 + words[index - 7] + sigma1) >>> 0;
+      }
+      words[index] = roundWord;
       const sum1 = rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25);
       const choose = (e & f) ^ (~e & g);
-      const temporary1 = (h + sum1 + choose + ROUND_CONSTANTS[index] + words[index]) >>> 0;
+      const temporary1 = (h + sum1 + choose + ROUND_CONSTANTS[index] + roundWord) >>> 0;
       const sum0 = rotateRight(a, 2) ^ rotateRight(a, 13) ^ rotateRight(a, 22);
       const majority = (a & b) ^ (a & c) ^ (b & c);
       const temporary2 = (sum0 + majority) >>> 0;

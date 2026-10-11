@@ -821,3 +821,54 @@ test('abort signal stops verification', async () => {
     (error) => error.name === 'AbortError',
   );
 });
+
+test('every preimage digest byte is checked and only immutable hex diagnostics are exposed', async () => {
+  const fixture = syntheticFixture();
+  const parsed = await parsePatch(fixture.patch, fixture.descriptor);
+  assert.deepEqual(parsed.records, fixture.records.map(({ offset, targetBytes, preimageSha256 }) => ({
+    offset,
+    length: targetBytes.byteLength,
+    preimageSha256,
+  })));
+  assert.equal('preimageDigest' in parsed.records[0], false);
+  for (let byteIndex = 0; byteIndex < 32; byteIndex += 1) {
+    const digest = hexToBytes(fixture.records[0].preimageSha256);
+    digest[byteIndex] ^= 1;
+    const damagedRecords = fixture.records.map((record, index) => index === 0 ? {
+      ...record,
+      preimageSha256: Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join(''),
+    } : record);
+    const damaged = await parsePatch(makePatch({
+      source: fixture.source,
+      target: fixture.target,
+      records: damagedRecords,
+    }));
+    await assert.rejects(verifySourceBlob(new Blob([fixture.source]), damaged), {
+      code: 'PREIMAGE_MISMATCH',
+    }, `preimage digest byte ${byteIndex} must be checked`);
+  }
+});
+
+
+test('exact DEFLATE parsing preserves varied stored, fixed and dynamic streams at byte boundaries', async () => {
+  for (const length of [1, 7, 31, 257, 4097, 65539]) {
+    let random = length;
+    for (const pattern of [0, 1, 2]) {
+      const target = Uint8Array.from({length}, (_, index) => {
+        random ^= random << 13; random ^= random >>> 17; random ^= random << 5;
+        return pattern === 0 ? 0 : pattern === 1 ? index & 255 : random & 255;
+      });
+      const source = Uint8Array.from(target, byte => byte ^ 255);
+      const records = [{offset: 0, targetBytes: target, preimageSha256: createHash('sha256').update(source).digest('hex')}];
+      for (const deflateOptions of [{level: 0}, {strategy: zlibConstants.Z_FIXED}, {level: 9}]) {
+        const bytes = makePatch({source, target, records, deflateOptions});
+        const parsed = await parsePatch(bytes);
+        assert.equal(parsed.recordCount, 1);
+        assert.equal(parsed.targetSha256, createHash('sha256').update(target).digest('hex'));
+        await verifySourceBlob(new Blob([source]), parsed);
+        await expectPatchError(parsePatch(bytes.subarray(0, bytes.length - 1)), 'BAD_ZLIB_BODY');
+        await expectPatchError(parsePatch(concatBytes([bytes, Uint8Array.of(0)])), 'BAD_ZLIB_BODY');
+      }
+    }
+  }
+});

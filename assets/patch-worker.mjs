@@ -5,15 +5,15 @@ import {
   buildVerifiedPatchedBlob,
   parsePatch,
   verifySourceBlob,
-} from "./patch-core.mjs?v=20261011-public5";
+} from "./patch-core.mjs?v=20261011-public6";
 import {
   PATCH_FORMAT_V2,
   PATCH_V2_LIMITS,
   applyPatchV2ToWritable,
   buildVerifiedPatchedBlobV2,
   parsePatchV2,
-} from "./patch-core-v2.mjs?v=20261011-public5";
-import { sha256Hex } from "./sha256.mjs?v=20261011-public5";
+} from "./patch-core-v2.mjs?v=20261011-public6";
+import { sha256Hex } from "./sha256.mjs?v=20261011-public6";
 
 let activeJob = null;
 let preparedSource = null;
@@ -399,7 +399,9 @@ async function loadParsedPatch(releaseKey, patchUrl, descriptor, jobId, signal) 
   let response;
   try {
     response = await fetch(resolvedUrl, {
-      cache: "no-store",
+      // Accepted payload URLs are immutable; cached bytes still pass the full
+      // size, SHA-256 and format checks below before they can be used.
+      cache: "default",
       credentials: "same-origin",
       redirect: "error",
       referrerPolicy: "no-referrer",
