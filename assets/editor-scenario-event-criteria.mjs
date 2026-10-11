@@ -2,10 +2,10 @@
 // The writer changes its skip branch only. It preserves the original action,
 // E9, saved resume, roots and all other script bytes. Carrier/provenance checks
 // must still authenticate the fully normalized source against its profile.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261011-public6';
-import { compileObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261011-public6';
-import { encodeObjectiveRule, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public6';
-import { Sha256 } from './sha256.mjs?v=20261011-public6';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261011-public7';
+import { compileObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261011-public7';
+import { encodeObjectiveRule, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261011-public7';
+import { Sha256 } from './sha256.mjs?v=20261011-public7';
 
 export const EVENT_CRITERIA_FIELDS=Object.freeze(['eventJoin','eventRule1','eventRule2','eventRule3']);
 const MAGIC=Uint8Array.of(83,82,87,70,84,69,48,50),TRAILER=80; // SRWFTE02

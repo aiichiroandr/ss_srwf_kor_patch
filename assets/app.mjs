@@ -1,10 +1,10 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public6';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public6';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public6";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public6";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public6";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public6";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public6";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public7';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public7';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public7";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public7";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public7";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public7";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public7";
 import {
   canStep,
   filterRecords,
@@ -13,7 +13,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public6";
+} from "./editor-list.mjs?v=20261011-public7";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -24,14 +24,13 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public6";
+} from "./editor-grades.mjs?v=20261011-public7";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
-  addBlock,
-  addSkill,
   groupedSkillCatalog,
   isFlagGated,
+  planSkillAdd,
   removeSkill,
   replaceSkill,
   setLevel,
@@ -41,6 +40,7 @@ import {
   sameList as sameSkillList,
   skillDiff,
   skillRequest,
+  skillRoomChoices,
   skillSummary,
   SPIRIT_LEVEL_MAX,
   SPIRIT_LEVEL_MIN,
@@ -58,27 +58,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public6";
+} from "./editor-skill-list.mjs?v=20261011-public7";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public6";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public6";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public6";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public6";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public6";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public6";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public6";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public6";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public6";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public6";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public6";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public6";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public6";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public6";
+} from "./editor-facts.mjs?v=20261011-public7";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public7";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public7";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public7";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public7";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public7";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public7";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public7";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public7";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public7";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public7";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public7";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public7";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public7";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -86,14 +86,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public6";
+} from "./font-revisions.mjs?v=20261011-public7";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public6";
+} from "./release-notes.mjs?v=20261011-public7";
 
-const STATIC_ASSET_REVISION = "20261011-public6";
+const STATIC_ASSET_REVISION = "20261011-public7";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -354,6 +354,8 @@ const elements = {
   pilotSkillAddLevel: byId("pilotSkillAddLevel"),
   pilotSkillAddButton: byId("pilotSkillAddButton"),
   pilotSkillAddHint: byId("pilotSkillAddHint"),
+  pilotSkillRoomField: byId("pilotSkillRoomField"),
+  pilotSkillRoomSelect: byId("pilotSkillRoomSelect"),
   pilotSkillRevertButton: byId("pilotSkillRevertButton"),
   weaponStatsHeading: byId("weaponStatsHeading"),
   unusedToggle: byId("unusedToggle"),
@@ -677,6 +679,7 @@ elements.pilotMentalCommands.addEventListener("click", handleSpiritClick);
 elements.pilotSkillAddSelect.addEventListener("change", () => { renderSkillAddRanks(); refreshSkillAddControls(); });
 elements.pilotSkillAddRank.addEventListener("change", refreshSkillAddControls);
 elements.pilotSkillAddLevel.addEventListener("input", refreshSkillAddControls);
+elements.pilotSkillRoomSelect.addEventListener("change", refreshSkillAddControls);
 elements.pilotSkillAddLevel.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -6154,7 +6157,10 @@ function skillAddBlockText(code, summary) {
     case "no-choice": return "추가할 능력을 고르세요.";
     case "held": return "이미 가진 능력입니다.";
     case "level": return `습득 레벨은 ${SKILL_LEVEL_MIN}~${SKILL_LEVEL_MAX} 사이의 정수여야 합니다.`;
-    case "capacity": return "빈자리 0 · 다른 능력은 ‘교체’에서 선택하세요.";
+    case "capacity":
+    case "missing-removal": return "정신기와 저장 공간을 공유합니다. 비울 항목을 고르세요.";
+    case "invalid-removal": return "비울 수 있는 항목을 다시 골라 주세요.";
+    case "minimum": return "이 파일럿에 필요한 정신커맨드는 남겨야 합니다.";
     case "event-gated": return "이벤트 조건이 있는 항목은 그대로 유지합니다.";
     case "consumers": return `한 파일럿이 동시에 쓰는 능력은 ${summary.limit}가지까지입니다(같은 계열은 하나로 셉니다). 새 계열을 더하려면 먼저 다른 능력을 삭제해 주세요.`;
     default: return "";
@@ -6193,6 +6199,49 @@ function renderPilotSkillButton(record) {
 }
 
 let skillReplaceIndex = null;
+const skillAddUndo = new WeakMap();
+
+function pendingSkillAddUndo(record) {
+  const undo = skillAddUndo.get(record);
+  return undo && sameSkillList(record.specialAbilities, undo.afterSkills)
+    && sameSkillList(record.spirits ?? [], undo.afterSpirits) ? undo : null;
+}
+
+function refreshSkillRevertButton(record) {
+  const undo = pendingSkillAddUndo(record);
+  const diff = skillDiff(record.specialAbilities, record.originalSkillEntries ?? []);
+  elements.pilotSkillRevertButton.disabled = !undo && diff.added.length + diff.removed.length + diff.changed.length === 0;
+  elements.pilotSkillRevertButton.textContent = undo ? "이번 추가 되돌리기" : "원래 목록으로 되돌리기";
+  elements.pilotSkillRevertButton.title = undo ? "이번 추가와 함께 비운 항목을 모두 되돌립니다."
+    : `추가 ${diff.added.length} · 삭제 ${diff.removed.length} · 변경 ${diff.changed.length}`;
+}
+
+function selectedSkillFreePair(record = pilotRowForSkills()) {
+  const choice = record && skillRoomChoices(record, state.editorGameId)
+    .find((candidate) => candidate.key === elements.pilotSkillRoomSelect.value);
+  return choice ? { kind: choice.kind, index: choice.index } : null;
+}
+
+function renderSkillRoomControl(record, summary, replacing) {
+  const needsRoom = Boolean(summary?.editable) && summary.free <= 0 && !replacing;
+  elements.pilotSkillRoomField.hidden = !needsRoom;
+  const select = elements.pilotSkillRoomSelect;
+  const previous = select.value;
+  const choices = needsRoom ? skillRoomChoices(record, state.editorGameId) : [];
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = choices.length ? "비울 항목을 선택하세요" : "비울 수 있는 항목이 없습니다";
+  select.replaceChildren(placeholder, ...choices.map((choice) => {
+    const option = document.createElement("option");
+    option.value = choice.key;
+    const name = choice.kind === "spirit" ? spiritChoiceLabel(choice.entry) : skillDisplayName(choice.entry);
+    option.textContent = `${choice.kind === "spirit" ? "정신기" : "능력"} · ${name} · 습득 Lv ${choice.entry.level}`;
+    return option;
+  }));
+  select.value = choices.some((choice) => choice.key === previous) ? previous : "";
+  select.disabled = !needsRoom || choices.length === 0;
+  select.title = select.selectedOptions?.[0]?.textContent ?? "";
+}
 
 function skillEditChoices(record = pilotRowForSkills()) {
   return record ? groupedSkillCatalog(record, state.editorGameId, record.specialAbilities, { excludeIndex: skillReplaceIndex }) : [];
@@ -6315,7 +6364,10 @@ function renderPilotSkillSchedule(record) {
   elements.pilotSkillSchedule.replaceChildren(...groups);
   if (!summary) elements.pilotSkillStatus.textContent = "";
   else if (summary.supported) {
-    const storage = document.createElement("span"); storage.textContent = `습득 항목 ${summary.count}/${summary.capacity} · 빈자리 ${summary.free}`;
+    const room = pairRoom(record);
+    const storage = document.createElement("span"); storage.textContent = room
+      ? `저장 자리 ${room.used}/${room.capacity} · 빈자리 ${room.free}`
+      : `습득 항목 ${summary.count}/${summary.capacity} · 빈자리 ${summary.free}`;
     const kinds = document.createElement("span"); kinds.textContent = `능력 종류 ${summary.consumers}/${summary.limit}`;
     elements.pilotSkillStatus.replaceChildren(storage, kinds);
     elements.pilotSkillStatus.title = "습득 항목마다 저장 공간을 하나씩 사용합니다. 정신커맨드와 공유하며, 같은 계열은 동시에 적용되는 능력 한 종류로 셉니다.";
@@ -6323,10 +6375,7 @@ function renderPilotSkillSchedule(record) {
   const over = Boolean(summary) && summary.consumers > summary.limit;
   elements.pilotSkillWarning.hidden = !over;
   elements.pilotSkillWarning.textContent = over ? `서로 다른 능력이 ${summary.consumers}가지입니다. 한 파일럿이 동시에 쓰는 능력은 ${summary.limit}가지까지(같은 계열은 하나)라서 이 목록은 저장할 수 없습니다. 능력을 삭제해 ${summary.limit}가지 이하로 줄여 주세요.` : "";
-  const diff = skillDiff(list, original);
-  elements.pilotSkillRevertButton.disabled = diff.added.length + diff.removed.length + diff.changed.length === 0;
-  elements.pilotSkillRevertButton.textContent = "원래 목록으로 되돌리기";
-  elements.pilotSkillRevertButton.title = `추가 ${diff.added.length} · 삭제 ${diff.removed.length} · 변경 ${diff.changed.length}`;
+  if (record) refreshSkillRevertButton(record);
   renderSkillAddControls(record, summary);
 }
 
@@ -6362,30 +6411,39 @@ function refreshSkillAddControls() {
   const level = elements.pilotSkillAddLevel.value === "" ? Number.NaN : Number(elements.pilotSkillAddLevel.value);
   const replacing = skillReplaceIndex !== null;
   const mayEdit = Boolean(summary?.editable);
-  elements.pilotSkillAdd.hidden = mayEdit && summary.free <= 0 && !replacing;
-  let block = !record ? "read-only" : replacing ? skillReplaceBlock(record, state.editorGameId, skillReplaceIndex, id) : addBlock(record, state.editorGameId, id, level);
+  elements.pilotSkillAdd.hidden = false;
+  renderSkillRoomControl(record, summary, replacing);
+  const plan = record && !replacing ? planSkillAdd(record, state.editorGameId, { id, level, freePair: selectedSkillFreePair(record) }) : null;
+  let block = !record ? "read-only" : replacing ? skillReplaceBlock(record, state.editorGameId, skillReplaceIndex, id) : plan.block;
   if (block === null && (!Number.isInteger(level) || level < SKILL_LEVEL_MIN || level > SKILL_LEVEL_MAX)) block = "level";
   elements.pilotSkillAddSelect.disabled = !mayEdit;
   elements.pilotSkillAddRank.disabled = !mayEdit;
   elements.pilotSkillAddLevel.disabled = !mayEdit;
   elements.pilotSkillAddButton.disabled = block !== null;
-  elements.pilotSkillAddButton.textContent = replacing ? "교체 적용" : "추가";
+  elements.pilotSkillAddButton.textContent = replacing ? "교체 적용" : plan?.removed ? "비우고 추가" : "추가";
   elements.pilotSkillAddTarget.hidden = !replacing;
   elements.pilotSkillReplaceTitle.textContent = replacing && record?.specialAbilities[skillReplaceIndex] ? `${skillDisplayName(record.specialAbilities[skillReplaceIndex])} 교체` : "";
-  const early = !record ? null : !mayEdit ? "read-only" : !replacing && summary.free <= 0 ? "capacity" : null;
+  const early = !record ? null : !mayEdit ? "read-only" : !replacing && summary.free <= 0 && !selectedSkillFreePair(record) ? "missing-removal" : null;
   const code = early ?? (block === "no-choice" ? null : block);
   let hint = code ? skillAddBlockText(code, summary ?? { reason: "unsupported", capacity: 0, limit: 4 }) : "";
+  if (!hint && plan?.removed) {
+    const removed = plan.removed;
+    const name = removed.kind === "spirit" ? spiritChoiceLabel(removed.entry) : skillDisplayName(removed.entry);
+    hint = `${name}(습득 Lv ${removed.entry.level})을 지우고 추가합니다.`;
+  }
   if (!hint && block === null) hint = replacing ? "선택한 항목만 바꿉니다. 추가 공간은 쓰지 않습니다." : "단계별 성장 시점을 추가합니다. 처음부터 9단계라면 9단계 항목 하나면 됩니다.";
   if (!hint && block === "no-choice") hint = summary && summary.consumers >= summary.limit ? `서로 다른 능력이 이미 ${summary.limit}가지입니다. 새 계열은 더할 수 없고, 이미 가진 계열의 다른 단계만 더할 수 있습니다.` : "능력을 고르고, 배우는 파일럿 레벨을 설정하세요.";
   if (mayEdit && record.noSpiritInDisc && record.specialAbilities.length === 0 && block === null) hint += " 이 파일럿은 원본에 정신커맨드가 없는 자리 표시 기록입니다. 능력을 넣으면 그 표시가 능력 쌍으로 바뀝니다(표시를 읽는 다른 코드가 있는지는 확인하지 못했습니다).";
   elements.pilotSkillAddHint.textContent = hint;
-  elements.pilotSkillAddHint.classList.toggle("is-caution", Boolean(code));
+  elements.pilotSkillAddHint.classList.toggle("is-caution", Boolean(code || plan?.removed));
   pilotSkillPagination.refresh();
 }
 
 // 목록을 바꾼 뒤 화면 곳곳을 맞춘다: 습득표 창, 능력 요약, 변경 표시, 아래 줄.
-function commitSkillList(record, list, message) {
+function commitSkillList(record, list, message, { addUndo = null } = {}) {
   skillReplaceIndex = null;
+  skillAddUndo.delete(record);
+  if (addUndo) skillAddUndo.set(record, addUndo);
   record.specialAbilities = list;
   renderPilotRuntimeSkills(record);
   renderPilotSkillSchedule(record);
@@ -6401,6 +6459,7 @@ function commitSkillList(record, list, message) {
 
 // 칸을 다시 그리면 고르던 요소가 새로 만들어지므로, 키보드로 고치던 자리에 초점을 되돌린다.
 function commitSpiritList(record, list, message, focusSelector = null) {
+  skillAddUndo.delete(record);
   record.spirits = list;
   renderPilotMentalCommands(record);
   if (focusSelector) elements.pilotMentalCommands.querySelector(focusSelector)?.focus?.({ preventScroll: true });
@@ -6460,6 +6519,8 @@ function handleSpiritLevelInput(event) {
   }
   input.removeAttribute("aria-invalid");
   record.spirits = next;
+  skillAddUndo.delete(record);
+  if (elements.pilotSkillDialog.open) refreshSkillRevertButton(record);
   const stored = record.original?.spirits?.[index];
   const changed = !stored || stored.id !== next[index].id || stored.level !== next[index].level;
   input.closest?.(".pilot-mental-slot")?.classList.toggle("is-modified", changed);
@@ -6554,17 +6615,32 @@ function addPilotSkillFromDialog() {
   if (!choice || !Number.isInteger(level) || level < SKILL_LEVEL_MIN || level > SKILL_LEVEL_MAX) return;
   const replacing = skillReplaceIndex !== null;
   let next;
+  let addUndo = null;
+  let removalNote = "";
   if (replacing) {
     if (skillReplaceBlock(record, state.editorGameId, skillReplaceIndex, id) !== null) return;
     next = replaceSkill(record, state.editorGameId, skillReplaceIndex, id);
     next = setLevel(next, next.findIndex((entry) => entry.id === id), level, record.originalSkillEntries ?? []);
   } else {
-    if (addBlock(record, state.editorGameId, id, level) !== null) return;
-    next = addSkill(record, state.editorGameId, id, level);
+    const plan = planSkillAdd(record, state.editorGameId, { id, level, freePair: selectedSkillFreePair(record) });
+    if (plan.block !== null) return;
+    next = plan.skills;
+    if (plan.removed) {
+      addUndo = {
+        beforeSkills: record.specialAbilities.map((entry) => ({ ...entry })),
+        beforeSpirits: (record.spirits ?? []).map((entry) => ({ ...entry })),
+        afterSkills: next.map((entry) => ({ ...entry })),
+        afterSpirits: plan.spirits.map((entry) => ({ ...entry })),
+      };
+      const name = plan.removed.kind === "spirit" ? spiritChoiceLabel(plan.removed.entry) : skillDisplayName(plan.removed.entry);
+      removalNote = `${name}을 비우고 `;
+    }
+    if (Array.isArray(record.spirits)) record.spirits = plan.spirits;
   }
   const added = next.find((entry) => entry.id === id);
-  commitSkillList(record, next, `${skillDisplayName(added)}${replacing ? "로 교체했습니다." : "을 추가했습니다."} 남은 자리 ${skillSummary(record, state.editorGameId, next).free}`);
+  commitSkillList(record, next, `${removalNote}${skillDisplayName(added)}${replacing ? "로 교체했습니다." : "을 추가했습니다."} 남은 자리 ${skillSummary(record, state.editorGameId, next).free}`, { addUndo });
   elements.pilotSkillAddSelect.value = "";
+  elements.pilotSkillRoomSelect.value = "";
   renderSkillAddRanks();
   refreshSkillAddControls();
   const focusIndex = next.findIndex((entry) => entry.id === id);
@@ -6592,6 +6668,7 @@ function handleSkillLevelInput(event) {
     return;
   }
   input.removeAttribute("aria-invalid");
+  skillAddUndo.delete(record);
   record.specialAbilities = next;
   const original = record.originalSkillEntries ?? [];
   const entry = next[index];
@@ -6600,11 +6677,8 @@ function handleSkillLevelInput(event) {
   const changed = Boolean(before) && before.level !== entry.level;
   row?.classList.toggle("is-modified", changed);
   input.classList.toggle("is-modified", changed);
-  const diff = skillDiff(next, original);
-  const count = diff.added.length + diff.removed.length + diff.changed.length;
-  elements.pilotSkillRevertButton.disabled = count === 0;
-  elements.pilotSkillRevertButton.textContent = "원래 목록으로 되돌리기";
-  elements.pilotSkillRevertButton.title = `추가 ${diff.added.length} · 삭제 ${diff.removed.length} · 변경 ${diff.changed.length}`;
+  refreshSkillRevertButton(record);
+  refreshSkillAddControls();
   renderPilotRuntimeSkills(record);
   refreshRecordOption("pilot", record);
   updateEditorStatus("pilot", record);
@@ -6613,6 +6687,12 @@ function handleSkillLevelInput(event) {
 function revertPilotSkills() {
   const record = selectedEditorRow("pilot");
   if (!record) return;
+  const undo = pendingSkillAddUndo(record);
+  if (undo) {
+    record.spirits = undo.beforeSpirits.map((entry) => ({ ...entry }));
+    commitSkillList(record, undo.beforeSkills.map((entry) => ({ ...entry })), "이번에 추가한 능력과 비운 항목을 모두 되돌렸습니다.");
+    return;
+  }
   commitSkillList(record, (record.originalSkillEntries ?? []).map((entry) => ({ ...entry })), "특수능력 목록을 원래대로 되돌렸습니다.");
 }
 
@@ -6620,6 +6700,9 @@ function openPilotSkillDialog() {
   const record = pilotRowForSkills();
   if (!record) return;
   skillReplaceIndex = null;
+  elements.pilotSkillAddSelect.value = "";
+  elements.pilotSkillRoomSelect.value = "";
+  elements.pilotSkillAddLevel.value = String(SKILL_LEVEL_MIN);
   renderPilotSkillSchedule(record);
   elements.pilotSkillDialog.showModal();
   pilotSkillPagination.refresh({ reset: true });

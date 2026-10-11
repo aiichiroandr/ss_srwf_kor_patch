@@ -14,7 +14,7 @@
 // The writer refuses (and the dialog therefore never offers): a list longer than the capacity, more than the limit of
 // distinct slot consumers (a ladder family counts once, every other skill once each), a repeated id, a new or changed
 // level outside 1..99, and any change of a level-100-and-up entry other than keeping or deleting it.
-import { PILOT_LADDER_FAMILIES, pilotSkillFamily, pilotSkillLevel } from "./editor-facts.mjs?v=20261011-public6";
+import { PILOT_LADDER_FAMILIES, pilotSkillFamily, pilotSkillLevel } from "./editor-facts.mjs?v=20261011-public7";
 
 export const SKILL_LEVEL_MIN = 1;
 export const SKILL_LEVEL_MAX = 99;
@@ -175,6 +175,62 @@ export function addSkill(row, gameId, id, level, list = row.specialAbilities ?? 
     id, level, name: choice?.name ?? "", familyId: choice?.familyId ?? null, rank: choice?.rank ?? null, unresolved: Boolean(choice?.unresolved),
   };
   return orderLadders(gameId, [...list, entry]);
+}
+
+// A full record can make one learning pair available by explicitly giving up an ordinary skill or spirit command.
+// Spirit candidates use the same minimum and event-slot rules as the spirit editor; no event entry is offered.
+export function skillRoomChoices(row, gameId) {
+  if (!row || !Array.isArray(row.specialAbilities) || !skillSummary(row, gameId).editable) return [];
+  const choices = row.specialAbilities.flatMap((entry, index) => isFlagGated(entry) ? [] : [{
+    key: `skill-${index}`, kind: "skill", index, entry,
+  }]);
+  if (isSharedRoom(row) && hasSpiritEditing(row)) {
+    row.spirits.forEach((entry, index) => {
+      if (spiritRemoveBlock(row, row.spirits, index) === null) {
+        choices.push({ key: `spirit-${index}`, kind: "spirit", index, entry });
+      }
+    });
+  }
+  return choices;
+}
+
+// Plan both lists before committing either one. Failed plans return the original arrays, so a forbidden fifth ability,
+// invalid level or locked removal cannot silently discard the selected spirit command or learning milestone.
+// When a real free pair exists, an obsolete removal selection is ignored and every existing pair is kept.
+export function planSkillAdd(row, gameId, { id, level, freePair = null } = {}) {
+  const skills = Array.isArray(row?.specialAbilities) ? row.specialAbilities : [];
+  const spirits = Array.isArray(row?.spirits) ? row.spirits : [];
+  const refused = (block) => ({ block, skills, spirits, removed: null });
+  if (!row || !Array.isArray(row.specialAbilities) || !skillSummary(row, gameId, skills).editable) return refused("read-only");
+  if (!Number.isInteger(id) || !skillCatalog(row).some((choice) => choice.id === id)) return refused("no-choice");
+  if (!isValidLevel(level)) return refused("level");
+  const summary = skillSummary(row, gameId, skills);
+  let nextSkills = skills;
+  let nextSpirits = spirits;
+  let removed = null;
+  if (summary.free <= 0) {
+    if (freePair === null) return refused("missing-removal");
+    if (!freePair || !Number.isInteger(freePair.index) || !["skill", "spirit"].includes(freePair.kind)) return refused("invalid-removal");
+    const { kind, index } = freePair;
+    if (kind === "skill") {
+      if (!skills[index]) return refused("invalid-removal");
+      if (isFlagGated(skills[index])) return refused("event-gated");
+      nextSkills = removeSkill(skills, index);
+    } else {
+      if (!isSharedRoom(row) || !hasSpiritEditing(row) || !spirits[index]) return refused("invalid-removal");
+      const block = spiritRemoveBlock(row, spirits, index);
+      if (block !== null) return refused(block);
+      nextSpirits = removeSpirit(row, spirits, index);
+    }
+    removed = skillRoomChoices(row, gameId).find((choice) => choice.kind === kind && choice.index === index) ?? null;
+    if (!removed) return refused("invalid-removal");
+  }
+  const proposed = { ...row, spirits: nextSpirits, specialAbilities: nextSkills };
+  const block = addBlock(proposed, gameId, id, level, nextSkills);
+  if (block !== null) return refused(block);
+  const added = addSkill(row, gameId, id, level, nextSkills);
+  if (countConsumers(gameId, added) > summary.limit) return refused("consumers");
+  return { block: null, skills: added, spirits: nextSpirits, removed };
 }
 
 // Replacing a learning entry needs no free pair, but its new id must still belong to this row's catalog and leave no
