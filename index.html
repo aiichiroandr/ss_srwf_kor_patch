@@ -15,10 +15,10 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 디스크 이미지를 기기 안에서 검증하고, 한글화 또는 게임 데이터 편집 후 BIN/CUE로 저장합니다."
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20261011-public8">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261011-public8">
-    <script type="module" src="assets/app.mjs?v=20261011-public8"></script>
-    <script type="module" src="assets/user-guide.mjs?v=20261011-public8"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20261011-public9">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261011-public9">
+    <script type="module" src="assets/app.mjs?v=20261011-public9"></script>
+    <script type="module" src="assets/user-guide.mjs?v=20261011-public9"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -411,15 +411,18 @@
 
             <section class="editor-reward-panel editor-effect-panel" id="rewardEditorPanel" role="tabpanel" aria-labelledby="rewardTabButton" hidden>
               <div class="reward-toolbar">
-                <label for="rewardSelector">강화파츠 격추 보상</label>
-                <select id="rewardSelector" aria-label="격추 보상 표 선택"></select>
-                <div class="reward-pager" id="rewardPager" hidden><button type="button" id="rewardPrev" aria-label="이전 파츠">‹</button><span id="rewardPageNumber"></span><button type="button" id="rewardNext" aria-label="다음 파츠">›</button></div>
+                <label for="rewardSelector">수정할 격추 보상</label>
+                <input id="rewardSearch" type="search" aria-label="기체·파츠 검색" placeholder="기체·파츠 검색" autocomplete="off">
+                <select id="rewardSelector" aria-label="수정할 격추 보상"></select>
+                <div class="reward-pager" id="rewardPager" hidden><button type="button" id="rewardPrev" aria-label="이전 획득 후보">‹</button><span id="rewardPageNumber"></span><button type="button" id="rewardNext" aria-label="다음 획득 후보">›</button></div>
                 <button class="record-tool" id="rewardReset" type="button" title="이 BIN을 열었을 때의 값으로 되돌리기">처음 값</button>
-                <details class="reward-details"><summary>설명</summary><div class="reward-explanation"><p id="rewardScope"></p><p class="reward-timing">파츠는 기체가 맵에 생성될 때 추첨됩니다. 이미 생성된 기체는 세이브에 정해진 보상을 유지할 수 있습니다.</p></div></details>
+                <details class="reward-details"><summary>설명</summary><div class="reward-explanation"><p class="reward-timing">획득 후보 중 하나를 기체가 맵에 생성될 때 추첨합니다. 나머지 확률은 보상 없음입니다. 이미 생성된 기체는 세이브에 정해진 보상을 유지할 수 있습니다.</p></div></details>
               </div>
               <div class="reward-card">
                 <div id="rewardFields"></div>
                 <p id="rewardSummary" role="status"></p>
+                <p id="rewardScope"></p>
+                <div class="reward-usage-row"><select id="rewardUsageSelector" aria-label="이 보상을 쓰는 기체"></select><button type="button" id="rewardUsageOpen" aria-label="선택한 기체 배치에서 보기"><span class="reward-usage-long">배치에서 보기</span><span class="reward-usage-short" aria-hidden="true">보기</span></button></div>
               </div>
             </section>
 
@@ -437,12 +440,14 @@
               <div class="scenario-toolbar">
                 <select id="scenarioSelector" aria-label="시나리오 선택"></select>
                 <div class="scenario-mode-row" role="group" aria-label="맵 작업 선택">
-                  <button type="button" id="scenarioDeploymentTool" aria-pressed="true">기체 배치</button><button type="button" id="scenarioEventTool" aria-pressed="false">이벤트</button><button type="button" id="scenarioObjectiveTool" aria-pressed="false">승리·패배</button><button type="button" id="scenarioTileTool" aria-pressed="false">타일</button>
+                  <button type="button" id="scenarioDeploymentTool" aria-pressed="true">초기·증원</button><button type="button" id="scenarioEventTool" aria-pressed="false">이벤트</button><button type="button" id="scenarioObjectiveTool" aria-pressed="false">승리·패배</button><button type="button" id="scenarioTileTool" aria-pressed="false">타일</button>
                 </div>
                 <div class="scenario-context-row">
                   <select id="scenarioEventSelector" aria-label="편집 대상 선택" hidden></select>
+                  <select id="scenarioFactionSelector" aria-label="배치의 초기 진영" hidden><option value="all">전체 진영</option><option value="player">아군</option><option value="enemy">적군</option><option value="other">기타 진영</option><option value="unknown">미확인</option></select>
+                  <button type="button" id="scenarioRelatedDeploymentButton" hidden>배치 보기</button>
                   <div id="scenarioViewPager" class="scenario-view-pager" hidden><button type="button" id="scenarioMapPage" aria-pressed="true">지도</button><button type="button" id="scenarioFieldsPage" aria-pressed="false">편집값</button></div>
-                  <details class="reward-details"><summary>도움말</summary><div class="reward-explanation"><p id="scenarioSelectionDescription"></p><p><strong>기체 배치</strong> 기체를 고르고 지도에서 목적지를 누른 뒤 좌표가 적힌 이동 버튼을 누릅니다. 좌표를 직접 입력해도 바뀝니다. 점은 배치 항목이며 진영 색이 아닙니다.</p><p><strong>이벤트</strong> 확인된 턴 검사만 편집합니다. 후속 등장에 연결된 검사도 포함하며, 다른 플래그·대사·분기 조건은 유지됩니다. 턴만 맞춘다고 반드시 등장하는 것은 아닙니다.</p><p><strong>승리·패배</strong> 지원 시나리오는 각각 최대 3개 조건을 조합합니다. F의 위치 조건은 현재 위치를 검사합니다. 있음·없음은 현재 상태이며 격추·도착 이력이 아닙니다.</p><p><strong>타일</strong> 지도에서 칸을 고르고 ‘타일 고르기’로 그림을 선택한 뒤 적용합니다. ‘누를 때마다 칠하기’는 이후 누른 칸마다 적용합니다. 맵 데이터 1·2는 별도 자료이며 전환 시점은 확인되지 않았습니다.</p><p><strong>복원·저장</strong> 복원은 이 BIN을 불러온 당시 값입니다. JSON은 편집값, BIN/CUE는 게임 적용용입니다. 작전 목적을 바꿨다면 해당 전투에 들어가기 전의 게임 저장부터 진행해주세요.</p></div></details>
+                  <details class="reward-details"><summary>도움말</summary><div class="reward-explanation"><p id="scenarioSelectionDescription"></p><p><strong>초기·증원</strong> 전체·초기·증원 중 원하는 배치를 고릅니다. 기체를 고르고 지도에서 목적지를 누른 뒤 이동 버튼을 누르거나 좌표를 직접 입력합니다. </p><p><strong>진영</strong> 색은 확인된 초기 진영입니다. 아군은 파랑, 적군은 빨강, 기타는 보라, 미확인은 흰색이며 선택한 기체는 노란 테두리입니다. 게임 중 진영 변경은 별도입니다. </p><p><strong>출격 편성</strong> 기체·파일럿은 게임 실행 때 정해집니다. 편성 좌표는 출격 목표이며, 막힌 칸이면 실제 위치가 달라질 수 있습니다. </p><p><strong>읽기 전용</strong> 위치와 보상을 수정할 수 없습니다.</p><p><strong>이벤트</strong> 확인된 턴 검사만 편집합니다. 후속 등장에 연결된 검사도 포함하며, 다른 플래그·대사·분기 조건은 유지됩니다. 턴만 맞춘다고 반드시 등장하는 것은 아닙니다.</p><p><strong>승리·패배</strong> 지원 시나리오는 각각 최대 3개 조건을 조합합니다. F의 위치 조건은 현재 위치를 검사합니다. 있음·없음은 현재 상태이며 격추·도착 이력이 아닙니다.</p><p><strong>타일</strong> 지도에서 칸을 고르고 ‘타일 고르기’로 그림을 선택한 뒤 적용합니다. ‘누를 때마다 칠하기’는 이후 누른 칸마다 적용합니다. 맵 데이터 1·2는 별도 자료이며 전환 시점은 확인되지 않았습니다.</p><p><strong>복원·저장</strong> 복원은 이 BIN을 불러온 당시 값입니다. JSON은 편집값, BIN/CUE는 게임 적용용입니다. 작전 목적을 바꿨다면 해당 전투에 들어가기 전의 게임 저장부터 진행해주세요.</p></div></details>
                   <details class="scenario-map-details"><summary>맵 자료</summary><div class="scenario-map-options"><label>공유 맵 직접 선택<select id="scenarioMapSelector" aria-label="공유 맵 직접 선택"></select></label><label>맵 데이터<select id="scenarioPlaneSelector" aria-label="맵 데이터 선택"><option value="0">맵 데이터 1</option><option value="1">맵 데이터 2</option></select></label><p>공유 맵을 직접 고르면 시나리오 연결을 해제하고 타일을 편집합니다. 데이터 2에서는 기체 배치를 편집할 수 없습니다.</p><button type="button" id="scenarioMapDetailsClose">닫기</button></div></details>
                 </div>
                 <p class="scenario-task-hint" id="scenarioTaskHint"></p>
@@ -450,7 +455,7 @@
               </div>
               <div class="scenario-workarea">
                 <div class="scenario-map-area">
-                  <div class="scenario-map-caption"><span id="scenarioMapSummary">지형 배치도</span><span id="scenarioMapLegend" title="점은 배치 항목이며 진영 색이 아닙니다">○ 배치 · ● 선택</span><select id="scenarioZoom" aria-label="맵 확대"><option value="1">전체</option><option value="2">2배</option><option value="4">4배</option></select></div>
+                  <div class="scenario-map-caption"><span id="scenarioMapSummary">지형 배치도</span><span id="scenarioMapLegend" title="확인된 초기 진영과 선택한 배치">초기 진영 · 선택</span><select id="scenarioZoom" aria-label="맵 확대"><option value="1">전체</option><option value="2">2배</option><option value="4">4배</option></select></div>
                   <div class="scenario-map-viewport" id="scenarioMapViewport"><canvas id="scenarioMapCanvas" tabindex="0" role="img" aria-label="지형 배치도. 방향키로 칸을 고릅니다."></canvas></div>
                 </div>
                 <div class="scenario-inspector">

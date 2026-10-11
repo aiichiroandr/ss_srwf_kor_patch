@@ -1,10 +1,10 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public8';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public8';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public8";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public8";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public8";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public8";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public8";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public9';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public9';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public9";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public9";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public9";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public9";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public9";
 import {
   canStep,
   filterRecords,
@@ -13,7 +13,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public8";
+} from "./editor-list.mjs?v=20261011-public9";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -24,7 +24,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public8";
+} from "./editor-grades.mjs?v=20261011-public9";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -58,27 +58,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public8";
+} from "./editor-skill-list.mjs?v=20261011-public9";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public8";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public8";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public8";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public8";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public8";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public8";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public8";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public8";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public8";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public8";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public8";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public8";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public8";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public8";
+} from "./editor-facts.mjs?v=20261011-public9";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public9";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public9";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public9";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public9";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public9";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public9";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public9";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public9";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public9";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public9";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public9";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public9";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public9";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -86,14 +86,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public8";
+} from "./font-revisions.mjs?v=20261011-public9";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public8";
+} from "./release-notes.mjs?v=20261011-public9";
 
-const STATIC_ASSET_REVISION = "20261011-public8";
+const STATIC_ASSET_REVISION = "20261011-public9";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -774,10 +774,15 @@ const editorPartName = id => {
 };
 const rewardEditor = createRewardEditor({
   rows: () => state.editorRewards,
+  model: () => state.editorScenario,
   partName: editorPartName,
   canEdit: () => Boolean(state.editorSessionToken) && !anyJobBusy(),
   onChange: (row) => updateEditorStatus("reward", row),
   open: () => selectEditorTab("reward", { render: false }),
+  openUse: (kind, recordIndex) => {
+    selectEditorTab("scenario", { render: false });
+    return scenarioEditor.focus(kind, recordIndex, ["rewardSelector"]);
+  },
 });
 const terrainEditor = createTerrainEditor({
   rows: () => state.editorTerrains,
@@ -4237,11 +4242,11 @@ function installEditorRows(view) {
   syncPilotExpansionBudget(state.editorPilots);
   state.editorWeapons = prepareEditorRows(view.weapons, "weapon");
   state.editorTerrains = prepareEditorRows(view.terrains ?? [], "terrain");
-  terrainEditor.reset();
   state.editorRewards = prepareEditorRows(view.rewards ?? [], "reward");
   state.editorPartNames = view.partNames ?? [];
-  rewardEditor.reset();
   state.editorScenario = createScenarioModel(view);
+  terrainEditor.reset();
+  rewardEditor.reset();
   scenarioEditor.reset();
   state.editorPilotAliases = Array.isArray(view.pilotAliases) ? view.pilotAliases : [];
   state.showUnused = { unit: false, pilot: false, weapon: false };

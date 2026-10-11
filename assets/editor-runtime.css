@@ -1210,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261011-public8');
+  --frame: url('./runtime-panel-frame.svg?v=20261011-public9');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -4077,9 +4077,10 @@ body[data-view="editor"] .editor-region {
 /* Reward tables have two compact pairs at most; no empty record rail or artificial pages. */
 .editor-reward-panel { min-width: 0; min-height: 0; grid-area: panel; align-self: stretch; }
 .editor-reward-panel[hidden] { display: none; }
-.reward-toolbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 8px; color: #d5ebe7; background: #07192d; border: 1px solid #26778a; }
+.reward-toolbar { display: grid; grid-template-columns: auto minmax(120px, .55fr) minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 8px; color: #d5ebe7; background: #07192d; border: 1px solid #26778a; }
 .reward-toolbar label { font-weight: 700; font-size: var(--fs-label); white-space: nowrap; }
-.reward-toolbar select, .reward-pair select, .reward-pair input { width: 100%; min-width: 0; height: 40px; box-sizing: border-box; color: #effcf8; background: #061425; border: 1px solid #3c8193; border-radius: 2px; padding: 0 8px; font: inherit; }
+.reward-toolbar select, .reward-toolbar input, .reward-pair select, .reward-pair input, .reward-usage-row select { width: 100%; min-width: 0; height: 40px; box-sizing: border-box; color: #effcf8; background: #061425; border: 1px solid #3c8193; border-radius: 2px; padding: 0 8px; font: inherit; }
+.reward-toolbar input::placeholder { color: #b4c6d3; }
 .reward-card { padding: 12px; background: #07192d; border: 1px solid #26778a; border-top: 0; color: #d5ebe7; }
 #rewardFields { display: grid; gap: 8px; }
 .reward-pair { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 8px; }
@@ -4088,11 +4089,25 @@ body[data-view="editor"] .editor-region {
 .reward-pair [aria-invalid="true"] { border-color: #ff8d8d; }
 #rewardSummary { margin: 10px 0 4px; font-weight: 700; }
 #rewardScope, .reward-timing { margin: 4px 0 0; font-size: var(--fs-help); line-height: 1.45; overflow-wrap: anywhere; }
+.reward-usage-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 6px; }
+.reward-usage-row button { min-height: 40px; padding: 0 8px; border: 1px solid #3c8193; background: #061425; color: #effcf8; font: inherit; white-space: nowrap; }
+.reward-usage-row[hidden] { display: none; }
+.reward-usage-short { display: none; }
 @media (min-width: 900px) { #rewardFields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) {
-  .reward-toolbar { grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 4px 8px; }
-  .reward-toolbar label { grid-column: 1 / -1; }
+  .reward-toolbar { grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 8px; }
+  .reward-toolbar label { grid-column: 1 / -1; grid-row: 1; }
+  .reward-toolbar input { grid-column: 1; grid-row: 2; }
+  .reward-toolbar > .record-tool { grid-column: 2; grid-row: 2; }
+  .reward-toolbar > .reward-details { grid-column: 3; grid-row: 2; }
+  .reward-toolbar > select { grid-column: 1 / -1; grid-row: 3; }
+  .reward-toolbar > .reward-pager { grid-column: 1 / -1; grid-row: 4; justify-content: flex-end; }
   .reward-card { padding: 8px; }
+  .reward-usage-row { gap: 4px; }
+}
+@media (max-width: 400px) {
+  .reward-usage-long { display: none; }
+  .reward-usage-short { display: inline; }
 }
 
 .reward-toolbar { position: relative; }
@@ -4102,10 +4117,15 @@ body[data-view="editor"] .editor-region {
 .reward-pager span { font-size: 12px; }
 .reward-details summary { height: 40px; display: grid; align-items: center; box-sizing: border-box; padding: 0 7px; border: 1px solid #3c8193; font-size: 12px; cursor: pointer; white-space: nowrap; }
 .reward-explanation { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; width: min(400px, 90vw); max-height: var(--reward-help-max-height, max(80px, calc(100dvh - 220px))); box-sizing: border-box; padding: 10px; border: 1px solid #3c8193; background: #061425; overflow-y: auto; box-shadow: 0 4px 16px #0008; }
-.editor-reward-panel[data-compact="true"] .reward-toolbar { padding: 4px; gap: 4px; grid-template-columns: minmax(0, 1fr) auto auto auto; }
+.editor-reward-panel[data-compact="true"] .reward-toolbar { padding: 4px; gap: 4px; grid-template-columns: minmax(0, 1fr) auto auto; }
 .editor-reward-panel[data-compact="true"] .reward-toolbar > label { display: none; }
+.editor-reward-panel[data-compact="true"] .reward-toolbar input { grid-column: 1; grid-row: 1; }
+.editor-reward-panel[data-compact="true"] .reward-toolbar > .record-tool { grid-column: 2; grid-row: 1; }
+.editor-reward-panel[data-compact="true"] .reward-toolbar > .reward-details { grid-column: 3; grid-row: 1; }
+.editor-reward-panel[data-compact="true"] .reward-toolbar > select { grid-column: 1 / -1; grid-row: 2; }
+.editor-reward-panel[data-compact="true"] .reward-toolbar > .reward-pager { grid-column: 1 / -1; grid-row: 3; justify-content: flex-end; }
 .editor-reward-panel[data-compact="true"] .reward-card { padding: 4px; }
-.editor-reward-panel[data-compact="true"] .reward-pair label { font-size: 0; gap: 0; }
+.editor-reward-panel[data-compact="true"] .reward-pair label { font-size: 11px; gap: 2px; }
 .editor-reward-panel[data-compact="true"] .reward-pair input, .editor-reward-panel[data-compact="true"] .reward-pair select { font-size: var(--fs-primary); }
 .editor-reward-panel[data-compact="true"] #rewardSummary { margin: 4px 0 0; font-size: 12px; }
 /* A short reward view reserves a single footer row before deciding whether a second pair fits. */
@@ -4188,6 +4208,10 @@ body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidd
 .scenario-mode-row button { min-width: 0; }
 .scenario-context-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; min-width: 0; }
 #scenarioEventSelector { flex: 1 1 0; width: 0; }
+#scenarioFactionSelector { flex: 0 0 90px; width: 90px; min-width: 0; }
+#scenarioFactionSelector[hidden] { display: none; }
+#scenarioRelatedDeploymentButton { flex: 0 0 auto; white-space: nowrap; padding-inline: 7px; }
+#scenarioRelatedDeploymentButton[hidden] { display: none; }
 .scenario-context-row > details, .scenario-context-row > .scenario-view-pager { flex: 0 0 auto; }
 .scenario-context-row > details > summary { height: 38px; min-height: 38px; display: grid; align-items: center; box-sizing: border-box; padding: 0 7px; border: 1px solid #3c8193; font-size: 12px; cursor: pointer; white-space: nowrap; }
 .scenario-task-hint, .scenario-cell-context { margin: 0; font-size: 12px; line-height: 18px; white-space: nowrap; }

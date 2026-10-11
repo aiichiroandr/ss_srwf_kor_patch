@@ -1,8 +1,8 @@
 // TSR root 34, subtables 3 and 4: two combat factors and HP/EN recovery per map terrain.
 // Combat stores the remaining multiplier (100 = unchanged); the editor shows the reduction.
 // EN's high bit is a separate runtime control. It is never made mutable by this editor.
-import { Sha256 } from "./sha256.mjs?v=20261011-public8";
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public8";
+import { Sha256 } from "./sha256.mjs?v=20261011-public9";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261011-public9";
 
 export const TERRAIN_FIELDS = Object.freeze(["avoidanceBonus", "defenseBonus", "hpRecovery", "enRecovery"]);
 export const TERRAIN_LABELS = Object.freeze({ avoidanceBonus: "회피 보정", defenseBonus: "방어 보정", hpRecovery: "HP 회복", enRecovery: "EN 회복" });

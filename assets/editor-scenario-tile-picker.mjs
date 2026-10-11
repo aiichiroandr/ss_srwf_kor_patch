@@ -1,4 +1,4 @@
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public8';
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public9';
 
 const TILE_COUNT = 1024;
 const option = (document, value, text) => {

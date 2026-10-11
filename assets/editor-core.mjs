@@ -1,28 +1,29 @@
-import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261011-public8';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public8';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public8';
-import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261011-public8";
-import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261011-public8";
-import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261011-public8";
-import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261011-public8";
-import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261011-public8";
-import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261011-public8";
-import { Sha256 } from "./sha256.mjs?v=20261011-public8";
-import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261011-public8";
-import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261011-public8";
-import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261011-public8";
-import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261011-public8";
-import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261011-public8";
-import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261011-public8";
-import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261011-public8";
-import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261011-public8";
-import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261011-public8";
-import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261011-public8";
-import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261011-public8";
-import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261011-public8";
-import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261011-public8";
-import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261011-public8";
-import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261011-public8";
+import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261011-public9';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public9';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public9';
+import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261011-public9";
+import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261011-public9";
+import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261011-public9";
+import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261011-public9";
+import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261011-public9";
+import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261011-public9";
+import { Sha256 } from "./sha256.mjs?v=20261011-public9";
+import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261011-public9";
+import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261011-public9";
+import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261011-public9";
+import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261011-public9";
+import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261011-public9";
+import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261011-public9";
+import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261011-public9";
+import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261011-public9";
+import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261011-public9";
+import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261011-public9";
+import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261011-public9";
+import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261011-public9";
+import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261011-public9";
+import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261011-public9";
+import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261011-public9";
+import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261011-public9";
 
 const SECTOR_SIZE = 2352;
 const SECTOR_USER_OFFSET = 16;
@@ -2753,7 +2754,7 @@ async function createProfile(trust, session, options = {}) {
   rawMasks.push([file.recordLba * SECTOR_SIZE + MODE1_EDC_OFFSET, SECTOR_SIZE - MODE1_EDC_OFFSET, 255]);
   rawMasks.sort((a, b) => a[0] - b[0]);
   const scenario = session.scenario;
-  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261011-public8') : null;
+  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261011-public9') : null;
   const completeRawMasks = scenario ? scenarioModule.mergeFullByteMasks([...rawMasks,
     ...scenarioModule.scenarioRawMasks(scenario.files, scenario.inspected)]) : rawMasks;
   const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId);
@@ -3048,8 +3049,15 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
     ? descriptor.gameId === "srwf-final" ? FINAL_STOCK_SCENARIO_NAME_MAP : F_STOCK_SCENARIO_NAME_MAP
     : descriptor.gameId === "srwf-final" ? FINAL_NAME_MAP : new Map([...F_NAME_SUPPLEMENT, ...F_NAME_MAP]);
   const scenarioTitles = scenario ? readScenarioTitleTable(decoded, root[22], descriptor.gameId, decodeEditorName, scenarioNameMap) : [];
+  // The supplemental grammar is separately verified for latest Korean F/Final
+  // and canonical stock F. Final stock retains its original writable reader
+  // until its own executable/operand replay is verified.
+  const displayDeployments = scenario ? baseIdentity.kind === "stock" && descriptor.gameId === "srwf-final"
+    ? scenario.inspected.deployments
+    : supplementScenarioDisplay(scenario.inspected.archive,
+      scenario.inspected.maps, scenario.tables, scenario.inspected.deployments) : null;
   const scenarioRows = scenario ? bindScenarioChapters(descriptor.gameId,
-    bindVerifiedScenarioTitles(descriptor.gameId, scenario.inspected.deployments.scenarios,
+    bindVerifiedScenarioTitles(descriptor.gameId, displayDeployments.scenarios,
       scenario.inspected.scope, scenarioTitles), scenario.inspected.scope, scenarioTitles) : [];
   return Object.freeze({
     session,
@@ -3100,7 +3108,11 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
             scenario.inspected.scope.scenario.bodies[row.physicalIndex].immutableDecodedSha256,row.scenarioSlots,row.recordIndex,
           ]))).hex()}`,
         }))),
-        deployments: Object.freeze(scenario.inspected.deployments.rows.map(row => Object.freeze({ ...row,
+        deployments: Object.freeze(displayDeployments.rows.map(row => Object.freeze({ ...row,
+          placementKind: row.placementKind ?? 'fixed-unit',
+          initialFactionCode: Number.isInteger(row.groupSelector) && (row.groupSelector & 3) < 3 ? row.groupSelector & 3 : null,
+          faction: Number.isInteger(row.groupSelector) ? ['player','enemy','other','unknown'][row.groupSelector & 3] : 'unknown',
+          factionSource: Number.isInteger(row.groupSelector) ? 'ca02-group-selector' : null,
           identity: `deployment:1:${new Sha256().update(new TextEncoder().encode(JSON.stringify([
             scenario.inspected.scope.scenario.bodies[row.physicalIndex].immutableDecodedSha256,
             row.scenarioSlots, row.recordIndex,
@@ -3110,8 +3122,8 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
               scenarioProfile.legacyDeploymentBodies[row.physicalIndex],row.scenarioSlots,row.recordIndex,
             ]))).hex()}`,
           ]) : Object.freeze([]),
-          name: units.find(unit => unit.recordIndex === row.unitId)?.name || `기체 #${row.unitId}`,
-          pilotName: pilots.find(pilot => pilot.recordIndex === row.pilotId)?.name || `파일럿 #${row.pilotId}`,
+          name: row.name || units.find(unit => unit.recordIndex === row.unitId)?.name || `기체 #${row.unitId}`,
+          pilotName: row.pilotName || pilots.find(pilot => pilot.recordIndex === row.pilotId)?.name || `파일럿 #${row.pilotId}`,
         }))),
         maps: Object.freeze(scenario.inspected.maps.members.map(member => Object.freeze({ mapIndex: member.mapIndex,
           mapSlots: member.slots, bankIndex: member.bankIndex,
@@ -3137,7 +3149,7 @@ function scenarioFileIdentity(files) {
 }
 
 async function inspectDiscScenario(trust, blob, actualHash, gameId, files, units, pilots, signal) {
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public8');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public9');
   const identity = scenarioFileIdentity(files), target = ownEntry(trust.targets, actualHash);
   let scenarioLayout;
   if (target) scenarioLayout = target.kind === 'stock' ? 'stock' : 'latest';
@@ -3626,7 +3638,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   if (session.scenario && (deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || mapEdits.length)) {
     const current = session.scenario, gameId = session.descriptor.gameId;
     const [{ repackScenarioDeployments }, { repackMapTiles }] = await Promise.all([
-      import('./editor-deployments.mjs?v=20261011-public8'), import('./editor-map-archive.mjs?v=20261011-public8'),
+      import('./editor-deployments.mjs?v=20261011-public9'), import('./editor-map-archive.mjs?v=20261011-public9'),
     ]);
     [scenarioChange, mapChange] = await Promise.all([
       deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length ? repackScenarioDeployments(current.scenarioBytes, gameId, current.inspected.maps, current.tables,
@@ -3671,7 +3683,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
     outputBlob = result.outputBlob; changedSectors.push(...result.changedSectors);
   }
   bytesChanged += new Set(changedSectors).size * SECTOR_SIZE;
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public8');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261011-public9');
   const checked = inspectScenarioScopes({ gameId: session.descriptor.gameId,
     scenarioBytes: scenarioChange?.bytes ?? current.scenarioBytes, mapBytes: mapChange?.bytes ?? current.mapBytes,
     bankBytes: current.bankBytes, tables: current.tables, sectorMode: current.inspected.scope.scenario.sectorMode,

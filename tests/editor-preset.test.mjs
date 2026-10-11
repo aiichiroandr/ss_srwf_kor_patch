@@ -28,6 +28,49 @@ import { PRESET_ERROR_COPY, SKIP_REASON_COPY, formatFieldValue } from "../assets
 
 const GAME = "srwf-final";
 
+test('read-only scenario display rows cannot become saved edits or change-list entries while writable edits remain',()=>{
+  const cases=[
+    ['deployment','deployments','x',2,5],
+    ['event','events','turn',2,3],
+    ['objective','objectives','deadline',0,4],
+    ['reinforcement','reinforcements','x',2,5],
+    ['map','mapCells','tileId',1,2],
+  ];
+  const rows={};
+  for(const[kind,,field,from,to]of cases){
+    const indices=kind==='map'?['2:0:2:3','2:0:3:3']:['0:100','0:200'];
+    rows[kind]=indices.map((recordIndex,i)=>({recordIndex,identity:`${kind}:1:${String(i).repeat(64)}`,name:i?'수정 가능':'표시 전용',
+      editable:i===1,[field]:to,original:Object.freeze({[field]:from})}));
+    assert.deepEqual(diffEditorRows(kind,rows[kind]).map(change=>change.recordIndex),[indices[1]]);
+  }
+  const before=structuredClone(rows);
+  const saved=JSON.parse(serializePreset(buildPreset({gameId:GAME},rows)));
+  for(const[kind,key,field,from,to]of cases){
+    assert.deepEqual(saved[key],[{recordIndex:rows[kind][1].recordIndex,identity:rows[kind][1].identity,name:'수정 가능',fields:{[field]:{from,to}}}]);
+  }
+  assert.equal(parsePreset(JSON.stringify(saved)).changeCount,5);
+  assert.deepEqual(rows,before);
+  const onlyDisplay=Object.fromEntries(cases.map(([kind])=>[kind,[rows[kind][0]]]));
+  const empty=buildPreset({gameId:GAME},onlyDisplay);
+  assert.equal(presetChangeCount(empty),0);
+  for(const[,key]of cases)assert.equal(Object.hasOwn(empty,key),false);
+});
+
+test('ordinary locked unit and pilot rows retain preset import skip behavior',()=>{
+  const edited=baseView();
+  find(edited,'unit',5).hp=3100;
+  find(edited,'pilot',1).atk=121;
+  assert.deepEqual(diffEditorRows('unit',edited.units).map(change=>change.recordIndex),[5]);
+  assert.deepEqual(diffEditorRows('pilot',edited.pilots).map(change=>change.recordIndex),[1]);
+  const parsed=parsePreset(serializePreset(buildPreset({gameId:GAME},tables(edited))));
+  const fresh=baseView(),plan=planPresetApplication(parsed,fresh);
+  assert.deepEqual(plan.counts,{apply:0,conflict:0,same:0,skip:2});
+  assert.deepEqual(plan.skipReasons,{'read-only':2});
+  assert.equal(applyPresetPlan(plan,fresh,'all').applied,0);
+  assert.equal(find(fresh,'unit',5).hp,3000);
+  assert.equal(find(fresh,'pilot',1).atk,120);
+});
+
 test('all six objective preset rules enforce the declared game ceiling and canonical wire values',()=>{
   const fields=['victoryRule1','victoryRule2','victoryRule3','defeatRule1','defeatRule2','defeatRule3'];
   const wire=(gameId,field,to)=>serializePreset({format:PRESET_FORMAT,version:1,gameId,units:[],pilots:[],weapons:[],objectives:[{
