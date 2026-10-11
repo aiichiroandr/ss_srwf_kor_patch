@@ -11,7 +11,7 @@
 // The isolated bytecode prototype lives in tests/helpers and is not imported
 // by the editor. No browser option, provenance receipt or source byte pattern
 // can enable this write capability.
-import { ownData } from './editor-own.mjs?v=20261011-public10';
+import { ownData } from './editor-own.mjs?v=20261011-public11';
 const MAGIC=Uint8Array.of(83,82,87,70,83,80,48,49),TRAILER=32;
 function fail(){const error=new Error('New reinforcement allocation capacity has not been proved.');error.code='EDITOR_REINFORCEMENT_INVALID';throw error;}
 

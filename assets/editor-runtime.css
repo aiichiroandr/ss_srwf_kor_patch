@@ -1210,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261011-public10');
+  --frame: url('./runtime-panel-frame.svg?v=20261011-public11');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -4213,6 +4213,7 @@ body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidd
 #scenarioRelatedDeploymentButton { flex: 0 0 auto; white-space: nowrap; padding-inline: 7px; }
 #scenarioRelatedDeploymentButton[hidden] { display: none; }
 .scenario-context-row > details, .scenario-context-row > .scenario-view-pager { flex: 0 0 auto; }
+.scenario-map-details[hidden] { display: none; }
 .scenario-context-row > details > summary { height: 38px; min-height: 38px; display: grid; align-items: center; box-sizing: border-box; padding: 0 7px; border: 1px solid #3c8193; font-size: 12px; cursor: pointer; white-space: nowrap; }
 .scenario-task-hint, .scenario-cell-context { margin: 0; font-size: 12px; line-height: 18px; white-space: nowrap; }
 .scenario-task-hint:empty { display: none; }

@@ -1,14 +1,14 @@
-import { packMeasuredGroups } from './editor-layout.mjs?v=20261011-public10';
-import { createScenarioTilePicker } from './editor-scenario-tile-picker.mjs?v=20261011-public10';
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public10';
-import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261011-public10';
-import { rewardOutcomeLabel } from './editor-rewards.mjs?v=20261011-public10';
-import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption, sortScenarioSelections } from './editor-scenario-labels.mjs?v=20261011-public10';
-import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public10';
-import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public10';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261011-public10';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public10';
-import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261011-public10';
+import { packMeasuredGroups } from './editor-layout.mjs?v=20261011-public11';
+import { createScenarioTilePicker } from './editor-scenario-tile-picker.mjs?v=20261011-public11';
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261011-public11';
+import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261011-public11';
+import { rewardOutcomeLabel } from './editor-rewards.mjs?v=20261011-public11';
+import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption, sortScenarioSelections } from './editor-scenario-labels.mjs?v=20261011-public11';
+import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261011-public11';
+import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261011-public11';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261011-public11';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261011-public11';
+import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261011-public11';
 const eventRuleControls=[1,2,3].map(n=>({field:`eventRule${n}`,prefix:`scenarioEventRule${n}`}));
 const eventCriteriaIds=['scenarioEventPhaseGroup','scenarioEventPhase','scenarioEventPhaseHint','scenarioEventCriteriaChoice','scenarioEventJoin','scenarioEventAdd','scenarioEventCriteriaReset',...eventRuleControls.flatMap(({prefix})=>['Group','Comparison','Value','Remove'].map(suffix=>prefix+suffix))];
 const ruleControls = ['Victory','Defeat'].flatMap(outcome => [1,2,3].map(n => ({field:`${outcome.toLowerCase()}Rule${n}`,prefix:`scenario${outcome}Rule${n}`})));
@@ -38,9 +38,10 @@ export function createScenarioEditor(host) {
   let explanationPages = [], explanationPage = 0, explanationSource;
   let eventIndex=null,conditionIndex=null,faction='all';
   const factionNames={player:'아군',enemy:'적군',other:'기타 진영',unknown:'미확인'};
+  const filterNames={...factionNames,sortie:'출격 위치'};
   const factionColors={player:'#66c7ff',enemy:'#ff8e8e',other:'#c6baff',unknown:'#e6f9ff'};
   const initialFaction=item=>item.factionSource==='ca02-group-selector'&&Object.hasOwn(factionNames,item.faction)?item.faction:'unknown';
-  const inFaction=item=>faction==='all'||initialFaction(item)===faction;
+  const inFaction=item=>faction==='all'||(faction==='sortie'?['roster-reference','sortie-position'].includes(item.placementKind):initialFaction(item)===faction);
   const texture = document.createElement('canvas');
   const model = () => host.model(), map = () => model().mapFor(mapIndex), plane = () => map()?.planes[planeIndex];
   const scene=()=>model().scenarios.find(item=>item.physicalIndex===scenarioIndex);
@@ -160,16 +161,18 @@ export function createScenarioEditor(host) {
     ui.scenarioCellInfo.textContent = `선택 칸 (${x}, ${y}) · ${terrainName(terrain)} · #${tileId}`;
     ui.scenarioCellInfo.title = `X는 왼쪽부터, Y는 위쪽부터 0으로 셉니다. 선택 칸 (${x}, ${y}), ${terrainName(terrain)}, 타일 #${tileId}.`;
     const shown=shownPlacements();
-    ui.scenarioMapLegend.hidden = planeIndex!==0||!shown.length;
-    ui.scenarioMapLegend.textContent=mode==='events'?`● 연계 배치 ${shown.length}기`:faction==='all'?`● 배치 ${shown.length}기`:`● ${factionNames[faction]} ${shown.length}기`;
-    ui.scenarioMapLegend.title=`아군 파랑 · 적군 빨강 · 기타 진영 보라 · 미확인 흰색 · 선택 노란 테두리. 기체 생성 시 초기 진영이며 게임 중 변경은 별도입니다.${mode==='events'?' 선택한 사건에 연결된 배치입니다. 점을 누르거나 ‘배치 보기’로 편집합니다.':''}`;
+    const listed=mode==='placement'?placements():relatedPlacements();
+    const count=shown.length===listed.length?`${shown.length}기`:`${shown.length}/${listed.length}기`;
+    ui.scenarioMapLegend.hidden = planeIndex!==0||!listed.length;
+    ui.scenarioMapLegend.textContent=mode==='events'?`● 연계 배치 ${count}`:faction==='all'?`● 배치 ${count}`:`● ${filterNames[faction]} ${count}`;
+    ui.scenarioMapLegend.title=`현재 지도에 ${shown.length}기 / 선택 목록 ${listed.length}기 표시. 맵 연결·좌표가 확인되지 않은 항목과 다른 맵의 배치는 표시하지 않습니다. 아군 파랑 · 적군 빨강 · 기타 진영 보라 · 미확인 흰색 · 선택 노란 테두리. 기체 생성 시 초기 진영이며 게임 중 변경은 별도입니다.${mode==='events'?' 선택한 사건에 연결된 배치입니다. 점을 누르거나 ‘배치 보기’로 편집합니다.':''}`;
     const bank=model().bankFor(map()),orientation=current.orientations?.[y*current.width+x]??0;
     ui.scenarioCurrentTilePreview.hidden=!paintTilePreview(ui.scenarioCurrentTilePreview,bank&&model().graphics.tile(bank,tileId,orientation));
     ui.scenarioCurrentTileName.textContent=terrainName(terrain);ui.scenarioCurrentTileName.title=`${terrainName(terrain)} · #${tileId}`;
     ui.scenarioMove.textContent=`(${x},${y})로 이동`;
     ui.scenarioMove.title=`선택한 기체를 (${x}, ${y}) 칸으로 이동`;
     ui.scenarioApplyTile.title=`(${x}, ${y}) 칸을 고른 타일로 교체`;
-    const shared = scenarioSharedCaption(scene());
+    const shared = mode==='tile'?'':scenarioSharedCaption(scene());
     ui.scenarioMapSummary.textContent = `${model().bankFor(map())?.graphics ? '맵' : '지형 배치도'}${planeIndex===1?' · 데이터 2':''} · ${current.width}×${current.height}${shared ? ` · ${shared}` : map().mapSlots.length > 1 ? ` · 공유 맵 ${map().mapSlots.length}` : ''}`;
     ui.scenarioMapSummary.title = `${scenarioSelectionDescription(scene())} 맵 선택 번호: ${map().mapSlots.map(id => `#${id}`).join(' · ')}.`;
     ui.scenarioTileReset.disabled = !host.canEdit() || !modified(cell(), ['tileId']);
@@ -393,7 +396,7 @@ export function createScenarioEditor(host) {
     ui.scenarioDeploymentFields.dataset.objectiveOnly=String(Boolean(eventIndex?.startsWith('objective:')));
     if (!rows.some(item => item.recordIndex === selected)) selected = rows.find(item => item.editable&&onMap(item))?.recordIndex ?? rows.find(onMap)?.recordIndex ?? rows.find(item=>item.editable)?.recordIndex ?? rows[0]?.recordIndex ?? null;
     ui.scenarioDeploymentSelector.replaceChildren(...rows.map((item, i) => {const choice=option(item.recordIndex,placementLabel(item,i));choice.title=placementDescription(item);return choice;}));
-    if (!rows.length) ui.scenarioDeploymentSelector.append(option('', unreadPlacements()?'배치 데이터 읽기 미지원':faction==='all'?'이 선택에서 읽은 배치 0기':`${factionNames[faction]} · 읽은 배치 0기`));
+    if (!rows.length) ui.scenarioDeploymentSelector.append(option('', unreadPlacements()?'배치 데이터 읽기 미지원':faction==='all'?'이 선택에서 읽은 배치 0기':`${filterNames[faction]} · 읽은 배치 0기`));
     ui.scenarioDeploymentSelector.value = selected ?? '';
     const current = row();
     for (const [field, input] of [['x', ui.scenarioX], ['y', ui.scenarioY]]) {
@@ -410,8 +413,9 @@ export function createScenarioEditor(host) {
     ui.scenarioReward.title=ui.scenarioReward.selectedOptions?.[0]?.title??'';
     ui.scenarioPilotName.textContent = current ? current.pilotName : '';
     ui.scenarioPilotName.title = current?.pilotName ?? '';
-    const readOnlyHint=current?.readOnlyReason&&(current.placementKind==='roster-reference'?'출격 편성 참조 · 읽기 전용':current.placementKind==='sortie-position'?'출격 목표 위치 · 읽기 전용':current.placementStage==='scenario-script'?'등장 시점·맵 연결 미확인 · 읽기 전용':current.readOnlyReason);
+    const readOnlyHint=current?.readOnlyReason&&(!onMap(current)?model().mapFor(current.mapIndex)?'다른 맵의 배치 · 목록에서 위치 확인':'맵 연결 미확인 · 지도 표시 불가':current.placementKind==='roster-reference'?'출격 편성 참조 · 읽기 전용':current.placementKind==='sortie-position'?'출격 목표 위치 · 읽기 전용':current.placementStage==='scenario-script'?'등장 시점 미확인 · 읽기 전용':current.readOnlyReason);
     say(mode==='placement'?(readOnlyHint || (planeIndex !== 0 ? '기체 배치는 맵 데이터 1에서 편집합니다.' : !rows.length&&faction!=='all'?'선택 진영에서 읽은 배치 0기':incompletePlacements()?'일부 배치 읽기 미지원 · 도움말 확인':'')):mode==='tile'&&unreadPlacements()?'배치 읽기 미지원 · 도움말 확인':'',current?.readOnlyReason);
+    if(mode==='placement')ui.scenarioTaskHint.textContent=current&&!current.editable?['roster-reference','sortie-position'].includes(current.placementKind)?'출격 위치 확인 · 기체는 게임에서 결정':'배치 확인 · 위치 수정 불가':'기체 선택 → 지도에서 칸 선택 → 이동';
     const visible=fieldGroups();for(const group of [...ui.scenarioDeploymentFields.children,...ui.scenarioTileFields.children])group.hidden=!visible.includes(group);
     sync();
   }
@@ -475,6 +479,8 @@ export function createScenarioEditor(host) {
       ui[id].disabled=!host.canEdit()||!available;ui[id].setAttribute('aria-pressed',String(next===mode));
       ui[id].title=available?({placement:'읽은 초기·증원 기체의 위치와 격추 보상 편집',events:'확인된 턴 검사 편집',objective:'이 시나리오에서 지원하는 승리·패배 조건 편집',tile:'지도 한 칸의 그림과 지형 교체'}[next]):next==='placement'&&scene()?'배치 명령 읽기 미지원 · 기체가 없다는 뜻은 아닙니다':'이 시나리오에서 확인된 편집 대상이 없습니다';
     }
+    const details=ui.scenarioMapSelector.closest?.('details');
+    if(details){details.hidden=mode!=='tile';if(details.hidden)details.open=false;}
     ui.scenarioTaskHint.textContent=({placement:'기체 선택 → 지도에서 칸 선택 → 이동',events:'턴 검사 편집 · 다른 이벤트 조건 유지',objective:objective()?.criteriaEditable?'승리·패배 조건을 조합하세요':'기존 승패에 추가할 턴 제한을 정하세요',tile:'칸 선택 → 타일 고르기 → 교체'}[mode]);
     ui.scenarioDeploymentFields.hidden=tool!=='deployment';ui.scenarioTileFields.hidden=tool!=='tile';
   }
@@ -780,7 +786,7 @@ export function createScenarioEditor(host) {
   function chooseMode(next){
     if(next===mode||!modeEntries(next).length||!host.canEdit()||!validateAll())return;
     regionPicker=null;mode=next;eventIndex=conditionIndex=selected=null;fieldsPage=0;brush=false;ui.scenarioBrush.setAttribute('aria-pressed','false');
-    if(next==='placement'){planeIndex=0;if(model().mapFor(scene()?.mapIndex))mapIndex=scene().mapIndex;}
+    if(next!=='tile'){planeIndex=0;if(model().mapFor(scene()?.mapIndex))mapIndex=scene().mapIndex;}
     ui.scenarioPlaneSelector.value=String(planeIndex);renderEvents();renderMap();
     if(next==='events'||next==='objective')showPage('fields');else showPage('map');
   }
@@ -884,7 +890,7 @@ export function createScenarioEditor(host) {
   ui.scenarioRelatedDeploymentButton?.addEventListener('click',()=>openRelatedDeployment());
   ui.scenarioFactionSelector?.addEventListener('change',()=>{
     const wanted=ui.scenarioFactionSelector.value;
-    if(!host.canEdit()||wanted!=='all'&&!Object.hasOwn(factionNames,wanted)||!validateAll()){ui.scenarioFactionSelector.value=faction;return;}
+    if(!host.canEdit()||wanted!=='all'&&!Object.hasOwn(filterNames,wanted)||!validateAll()){ui.scenarioFactionSelector.value=faction;return;}
     faction=wanted;selected=null;renderEvents();renderMap();
   });
   function startRegionPick(control){
@@ -977,7 +983,7 @@ export function createScenarioEditor(host) {
   ui.scenarioDeploymentSelector.addEventListener('change', () => {
     if(!validateAll()){ui.scenarioDeploymentSelector.value=selected??'';return;}
     selected=ui.scenarioDeploymentSelector.value;const target=row();
-    if(target){if(positioned(target)){x=target.x;y=target.y;}if(model().mapFor(target.mapIndex)){mapIndex=target.mapIndex;ui.scenarioMapSelector.value=String(map().mapIndex);}}
+    if(target&&model().mapFor(target.mapIndex)){mapIndex=target.mapIndex;ui.scenarioMapSelector.value=String(map().mapIndex);if(positioned(target)){x=target.x;y=target.y;}}
     renderMap();
   });
   for (const input of [ui.scenarioX, ui.scenarioY, ui.scenarioReward]) { input.addEventListener('input', () => accept()); input.addEventListener('change', () => accept()); }
