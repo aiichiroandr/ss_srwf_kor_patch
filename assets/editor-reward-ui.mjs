@@ -1,5 +1,5 @@
-import { REWARD_FIELDS, REWARD_PART_MAX, rewardTotal, rewardValueAllowed, rewardOutcomeLabel, rewardReferences } from "./editor-rewards.mjs?v=20261011-public11";
-import { scenarioSelectionLabel } from "./editor-scenario-labels.mjs?v=20261011-public11";
+import { REWARD_FIELDS, REWARD_PART_MAX, rewardTotal, rewardValueAllowed, rewardOutcomeLabel, rewardReferences } from "./editor-rewards.mjs?v=20261011-public12";
+import { scenarioSelectionLabel } from "./editor-scenario-labels.mjs?v=20261011-public12";
 
 const node = (tag, text, className = "") => {
   const element = document.createElement(tag);
