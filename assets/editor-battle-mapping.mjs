@@ -150,6 +150,18 @@ const ACTOR_FA_WIDTH = new Map([[0x44, 6], [0x2c, 2], [0x2d, 2], [0xf6, 3],
   [0xf7, 3], [0xfa, 3], [0xba, 4], [0xbb, 2], [0xa7, 4], [0xf9, 2], [0xfc, 3],
   [0x10, 4], [0x16, 4], [0x17, 4], [0xd7, 2], [0xfb, 2], [0x46, 3],
   [0x45, 3], [0xc4, 7], [0xe6, 2], [0x06, 3]]);
+// Shared with the local authoring reader. Widths alone do not authorize an
+// operand edit: that module maintains a smaller native-proven field contract.
+export function battleActorInstructionBytes(opcode, subopcode) {
+  if (!Number.isInteger(opcode) || opcode < 0 || opcode > 255) return null;
+  if (opcode <= 0xbe) return 1;
+  if (opcode === 0xfa) {
+    if ([0x36,0x37,0x38,0x39,0x3a,0x3e,0xcf,0xee].includes(subopcode)) return 4;
+    if ([0x3b,0xef].includes(subopcode)) return 6;
+    return ACTOR_FA_WIDTH.get(subopcode) ?? null;
+  }
+  return ACTOR_WIDTH.get(opcode) ?? null;
+}
 const MAX_STEPS = 4096;
 
 function representativeState(mode, defenseId, deathType) {
