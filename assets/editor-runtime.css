@@ -1210,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261012-weapons2');
+  --frame: url('./runtime-panel-frame.svg?v=20261012-frames3');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -4560,3 +4560,5 @@ body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidd
 .scenario-objective-copy dd{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scenario-objective-note{margin:0;font-size:11px;line-height:1.4;white-space:nowrap}
 #scenarioDeadlineRule{min-width:0;font-size:12px;white-space:nowrap}
+
+.battle-preview-play { min-height:28px; padding:2px 8px; border:1px solid #486c73; border-radius:3px; background:#102b31; color:#d4f8f3; font:inherit; font-size:11px; white-space:nowrap; cursor:pointer; }

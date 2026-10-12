@@ -1,4 +1,4 @@
-import { NEXT_RELEASE_NOTES } from "./next-release-notes.mjs?v=20261012-weapons2";
+import { NEXT_RELEASE_NOTES } from "./next-release-notes.mjs?v=20261012-frames3";
 const image = (src, alt, width, height) => Object.freeze({ src, alt, width, height });
 
 const item = ({ id, title, description, evidenceType, asIs, toBe, asIsLabel, toBeLabel }) => Object.freeze({

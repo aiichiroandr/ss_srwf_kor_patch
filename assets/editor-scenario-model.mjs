@@ -1,10 +1,10 @@
-import { EVENT_CRITERIA_FIELDS } from './editor-scenario-event-criteria.mjs?v=20261012-weapons2';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-weapons2';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-weapons2';
+import { EVENT_CRITERIA_FIELDS } from './editor-scenario-event-criteria.mjs?v=20261012-frames3';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-frames3';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-frames3';
 // Sparse map rows share the ordinary diff/preset model without allocating a
 // mutable object for every cell of every map on a phone.
-import { createMapGraphics } from './editor-map-graphics.mjs?v=20261012-weapons2';
-import {objectiveContextFor as contextFor,snapshotRegionContexts} from './editor-scenario-region-context.mjs?v=20261012-weapons2';
+import { createMapGraphics } from './editor-map-graphics.mjs?v=20261012-frames3';
+import {objectiveContextFor as contextFor,snapshotRegionContexts} from './editor-scenario-region-context.mjs?v=20261012-frames3';
 export function createScenarioModel(view = {}) {
   const graphics = createMapGraphics();
   const gameId=view.gameId??null,units=view.units??[],pilots=view.pilots??[];

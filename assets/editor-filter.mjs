@@ -1,8 +1,8 @@
 // Conditions inspect the current editor rows. Bulk edits use the preset planner's writer-domain checks;
 // no second binary writer and no game data. Unit/pilot and weapon grade encodings remain distinct.
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds } from "./editor-fields.mjs?v=20261012-weapons2";
-import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261012-weapons2";
-import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261012-weapons2";
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds } from "./editor-fields.mjs?v=20261012-frames3";
+import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261012-frames3";
+import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261012-frames3";
 
 const TYPES = ["unit", "pilot", "weapon"];
 const TABLES = { unit: "units", pilot: "pilots", weapon: "weapons" };

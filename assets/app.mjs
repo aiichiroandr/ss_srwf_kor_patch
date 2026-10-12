@@ -1,12 +1,12 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-weapons2';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-weapons2';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261012-weapons2";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261012-weapons2";
-import { createBattlePreview } from "./editor-battle-preview.mjs?v=20261012-weapons2";
-import {createWeaponAuthoringUI} from './editor-weapon-authoring-ui.mjs?v=20261012-weapons2';
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261012-weapons2";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261012-weapons2";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261012-weapons2";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-frames3';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-frames3';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261012-frames3";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261012-frames3";
+import { createBattlePreview } from "./editor-battle-preview.mjs?v=20261012-frames3";
+import {createWeaponAuthoringUI} from './editor-weapon-authoring-ui.mjs?v=20261012-frames3';
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261012-frames3";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261012-frames3";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261012-frames3";
 import {
   canStep,
   filterRecords,
@@ -15,7 +15,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261012-weapons2";
+} from "./editor-list.mjs?v=20261012-frames3";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -26,7 +26,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261012-weapons2";
+} from "./editor-grades.mjs?v=20261012-frames3";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -60,27 +60,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261012-weapons2";
+} from "./editor-skill-list.mjs?v=20261012-frames3";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261012-weapons2";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261012-weapons2";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261012-weapons2";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261012-weapons2";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261012-weapons2";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261012-weapons2";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261012-weapons2";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261012-weapons2";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261012-weapons2";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261012-weapons2";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261012-weapons2";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261012-weapons2";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261012-weapons2";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261012-weapons2";
+} from "./editor-facts.mjs?v=20261012-frames3";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261012-frames3";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261012-frames3";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261012-frames3";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261012-frames3";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261012-frames3";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261012-frames3";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261012-frames3";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261012-frames3";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261012-frames3";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261012-frames3";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261012-frames3";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261012-frames3";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261012-frames3";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -88,14 +88,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261012-weapons2";
+} from "./font-revisions.mjs?v=20261012-frames3";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261012-weapons2";
+} from "./release-notes.mjs?v=20261012-frames3";
 
-const STATIC_ASSET_REVISION = "20261012-weapons2";
+const STATIC_ASSET_REVISION = "20261012-frames3";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -635,7 +635,7 @@ function clearBattlePreview() {
 
 function requestBattlePreview({ signal, ...request }) {
   return requestBattleJob(state.editorWeaponAuthoring.length?'WEAPON_AUTHORING_PREVIEW':'BATTLE_PREVIEW',
-    {...request,...(state.editorWeaponAuthoring.length?{weaponAuthoring:weaponAuthoringRequest()}:{}),signal});
+    {...request,playback:request.mode==='attack',...(state.editorWeaponAuthoring.length?{weaponAuthoring:weaponAuthoringRequest()}:{}),signal});
 }
 function requestBattleJob(type,{ signal, ...request }) {
   return new Promise((resolve, reject) => {
