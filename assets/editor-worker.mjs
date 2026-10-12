@@ -5,6 +5,7 @@ import {
   previewEditorBattle,
   catalogEditorBattleAssets,
   previewEditorBattleAsset,
+  viewEditorWeaponProject,inspectEditorWeaponProjectAnimation,previewEditorWeaponProject,
 } from "./editor-core.mjs?v=20261012-battle1";
 
 // The worker body takes its scope and the three core operations so that a test can drive it with a fake scope and fake
@@ -50,7 +51,7 @@ export function createEditorWorker(scope, api) {
     if (message.type === "PREVIEW") {
       void runPreview(message);
     }
-    if (["BATTLE_PREVIEW", "BATTLE_CATALOG", "BATTLE_ASSET_PREVIEW"].includes(message.type)) {
+    if (["BATTLE_PREVIEW", "BATTLE_CATALOG", "BATTLE_ASSET_PREVIEW","WEAPON_AUTHORING_PLAN","WEAPON_AUTHORING_INSPECT","WEAPON_AUTHORING_PREVIEW"].includes(message.type)) {
       void runBattlePreview(message);
     }
     if (message.type === "BATTLE_PREVIEW_CANCEL" && message.previewId === battlePreview?.previewId) {
@@ -71,6 +72,9 @@ export function createEditorWorker(scope, api) {
         throw makeError("EDITOR_SESSION_MISSING", "The authenticated editor session is no longer available.");
       }
       const operation = message.type === "BATTLE_CATALOG" ? api.catalogEditorBattleAssets
+        : message.type==='WEAPON_AUTHORING_PLAN'?api.viewEditorWeaponProject
+        : message.type==='WEAPON_AUTHORING_INSPECT'?api.inspectEditorWeaponProjectAnimation
+        : message.type==='WEAPON_AUTHORING_PREVIEW'?api.previewEditorWeaponProject
         : message.type === "BATTLE_ASSET_PREVIEW" ? api.previewEditorBattleAsset : api.previewEditorBattle;
       const result = await operation(session, message.request, { signal: controller.signal });
       if (!live()) return;
@@ -258,5 +262,6 @@ function makeError(code, message) {
 
 if (typeof self !== "undefined" && typeof self.addEventListener === "function") {
   createEditorWorker(self, { exportEditedImage, inspectPatchedImage, previewEditorRecord,
-    previewEditorBattle, catalogEditorBattleAssets, previewEditorBattleAsset });
+    previewEditorBattle, catalogEditorBattleAssets, previewEditorBattleAsset,
+    viewEditorWeaponProject,inspectEditorWeaponProjectAnimation,previewEditorWeaponProject });
 }

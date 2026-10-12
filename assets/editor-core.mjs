@@ -25,6 +25,7 @@ import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261012-
 import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261012-battle1";
 import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261012-battle1";
 import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261012-battle1";
+import { normalizeWeaponProjectTsr,cloneWeaponIntoVerifiedSlot,cloneWeaponNameReference } from './editor-weapon-layout.mjs?v=20261012-battle1';
 
 const SECTOR_SIZE = 2352;
 const SECTOR_USER_OFFSET = 16;
@@ -457,7 +458,7 @@ async function readDirectoryRecords(blob, extent, depth, budget, signal) {
   return records;
 }
 
-export async function locateIsoFiles(blob, signal, requestedNames = ["TSR.BIN", "FACE.BIN", "C_ROBOT.BIN"]) {
+export async function locateIsoFiles(blob, signal, requestedNames = ["TSR.BIN", "FACE.BIN", "C_ROBOT.BIN"], {optionalNames=[]} = {}) {
   const pvdSector = await readMode1Sector(blob, 16, { signal });
   const pvd = pvdSector.subarray(SECTOR_USER_OFFSET, SECTOR_USER_OFFSET + SECTOR_USER_SIZE);
   if (pvd[0] !== 1
@@ -508,6 +509,7 @@ export async function locateIsoFiles(blob, signal, requestedNames = ["TSR.BIN", 
     const found = matches.get(name);
     if (found.length !== 1) {
       const missing = found.length === 0;
+      if(missing&&optionalNames.includes(name))continue;
       const isTsr = name === "TSR.BIN";
       fail(
         isTsr ? (missing ? "EDITOR_TSR_NOT_FOUND" : "EDITOR_TSR_AMBIGUOUS") : "EDITOR_MEDIA_NOT_FOUND",
@@ -2169,6 +2171,7 @@ async function readBattleFile(session, fileName, signal) {
   if (!BATTLE_FILE_NAMES.has(fileName)) fail('EDITOR_PREVIEW_INVALID', 'Unknown battle picture file.');
   const cache = battleCache(session);
   checkAbort(signal);
+  if(cache.originalSession&&fileName!=='D_ANIME.BIN')return readBattleFile(cache.originalSession,fileName,signal);
   if (cache.bytes.has(fileName)) return cache.bytes.get(fileName);
   let file = cache.files.get(fileName);
   if (!file) {
@@ -2214,11 +2217,22 @@ export async function inspectEditorWeaponAnimation(session, request, { signal } 
   const bytes=await readBattleFile(session,'D_ANIME.BIN',signal);
   const {inspectWeaponAnimation}=await import('./editor-weapon-authoring.mjs?v=20261012-battle1');
   const inspection=inspectWeaponAnimation(bytes,selector);
+  const entry=session.weaponProject?.entries.find(item=>item.weaponIndex===weaponIndex);
+  const originSelector=entry?.sourceSelector??selector;
+  const original=inspectWeaponAnimation(session.weaponProject?.canonicalBytes??bytes,originSelector);
+  const originals=new Map(original.instructions.map(item=>[item.recordOffset,item]));
+  inspection.instructions=inspection.instructions.map(item=>({...item,fields:item.fields.map(field=>({...field,
+    originalValue:originals.get(item.recordOffset)?.fields.find(old=>old.name===field.name)?.value??field.value,
+    editable:!['frameBank','frameIndex'].includes(field.name)}))}));
   checkAbort(signal);
   const sharedWeapons=cache.rows.weapons.filter(row=>row.owners?.length&&readU16BE(data,row.byteOffset+3)===selector)
     .map(row=>({recordIndex:row.recordIndex,name:row.name}));
-  return {...inspection,gameId:session.descriptor.gameId,weaponIndex,sharedWeapons,
-    editScope:'local-authoring-investigation',exportSupported:false};
+  const reserveFirst=session.descriptor.gameId==='srwf-final'?1331:1248,reserveLast=session.descriptor.gameId==='srwf-final'?1343:1278;
+  const freeWeaponIndices=cache.rows.weapons.filter(row=>row.recordIndex>=reserveFirst&&row.recordIndex<=reserveLast
+    &&row.recordKind==='unused-filler'&&row.nameStatus==='empty'&&row.ownership==='unowned').map(row=>row.recordIndex);
+  return {...inspection,gameId:session.descriptor.gameId,weaponIndex,sharedWeapons,originSelector,
+    sourceWeapon:entry?.sourceWeapon??weaponIndex,freeWeaponIndices,
+    editScope:'verified-motion-operands',exportSupported:true};
 }
 
 export async function previewEditorBattleAsset(session, request, { signal } = {}) {
@@ -3141,27 +3155,48 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
       registeredBases.add(baseHash);
     }
   }
-  const normalized = normalizePilotLayout(decoded, root[28].start, root[28].end, descriptor.gameId, pilots);
-  const canonicalRoot = normalized ? splitRootSegments(normalized) : root;
-  const canonicalDecoded = normalized ?? decoded;
+  let weaponProject=null,canonicalDisc=blob;
+  const animationFiles=await locateIsoFiles(blob,options.signal,['D_ANIME.BIN'],{optionalNames:['D_ANIME.BIN']});
+  const animationFile=animationFiles.d_anime;
+  if(animationFile?.byteLength>=4096){
+    const tailOffset=animationFile.byteLength-4096,sectorOffset=Math.floor(tailOffset/SECTOR_USER_SIZE)*SECTOR_USER_SIZE;
+    const tail=await readCdUserExtent(blob,animationFile.extentLba+sectorOffset/SECTOR_USER_SIZE,
+      animationFile.byteLength-sectorOffset,{signal:options.signal});
+    if(new TextDecoder().decode(tail.subarray(tailOffset-sectorOffset,tailOffset-sectorOffset+8))==='SRWFWPN1'){
+      const animationBytes=await readCdUserExtent(blob,animationFile.extentLba,animationFile.byteLength,{signal:options.signal});
+      const {readWeaponProject}=await import('./editor-weapon-project.mjs?v=20261012-battle1');
+      const project=readWeaponProject(animationBytes);
+      if(!project||project.gameId!==descriptor.gameId)fail('EDITOR_CUSTOM_PROVENANCE','Weapon project game identity mismatch.');
+      requireLatestEditorBase(trust,descriptor.gameId,project.baseTargetSha256);
+      canonicalDisc=(await rewriteCdUserExtent(blob,animationFile,project.canonicalBytes,{signal:options.signal})).outputBlob;
+      weaponProject={...project,file:animationFile,bytes:animationBytes};
+    }
+  }
+  const weaponNormalized=weaponProject?normalizeWeaponProjectTsr(decoded,root,descriptor.gameId,weaponProject):decoded;
+  const weaponRoot=weaponProject?splitRootSegments(weaponNormalized):root;
+  const normalized = normalizePilotLayout(weaponNormalized, weaponRoot[28].start, weaponRoot[28].end, descriptor.gameId, pilots);
+  const canonicalDecoded = normalized ?? weaponNormalized;
+  const canonicalRoot = canonicalDecoded===decoded?root:splitRootSegments(canonicalDecoded);
   for (const profile of trust.profiles) {
     if (profile.gameId !== descriptor.gameId || profile.size !== blob.size
       || profile.extentLba !== file.extentLba || profile.recordLba !== file.recordLba
       || profile.recordOffset !== file.recordOffset || profile.decodedLength !== decoded.length
       || file.byteLength > profile.allocatedSectors * SECTOR_USER_SIZE) continue;
+    if(weaponProject&&profile.baseTargetSha256!==weaponProject.baseTargetSha256)continue;
     const masks = JSON.stringify(profile.decodedMasks);
     if (![{}, { terrain: false }, { rewards: false, terrain: false }].some(options => JSON.stringify(editorDecodedMasks(canonicalRoot, descriptor.gameId, options)) === masks)) continue;
     if (immutableBytesHash(canonicalDecoded, profile.decodedMasks) !== profile.immutableTsrSha256) continue;
     if (profile.scenarioScopes && (!scenario
       || JSON.stringify(profile.scenarioFiles) !== JSON.stringify(scenarioFileIdentity(scenario.files))
       || stableScopeJson(profile.scenarioScopes) !== stableScopeJson(scenario.inspected.scope))) continue;
-    if (await immutableImageHash(blob, profile.rawMasks, options) !== profile.immutableDiscSha256) continue;
+    if (await immutableImageHash(canonicalDisc, profile.rawMasks, options) !== profile.immutableDiscSha256) continue;
     await readMode1Sector(blob, file.recordLba, { signal: options.signal, checksum: true });
     // every allocated sector must carry valid checksums, and what lies behind the stream must be zero or accepted bytes
     await requireCleanTsrTail(blob, profile, streamEnd, options.signal);
     requireLatestEditorBase(trust, descriptor.gameId, profile.baseTargetSha256);
     return { baseTargetSha256: profile.baseTargetSha256,
-      mode: registeredBases.has(profile.baseTargetSha256) ? "registered-editor-output" : "bounded-editor-profile" };
+      mode: registeredBases.has(profile.baseTargetSha256) ? "registered-editor-output" : "bounded-editor-profile",
+      ...(weaponProject?{weaponProject}: {}) };
   }
   fail("EDITOR_CUSTOM_PROVENANCE", "The BIN is neither a registered editor export nor a bounded modification of an accepted image.");
 }
@@ -3209,6 +3244,21 @@ export function buildEditorRows(root, decoded, gameId, lockLayout = null) {
     }
   }
   return { units, pilots, pilotAliases, weapons, unitAbilityNames, pilotAbilityNames, rewards, partNames, terrains };
+}
+
+function attachWeaponAuthoringRows(rows,root,gameId,project){
+  for(const entry of project?.entries??[]){
+    const row=rows.weapons.find(item=>item.recordIndex===entry.weaponIndex);if(!row)continue;
+    row.authoring=Object.freeze({sourceWeapon:entry.sourceWeapon,unitIndex:entry.unitIndex,isNew:entry.donorUnit>0});
+    if(entry.donorUnit){
+      const tag=new TextEncoder().encode(JSON.stringify([gameId,'created-weapon-v1',entry.weaponIndex,entry.sourceWeapon,entry.unitIndex]));
+      row.identity=`weapon:1:${new Sha256().update(tag).hex()}`;
+    }else{
+      const header=root[29].bytes.slice(row.byteOffset,row.byteOffset+5);
+      writeU16BE(header,3,entry.sourceSelector);row.identity=`weapon:1:${new Sha256().update(header).hex()}`;
+    }
+  }
+  return rows;
 }
 
 // Record id -> reason for every row the model marks read-only; the writers enforce it independently of the UI.
@@ -3300,6 +3350,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
   if (scenarioEnabled) onProgress?.({ phase: "scenario-data", indeterminate: true });
   const scenario = scenarioEnabled ? await inspectDiscScenario(trust, blob, actualHash, descriptor.gameId, files, units, pilots, signal) : null;
   const provenance = await establishEditorProvenance(trust, blob, actualHash, descriptor, receipts, file, decoded, root, streamEnd, scenario, { signal, onProgress }, pilots);
+  attachWeaponAuthoringRows({weapons},root,descriptor.gameId,provenance.weaponProject);
   const baseIdentity = ownEntry(trust.targets, provenance.baseTargetSha256);
   const scenarioProfile=trust.profiles.find(profile=>profile.baseTargetSha256===provenance.baseTargetSha256&&profile.scenarioScopes);
   const sessionToken = `${actualHash}:${file.extentLba}:${file.byteLength}:${decoded.length}`;
@@ -3318,6 +3369,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
     decoded,
     root,
     scenario,
+    ...(provenance.weaponProject?{weaponProject:Object.freeze(provenance.weaponProject)}:{}),
     readOnly: Object.freeze({
       unit: readOnlyRecordMap(units),
       pilot: readOnlyRecordMap(pilots),
@@ -3356,6 +3408,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
       pilots: Object.freeze(pilots.map((row) => Object.freeze(row))),
       pilotAliases: Object.freeze(pilotAliases),
       weapons: Object.freeze(weapons.map((row) => Object.freeze(row))),
+      weaponAuthoring: Object.freeze(provenance.weaponProject?.entries??[]),
       unitAbilityNames,
       pilotAbilityNames,
       rewards: Object.freeze(rewards.map(Object.freeze)),
@@ -3749,7 +3802,7 @@ function requireRoundTrip(packed, decoded) {
 // Packs the edited decoded TSR for the session's slot. Edits keep the decoded length, so the stream stored in the image
 // is replayed first (see repackTsr). A from-scratch pack is the fallback when the stored stream cannot be replayed, and
 // also the second try when the replayed stream does not fit.
-async function packEditedTsr(session, decoded, slot, { signal, onProgress }) {
+async function packEditedTsr(session, decoded, slot, { signal, onProgress,completeNearMatches=false }) {
   let packed = null;
   let method = "recompress";
   let counts = null;
@@ -3768,6 +3821,13 @@ async function packEditedTsr(session, decoded, slot, { signal, onProgress }) {
       method = "recompress";
       counts = null;
     }
+  }
+  if(packed.length>slot.writableLength&&completeNearMatches===true){
+    // Structural weapon edits can make a second-generation replay exceed the
+    // fixed Final span. Exhaust the already supported two-byte near matches
+    // before refusing growth; decoded bytes and the disc extent stay fixed.
+    const complete=await compressTsr(decoded,{signal,onProgress,completeNearMatches:true});
+    if(complete.length<packed.length){packed=complete;method='recompress';counts=null;}
   }
   return { packed, method, counts };
 }
@@ -3798,13 +3858,13 @@ async function verifyWrittenTsr(outputBlob, session, decoded, directoryLength, s
 // `testSeam` exists for the tests only (the worker never passes it): `pack` replaces the packer and `afterWrite` may replace the
 // written image before it is verified. Both put a fault where the checks behind them must catch it; they cannot switch a
 // check off.
-async function writeEditedTsrImage(session, decoded, { signal, onProgress, testSeam } = {}) {
+async function writeEditedTsrImage(session, decoded, { signal, onProgress, testSeam,completeNearMatches=false } = {}) {
   checkAbort(signal);
   const slot = await measureTsrSlot(session, signal);
   onProgress?.({ phase: "compress", processed: 0, total: decoded.length });
   const { packed, method, counts } = testSeam?.pack
     ? await testSeam.pack({ session, decoded, slot })
-    : await packEditedTsr(session, decoded, slot, { signal, onProgress });
+    : await packEditedTsr(session, decoded, slot, { signal, onProgress,completeNearMatches });
   if (packed.length > slot.writableLength) {
     fail(
       "EDITOR_TSR_GROWTH_UNSUPPORTED",
@@ -3864,6 +3924,93 @@ export async function buildEditedImage(session, decoded, options = {}) {
   return finishEditedImage(session, await writeEditedTsrImage(session, decoded, options), options);
 }
 
+// Authoritative local planner: identities and free slots come from the loaded
+// tables. A caller's offsets, selectors or donor choices grant no permission.
+export async function prepareEditorWeaponProject(session,submitted,{signal}={}){
+  battleCache(session);checkAbort(signal);
+  const gameId=session.descriptor.gameId,final=gameId==='srwf-final';
+  const source=session.weaponProject?normalizeWeaponProjectTsr(session.decoded,session.root,gameId,session.weaponProject):session.decoded;
+  const decoded=source.slice(),root=splitRootSegments(decoded),rows=buildEditorRows(root,decoded,gameId);
+  const loadedRows=session.weaponProject?buildEditorRows(session.root,session.decoded,gameId):rows;
+  const {list}=readDenseList(submitted,24);
+  if(!list)fail('EDITOR_EDIT_INVALID','Weapon authoring needs a dense bounded list.');
+  const snapshots=list.map(item=>{
+    const weaponIndex=ownData(item,'weaponIndex'),sourceWeapon=ownData(item,'sourceWeapon'),unitIndex=ownData(item,'unitIndex');
+    if(![weaponIndex,sourceWeapon,unitIndex].every(Number.isSafeInteger))fail('EDITOR_EDIT_INVALID','Invalid weapon authoring identity.');
+    const {list:operandList}=readDenseList(ownData(item,'edits'),4096);
+    if(!operandList)fail('EDITOR_EDIT_INVALID','Animation operands need a dense bounded list.');
+    const edits=operandList.map(edit=>({
+      recordOffset:ownData(edit,'recordOffset'),field:ownData(edit,'field'),value:ownData(edit,'value')}));
+    return {weaponIndex,sourceWeapon,unitIndex,edits};
+  });
+  const seen=new Set(),entries=[],first=final?1331:1248,last=final?1343:1278;
+  const donors=rows.units.filter(row=>row.recordIndex>=(final?430:354)&&!row.editable&&row.recordKind==='unused-filler'
+    &&row.weaponList.status==='known'&&row.weaponList.placeholder&&!row.weaponList.notes.length).map(row=>row.recordIndex).reverse();
+  for(const entry of snapshots){
+    checkAbort(signal);
+    const {weaponIndex,sourceWeapon,unitIndex}=entry;
+    if(seen.has(weaponIndex))fail('EDITOR_EDIT_INVALID','Repeated weapon authoring identity.');seen.add(weaponIndex);
+    const sourceRow=rows.weapons.find(row=>row.recordIndex===sourceWeapon),unit=rows.units.find(row=>row.recordIndex===unitIndex);
+    if(sourceWeapon>=first||!sourceRow?.editable||!unit?.editable||!sourceRow.owners.some(owner=>owner.unit===unitIndex))fail('EDITOR_EDIT_INVALID','Weapon animation needs a verified original owner.');
+    let donorUnit=0;
+    if(weaponIndex>=first&&weaponIndex<=last){
+      const target=rows.weapons.find(row=>row.recordIndex===weaponIndex);
+      if(target?.editable||target?.recordKind!=='unused-filler'||target?.nameStatus!=='empty'||target?.ownership!=='unowned')fail('EDITOR_EDIT_INVALID','The new weapon slot is not a verified free record.');
+      donorUnit=donors.shift();if(!donorUnit)fail('EDITOR_WEAPON_CAPACITY','신규 무기를 위한 기체 목록 공간이 부족합니다.');
+      const request={unitIndex,sourceWeapon,targetWeapon:weaponIndex,donorUnit};
+      const clone=cloneWeaponIntoVerifiedSlot(root[27].bytes,root[29].bytes,request,request);
+      root[27].bytes.set(clone.unitBytes);root[29].bytes.set(clone.weaponBytes);
+      const named=cloneWeaponNameReference(decoded,root[14].start,final?1344:1280,sourceWeapon,weaponIndex);decoded.set(named);
+      const previous=session.weaponProject?.entries.find(old=>old.weaponIndex===weaponIndex&&old.sourceWeapon===sourceWeapon&&old.unitIndex===unitIndex);
+      if(previous){
+        const old=loadedRows.weapons.find(row=>row.recordIndex===weaponIndex),current=rows.weapons.find(row=>row.recordIndex===weaponIndex);
+        const original=session.root[29].bytes;
+        for(let offset=5;offset<17;offset++)root[29].bytes[current.byteOffset+offset]=offset===8
+          ?(root[29].bytes[current.byteOffset+8]&15)|(original[old.byteOffset+8]&240):original[old.byteOffset+offset];
+      }
+    }else if(weaponIndex!==sourceWeapon)fail('EDITOR_EDIT_INVALID','An original weapon keeps its own animation origin.');
+    // Source selectors are read from the canonical original table, not request.
+    const sourceSelector=readU16BE(source,root[29].start+sourceRow.byteOffset+3);
+    entries.push({...entry,donorUnit,sourceSelector});
+  }
+  const animationBytes=session.weaponProject?.bytes??await readBattleFile(session,'D_ANIME.BIN',signal);
+  const {writeWeaponProject}=await import('./editor-weapon-project.mjs?v=20261012-battle1');
+  const built=writeWeaponProject(animationBytes,{gameId,baseTargetSha256:session.descriptor.baseTargetSha256},entries);
+  const project=built.project??{gameId,baseTargetSha256:session.descriptor.baseTargetSha256,entries:[],
+    canonicalBytes:built.bytes,directoryBytes:built.bytes.slice(0,6168),allocatedBytes:0,capacityBytes:46400};
+  const changedRows=buildEditorRows(root,decoded,gameId);
+  for(const entry of project.entries){
+    const row=changedRows.weapons.find(row=>row.recordIndex===entry.weaponIndex);
+    writeU16BE(root[29].bytes,row.byteOffset+3,entry.targetSelector);
+  }
+  root[6].bytes.set(built.bytes.subarray(0,6168),0);
+  const file=session.weaponProject?.file??battleCache(session).files.get('D_ANIME.BIN');
+  if(!file)fail('EDITOR_SESSION_MISSING','The authenticated animation extent is unavailable.');
+  return {decoded,animationBytes:built.bytes,project,file,rows:attachWeaponAuthoringRows(buildEditorRows(root,decoded,gameId),root,gameId,project)};
+}
+
+export async function viewEditorWeaponProject(session,request,{signal}={}){
+  const planned=await prepareEditorWeaponProject(session,ownData(request,'weaponAuthoring'),{signal});
+  return {gameId:session.descriptor.gameId,units:planned.rows.units,weapons:planned.rows.weapons,
+    weaponAuthoring:planned.project.entries,allocatedBytes:planned.project.allocatedBytes,capacityBytes:planned.project.capacityBytes};
+}
+
+async function projectedWeaponSession(session,request,signal){
+  const planned=await prepareEditorWeaponProject(session,ownData(request,'weaponAuthoring'),{signal});
+  const projected=Object.freeze({...session,decoded:planned.decoded,root:splitRootSegments(planned.decoded),
+    weaponProject:Object.freeze({...planned.project,bytes:planned.animationBytes,file:planned.file})});
+  const cache=battleCache(projected);cache.rows=planned.rows;cache.files.set('D_ANIME.BIN',planned.file);cache.bytes.set('D_ANIME.BIN',planned.animationBytes);
+  cache.originalSession=session;
+  return projected;
+}
+export async function inspectEditorWeaponProjectAnimation(session,request,{signal}={}){
+  return inspectEditorWeaponAnimation(await projectedWeaponSession(session,request,signal),request,{signal});
+}
+export async function previewEditorWeaponProject(session,request,{signal}={}){
+  const result=await previewEditorBattle(await projectedWeaponSession(session,request,signal),request,{signal});
+  return {...result,evidence:{...result.evidence,authoringPreview:true}};
+}
+
 function snapshotScenarioEdits(value, fields, maximum) {
   if (value === undefined) return [];
   const { list, problem } = readDenseList(value, maximum);
@@ -3881,7 +4028,11 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
     || ownData(request, "sessionToken") !== session.sessionToken) {
     fail("EDITOR_SESSION_MISSING", "The authenticated editor session is no longer available.");
   }
-  const decoded = session.decoded.slice();
+  const authoringPresent=Object.hasOwn(request,'weaponAuthoring');
+  if(authoringPresent&&ownData(request,'weaponAuthoring')===undefined)fail('EDITOR_REQUEST_INVALID','Weapon authoring must be an own data list.');
+  const authoring=authoringPresent||session.weaponProject?await prepareEditorWeaponProject(session,
+    authoringPresent?ownData(request,'weaponAuthoring'):session.weaponProject.entries,{signal}):null;
+  const decoded = authoring?.decoded??session.decoded.slice();
   const root = splitRootSegments(decoded);
   if (root.length <= 29) {
     fail("EDITOR_TSR_STRUCTURE_UNSUPPORTED", "The authenticated TSR root no longer has the expected tables.");
@@ -3889,7 +4040,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   const unitData = root[27].bytes;
   const pilotData = root[28].bytes;
   const weaponData = root[29].bytes;
-  const readOnly = session.readOnly;
+  const readOnly = authoring?{unit:readOnlyRecordMap(authoring.rows.units),pilot:readOnlyRecordMap(authoring.rows.pilots),weapon:readOnlyRecordMap(authoring.rows.weapons)}:session.readOnly;
   if (!readOnly?.unit || !readOnly.pilot || !readOnly.weapon) {
     fail("EDITOR_SESSION_MISSING", "The authenticated editor session has no record classification.");
   }
@@ -3927,8 +4078,9 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   }
 
   const tsrChanged = !sameBytes(decoded, session.decoded);
+  const animationChanged=authoring&&!sameBytes(authoring.animationBytes,session.weaponProject?.bytes??await readBattleFile(session,'D_ANIME.BIN',signal));
   const scenarioChanged = scenarioChange?.changedBodies.length > 0, mapChanged = mapChange?.changedPlanes.length > 0;
-  if (!tsrChanged && !scenarioChanged && !mapChanged) {
+  if (!tsrChanged && !scenarioChanged && !mapChanged && !animationChanged) {
     return Object.freeze({
       outputBlob: session.sourceBlob,
       size: session.sourceBlob.size,
@@ -3947,10 +4099,15 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
       fail('EDITOR_OUTPUT_INTERNAL', 'Pilot edits changed the immutable objective lookup catalog.');
     }
   }
-  if (!scenarioChanged && !mapChanged) return buildEditedImage(session, decoded, { signal, onProgress, testSeam });
-  const tsrOutput = tsrChanged ? await writeEditedTsrImage(session, decoded, { signal, onProgress, testSeam })
+  if (!scenarioChanged && !mapChanged && !animationChanged) return buildEditedImage(session, decoded, { signal, onProgress, testSeam,completeNearMatches:Boolean(authoring) });
+  const tsrOutput = tsrChanged ? await writeEditedTsrImage(session, decoded, { signal, onProgress, testSeam,completeNearMatches:Boolean(authoring) })
     : { outputBlob: session.sourceBlob, bytesChanged: 0 };
   let outputBlob = tsrOutput.outputBlob, bytesChanged = tsrOutput.bytesChanged;
+  if(animationChanged){
+    const written=await rewriteCdUserExtent(outputBlob,authoring.file,authoring.animationBytes,{signal});
+    outputBlob=written.outputBlob;bytesChanged+=written.changedSectors.length*SECTOR_SIZE;
+  }
+  if(!scenarioChanged&&!mapChanged)return finishEditedImage(session,{...tsrOutput,outputBlob,bytesChanged},{signal,onProgress});
   const current = session.scenario, changedSectors = [];
   if (scenarioChanged) {
     const result = await rewriteCdUserExtent(outputBlob, current.files.scedata, scenarioChange.bytes,

@@ -186,3 +186,19 @@ test('catalog and explicit archive-picture reads use their own core APIs and ret
   assert.deepEqual(run.last().transfer, [pixels.buffer]);
   assert.equal(run.last().message.previewId, 'asset');
 });
+
+test('authoring plan, inspection and pending pictures use the same authenticated cancellation boundary',async()=>{
+  const seen=[],waiting=deferred();let signal;
+  const run=harness({
+    viewEditorWeaponProject:async(session,input,options)=>{seen.push(['plan',session,input,options]);return {units:[],weapons:[],weaponAuthoring:[]};},
+    inspectEditorWeaponProjectAnimation:async(session,input,options)=>{seen.push(['inspect',session,input,options]);return {instructions:[]};},
+    previewEditorWeaponProject:(session,input,options)=>{seen.push(['preview',session,input,options]);signal=options.signal;return waiting.promise;},
+  });
+  await run.send(message('missing',{type:'WEAPON_AUTHORING_PLAN'}));assert.equal(seen.length,0);
+  await run.send(inspect());
+  await run.send(message('plan',{type:'WEAPON_AUTHORING_PLAN'}));assert.equal(seen[0][0],'plan');assert.deepEqual(run.last().transfer,[]);
+  await run.send(message('commands',{type:'WEAPON_AUTHORING_INSPECT'}));assert.equal(seen[1][0],'inspect');assert.deepEqual(run.last().transfer,[]);
+  await run.send(message('pending',{type:'WEAPON_AUTHORING_PREVIEW'}));assert.equal(seen[2][0],'preview');
+  await run.send({type:'RESET'});assert.equal(signal.aborted,true);
+  const count=run.previews().length;waiting.resolve(result());await settle();assert.equal(run.previews().length,count);
+});

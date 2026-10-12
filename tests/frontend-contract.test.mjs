@@ -4140,6 +4140,7 @@ test("every editor error code the core and the worker can raise has natural Kore
   const names = [
     "editor-core", "editor-worker", "editor-provenance", "editor-provenance-profiles", "editor-directory",
     "editor-grades", "editor-weapon-links", "editor-facts",
+    "editor-weapon-authoring", "editor-weapon-layout", "editor-weapon-project",
     "editor-rewards", "editor-terrain",
     "editor-scenario-archive", "editor-deployments", "editor-map-archive", "editor-scenario-provenance",
     "editor-scenario-deadlines", "editor-scenario-objectives", "editor-scenario-spawns",
