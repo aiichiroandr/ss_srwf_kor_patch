@@ -102,3 +102,13 @@ test('supplementation leaves writable rows, masks and export requests unchanged,
     await assert.rejects(repackScenarioDeployments(f.bytes,gameId,maps,tables,[{recordIndex:extra.recordIndex,x:5}]),{code:'EDITOR_DEPLOYMENT_INVALID'});
   }
 });
+
+test('F chapter-choice switch follows all eight native self-relative destinations without granting writes',()=>{
+ const {body,maps}=fixture();body.roots[5]=300;for(let i=0;i<14;i++)if(i!==4&&i!==5)body.roots[i]=310;
+ body.decoded.set([0xc4,0,2,0xc4,0x15],60);
+ const data=new DataView(body.decoded.buffer);
+ for(let i=0;i<8;i++){const cell=65+i*2,target=81+i*18;data.setInt16(cell,target-cell);body.decoded.set([...appearance,0xea],target);}
+ const result=readScenarioDisplay(body,maps,tables);
+ assert.equal(result.rows.length,8);assert.ok(result.rows.every(row=>row.mapIndex===1&&!row.editable));
+ data.setInt16(65,1);assert.equal(readScenarioDisplay(body,maps,tables).rows.length,0);
+});

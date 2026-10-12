@@ -6,7 +6,7 @@ import {
   catalogEditorBattleAssets,
   previewEditorBattleAsset,
   viewEditorWeaponProject,inspectEditorWeaponProjectAnimation,previewEditorWeaponProject,
-} from "./editor-core.mjs?v=20261012-weapons2";
+} from "./editor-core.mjs?v=20261012-frames3";
 
 // The worker body takes its scope and the three core operations so that a test can drive it with a fake scope and fake
 // operations. The page's worker starts it below with the real ones.

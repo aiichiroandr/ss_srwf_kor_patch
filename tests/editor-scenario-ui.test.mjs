@@ -609,3 +609,13 @@ test('display-reader frontiers keep partial coverage explicit independently of t
   assert.match($('scenarioStatus').textContent,/일부 배치 읽기 미지원/);assert.match($('scenarioSelectionDescription').textContent,/읽은 배치 1기만 표시/);assert.match($('scenarioSelectionDescription').textContent,/일부 명령은 아직 읽지 못해/);
  }
 });
+
+test('literal fixed-unit default coordinates stay visible without granting a runtime binding or writer permission',()=>{
+ const m0=setup(),initial={...deployment,waveIndex:'0:100'},fixed={...deployment,recordIndex:'0:240',waveIndex:'0:237',placementKind:'fixed-unit',placementStage:'scenario-script',mapIndex:null,x:1,y:2,editable:false,readOnlyReason:'원본 좌표 · 읽기 전용'};
+ const rows=[initial,fixed];hooks.installEditorRows({units:[],pilots:[],weapons:[],terrains:[],rewards:[],deployments:rows,maps:m0.maps,mapBanks:m0.banks,scenarios:[{physicalIndex:0,scenarioSlots:[0],mapIndex:0,placements:rows,waves:[{recordIndex:'0:100',initial:true,mapIndex:0,guards:[],placements:[initial]},{recordIndex:'0:237',root:4,initial:false,placementStage:'scenario-script',mapIndex:null,guards:[],placements:[fixed]}]}]});$('scenarioTabButton').click();
+ assert.match($('scenarioMapLegend').textContent,/배치 2기/);set('scenarioDeploymentSelector',fixed.recordIndex);
+ assert.match($('scenarioDeploymentSelector').selectedOptions[0].title,/기본 맵 기준 좌표/);
+ assert.equal(hooks.state.editorScenario.deployments.find(r=>r.recordIndex===fixed.recordIndex).mapIndex,null);
+ assert.deepEqual(hooks.state.editorScenario.exportDeployments(),[]);
+ assert.equal($('scenarioX').disabled,true);
+});

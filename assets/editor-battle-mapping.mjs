@@ -457,7 +457,7 @@ async function statePlan(input, animationRecord, spriteDirectory, evidence) {
       : (selectors.get(actorId) ?? null);
     const final = traceActor(record, span, initial, state, (selector, selectorEvidence) => {
       const shieldPose = mode === 'defense' && defenseId === 'shield' && sequence === 0xf007 && (selector >>> 8) === 8;
-      if (reaction || shieldPose) references.push({ selector, actorId, sequence, mainSource: source, mainPc: pc,
+      if (reaction || shieldPose || mode === 'attack') references.push({ selector, actorId, sequence, mainSource: source, mainPc: pc,
         cache19Source: state.cache19Source, ...selectorEvidence });
     },
       diagnostics, `${common ? 'BTSR-cell3' : 'D_ANIME'}-sequence-${index}`, selectors, (childId, childSelector) => {
@@ -516,17 +516,17 @@ async function statePlan(input, animationRecord, spriteDirectory, evidence) {
     stateBranches: 'verified-bounded-conditions',
     representativeCondition: state, mainPredicates: mainEvidence, diagnostics,
     coverage: diagnostics.length ? 'verified-references-with-unresolved-sequences' : 'bounded-path',
-    selectedUnitRole: 'representative-defender', selectedWeaponRole: 'incoming-effect-from-selected-owned-weapon',
+    selectedUnitRole:mode==='attack'?'representative-attacker':'representative-defender', selectedWeaponRole: 'incoming-effect-from-selected-owned-weapon',
     opponentArrangement: 'same-unit-mirror-sample',
     sceneContext: 'explicit-sample-metadata-index-zero-not-current-map',
     ...(defenseId === 'parry' ? { reason: 'parry-specific-source-unverified' } : {}),
     composition: 'source-sprite-gallery', timeline: 'not-reproduced' };
   if (mode === 'destroyed') assets.sort((a, b) => Number(b.role === 'common-destruction-sprite') - Number(a.role === 'common-destruction-sprite'));
-  else assets.sort((a, b) => Number(b.role === 'selected-unit-reaction-sprite') - Number(a.role === 'selected-unit-reaction-sprite'));
+  else if(mode!=='attack') assets.sort((a, b) => Number(b.role === 'selected-unit-reaction-sprite') - Number(a.role === 'selected-unit-reaction-sprite'));
   return result(assets.length ? 'ready' : 'unmapped', assets.length
-    ? `대표 조건 · 선택 기체의 ${{ hit: '명중', evade: '회피', defense: '방어', destroyed: '격추' }[mode]}${diagnostics.length ? ' 일부' : ''} 그림`
+    ? `대표 조건 · 선택 기체의 ${{ attack:'공격', hit: '명중', evade: '회피', defense: '방어', destroyed: '격추' }[mode]}${diagnostics.length ? ' 일부' : ''} 그림`
     : `${({ shield: '실드', parry: '베어내기' }[defenseId]
-      ?? { hit: '명중', evade: '회피', defense: '방어', destroyed: '격추' }[mode])} 그림은 아직 지원하지 않습니다.`, stateEvidence, assets);
+      ?? { attack:'공격', hit: '명중', evade: '회피', defense: '방어', destroyed: '격추' }[mode])} 그림은 아직 지원하지 않습니다.`, stateEvidence, assets);
 }
 
 /** Resolve authenticated disc data to physical battle sprite records.
@@ -579,7 +579,7 @@ async function resolvePlan(input = {}) {
     if (bytes[pos] !== animationDirectory[pos]) return result('unmapped',
       '전투 애니메이션 디렉터리가 원본 참조와 다릅니다.', { ...evidence, reason: 'animation-directory-mismatch' });
   }
-  if (mode !== 'attack') return statePlan(input, bytes.subarray(animation.start, animation.end), spriteDirectory, evidence);
+  if (mode !== 'attack' || input.playback === true) return statePlan(input, bytes.subarray(animation.start, animation.end), spriteDirectory, evidence);
   const assets = [];
   const reusedSlots = [];
   for (let headerSlot = 0; headerSlot < SPRITE_SLOTS; headerSlot += 1) {

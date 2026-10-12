@@ -1,5 +1,6 @@
 // Read-only state pictures from the user's authenticated disc. Asset order is
-// archive order; this controller never infers or plays an animation sequence.
+// archive order for catalogs. Verified actor-reference groups may repeat at
+// a display cadence; this does not reproduce the native battle timeline.
 const MODES = Object.freeze([['attack', '공격'], ['hit', '명중'], ['evade', '회피'], ['defense', '방어'], ['destroyed', '격추']]);
 const STATUS_TEXT = Object.freeze({
   unmapped: '이 상태와 그림의 연결은 아직 확인되지 않았습니다.',
@@ -72,6 +73,7 @@ export function createBattlePreview({ container, requestPreview }) {
   const count = element('span', 'battle-preview-count');
   const next = element('button', 'battle-preview-next', '›'); next.type = 'button'; next.setAttribute('aria-label', '다음 그림');
   pager.append(previous, count, next); contextRow.append(pager);
+  const play=element('button','battle-preview-play','일시정지');play.type='button';play.hidden=true;contextRow.append(play);
   const modes = element('div', 'battle-preview-modes'); modes.setAttribute('role', 'group'); modes.setAttribute('aria-label', '전투 상태별 원본 그림');
   const buttons = new Map();
   const defenseSelect = element('select', 'battle-preview-defense');
@@ -88,10 +90,12 @@ export function createBattlePreview({ container, requestPreview }) {
   let choices = { defense: [], evade: [] };
   let currentResult = null, assetFilter = null, galleryPage = 0, generation = 0, controller = null, busy = false, destroyed = false, pending = null;
   const memories = new Map(), listeners = [];
+  let playbackTimer=null,playing=true,playbackFrames=[];
+  const stopPlayback=()=>{if(playbackTimer!==null)clearInterval(playbackTimer);playbackTimer=null;playbackFrames=[];play.hidden=true;};
   const listen = (node, event, callback) => { node.addEventListener(event, callback); listeners.push([node, event, callback]); };
   const memoryKey = () => selection ? `${selection.gameId}:${selection.weaponIndex}` : null;
   const remember = () => { if (selection) memories.set(memoryKey(), { unitIndex, mode, defenseId, evadeId, assetFilter, galleryPage }); };
-  const cancel = () => { generation++; controller?.abort(); controller = null; pending = null; panel.setAttribute('aria-busy', 'false'); };
+  const cancel = () => { stopPlayback();generation++; controller?.abort(); controller = null; pending = null; panel.setAttribute('aria-busy', 'false'); };
   const say = (kind, text) => { panel.dataset.status = kind; status.textContent = text; status.hidden = !text; };
   const pictureLabel = (asset, index) => `${({
     'attack-linked-sprite': '공격 그림',
@@ -204,7 +208,17 @@ export function createBattlePreview({ container, requestPreview }) {
       option(asset.assetKey, pictureLabel(asset, index))));
     if (assets.length > 1) assetSelect.append(option('all', '모아 보기 · 4개씩'));
     assetSelect.value = assetFilter; assetSelect.hidden = assets.length < 2;
-    note.hidden = true; say('ready', result.message || '사용자 디스크 원본 그림'); showGallery(); remember();
+    if(result.playback?.verifiedReferences){
+      const source=assets.find(a=>a.role==='weapon-state-sprite')??assets[0];
+      playbackFrames=assets.filter(a=>a.fileName===source.fileName&&a.actorId===source.actorId&&a.sequence===source.sequence);
+      assetFilter=source.assetKey;assetSelect.value=assetFilter;playing=true;play.textContent='일시정지';play.hidden=playbackFrames.length<2;
+      if(assets.length>1){playbackTimer=setInterval(()=>{
+        if(!playing||playbackFrames.length<2||busy||panel.hidden||!container.getClientRects().length)return;
+        const at=playbackFrames.findIndex(a=>a.assetKey===assetFilter);assetFilter=playbackFrames[(at+1)%playbackFrames.length].assetKey;
+        assetSelect.value=assetFilter;showGallery();
+      },250);playbackTimer.unref?.();}
+    }
+    note.hidden = true; say('ready', result.playback?.verifiedReferences?'실제 참조 프레임 · 0.25초 간격 반복 (게임 재생 시간과 다름)':result.message || '사용자 디스크 원본 그림'); showGallery(); remember();
   }
   function load() {
     cancel(); currentResult = null; gallery.replaceChildren(); gallery.hidden = true; assetSelect.hidden = true; pager.hidden = true; note.hidden = true;
@@ -246,12 +260,20 @@ export function createBattlePreview({ container, requestPreview }) {
     const owner = selection.owners.find(item => String(item.unitIndex) === ownerSelect.value);
     if (!owner) return; unitIndex = owner.unitIndex; assetFilter = null; galleryPage = 0; remember(); void load();
   });
-  listen(assetSelect, 'change', () => { if (!busy && currentResult) { assetFilter = assetSelect.value; remember(); showGallery(); } });
+  function pauseAtSelection(){
+    if(!currentResult?.playback?.verifiedReferences)return;
+    playing=false;play.textContent='반복 재생';
+    const source=currentResult.assets.find(a=>a.assetKey===assetFilter);
+    playbackFrames=source?currentResult.assets.filter(a=>a.fileName===source.fileName&&a.actorId===source.actorId&&a.sequence===source.sequence):[];
+    play.hidden=playbackFrames.length<2;
+  }
+  listen(assetSelect, 'change', () => { if (!busy && currentResult) { assetFilter = assetSelect.value; pauseAtSelection();remember(); showGallery(); } });
+  listen(play,'click',()=>{playing=!playing;play.textContent=playing?'일시정지':'반복 재생';});
   for (const [button, direction] of [[previous, -1], [next, 1]]) listen(button, 'click', () => {
     if (busy || !currentResult || button.disabled) return;
     if (assetFilter === 'all') galleryPage += direction;
     else { const index = currentResult.assets.findIndex(asset => asset.assetKey === assetFilter); assetFilter = currentResult.assets[index + direction].assetKey; }
-    assetSelect.value = assetFilter; remember(); showGallery();
+    assetSelect.value = assetFilter; pauseAtSelection();remember(); showGallery();
   });
   function select(input) {
     if (destroyed) return Promise.resolve();

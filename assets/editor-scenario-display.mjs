@@ -2,12 +2,26 @@
 // This runs after provenance validation and never participates in decoded
 // masks, region contexts or writer lookup tables. Calls can change the map
 // and scheduling context: their return boundary alone grants neither.
-import { decodeScenarioInstruction } from './editor-scenario-events.mjs?v=20261012-weapons2';
-import { DISPLAY_INSTRUCTION_LENGTHS } from './editor-scenario-display-grammar.mjs?v=20261012-weapons2';
+import { decodeScenarioInstruction } from './editor-scenario-events.mjs?v=20261012-frames3';
+import { DISPLAY_INSTRUCTION_LENGTHS } from './editor-scenario-display-grammar.mjs?v=20261012-frames3';
 
 const word=(b,p)=>b[p]*256+b[p+1];
 const calls=new Set([0xe1,0xb1,0xb3,0xb4,0xb6]);
 function displayCommand(bytes,p,start,end,gameId) {
+  if(gameId==='srwf-f'&&bytes[p]===0x08){
+    if(p+4>end)return null;
+    const value=word(bytes,p+2),target=p+2+(value<32768?value:value-65536);
+    if(target<start||target>=end)return null;
+    return {length:4,target,branch:true};
+  }
+  // F's chapter-choice producer yields exactly 0..7. Each destination is
+  // relative to its own BE16 cell, not to the opcode or first destination.
+  if(gameId==='srwf-f'&&bytes[p]===0xc4&&bytes[p+1]===0x15){
+    if(p+18>end)return null;
+    const targets=Array.from({length:8},(_,i)=>{const cell=p+2+i*2,value=word(bytes,cell);return cell+(value<32768?value:value-65536);});
+    if(targets.some(target=>target<start||target>=end))return null;
+    return {length:18,targets};
+  }
   if(bytes[p]===0x03&&p+3<=end) {
     // Same-body relative subroutine: return is op+3; no callee state is
     // inherited at that point. Native failure (full call stack) creates no
@@ -97,6 +111,7 @@ export function readScenarioDisplay(body,maps,tables,{initialMapIndex=null}={}) 
         else frontiers.push({root,offset:p,reason:'display-cross-root-call'});
         todo.push(next);continue;
       }
+      if(command.targets){for(const target of command.targets)todo.push({...state,p:target});continue;}
       if(command.target!==undefined) {
         if(!command.outside)todo.push({...state,p:command.target});
         if(command.branch)todo.push(next);

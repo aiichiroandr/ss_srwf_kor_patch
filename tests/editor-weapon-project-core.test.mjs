@@ -87,3 +87,12 @@ test('canonicalization cannot hide an unrelated TSR directory or donor counter m
   await assert.rejects(f.full.inspectPatchedImage(forged.outputBlob,{gameId:'srwf-final',targetSize:forged.size,targetSha256:forged.sha256,imageKind:'local'}),{code:'EDITOR_WEAPON_LAYOUT_INVALID'});
  }
 });
+
+test('deleting a saved new weapon restores the original decoded layout and animation programs',async()=>{
+ const f=await fixture(),created=await exported(f,[entry]);
+ const removed=await exported(f,[],created.reopened);
+ assert.deepEqual(removed.reopened.session.decoded,f.base.session.decoded);
+ assert.deepEqual(removed.plan.animationBytes,animation());
+ assert.equal(removed.reopened.view.weaponAuthoring.length,0);
+ assert.equal(removed.reopened.view.units.find(u=>u.recordIndex===1).weaponList.entries.length,1);
+});

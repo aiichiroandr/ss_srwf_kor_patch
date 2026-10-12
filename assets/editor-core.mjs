@@ -1,31 +1,31 @@
-import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261012-weapons2';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-weapons2';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-weapons2';
-import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261012-weapons2";
-import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261012-weapons2";
-import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261012-weapons2";
-import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261012-weapons2";
-import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261012-weapons2";
-import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261012-weapons2";
-import { Sha256 } from "./sha256.mjs?v=20261012-weapons2";
-import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261012-weapons2";
-import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261012-weapons2";
-import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261012-weapons2";
-import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261012-weapons2";
-import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261012-weapons2";
-import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261012-weapons2";
-import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261012-weapons2";
-import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261012-weapons2";
-import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261012-weapons2";
-import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261012-weapons2";
-import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261012-weapons2";
-import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261012-weapons2";
-import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261012-weapons2";
-import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261012-weapons2";
-import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261012-weapons2";
-import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261012-weapons2";
-import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261012-weapons2";
-import { normalizeWeaponProjectTsr,cloneWeaponIntoVerifiedSlot,cloneWeaponNameReference } from './editor-weapon-layout.mjs?v=20261012-weapons2';
+import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261012-frames3';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-frames3';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-frames3';
+import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261012-frames3";
+import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261012-frames3";
+import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261012-frames3";
+import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261012-frames3";
+import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261012-frames3";
+import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261012-frames3";
+import { Sha256 } from "./sha256.mjs?v=20261012-frames3";
+import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261012-frames3";
+import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261012-frames3";
+import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261012-frames3";
+import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261012-frames3";
+import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261012-frames3";
+import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261012-frames3";
+import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261012-frames3";
+import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261012-frames3";
+import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261012-frames3";
+import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261012-frames3";
+import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261012-frames3";
+import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261012-frames3";
+import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261012-frames3";
+import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261012-frames3";
+import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261012-frames3";
+import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261012-frames3";
+import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261012-frames3";
+import { normalizeWeaponProjectTsr,cloneWeaponIntoVerifiedSlot,cloneWeaponNameReference } from './editor-weapon-layout.mjs?v=20261012-frames3';
 
 const SECTOR_SIZE = 2352;
 const SECTOR_USER_OFFSET = 16;
@@ -2198,7 +2198,7 @@ export async function catalogEditorBattleAssets(session, request, { signal } = {
   if (!BATTLE_FILE_NAMES.has(fileName) || ['0', 'TSR_OBJ.BIN', 'BTSR.BIN', 'E_PAL.BIN', 'E_SC.BIN'].includes(fileName)) {
     fail('EDITOR_PREVIEW_INVALID', 'Unknown battle picture catalog.');
   }
-  const { inspectBattleAssetFile } = await import('./editor-battle-assets.mjs?v=20261012-weapons2');
+  const { inspectBattleAssetFile } = await import('./editor-battle-assets.mjs?v=20261012-frames3');
   const bytes = await readBattleFile(session, fileName, signal);
   checkAbort(signal);
   return inspectBattleAssetFile(bytes, { fileName, cursor: ownData(request, 'cursor') ?? 0,
@@ -2215,7 +2215,7 @@ export async function inspectEditorWeaponAnimation(session, request, { signal } 
   if(!weapon?.editable||!weapon.owners?.length)fail('EDITOR_PREVIEW_INVALID','The weapon has no verified editable owner.');
   const data=session.root[29].bytes,selector=readU16BE(data,weapon.byteOffset+3);
   const bytes=await readBattleFile(session,'D_ANIME.BIN',signal);
-  const {inspectWeaponAnimation}=await import('./editor-weapon-authoring.mjs?v=20261012-weapons2');
+  const {inspectWeaponAnimation}=await import('./editor-weapon-authoring.mjs?v=20261012-frames3');
   const inspection=inspectWeaponAnimation(bytes,selector);
   const entry=session.weaponProject?.entries.find(item=>item.weaponIndex===weaponIndex);
   const originSelector=entry?.sourceSelector??selector;
@@ -2243,7 +2243,7 @@ export async function previewEditorBattleAsset(session, request, { signal } = {}
     || assetKey.length > 160 || !assetKey.startsWith(`battle1:${fileName}:`)) {
     fail('EDITOR_PREVIEW_INVALID', 'Invalid battle picture identity.');
   }
-  const { decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261012-weapons2');
+  const { decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261012-frames3');
   const bytes = await readBattleFile(session, fileName, signal);
   checkAbort(signal);
   const image = decodeBattleAsset(bytes, assetKey);
@@ -2267,9 +2267,9 @@ export async function previewEditorBattle(session, request, { signal } = {}) {
   if (!weapon || !unit || !(weapon.owners ?? []).some(owner => owner.unit === unitIndex)) {
     fail('EDITOR_PREVIEW_INVALID', 'The selected unit does not have a verified link to this weapon.');
   }
-  const { resolveBattleAssetPlan } = await import('./editor-battle-mapping.mjs?v=20261012-weapons2');
+  const { resolveBattleAssetPlan } = await import('./editor-battle-mapping.mjs?v=20261012-frames3');
   const plan = await resolveBattleAssetPlan({ gameId, weapon, unit, mode, defenseId,
-    decodedTsr: session.decoded, root: session.root,
+    decodedTsr: session.decoded, root: session.root, playback: ownData(request,'playback')===true,
     readFile: fileName => readBattleFile(session, fileName, signal) });
   checkAbort(signal);
   const identity = { gameId, weaponIndex, unitIndex, mode, ...(defenseId === undefined ? {} : { defenseId }) };
@@ -2281,7 +2281,7 @@ export async function previewEditorBattle(session, request, { signal } = {}) {
   if (!Array.isArray(plan.assets) || !plan.assets.length || plan.assets.length > 64) {
     fail('EDITOR_PREVIEW_INVALID', 'The battle picture mapping exceeds its inspection limit.');
   }
-  const { inspectBattleAssetRecord, decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261012-weapons2');
+  const { inspectBattleAssetRecord, decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261012-frames3');
   const assets = [], diagnostics = [], seen = new Set(), diagnosed = new Set();
   let pixelBytes = 0;
   for (const reference of plan.assets) {
@@ -2318,7 +2318,8 @@ export async function previewEditorBattle(session, request, { signal } = {}) {
         }
         seen.add(entry.assetKey);
         assets.push(Object.freeze({ ...image, assetKey: entry.assetKey, fileName,
-          recordIndex: reference.recordIndex ?? null, subIndex: entry.subIndex, role: reference.role ?? null }));
+          recordIndex: reference.recordIndex ?? null, subIndex: entry.subIndex, role: reference.role ?? null,
+          actorId:reference.actorId??null,sequence:reference.sequence??null }));
       }
       cursor = page.nextCursor;
       if (++pages > 4096) fail('EDITOR_PREVIEW_INVALID', 'The battle picture catalog exceeds its inspection limit.');
@@ -2327,6 +2328,7 @@ export async function previewEditorBattle(session, request, { signal } = {}) {
   checkAbort(signal);
   return Object.freeze({ ...identity, ...choices, status: assets.length ? 'ready' : diagnostics.length ? 'unsupported' : 'empty',
     assets: Object.freeze(assets), diagnostics: Object.freeze(diagnostics),
+    ...(ownData(request,'playback')===true?{playback:{verifiedReferences:true,cadenceMs:250}}:{}),
     message: assets.length ? `${plan.message ?? ''}${diagnostics.length ? ' · 일부 그림 형식 미지원' : ''}`
       : diagnostics.length ? '연결된 그림 형식은 아직 지원하지 않습니다.' : '연결된 그림 자료를 읽지 못했습니다.',
     evidence: plan.evidence ?? null });
@@ -3037,7 +3039,7 @@ async function createProfile(trust, session, options = {}) {
   rawMasks.push([file.recordLba * SECTOR_SIZE + MODE1_EDC_OFFSET, SECTOR_SIZE - MODE1_EDC_OFFSET, 255]);
   rawMasks.sort((a, b) => a[0] - b[0]);
   const scenario = session.scenario;
-  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261012-weapons2') : null;
+  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261012-frames3') : null;
   const completeRawMasks = scenario ? scenarioModule.mergeFullByteMasks([...rawMasks,
     ...scenarioModule.scenarioRawMasks(scenario.files, scenario.inspected)]) : rawMasks;
   const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId);
@@ -3164,7 +3166,7 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
       animationFile.byteLength-sectorOffset,{signal:options.signal});
     if(new TextDecoder().decode(tail.subarray(tailOffset-sectorOffset,tailOffset-sectorOffset+8))==='SRWFWPN1'){
       const animationBytes=await readCdUserExtent(blob,animationFile.extentLba,animationFile.byteLength,{signal:options.signal});
-      const {readWeaponProject}=await import('./editor-weapon-project.mjs?v=20261012-weapons2');
+      const {readWeaponProject}=await import('./editor-weapon-project.mjs?v=20261012-frames3');
       const project=readWeaponProject(animationBytes);
       if(!project||project.gameId!==descriptor.gameId)fail('EDITOR_CUSTOM_PROVENANCE','Weapon project game identity mismatch.');
       requireLatestEditorBase(trust,descriptor.gameId,project.baseTargetSha256);
@@ -3481,7 +3483,7 @@ function scenarioFileIdentity(files) {
 }
 
 async function inspectDiscScenario(trust, blob, actualHash, gameId, files, units, pilots, signal) {
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261012-weapons2');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261012-frames3');
   const identity = scenarioFileIdentity(files), target = ownEntry(trust.targets, actualHash);
   let scenarioLayout;
   if (target) scenarioLayout = target.kind === 'stock' ? 'stock' : 'latest';
@@ -3974,7 +3976,7 @@ export async function prepareEditorWeaponProject(session,submitted,{signal}={}){
     entries.push({...entry,donorUnit,sourceSelector});
   }
   const animationBytes=session.weaponProject?.bytes??await readBattleFile(session,'D_ANIME.BIN',signal);
-  const {writeWeaponProject}=await import('./editor-weapon-project.mjs?v=20261012-weapons2');
+  const {writeWeaponProject}=await import('./editor-weapon-project.mjs?v=20261012-frames3');
   const built=writeWeaponProject(animationBytes,{gameId,baseTargetSha256:session.descriptor.baseTargetSha256},entries);
   const project=built.project??{gameId,baseTargetSha256:session.descriptor.baseTargetSha256,entries:[],
     canonicalBytes:built.bytes,directoryBytes:built.bytes.slice(0,6168),allocatedBytes:0,capacityBytes:46400};
@@ -4068,7 +4070,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   if (session.scenario && (deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || mapEdits.length)) {
     const current = session.scenario, gameId = session.descriptor.gameId;
     const [{ repackScenarioDeployments }, { repackMapTiles }] = await Promise.all([
-      import('./editor-deployments.mjs?v=20261012-weapons2'), import('./editor-map-archive.mjs?v=20261012-weapons2'),
+      import('./editor-deployments.mjs?v=20261012-frames3'), import('./editor-map-archive.mjs?v=20261012-frames3'),
     ]);
     [scenarioChange, mapChange] = await Promise.all([
       deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length ? repackScenarioDeployments(current.scenarioBytes, gameId, current.inspected.maps, current.tables,
@@ -4119,7 +4121,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
     outputBlob = result.outputBlob; changedSectors.push(...result.changedSectors);
   }
   bytesChanged += new Set(changedSectors).size * SECTOR_SIZE;
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261012-weapons2');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261012-frames3');
   const checked = inspectScenarioScopes({ gameId: session.descriptor.gameId,
     scenarioBytes: scenarioChange?.bytes ?? current.scenarioBytes, mapBytes: mapChange?.bytes ?? current.mapBytes,
     bankBytes: current.bankBytes, tables: current.tables, sectorMode: current.inspected.scope.scenario.sectorMode,

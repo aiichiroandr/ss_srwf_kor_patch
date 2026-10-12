@@ -335,3 +335,11 @@ test('bounded loops and truncated operands report partial coverage without inven
   const plan = await resolveBattleAssetPlan(stateFixture({ actors: [[0xbf]] }));
   assert.ok(plan.evidence.diagnostics.some((item) => item.reason === 'actor-opcode-unverified'));
 });
+
+test('attack frame playback follows actor references rather than enumerating the linked sprite archive',async()=>{
+ const input={...stateFixture({actors:[[0xbf,0,0xc0,5,1,0xfe]]}),mode:'attack',playback:true};
+ const result=await resolveBattleAssetPlan(input);
+ assert.equal(result.status,'ready');assert.deepEqual(result.assets.map(a=>a.subIndex),[5]);
+ assert.ok(result.assets.every(a=>Number.isInteger(a.actorId)&&Number.isInteger(a.sequence)));
+ assert.equal(result.evidence.timeline,'not-reproduced');
+});
