@@ -587,6 +587,20 @@ test('when the replayed stream does not fit but a fresh compression does, the sm
   assert.ok(sameBytes(decodedAfter, patchedHp(decoded)));
 });
 
+test('authoring compression can use complete near matches without growing its fixed TSR slot', async () => {
+  const base=await noSlackFixture();
+  const edited=patchedHp(base.session.decoded);
+  const ordinary=await compressTsr(edited),complete=await compressTsr(edited,{completeNearMatches:true});
+  assert.ok(ordinary.length>base.disc.slot.length,'the ordinary fallback genuinely exceeds the fixed slot');
+  assert.ok(complete.length<=base.disc.slot.length,'the complete near-match path fits without extent growth');
+  const session={...base.session,compressedTsr:null};
+  const result=await buildEditedImage(session,edited,{completeNearMatches:true});
+  const files=await locateIsoFiles(result.outputBlob),output=new Uint8Array(await result.outputBlob.arrayBuffer());
+  const decodedAfter=decompressTsr(readFileBytes(output,files.tsr.extentLba,files.tsr.byteLength));
+  assert.equal(result.tsr.method,'recompress');assert.equal(result.tsr.directoryBytes,base.disc.slot.length);
+  assert.ok(sameBytes(decodedAfter,edited));
+});
+
 // ---------------------------------------------------------------------------------------------------------------------
 // The padding rule of the slot, the write comparison and the directory guard, one byte at a time
 
