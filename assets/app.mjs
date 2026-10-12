@@ -1,11 +1,12 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-battle1';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-battle1';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261012-battle1";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261012-battle1";
-import { createBattlePreview } from "./editor-battle-preview.mjs?v=20261012-battle1";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261012-battle1";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261012-battle1";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261012-battle1";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-weapons2';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-weapons2';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261012-weapons2";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261012-weapons2";
+import { createBattlePreview } from "./editor-battle-preview.mjs?v=20261012-weapons2";
+import {createWeaponAuthoringUI} from './editor-weapon-authoring-ui.mjs?v=20261012-weapons2';
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261012-weapons2";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261012-weapons2";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261012-weapons2";
 import {
   canStep,
   filterRecords,
@@ -14,7 +15,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261012-battle1";
+} from "./editor-list.mjs?v=20261012-weapons2";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -25,7 +26,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261012-battle1";
+} from "./editor-grades.mjs?v=20261012-weapons2";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -59,27 +60,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261012-battle1";
+} from "./editor-skill-list.mjs?v=20261012-weapons2";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261012-battle1";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261012-battle1";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261012-battle1";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261012-battle1";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261012-battle1";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261012-battle1";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261012-battle1";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261012-battle1";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261012-battle1";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261012-battle1";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261012-battle1";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261012-battle1";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261012-battle1";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261012-battle1";
+} from "./editor-facts.mjs?v=20261012-weapons2";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261012-weapons2";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261012-weapons2";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261012-weapons2";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261012-weapons2";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261012-weapons2";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261012-weapons2";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261012-weapons2";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261012-weapons2";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261012-weapons2";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261012-weapons2";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261012-weapons2";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261012-weapons2";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261012-weapons2";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -87,14 +88,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261012-battle1";
+} from "./font-revisions.mjs?v=20261012-weapons2";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261012-battle1";
+} from "./release-notes.mjs?v=20261012-weapons2";
 
-const STATIC_ASSET_REVISION = "20261012-battle1";
+const STATIC_ASSET_REVISION = "20261012-weapons2";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -401,6 +402,7 @@ const elements = {
   pilotHeroLinksNote: byId("pilotHeroLinksNote"),
   pilotHeroReturnButton: byId("pilotHeroReturnButton"),
   weaponBattlePreview: byId("weaponBattlePreview"),
+  weaponAuthoring: byId('weaponAuthoring'),
   liveRegion: byId("liveRegion"),
 };
 
@@ -547,6 +549,7 @@ const state = {
   cueSaveSequence: 0,
   editorWorker: null,
   editorBusy: false,
+  editorAuthoringBusy: false,
   editorChangeCount: 0,
   editorJobId: null,
   editorOperation: null,
@@ -559,6 +562,8 @@ const state = {
   editorUnits: [],
   editorPilots: [],
   editorWeapons: [],
+  editorWeaponAuthoring: [],
+  editorOriginalWeaponAuthoring: [],
   editorTerrains: [],
   editorRewards: [],
   editorScenario: createScenarioModel(),
@@ -592,14 +597,47 @@ const listNeedsBuild = { unit: false, pilot: false, weapon: false };
 const battlePreviewRequests = new Map();
 const weaponBattlePreview = createBattlePreview({ container: elements.weaponBattlePreview,
   requestPreview: requestBattlePreview });
+const weaponAuthoringUI=createWeaponAuthoringUI({container:elements.weaponAuthoring,
+  getEntries:()=>state.editorWeaponAuthoring,getOwner:()=>weaponBattlePreview.snapshot().unitIndex,
+  inspect:request=>requestBattleJob('WEAPON_AUTHORING_INSPECT',{...request,weaponAuthoring:weaponAuthoringRequest()}),
+  apply:applyWeaponAuthoring,
+  onToggle:open=>{elements.weaponBattlePreview.hidden=open;weaponBattlePreview.setBusy(open);},
+  onSelect:id=>{state.editorSelected.weapon=id;EDITOR_UI.weapon.search.value='';editorSearchTools.clear?.('weapon');renderRecordList('weapon',{build:true});selectEditorRecord('weapon');},
+});
+function weaponAuthoringRequest(){return state.editorWeaponAuthoring.map(({weaponIndex,sourceWeapon,unitIndex,edits})=>({weaponIndex,sourceWeapon,unitIndex,edits:edits.map(e=>({...e}))}));}
+async function applyWeaponAuthoring(entries,seed=null){
+  const controller=new AbortController();
+  const seedRow=seed?state.editorWeapons.find(row=>row.recordIndex===seed.copyFrom):null;
+  state.editorAuthoringBusy=true;updateControls();
+  try{
+  for(const pending of [...battlePreviewRequests.values()])pending.cancel();
+  const result=await requestBattleJob('WEAPON_AUTHORING_PLAN',{weaponAuthoring:entries,signal:controller.signal});
+  state.editorUnits=mergeAuthoringRows('unit',result.units);state.editorWeapons=mergeAuthoringRows('weapon',result.weapons);
+  if(seedRow){const row=state.editorWeapons.find(item=>item.recordIndex===seed.copyTo);for(const field of editorFieldsFor('weapon'))row[field]=seedRow[field];row.original=Object.freeze({...row.original,...Object.fromEntries(editorFieldsFor('weapon').map(field=>[field,row[field]]))});}
+  state.editorWeaponAuthoring=result.weaponAuthoring;
+  rebuildEditorRowIndex();listNeedsBuild.unit=listNeedsBuild.weapon=true;
+  invalidateEditorDownloads();renderRecordList('weapon',{build:true});selectEditorRecord('weapon');updateEditorStatus('weapon');
+  }finally{state.editorAuthoringBusy=false;updateControls();}
+}
+function mergeAuthoringRows(kind,incoming){
+  const current=new Map(editorRowsFor(kind).map(row=>[row.recordIndex,row]));
+  return prepareEditorRows(incoming,kind).map(row=>{const previous=current.get(row.recordIndex);
+    if(previous?.editable&&row.editable&&previous.identity===row.identity){for(const field of editorFieldsFor(kind))row[field]=previous[field];row.original=previous.original;}return row;
+  });
+}
 
 function clearBattlePreview() {
+  weaponAuthoringUI.clear();state.editorWeaponAuthoring=[];state.editorOriginalWeaponAuthoring=[];
   weaponBattlePreview.clear();
   for (const pending of battlePreviewRequests.values()) pending.cancel();
   battlePreviewRequests.clear();
 }
 
 function requestBattlePreview({ signal, ...request }) {
+  return requestBattleJob(state.editorWeaponAuthoring.length?'WEAPON_AUTHORING_PREVIEW':'BATTLE_PREVIEW',
+    {...request,...(state.editorWeaponAuthoring.length?{weaponAuthoring:weaponAuthoringRequest()}:{}),signal});
+}
+function requestBattleJob(type,{ signal, ...request }) {
   return new Promise((resolve, reject) => {
     if (signal.aborted || !state.editorSessionToken || !state.editorWorker) {
       reject(new DOMException("Preview cancelled", "AbortError")); return;
@@ -616,7 +654,7 @@ function requestBattlePreview({ signal, ...request }) {
       resolve: result => { cleanup(); resolve(result); },
       reject: error => { cleanup(); reject(error); } });
     signal.addEventListener("abort", cancel, { once: true });
-    try { worker.postMessage({ type: "BATTLE_PREVIEW", previewId, sessionToken, request }); }
+    try { worker.postMessage({ type, previewId, sessionToken, request }); }
     catch (error) { cleanup(); reject(error); }
   });
 }
@@ -804,7 +842,30 @@ const editorChanges = createEditorChanges({
   changeCount: () => countEditorChanges(),
   jumpTo: (kind, recordIndex, fields) => focusEditorChange(kind, recordIndex, fields),
   afterApply: () => refreshEditorAfterPreset(),
-  preparePreset: preset => state.editorScenario.preparePreset(preset),
+  weaponAuthoring:()=>weaponAuthoringRequest(),
+  hasWeaponAuthoring:()=>state.editorWeaponAuthoring.length>0||state.editorOriginalWeaponAuthoring.length>0,
+  flushWeaponAuthoring:()=>weaponAuthoringUI.flush(),
+  extendPreset:preset=>{
+    if(!state.editorWeaponAuthoring.length&&!state.editorOriginalWeaponAuthoring.length)return;
+    preset.weaponAuthoring=weaponAuthoringRequest();
+    preset.weaponAuthoringFrom=state.editorOriginalWeaponAuthoring.map(({weaponIndex,sourceWeapon,unitIndex,edits})=>({weaponIndex,sourceWeapon,unitIndex,edits}));
+    for(const entry of preset.weaponAuthoring){
+      const row=state.editorWeapons.find(item=>item.recordIndex===entry.weaponIndex);
+      if(!row?.authoring?.isNew)continue;
+      const source=state.editorWeapons.find(item=>item.recordIndex===entry.sourceWeapon);
+      const fields=Object.fromEntries(editorFieldsFor('weapon').filter(field=>source.original[field]!==row[field]).map(field=>[field,{from:source.original[field],to:row[field]}]));
+      const existing=preset.weapons.find(item=>item.recordIndex===row.recordIndex);
+      if(existing)existing.fields=fields;else if(Object.keys(fields).length)preset.weapons.push({recordIndex:row.recordIndex,name:row.name,identity:row.identity,fields});
+    }
+  },
+  preparePreset: async preset=>{
+    state.editorScenario.preparePreset(preset);
+    if(!preset.weaponAuthoring)return;
+    const controller=new AbortController();
+    const result=await requestBattleJob('WEAPON_AUTHORING_PLAN',{weaponAuthoring:preset.weaponAuthoring,signal:controller.signal});
+    return {units:mergeAuthoringRows('unit',result.units),weapons:mergeAuthoringRows('weapon',result.weapons),weaponAuthoringConflict:JSON.stringify(weaponAuthoringRequest())!==JSON.stringify(preset.weaponAuthoringFrom??[])};
+  },
+  applyWeaponAuthoringPreset: async(entries,mode,from=[])=>{if(mode==='matching'&&JSON.stringify(weaponAuthoringRequest())!==JSON.stringify(from))return false;await applyWeaponAuthoring(entries);weaponAuthoringUI.refresh();return true;},
   announce: (text) => announce(text),
 });
 const editorPartName = id => {
@@ -1705,7 +1766,7 @@ function patchSideBusy() {
 }
 
 function editorSideBusy() {
-  return state.editorBusy || state.editorActive;
+  return state.editorBusy || state.editorActive || state.editorAuthoringBusy;
 }
 
 function anyJobBusy() {
@@ -4244,6 +4305,8 @@ function installEditorRows(view) {
   state.editorPilots = prepareEditorRows(view.pilots, "pilot");
   syncPilotExpansionBudget(state.editorPilots);
   state.editorWeapons = prepareEditorRows(view.weapons, "weapon");
+  state.editorWeaponAuthoring=structuredClone(view.weaponAuthoring??[]);
+  state.editorOriginalWeaponAuthoring=structuredClone(view.weaponAuthoring??[]);
   state.editorTerrains = prepareEditorRows(view.terrains ?? [], "terrain");
   state.editorRewards = prepareEditorRows(view.rewards ?? [], "reward");
   state.editorPartNames = view.partNames ?? [];
@@ -7123,6 +7186,7 @@ function isCurrentEditorPreview(requests, message) {
 
 function requestEditorPreview(type, record) {
   if (type === "weapon") {
+    weaponAuthoringUI.select(record);
     if (!record || !state.editorSessionToken) { weaponBattlePreview.clear(); return; }
     const owners = [...new Set((record.owners ?? []).map(owner => owner.unit))]
       .map(unitIndex => ({ unitIndex, name: unitNameForOwner(unitIndex) }));
@@ -7305,7 +7369,8 @@ function invalidateEditorDownloads() {
 
 // 지금 세션에서 원래 값과 달라진 칸(기체·파일럿·무기 수치와 습득표, 정신커맨드)의 수.
 function countEditorChanges() {
-  return ["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"].reduce((count, kind) => {
+  const authoringChanged=JSON.stringify(weaponAuthoringRequest())!==JSON.stringify(state.editorOriginalWeaponAuthoring.map(({weaponIndex,sourceWeapon,unitIndex,edits})=>({weaponIndex,sourceWeapon,unitIndex,edits})));
+  return (authoringChanged?1:0)+["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"].reduce((count, kind) => {
     const fields = editorFieldsFor(kind);
     return count + editorRowsFor(kind).reduce((rowCount, candidate) => {
       const changedFields = fields.filter((field) => candidate[field] !== candidate.original?.[field]).length;
@@ -7445,6 +7510,7 @@ function buildEditorExportRequest() {
   const weaponFields = editorFieldsFor("weapon");
   return Object.freeze({
     sessionToken: state.editorSessionToken,
+    ...(state.editorWeaponAuthoring.length||state.editorOriginalWeaponAuthoring.length?{weaponAuthoring:weaponAuthoringRequest()}:{}),
     deploymentEdits: state.editorScenario.exportDeployments(),
     eventEdits: state.editorScenario.exportEvents(),
     deadlineEdits: state.editorScenario.exportDeadlines(),
@@ -7474,6 +7540,8 @@ function buildEditorExportRequest() {
 
 async function exportEditorImage() {
   if (!state.editorSessionToken || !state.release || state.editorBusy) return;
+  const pendingMotion=weaponAuthoringUI.flush();
+  if(!(pendingMotion instanceof Promise?await pendingMotion:pendingMotion))return;
   if (!validateEditorForms()) { navigateWorkflow("editor"); return; }
   clearEditorDownloads();
   const request = buildEditorExportRequest();
@@ -8394,7 +8462,8 @@ function sourceSelectionMeta(source, suffix) {
 }
 
 function updateControls() {
-  weaponBattlePreview.setBusy(anyJobBusy());
+  weaponBattlePreview.setBusy(anyJobBusy()||weaponAuthoringUI.snapshot().open);
+  weaponAuthoringUI.setBusy(anyJobBusy());
   const releaseReady = state.availability === "ready" && Boolean(state.release);
   const interactionBusy = state.busy || state.cueSaving;
   // 어느 모드의 작업이든 하나라도 돌고 있으면 게임·버전·폰트와 모든 폴더 줄을 잠근다(작업은 하나씩 한다).

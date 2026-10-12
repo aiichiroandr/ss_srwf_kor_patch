@@ -2,8 +2,8 @@
 // This runs after provenance validation and never participates in decoded
 // masks, region contexts or writer lookup tables. Calls can change the map
 // and scheduling context: their return boundary alone grants neither.
-import { decodeScenarioInstruction } from './editor-scenario-events.mjs?v=20261012-battle1';
-import { DISPLAY_INSTRUCTION_LENGTHS } from './editor-scenario-display-grammar.mjs?v=20261012-battle1';
+import { decodeScenarioInstruction } from './editor-scenario-events.mjs?v=20261012-weapons2';
+import { DISPLAY_INSTRUCTION_LENGTHS } from './editor-scenario-display-grammar.mjs?v=20261012-weapons2';
 
 const word=(b,p)=>b[p]*256+b[p+1];
 const calls=new Set([0xe1,0xb1,0xb3,0xb4,0xb6]);

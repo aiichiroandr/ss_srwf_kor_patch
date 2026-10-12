@@ -449,3 +449,16 @@ test("a busy session or no session cannot load or apply", async () => {
   assert.equal(editorChanges.pending(), null);
   assert.equal(byId("editorChangesDialog").open, false);
 });
+
+test('a cloned weapon preset includes changed values only and can be parsed again', async () => {
+  const view=makeView();
+  view.weapons.push({...weaponRow(1),recordIndex:1331,attack:1999,identity:`weapon:1:${'a'.repeat(64)}`,authoring:{isNew:true,sourceWeapon:1,unitIndex:1}});
+  openSession(view);
+  state.editorWeaponAuthoring=[{weaponIndex:1331,sourceWeapon:1,unitIndex:1,edits:[]}];
+  state.editorOriginalWeaponAuthoring=[];
+  try {
+    const parsed=parsePreset(await savedText());
+    assert.deepEqual(parsed.weaponAuthoring,[{weaponIndex:1331,sourceWeapon:1,unitIndex:1,edits:[]}]);
+    assert.deepEqual(parsed.entries.weapon[0].fields,[{field:'attack',from:1001,to:1999}]);
+  } finally {state.editorWeaponAuthoring=[];state.editorOriginalWeaponAuthoring=[];}
+});

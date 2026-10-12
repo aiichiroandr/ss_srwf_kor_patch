@@ -20,14 +20,14 @@
 // still has the `from` value, is a conflict when it has another value, is already done when it has the `to` value, and is
 // skipped (with a reason) when the session could not take it: a record that does not exist or is read-only, a structural
 // unit ability (editor-locks.mjs), a terrain grade the writer refuses, a skill list the record cannot hold.
-import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261012-battle1';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261012-battle1';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261012-battle1';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261012-battle1';
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261012-battle1";
-import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261012-battle1";
-import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261012-battle1";
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261012-battle1";
+import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261012-weapons2';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261012-weapons2';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261012-weapons2';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261012-weapons2';
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261012-weapons2";
+import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261012-weapons2";
+import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261012-weapons2";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261012-weapons2";
 import {
   DEFAULT_CONSUMER_LIMIT,
   countConsumers,
@@ -39,10 +39,10 @@ import {
   skillRequest,
   spiritRequest, spiritCatalog, isSpiritLocked,
   pilotPairRequirement, syncPilotExpansionBudget,
-} from "./editor-skill-list.mjs?v=20261012-battle1";
+} from "./editor-skill-list.mjs?v=20261012-weapons2";
 
-import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261012-battle1";
-import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261012-battle1";
+import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261012-weapons2";
+import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261012-weapons2";
 
 export const PRESET_FORMAT = "srwf.editor-preset";
 export const PRESET_VERSION = 1;
@@ -76,7 +76,7 @@ const MAX_NAME_LENGTH = 200;
 const MAX_CREATED_AT_LENGTH = 64;
 const RECORD_INDEX_MAX = 0xffff;
 const RELEASE_ID = /^[a-z0-9][a-z0-9.-]{0,99}$/;
-const TOP_KEYS = Object.freeze(["format", "version", "gameId", "base", "createdAt", "units", "pilots", "weapons", "rewards", "terrains", "deployments", "events", "objectives", "reinforcements", "mapCells"]);
+const TOP_KEYS = Object.freeze(["format", "version", "gameId", "base", "createdAt", "units", "pilots", "weapons", "rewards", "terrains", "deployments", "events", "objectives", "reinforcements", "mapCells", "weaponAuthoring", "weaponAuthoringFrom"]);
 const REQUIRED_TOP_KEYS = Object.freeze(["format", "version", "gameId", "units", "pilots", "weapons"]);
 const ENTRY_KEYS = Object.freeze({
   unit: Object.freeze(["recordIndex", "name", "fields", "identity"]),
@@ -190,7 +190,7 @@ export function buildPreset({ gameId, releaseId = null, createdAt = new Date() }
 
 // How many changes a preset (built or parsed) carries: every field change plus one per changed skill list.
 export function presetChangeCount(preset) {
-  let count = 0;
+  let count = preset&&Object.hasOwn(preset,'weaponAuthoring')?Math.max(1,preset.weaponAuthoring.length):0;
   for (const kind of PRESET_KINDS) {
     const entries = preset?.entries?.[kind] ?? preset?.[PRESET_TABLE_KEYS[kind]] ?? [];
     for (const entry of entries) {
@@ -236,6 +236,25 @@ function requireKeys(value, allowed, required, details) {
   for (const key of required) {
     if (!Object.hasOwn(value, key)) fail("PRESET_MISSING_KEY", details);
   }
+}
+
+export function parseWeaponAuthoringSettings(value,gameId){
+  const rows=readList(value,24,{where:'weaponAuthoring'}),seen=new Set();
+  const motion=['horizontalVelocity','horizontalDisplacement','verticalDisplacement','horizontalPosition','verticalPosition','motionDuration'];
+  return rows.map(row=>{
+    if(!isPlainRecord(row))fail('PRESET_BAD_VALUE');requireKeys(row,['weaponIndex','sourceWeapon','unitIndex','edits'],['weaponIndex','sourceWeapon','unitIndex','edits'],{where:'weaponAuthoring'});
+    const weaponIndex=ownData(row,'weaponIndex'),sourceWeapon=ownData(row,'sourceWeapon'),unitIndex=ownData(row,'unitIndex');
+    if(![weaponIndex,sourceWeapon,unitIndex].every(Number.isSafeInteger)||weaponIndex<1||weaponIndex>(gameId==='srwf-f'?1279:1407)
+      ||sourceWeapon<1||sourceWeapon>=(gameId==='srwf-f'?1248:1331)||unitIndex<1||unitIndex>(gameId==='srwf-f'?367:447)||seen.has(weaponIndex))fail('PRESET_BAD_VALUE');
+    seen.add(weaponIndex);const keys=new Set();
+    const edits=readList(ownData(row,'edits'),4096,{where:'weaponAuthoring'}).map(edit=>{
+      if(!isPlainRecord(edit))fail('PRESET_BAD_VALUE');requireKeys(edit,['recordOffset','field','value'],['recordOffset','field','value'],{where:'weaponAuthoring'});
+      const recordOffset=ownData(edit,'recordOffset'),field=ownData(edit,'field'),value=ownData(edit,'value'),key=`${recordOffset}:${field}`;
+      if(!Number.isSafeInteger(recordOffset)||recordOffset<0||recordOffset>8*1024*1024||!motion.includes(field)||!Number.isSafeInteger(value)
+        ||value<(field==='motionDuration'?1:-32768)||value>(field==='motionDuration'?255:32767)||keys.has(key))fail('PRESET_BAD_VALUE');
+      keys.add(key);return {recordOffset,field,value};
+    });return {weaponIndex,sourceWeapon,unitIndex,edits};
+  });
 }
 
 function readList(value, maximum, details) {
@@ -391,7 +410,10 @@ export function parsePreset(text, { gameId = null } = {}) {
       return entry;
     }));
   }
-  return Object.freeze({ gameId: presetGameId, releaseId, createdAt, entries: Object.freeze(entries), changeCount });
+  const weaponAuthoring=Object.hasOwn(data,'weaponAuthoring')?parseWeaponAuthoringSettings(ownData(data,'weaponAuthoring'),presetGameId):undefined;
+  const weaponAuthoringFrom=Object.hasOwn(data,'weaponAuthoringFrom')?parseWeaponAuthoringSettings(ownData(data,'weaponAuthoringFrom'),presetGameId):[];
+  if(Object.hasOwn(data,'weaponAuthoringFrom')&&!weaponAuthoring)fail('PRESET_BAD_VALUE');
+  return Object.freeze({ gameId: presetGameId, releaseId, createdAt, entries: Object.freeze(entries), changeCount:changeCount+(weaponAuthoring?Math.max(1,weaponAuthoring.length):0),...(weaponAuthoring?{weaponAuthoring,weaponAuthoringFrom}:{}) });
 }
 
 // ---- judging a preset against an open session ----------------------------------------------------------------------

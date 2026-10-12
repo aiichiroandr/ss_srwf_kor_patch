@@ -1,6 +1,6 @@
 // Local authoring primitives. They operate only on caller-owned byte copies.
 // No disc write permission or provenance is inferred from this parser.
-import { battleActorInstructionBytes } from './editor-battle-mapping.mjs?v=20261012-battle1';
+import { battleActorInstructionBytes } from './editor-battle-mapping.mjs?v=20261012-weapons2';
 
 const HEADER = 46, DIRECTORY = 6168, MAX_FILE = 8 * 1024 * 1024;
 const view = b => new DataView(b.buffer,b.byteOffset,b.byteLength);

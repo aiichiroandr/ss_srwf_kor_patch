@@ -1,8 +1,8 @@
 // Structural local experiment: clone a weapon into a VERIFIED free record and
 // fund one new unit entry by removing a VERIFIED unused unit's sentinel entry.
 // The caller must supply authenticated admission; this is not a public writer.
-import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261012-battle1';
-import {isWeaponRequiredSkillEditable} from './editor-facts.mjs?v=20261012-battle1';
+import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261012-weapons2';
+import {isWeaponRequiredSkillEditable} from './editor-facts.mjs?v=20261012-weapons2';
 const own=(o,k)=>o&&typeof o==='object'?Object.getOwnPropertyDescriptor(o,k)?.value:undefined;
 const dv=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 function fail(message){const e=new Error(message);e.code='EDITOR_WEAPON_LAYOUT_INVALID';throw e;}
