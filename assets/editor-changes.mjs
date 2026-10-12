@@ -1,5 +1,5 @@
-import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261012-battle1';
-import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261012-battle1';
+import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261012-weapons2';
+import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261012-weapons2';
 // The change list of the editor and its preset file: the button at the bottom of the editor (the change count) opens a
 // dialog that lists every changed record grouped by unit, pilot and weapon; an entry jumps to that record and field. The
 // footer saves the changes as a preset file (.json) and loads one: a loaded file is checked, judged against the open
@@ -12,8 +12,8 @@ import {
   gradeLabel,
   splitWeaponTerrain,
   weaponGradeLabel,
-} from "./editor-grades.mjs?v=20261012-battle1";
-import { skillDiff } from "./editor-skill-list.mjs?v=20261012-battle1";
+} from "./editor-grades.mjs?v=20261012-weapons2";
+import { skillDiff } from "./editor-skill-list.mjs?v=20261012-weapons2";
 import {
   PresetError,
   applyPreset,
@@ -25,7 +25,7 @@ import {
   presetChangeCount,
   presetFileName,
   serializePreset,
-} from "./editor-preset.mjs?v=20261012-battle1";
+} from "./editor-preset.mjs?v=20261012-weapons2";
 
 export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"]);
 const KIND_HEADINGS = Object.freeze({ unit: "기체", pilot: "파일럿", weapon: "무기", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 증원", map: "맵 타일" });
@@ -216,7 +216,7 @@ export function createEditorChanges(host) {
 
   function renderList() {
     const byKind = changes();
-    const records = CHANGE_KINDS.reduce((sum, kind) => sum + byKind[kind].length, 0);
+    const records = CHANGE_KINDS.reduce((sum, kind) => sum + byKind[kind].length, 0)+(host.hasWeaponAuthoring?.()?Math.max(1,host.weaponAuthoring().length):0);
     const count = typeof host.changeCount === "function" ? host.changeCount() : records;
     ui.title.textContent = count > 0 ? `바뀐 값 ${count}개` : "바뀐 값";
     syncButtons(records > 0);
@@ -253,6 +253,7 @@ export function createEditorChanges(host) {
       group.append(heading, list);
       return group;
     });
+    if(host.hasWeaponAuthoring?.())groups.push(node('p','editor-changes-detail',`무기 연출·신규 무기 이력 ${host.weaponAuthoring().length}개 · BIN 및 편집값 파일에 함께 저장됩니다`));
     ui.list.replaceChildren(...groups);
   }
 
@@ -263,6 +264,7 @@ export function createEditorChanges(host) {
     const base = knownBase ? ` · 저장한 판 ${knownBase}` : "";
     ui.title.textContent = "편집값 불러오기";
     ui.summaryText.textContent = `${fileName || "선택한 파일"} · 값 ${preset.changeCount}개${base}`;
+    if(preset.weaponAuthoring)ui.summaryText.textContent+=` · 연출·신규 무기 ${preset.weaponAuthoring.length}개`;
     const lines = [
       ["apply", `바로 적용 ${apply}개`, "지금 값이 파일의 원래 값과 같습니다"],
       ["conflict", `원래 값이 다름 ${conflict}개`, "이 판에서 값이 달라진 곳입니다"],
@@ -367,8 +369,10 @@ export function createEditorChanges(host) {
         throw new PresetError("PRESET_READ_FAILED");
       }
       const preset = parsePreset(text, { gameId: host.gameId() });
-      host.preparePreset?.(preset);
-      const plan = planPresetApplication(preset, session());
+      const prepared=await host.preparePreset?.(preset);
+      const basePlan = planPresetApplication(preset, {...session(),...(prepared??{})});
+      const authoringStatus=prepared?.weaponAuthoringConflict?'conflict':'apply';
+      const plan=preset.weaponAuthoring?{...basePlan,counts:{...basePlan.counts,[authoringStatus]:basePlan.counts[authoringStatus]+Math.max(1,preset.weaponAuthoring.length)}}:basePlan;
       pending = { preset, plan, fileName: typeof file.name === "string" ? file.name : "" };
       say("");
       renderSummary();
@@ -387,10 +391,17 @@ export function createEditorChanges(host) {
   function apply(mode) {
     if (!pending || !host.hasSession() || !host.canEdit()) return null;
     const { preset } = pending;
+    if(preset.weaponAuthoring&&host.applyWeaponAuthoringPreset){
+      return host.applyWeaponAuthoringPreset(preset.weaponAuthoring,mode,preset.weaponAuthoringFrom).then(applied=>applyPrepared(preset,mode,applied?Math.max(1,preset.weaponAuthoring.length):0)).catch(error=>{say(errorText(error),'error');return null;});
+    }
+    return applyPrepared(preset,mode);
+  }
+  function applyPrepared(preset,mode,extraCount=0){
     let result;
     try {
       // judged again against the rows as they are now, then applied to the pending rows only
       result = applyPreset(preset, session(), mode);
+      if(extraCount)result={...result,applied:result.applied+extraCount};
     } catch (error) {
       pending = null;
       renderList();
@@ -438,10 +449,12 @@ export function createEditorChanges(host) {
 
   async function save() {
     if (!host.hasSession() || !host.canEdit()) return null;
+    if(host.flushWeaponAuthoring){const flushed=host.flushWeaponAuthoring();if(flushed?.then){if(!await flushed)return null;}else if(flushed===false)return null;}
     const preset = buildPreset(
       { gameId: host.gameId(), releaseId: host.releaseId(), createdAt: new Date() },
       Object.fromEntries(CHANGE_KINDS.map((kind) => [kind, (host.rows(kind) ?? [])])),
     );
+    host.extendPreset?.(preset);
     if (presetChangeCount(preset) === 0) {
       say("저장할 바뀐 값이 없습니다.");
       return null;

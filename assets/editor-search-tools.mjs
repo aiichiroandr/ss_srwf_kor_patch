@@ -1,5 +1,5 @@
-import { filterFields, filterField, gradeChoices, gradeText, filterValue, isValidCondition, matchesConditions, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit, MAX_EDITOR_CONDITIONS } from "./editor-filter.mjs?v=20261012-battle1";
-import { packMeasuredGroups } from "./editor-layout.mjs?v=20261012-battle1";
+import { filterFields, filterField, gradeChoices, gradeText, filterValue, isValidCondition, matchesConditions, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit, MAX_EDITOR_CONDITIONS } from "./editor-filter.mjs?v=20261012-weapons2";
+import { packMeasuredGroups } from "./editor-layout.mjs?v=20261012-weapons2";
 
 const KINDS = ["unit", "pilot", "weapon"];
 const NOUNS = { unit: "기체", pilot: "파일럿", weapon: "무기" };

@@ -1210,7 +1210,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261012-battle1');
+  --frame: url('./runtime-panel-frame.svg?v=20261012-weapons2');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -2480,6 +2480,17 @@ body[data-view="editor"] .editor-region {
 
 /* Battle picture preview: only this new region owns its sizing and controls. */
 .weapon-preview-panel { min-width: 0; min-height: 0; }
+.weapon-authoring-tools,.weapon-authoring-actions { display:flex; gap:4px; min-width:0; }
+.weapon-authoring-tools button,.weapon-authoring-actions button { flex:1; min-width:0; min-height:28px; padding:3px 5px; border:1px solid #47656b; border-radius:2px; background:#071d27; color:#d4e6df; font:inherit; font-size:12px; white-space:nowrap; }
+.weapon-authoring-tools { margin-bottom:4px; }
+.weapon-authoring-panel { display:grid; gap:6px; min-width:0; }
+.weapon-authoring-panel[hidden],.weapon-authoring-tools button[hidden] { display:none; }
+.weapon-authoring-picker { width:100%; min-width:0; min-height:28px; padding:3px 5px; color:#d4e6df; background:#071d27; border:1px solid #47656b; font:inherit; font-size:12px; }
+.weapon-authoring-fields { display:flex; gap:4px; min-width:0; }
+.weapon-authoring-fields label { flex:1; min-width:0; color:#bed7d2; font-size:12px; white-space:nowrap; }
+.weapon-authoring-fields input { display:block; width:100%; box-sizing:border-box; min-width:0; height:32px; margin-top:3px; padding:2px 4px; border:1px solid #47656b; background:#03131b; color:#f0f4d6; font-family:monospace; font-size:16px; text-align:center; }
+.weapon-authoring-fields input[aria-invalid="true"] { border-color:#ff8878; }
+.weapon-authoring-status { margin:0; min-width:0; font-size:11px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#b8c9bf; }
 .battle-preview {
   display: flex;
   flex-direction: column;

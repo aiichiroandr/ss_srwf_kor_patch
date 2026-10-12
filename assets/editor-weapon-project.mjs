@@ -1,6 +1,6 @@
 // Bounded local project carrier. Final admission still requires canonical TSR
 // and whole-disc immutable hashes; this metadata is never an ACCEPTED receipt.
-import {inspectWeaponAnimation,editWeaponAnimation,weaponAnimationSpan} from './editor-weapon-authoring.mjs?v=20261012-battle1';
+import {inspectWeaponAnimation,editWeaponAnimation,weaponAnimationSpan} from './editor-weapon-authoring.mjs?v=20261012-weapons2';
 const FIRST=0x0560,COUNT=32,BLOCK=1578,META=4096,HEADER=16,TEMPLATE=12;
 const MAGIC=Uint8Array.from([83,82,87,70,87,80,78,49]); // SRWFWPN1
 const dv=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);

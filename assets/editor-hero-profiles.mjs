@@ -2,8 +2,8 @@
 // Only fixed hero-list footprints 308..311, excluding their final four zero
 // padding bytes, are additionally mutable. Pointer cells and destination slots
 // remain pinned; the parser/writer require exactly six spirits and 00 00.
-import { SCENARIO_EDITOR_PROFILES } from './editor-scenario-profiles.mjs?v=20261012-battle1';
-import { TERRAIN_EDITOR_PROFILES } from './editor-terrain-profiles.mjs?v=20261012-battle1';
+import { SCENARIO_EDITOR_PROFILES } from './editor-scenario-profiles.mjs?v=20261012-weapons2';
+import { TERRAIN_EDITOR_PROFILES } from './editor-terrain-profiles.mjs?v=20261012-weapons2';
 const pins = [
   {
     "baseTargetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",
