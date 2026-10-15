@@ -15,10 +15,10 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 디스크 이미지를 기기 안에서 검증하고, 한글화 또는 게임 데이터 편집 후 BIN/CUE로 저장합니다."
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20261012-frames3">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261012-frames3">
-    <script type="module" src="assets/app.mjs?v=20261012-frames3"></script>
-    <script type="module" src="assets/user-guide.mjs?v=20261012-frames3"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20261015-stocknames2">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261015-stocknames2">
+    <script type="module" src="assets/app.mjs?v=20261015-stocknames2"></script>
+    <script type="module" src="assets/user-guide.mjs?v=20261015-stocknames2"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -735,7 +735,7 @@
                 <div class="game-screen-shell">
                   <div class="editor-game-screen weapon-game-screen" id="weaponStatsForm">
                     <p class="weapon-scope-note" data-editor-section="main">게임 전체의 무기 데이터입니다. 기체마다 쓰는 무기는 기체 탭의 ‘무기’ 구역에서 봅니다.</p>
-                    <section class="game-panel weapon-preview-panel" data-editor-section="main" aria-label="무기 상태 그림">
+                    <section class="game-panel weapon-preview-panel" data-editor-section="main" aria-label="무기 연출">
                       <div id="weaponAuthoring"></div>
                       <div id="weaponBattlePreview"></div>
                     </section>
@@ -744,13 +744,17 @@
                       <div class="weapon-detail-grid is-stacked">
                         <label>공격력<input type="number" data-editor-field="attack" min="0" max="65535" step="1" inputmode="numeric"></label>
                         <label>명중 보정<input type="number" data-editor-field="hit" min="-128" max="127" step="1" inputmode="numeric"></label>
-                        <label>크리티컬<input type="number" data-editor-field="critical" min="0" max="15" step="1" inputmode="numeric"></label>
+                        <label>크리티컬<select aria-label="크리티컬 판정 보정" data-editor-field="critical"></select></label>
                         <label>최소 사거리<input type="number" data-editor-field="minRange" min="0" max="255" step="1" inputmode="numeric"></label>
                         <label>최대 사거리<input type="number" data-editor-field="maxRange" min="0" max="255" step="1" inputmode="numeric"></label>
                         <label>소비 EN<input type="number" data-editor-field="energy" min="0" max="65535" step="1" inputmode="numeric"></label>
                         <label>탄수<input type="number" data-editor-field="ammo" min="1" max="255" step="1" inputmode="numeric"><output class="editor-field-info" hidden></output></label>
                         <label>필요 기력<input type="number" data-editor-field="requiredMorale" min="0" max="150" step="1" inputmode="numeric"></label>
                         <label>필요 기능<select data-editor-field="requiredSkill"></select></label>
+                        <label>공격 분류<select aria-label="공격 분류" data-editor-field="ranged"></select></label>
+                        <label>이동 후(P)<select aria-label="이동 후 공격(P)" data-editor-field="postMove"></select></label>
+                        <label>베어내기<select aria-label="베어내기 대상 여부" data-editor-field="parryable"></select></label>
+                        <label>전투대사<select aria-label="무기 전투대사 연결" data-editor-field="dialogueKey"></select></label>
                       </div>
                     </section>
                     <section class="game-panel weapon-terrain-panel" data-editor-section="extra" aria-label="무기 지형 적응도">
@@ -772,6 +776,7 @@
                   <span class="sr-only" id="editorStateLive" role="status" aria-live="polite"></span>
                   <div class="editor-preset-file-actions" role="group" aria-label="편집값 파일">
                     <button class="editor-preset-file-button" type="button" id="editorPresetSaveButton" title="이번에 바꾼 값을 JSON 파일로 저장" aria-label="편집값 저장" disabled><span class="preset-long">편집값 저장</span><span class="preset-short" aria-hidden="true">값 저장</span></button>
+                    <a class="editor-preset-file-button" id="editorPresetDownloadLink" aria-label="준비된 편집값 받기" title="준비된 JSON 파일 다운로드" hidden download><span class="preset-long">편집값 받기</span><span class="preset-short" aria-hidden="true">값 받기</span></a>
                     <button class="editor-preset-file-button" type="button" id="editorPresetLoadButton" title="저장한 편집값 JSON 파일 불러오기" aria-label="편집값 불러오기" aria-haspopup="dialog" aria-controls="editorChangesDialog" disabled><span class="preset-long">편집값 불러오기</span><span class="preset-short" aria-hidden="true">값 불러오기</span></button>
                     <input type="file" id="editorPresetFile" accept=".json,application/json" hidden>
                   </div>

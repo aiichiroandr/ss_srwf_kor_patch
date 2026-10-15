@@ -474,7 +474,7 @@ function twoRecords() {
   const weapons = weaponRows(built.segments, built.decoded, GLYPHS, GAME);
   const unitFields = ['hp', 'en', 'armor', 'speed', 'limit', 'move', 'ground', 'sea', 'air', 'space', 'ability1', 'ability2', 'ability3', 'ability4', 'abilityValue1', 'abilityValue2', 'abilityValue3', 'abilityValue4', 'shield', 'parry'];
   const pilotFields = ['exp', 'atk', 'shot', 'agi', 'hit', 'tech', 'cnt', 'mp', 'ground', 'sea', 'air', 'space', 'attackGrowth', 'shotGrowth', 'hitGrowth', 'techGrowth', 'agiGrowth', 'cntGrowth', 'mindGrowth', 'syncGrowth'];
-  const weaponFields = ['attack', 'hit', 'critical', 'minRange', 'maxRange', 'terrain', 'energy', 'ammo', 'requiredMorale', 'requiredSkill'];
+  const weaponFields = ['attack', 'hit', 'critical', 'minRange', 'maxRange', 'terrain', 'energy', 'ammo', 'requiredMorale', 'requiredSkill', 'ranged', 'postMove', 'parryable', 'dialogueKey'];
   return {
     built,
     unit: units.map((row) => ({ recordIndex: row.recordIndex, fields: pick(row, unitFields) })),

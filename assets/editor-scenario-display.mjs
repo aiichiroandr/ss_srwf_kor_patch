@@ -1,9 +1,10 @@
+import {readBattlePilotRegistrationExamples} from './editor-battle-pilot-defaults.mjs?v=20261015-stocknames2';
 // Supplement the writable reader with proved, read-only script appearances.
 // This runs after provenance validation and never participates in decoded
 // masks, region contexts or writer lookup tables. Calls can change the map
 // and scheduling context: their return boundary alone grants neither.
-import { decodeScenarioInstruction } from './editor-scenario-events.mjs?v=20261012-frames3';
-import { DISPLAY_INSTRUCTION_LENGTHS } from './editor-scenario-display-grammar.mjs?v=20261012-frames3';
+import { decodeScenarioInstruction } from './editor-scenario-events.mjs?v=20261015-stocknames2';
+import { DISPLAY_INSTRUCTION_LENGTHS } from './editor-scenario-display-grammar.mjs?v=20261015-stocknames2';
 
 const word=(b,p)=>b[p]*256+b[p+1];
 const calls=new Set([0xe1,0xb1,0xb3,0xb4,0xb6]);
@@ -152,4 +153,21 @@ export function supplementScenarioDisplay(archive,maps,tables,model) {
     return Object.freeze({...scene,placements:Object.freeze([...scene.placements,...extra]),waves:Object.freeze([...scene.waves,...extraWaves].sort((a,b)=>a.commandOffset-b.commandOffset)),coverage});
   });
   return Object.freeze({...model,rows:Object.freeze(rows),scenarios:Object.freeze(scenarios)});
+}
+
+// Read-only original registration examples; no activation/write authority.
+// Native C1/04 consumes pilot BE16 and unit BE16. Require adjacent
+// registration/link/removal corroboration; FFFF is runtime context, not an id.
+export function readScenarioPilotAssignments(body,maps,tables){
+ const bytes=body.decoded,rows=new Map(),word=p=>bytes[p]*256+bytes[p+1];
+ for(const root of [2,4,5]){const start=body.roots[root],end=Math.min(...body.roots.filter(p=>p>start),bytes.length);
+  if(!Number.isInteger(start)||start<0||start>=end)continue;
+  for(const row of readBattlePilotRegistrationExamples(bytes,{...tables,start,end,physicalIndex:body.physicalIndex}))rows.set(row.byteOffset,row);
+  const pair=pc=>{if(pc<start||pc+6>end||bytes[pc]!==0xc1||bytes[pc+1]!==4)return null;const pilotId=word(pc+2),unitId=word(pc+4);return pilotId>1&&pilotId<tables.pilotCount&&unitId>0&&unitId<tables.unitCount?{pilotId,unitId}:null;};
+  for(let pc=start;pc+6<=end;pc++){const row=pair(pc);if(!row)continue;const next=pc+6,prior=pc-4;
+   const linked=next+6<=end&&bytes[next]===0xc1&&bytes[next+1]===11&&word(next+2)===row.pilotId&&word(next+4)<tables.pilotCount;
+   const prepared=prior>=start&&((bytes[prior]===0xc1&&bytes[prior+1]===5&&word(prior+2)===row.pilotId)||(bytes[prior]===0xc2&&bytes[prior+1]===11&&word(prior+2)===row.unitId));
+   if(linked||prepared||pair(pc-6)||pair(next))rows.set(pc,{...row,physicalIndex:body.physicalIndex,byteOffset:pc,source:'scenario-c1-04-registration-example'});
+  }
+ }return [...rows.values()];
 }

@@ -1,5 +1,6 @@
-import { filterFields, filterField, gradeChoices, gradeText, filterValue, isValidCondition, matchesConditions, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit, MAX_EDITOR_CONDITIONS } from "./editor-filter.mjs?v=20261012-frames3";
-import { packMeasuredGroups } from "./editor-layout.mjs?v=20261012-frames3";
+import {WEAPON_CRITICAL_CHOICES,weaponCriticalLabel} from './editor-weapon-critical.mjs?v=20261015-stocknames2';
+import { filterFields, filterField, gradeChoices, gradeText, filterValue, isValidCondition, matchesConditions, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit, MAX_EDITOR_CONDITIONS } from "./editor-filter.mjs?v=20261015-stocknames2";
+import { packMeasuredGroups } from "./editor-layout.mjs?v=20261015-stocknames2";
 
 const KINDS = ["unit", "pilot", "weapon"];
 const NOUNS = { unit: "기체", pilot: "파일럿", weapon: "무기" };
@@ -28,7 +29,7 @@ export function createEditorSearchTools(host) {
   const session = () => host.session();
   const rowsFor = kind => session()[{ unit: "units", pilot: "pilots", weapon: "weapons" }[kind]] ?? [];
   const readValue = input => input.type === "number" ? (input.value.trim() === "" ? null : Number(input.value)) : Number(input.value);
-  const format = (kind, key, value) => filterField(kind, key)?.type === "grade" ? gradeText(kind, value) : typeof value === "boolean" ? (value ? "있음" : "없음") : String(value);
+  const format = (kind, key, value) => kind==="weapon"&&key==="critical"?weaponCriticalLabel(value):filterField(kind, key)?.type === "grade" ? gradeText(kind, value) : typeof value === "boolean" ? (value ? "있음" : "없음") : String(value);
   const reasonText = reason => reason === "weapon-domain" && pending?.key === "ammo" ? "탄수 없는 무기" : REASONS[reason] ?? "편집 제한";
   const catalog = (kind, key) => { const id = `${kind}/${key}`; if (!catalogs.has(id)) catalogs.set(id, host.choices(kind, key)); return catalogs.get(id); };
   function describe(kind, condition) {
@@ -114,7 +115,8 @@ export function createEditorSearchTools(host) {
       if (edit && kind === "weapon" && field.key === "ammo") input.min = "1";
       input.step = "1"; input.inputMode = field.bounds[0] < 0 ? "text" : "numeric";
       if (edit) input.placeholder = "새 값 입력";
-    } else if (field.type === "grade") gradeChoices(kind).forEach(choice => option(input, choice.value, choice.letter));
+    } else if(field.type==="critical") WEAPON_CRITICAL_CHOICES.forEach(choice=>option(input,choice.value,choice.label));
+    else if (field.type === "grade") gradeChoices(kind).forEach(choice => option(input, choice.value, choice.letter));
     else if (field.type === "boolean") { option(input, 1, field.key === "modified" ? "수정됨" : "있음"); option(input, 0, field.key === "modified" ? "수정 안 함" : "없음"); }
     else { option(input, "", "능력 선택"); catalog(kind, field.key).forEach(item => option(input, item.id, item.name)); }
     input.value = value === null ? "" : typeof value === "boolean" ? (value ? "1" : "0") : String(value);

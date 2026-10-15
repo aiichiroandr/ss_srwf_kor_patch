@@ -1,31 +1,35 @@
-import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261012-frames3';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-frames3';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-frames3';
-import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261012-frames3";
-import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261012-frames3";
-import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261012-frames3";
-import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261012-frames3";
-import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261012-frames3";
-import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261012-frames3";
-import { Sha256 } from "./sha256.mjs?v=20261012-frames3";
-import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261012-frames3";
-import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261012-frames3";
-import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261012-frames3";
-import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261012-frames3";
-import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261012-frames3";
-import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261012-frames3";
-import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261012-frames3";
-import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261012-frames3";
-import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261012-frames3";
-import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261012-frames3";
-import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261012-frames3";
-import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261012-frames3";
-import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261012-frames3";
-import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261012-frames3";
-import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261012-frames3";
-import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261012-frames3";
-import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261012-frames3";
-import { normalizeWeaponProjectTsr,cloneWeaponIntoVerifiedSlot,cloneWeaponNameReference } from './editor-weapon-layout.mjs?v=20261012-frames3';
+import { F_STOCK_NAME_MAP } from './editor-stock-name-map.mjs?v=20261015-stocknames2';
+import {unitWeaponConditionRows,updateUnitWeaponConditions} from './editor-weapon-conditions.mjs?v=20261015-stocknames2';
+import {readWeaponCombatAttributes,writeWeaponCombatAttributes} from './editor-weapon-attributes.mjs?v=20261015-stocknames2';
+import {readBattlePilotRegistrationExamples} from './editor-battle-pilot-defaults.mjs?v=20261015-stocknames2';
+import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261015-stocknames2';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261015-stocknames2';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261015-stocknames2';
+import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261015-stocknames2";
+import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261015-stocknames2";
+import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261015-stocknames2";
+import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261015-stocknames2";
+import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261015-stocknames2";
+import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261015-stocknames2";
+import { Sha256 } from "./sha256.mjs?v=20261015-stocknames2";
+import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261015-stocknames2";
+import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261015-stocknames2";
+import { GRADE_EDIT_MAX, PILOT_GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261015-stocknames2";
+import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261015-stocknames2";
+import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261015-stocknames2";
+import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261015-stocknames2";
+import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261015-stocknames2";
+import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261015-stocknames2";
+import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261015-stocknames2";
+import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261015-stocknames2";
+import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261015-stocknames2";
+import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261015-stocknames2";
+import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261015-stocknames2";
+import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261015-stocknames2";
+import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261015-stocknames2";
+import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261015-stocknames2";
+import { supplementScenarioDisplay, readScenarioPilotAssignments } from "./editor-scenario-display.mjs?v=20261015-stocknames2";
+import { normalizeWeaponProjectTsr,cloneWeaponIntoVerifiedSlot,cloneWeaponNameReference } from './editor-weapon-layout.mjs?v=20261015-stocknames2';
 
 const SECTOR_SIZE = 2352;
 const SECTOR_USER_OFFSET = 16;
@@ -61,7 +65,7 @@ const PILOT_FIELDS = Object.freeze([
   "agiGrowth", "cntGrowth", "mindGrowth", "syncGrowth",
 ]);
 const WEAPON_FIELDS = Object.freeze([
-  "attack", "hit", "critical", "minRange", "maxRange", "terrain", "energy", "ammo", "requiredMorale", "requiredSkill",
+  "attack", "hit", "critical", "minRange", "maxRange", "terrain", "energy", "ammo", "requiredMorale", "requiredSkill", "ranged", "postMove", "parryable", "dialogueKey",
 ]);
 // Weapon record (17 bytes, root 29) bytes behind the stat fields. +12 is the ammunition (0 = the weapon keeps no ammo counter:
 // it uses EN or is unlimited), +15 the pilot morale the weapon needs (0 = none), +16 the pilot skill id it needs (0 = none).
@@ -517,7 +521,7 @@ export async function locateIsoFiles(blob, signal, requestedNames = ["TSR.BIN", 
       );
     }
     const file = found[0];
-    const sizeLimit = name === "TSR.BIN" ? MAX_TSR_BYTES : 16 * 1024 * 1024;
+    const sizeLimit = name === "TSR.BIN" ? MAX_TSR_BYTES : name === 'ADPCM.XA' ? 384*1024*1024 : 16 * 1024 * 1024;
     if (file.byteLength <= 0 || file.byteLength > sizeLimit) {
       fail(name === "TSR.BIN" ? "EDITOR_TSR_SIZE_UNSUPPORTED" : "EDITOR_MEDIA_NOT_FOUND", `${name} has a size outside the local inspection limit.`);
     }
@@ -1641,7 +1645,7 @@ export function unitRows(segments, decoded, unitAbilityNames, nameMap, gameId = 
   }
   const nameSegment = segments[11];
   const data = segments[27].bytes;
-  const { offsets, records } = dataRecordOffsets(data, 48);
+  const { offsets, records, groups } = dataRecordOffsets(data, 48);
   if (offsets.length < 2 || offsets.length > MAX_DATA_ROWS) {
     fail("EDITOR_TSR_STRUCTURE_UNSUPPORTED", "TSR.BIN has an unsupported number of unit records.");
   }
@@ -1660,6 +1664,7 @@ export function unitRows(segments, decoded, unitAbilityNames, nameMap, gameId = 
     rows.push({
       recordIndex,
       mapIcon,
+      weaponBindingAliases:(groups.get(recordIndex)??[recordIndex]).filter(index=>index>=1),
       ...nameFields,
       ...templateClass(nameFields.nameStatus, template),
       hp: readU16BE(data, start + 36),
@@ -1959,6 +1964,8 @@ export function weaponRows(segments, decoded, nameMap, gameId = "srwf-final", pi
       attack: attackValue,
       hit: data[start + 7] > 0x7f ? data[start + 7] - 0x100 : data[start + 7],
       critical: criticalAndTune >>> 4,
+      ...readWeaponCombatAttributes(readU16BE(data,start)),
+      dialogueKey: data[start+2]&63,
       minRange: data[start + 9],
       maxRange: data[start + 10],
       terrain: data[start + 11],
@@ -2134,8 +2141,8 @@ export async function previewEditorRecord(session, kind, recordIndex, { signal }
 // Battle pictures are read only, and stay owned by the authenticated session.
 // No decoded pixels, catalog or additional file is added to an export receipt.
 const BATTLE_FILE_NAMES = new Set([
-  'C_ROBOT.BIN', 'EFFECT.BIN', 'E_SPR.BIN', 'E_BNK.BIN', 'E_PAL.BIN',
-  'E_SC.BIN', 'D_ANIME.BIN', 'TSR_OBJ.BIN', 'BTSR.BIN', '0',
+  'C_ROBOT.BIN', 'FACE.BIN', 'EFFECT.BIN', 'E_SPR.BIN', 'E_BNK.BIN', 'E_PAL.BIN',
+  'E_SC.BIN', 'D_ANIME.BIN', 'TSR_OBJ.BIN', 'BTSR.BIN', 'BMESS.BIN', 'BBACK.BIN', '0',
 ]);
 const BATTLE_MODES = new Set(['attack', 'hit', 'evade', 'defense', 'destroyed']);
 const battleSessionCache = new WeakMap();
@@ -2168,7 +2175,7 @@ function battleCache(session) {
 }
 
 async function readBattleFile(session, fileName, signal) {
-  if (!BATTLE_FILE_NAMES.has(fileName)) fail('EDITOR_PREVIEW_INVALID', 'Unknown battle picture file.');
+  if (!BATTLE_FILE_NAMES.has(fileName)&&!['SE.BIN','BGM.BIN'].includes(fileName)) fail('EDITOR_PREVIEW_INVALID', 'Unknown battle source file.');
   const cache = battleCache(session);
   checkAbort(signal);
   if(cache.originalSession&&fileName!=='D_ANIME.BIN')return readBattleFile(cache.originalSession,fileName,signal);
@@ -2176,6 +2183,7 @@ async function readBattleFile(session, fileName, signal) {
   let file = cache.files.get(fileName);
   if (!file) {
     if (fileName === 'C_ROBOT.BIN') file = session.mediaFiles?.robot;
+    if (fileName === 'FACE.BIN') file = session.mediaFiles?.face;
     if (!file) {
       const files = await locateIsoFiles(session.sourceBlob, signal, [fileName]);
       file = files[fileName.replace(/\.BIN$/, '').toLowerCase()];
@@ -2192,17 +2200,206 @@ async function readBattleFile(session, fileName, signal) {
   return bytes;
 }
 
+async function readBattleVoiceClip(session,record,id,signal){
+ const cache=battleCache(session);checkAbort(signal);
+ if(cache.originalSession)return readBattleVoiceClip(cache.originalSession,record,id,signal);
+ if(!cache.voiceFile){const files=await locateIsoFiles(session.sourceBlob,signal,['ADPCM.XA']);
+  checkAbort(signal);cache.voiceFile=files['adpcm.xa'];}
+ const {planBattleVoiceRange}=await import('./editor-battle-voice-range.mjs');
+ const range=planBattleVoiceRange(record,cache.voiceFile,session.sourceBlob.size);
+ const key=range.startByte+':'+range.frameCount;
+ cache.voiceClips??=new Map();
+ let clip=cache.voiceClips.get(key);
+ if(!clip){
+  const raw=new Uint8Array(await session.sourceBlob.slice(range.startByte,range.startByte+range.byteLength).arrayBuffer());
+  checkAbort(signal);
+  const {decodeBattleVoice}=await import('./editor-battle-audio.mjs');
+  const decoded=decodeBattleVoice(raw,{format:'cd-xa-adpcm',frameCount:range.frameCount});
+  if(decoded.sampleRate!==range.sampleRate||decoded.channels!==range.channelCount
+   ||decoded.frameCount!==range.frameCount||!(decoded.pcm16 instanceof Int16Array))
+   fail('EDITOR_AUDIO_UNSUPPORTED','The selected voice does not match its owned source profile.');
+  clip={sampleRate:decoded.sampleRate,channelCount:decoded.channels,pcm16:decoded.pcm16};
+  checkAbort(signal);cache.voiceClips.set(key,clip);
+ }else{cache.voiceClips.delete(key);cache.voiceClips.set(key,clip);}
+ while(cache.voiceClips.size>32||[...cache.voiceClips.values()].reduce((sum,c)=>sum+c.pcm16.byteLength,0)>8*1024*1024)
+  cache.voiceClips.delete(cache.voiceClips.keys().next().value);
+ return {id,...clip};
+}
+
+export async function catalogEditorWeaponMotions(session,request={}, {signal}={}){
+ const cache=battleCache(session);checkAbort(signal);
+ if(cache.motionCatalog)return structuredClone(cache.motionCatalog);
+ if(!cache.rows)cache.rows=sessionEditorRows(session);
+ const bytes=session.weaponProject?.canonicalBytes??await readBattleFile(session,'D_ANIME.BIN',signal);
+ const {catalogBattleWeaponMotions}=await import('./editor-battle-weapon-catalog.mjs');
+ cache.motionCatalog=catalogBattleWeaponMotions({weapons:cache.rows.weapons,weaponData:session.root[29].bytes,animationData:bytes});
+ checkAbort(signal);return structuredClone(cache.motionCatalog);
+}
+
+// A missing unit-list owner is not a free-form selector grant. An unlinked
+// effect donor must be an authenticated original record with its own parsed
+// source program, under the same catalog gate used for full-motion donors.
+async function verifiedWeaponEffectDonor(session,donor,signal){
+ const first=session.descriptor.gameId==='srwf-final'?1331:1248;
+ if(!donor?.editable||donor.recordIndex<1||donor.recordIndex>=first||donor.authoring?.isNew)return false;
+ if(donor.owners?.length)return true;
+ return donor.ownership==='unowned'&&Boolean((await catalogEditorWeaponMotions(session,{}, {signal}))
+  .entries.find(row=>row.recordIndex===donor.recordIndex)?.previewEligible);
+}
+
+// Preview the same edited fields that the export writer admits, on a private
+// TSR copy. The authenticated session and selected disc are never changed.
+async function prepareEditorBattleCombatRows(session,request){
+ const cache=battleCache(session);if(!cache.rows)cache.rows=sessionEditorRows(session);
+ const submitted=ownData(request,'combatRows');if(submitted==null)return cache.rows;
+ const decoded=session.decoded.slice(),root=splitRootSegments(decoded);
+ const {skillRequest,spiritRequest}=await import('./editor-skill-list.mjs?v=20261015-stocknames2');
+ for(const [kind,key,fields,segment,write]of [['unit','units',UNIT_FIELDS,27,updateUnitRecords],['pilot','pilots',PILOT_FIELDS,28,updatePilotRecords],['weapon','weapons',WEAPON_FIELDS,29,updateWeaponRecords]]){
+  const {list}=readDenseList(ownData(submitted,key),kind==='weapon'?1:2);if(!list)fail('EDITOR_PREVIEW_INVALID','Invalid selected combat edits.');
+  const original=cache.rows[key],allowed=new Set(kind==='unit'?[ownData(request,'unitIndex'),ownData(request,'opponentUnitIndex')]:kind==='pilot'?[ownData(request,'attackerPilotIndex'),ownData(request,'defenderPilotIndex')]:[ownData(request,'weaponIndex')]);
+  const overrides=new Map();for(const edit of list){const id=ownData(edit,'recordIndex');if(!allowed.has(id)||overrides.has(id)||!original.some(row=>row.recordIndex===id))fail('EDITOR_PREVIEW_INVALID','Combat edits must match the selected records.');overrides.set(id,edit);}
+  const edits=original.map(row=>overrides.get(row.recordIndex)??{recordIndex:row.recordIndex,fields:Object.fromEntries(fields.map(field=>[field,row[field]])),
+   ...(kind==='pilot'?{specialAbilities:skillRequest(row.specialAbilities??[]),...(Array.isArray(row.spirits)?{spirits:spiritRequest(row.spirits)}:{})}:{})});
+  write(root[segment].bytes,edits,session.readOnly[kind],session.descriptor.gameId);
+ }
+ const {list:terrain}=readDenseList(ownData(submitted,'terrains')??[],1);
+ if(!terrain||terrain.some(row=>ownData(row,'recordIndex')!==ownData(request,'terrainIndex')))fail('EDITOR_PREVIEW_INVALID','Combat terrain edits must match the selected terrain.');
+ updateTerrainRecords(root[34],session.descriptor.gameId,terrain);
+ return sessionEditorRows(session,root,decoded);
+}
+
+async function prepareEditorBattleCombat(session,request,{signal}={}){
+ const condition=ownData(request,'combat');if(!condition)return {status:'off'};
+ const rows=await prepareEditorBattleCombatRows(session,request),weapon=rows.weapons.find(row=>row.recordIndex===ownData(request,'weaponIndex'));
+ const actors=['attacker','defender'].map((side,index)=>({unit:rows.units.find(row=>row.recordIndex===ownData(request,index?'opponentUnitIndex':'unitIndex')),
+  pilot:rows.pilots.find(row=>row.recordIndex===ownData(request,index?'defenderPilotIndex':'attackerPilotIndex')),level:ownData(condition,side+'Level'),morale:ownData(condition,side+'Morale'),currentHp:ownData(condition,side+'Hp'),currentEn:ownData(condition,side+'En'),eventFlags:ownData(condition,side+'EventFlags')}));
+ if(actors.some(actor=>!actor.pilot))return {status:'partial',reason:'combat-pilot-selection-required'};
+ const executable=await readBattleFile(session,'0',signal);checkAbort(signal);
+ const {resolveBattleCombatPreview}=await import('./editor-battle-combat.mjs?v=20261015-stocknames2');
+ const result=resolveBattleCombatPreview({gameId:session.descriptor.gameId,attacker:actors[0],defender:actors[1],weapon,
+  rawWeapon:session.root[29].bytes.slice(weapon.byteOffset,weapon.byteOffset+17),sources:{pilotGrowth:session.root[30].bytes,executable},
+  terrain:{attackerDomain:ownData(condition,'attackerDomain'),defenderDomain:ownData(condition,'defenderDomain'),defensePercent:rows.terrains.find(row=>row.recordIndex===ownData(request,'terrainIndex'))?.defenseBonus??0},
+  critical:ownData(condition,'critical'),spirit:ownData(condition,'spirit'),defense:ownData(request,'mode')==='evade'?'none':ownData(condition,'defense'),forcedDefense:ownData(condition,'forcedDefense'),
+  hit:ownData(request,'mode')!=='evade'});
+ if(result.status==='ready'){
+  const {createBattleDialogueOutcome}=await import('./editor-battle-dialogue-outcome.mjs');
+  const defense={'beam-coat':'beamcoat','i-field':'ifield','at-field':'atfield'}[result.defense]??result.defense;
+  result.outcome=createBattleDialogueOutcome({gameId:session.descriptor.gameId,hit:result.hitRoll,critical:result.critical,
+   defense:result.hitRoll?defense:'none',currentHp:result.defender.hpBefore,maxHp:result.defender.maxHp,finalDamage:result.damage,
+   ...(ownData(request,'mode')==='evade'?{responseAction:'evade'}:{}),
+   ...(result.barrierKind?{barrierBreached:result.barrierBroken}:{})});
+ }
+ return result;
+}
+
+export async function inspectEditorWeaponDialogueChoices(session,request,{signal}={}){
+  const cache=battleCache(session),gameId=session.descriptor.gameId;
+  if(!cache.rows)cache.rows=sessionEditorRows(session);
+  const pilotIndex=ownData(request,'pilotIndex');
+  if(!Number.isInteger(pilotIndex)||!cache.rows.pilots.some(row=>row.recordIndex===pilotIndex&&row.role!=='hero-list'))
+    fail('EDITOR_PREVIEW_INVALID','Invalid dialogue pilot selection.');
+  const {listBattleDialogueWeaponChoices,readBattleDialogueWeaponKey}=await import('./editor-battle-dialogue-selection.mjs');
+  const bytes=await readBattleFile(session,'BMESS.BIN',signal);checkAbort(signal);
+  const result=listBattleDialogueWeaponChoices(bytes,gameId,{pilotIndex,heroVariant:ownData(request,'heroVariant')});
+  if(result.status!=='ready')return result;
+  const peers=new Map();
+  for(const row of cache.rows.weapons){
+    const key=readBattleDialogueWeaponKey(session.root[29].bytes.subarray(row.byteOffset,row.byteOffset+17));
+    if(!peers.has(key))peers.set(key,[]);
+    peers.get(key).push({weaponIndex:row.recordIndex,name:row.name});
+  }
+  return {...result,choices:result.choices.map(choice=>({...choice,weapons:peers.get(choice.key)??[]}))};
+}
+
 export async function catalogEditorBattleAssets(session, request, { signal } = {}) {
   battleCache(session);
   const fileName = ownData(request, 'fileName');
-  if (!BATTLE_FILE_NAMES.has(fileName) || ['0', 'TSR_OBJ.BIN', 'BTSR.BIN', 'E_PAL.BIN', 'E_SC.BIN'].includes(fileName)) {
+  if (!BATTLE_FILE_NAMES.has(fileName) || ['0', 'TSR_OBJ.BIN', 'BTSR.BIN', 'BMESS.BIN', 'E_PAL.BIN', 'E_SC.BIN'].includes(fileName)) {
     fail('EDITOR_PREVIEW_INVALID', 'Unknown battle picture catalog.');
   }
-  const { inspectBattleAssetFile } = await import('./editor-battle-assets.mjs?v=20261012-frames3');
+  const { inspectBattleAssetFile } = await import('./editor-battle-assets.mjs?v=20261015-stocknames2');
   const bytes = await readBattleFile(session, fileName, signal);
   checkAbort(signal);
   return inspectBattleAssetFile(bytes, { fileName, cursor: ownData(request, 'cursor') ?? 0,
     pageSize: ownData(request, 'pageSize') ?? 16 });
+}
+
+// Music stays in the authenticated browser session, separate from picture
+// assets. Directory ordinals are not pilot assignments or verified song names.
+export async function previewEditorBattleMusic(session,request,{signal}={}){
+  battleCache(session);checkAbort(signal);
+  const bankIndex=ownData(request,'bankIndex'),songIndex=ownData(request,'songIndex')??0,durationUs=ownData(request,'durationUs');
+  if(!Number.isSafeInteger(bankIndex)||bankIndex<0||bankIndex>64
+    ||!Number.isSafeInteger(songIndex)||songIndex<0||songIndex>255)
+    fail('EDITOR_PREVIEW_INVALID','Invalid battle music selection.');
+  if(durationUs!==undefined&&(!Number.isSafeInteger(durationUs)||durationUs<1||durationUs>1000000000))
+    fail('EDITOR_PREVIEW_INVALID','Invalid battle music duration.');
+  const bytes=await readBattleFile(session,'BGM.BIN',signal);checkAbort(signal);
+  const {readBattleSoundPackage}=await import('./editor-battle-sound-package.mjs');
+  const {compileBattleSequenceVoicePlan}=await import('./editor-battle-sequence-voice-plan.mjs?v=20261015-stocknames2');
+  checkAbort(signal);
+  const soundPackage=readBattleSoundPackage(bytes,{fileName:'BGM.BIN',bankIndex});
+  const song=soundPackage.sequence.songs[songIndex];
+  if(!song)fail('EDITOR_PREVIEW_INVALID','Battle music song is unavailable.');
+  const voicePlan=compileBattleSequenceVoicePlan(song,{toneBanks:new Map([[0,soundPackage.tone]]),stopAtUs:durationUs});
+  checkAbort(signal);
+  return {status:'reference',bankIndex,songIndex,songCount:soundPackage.sequence.songs.length,
+    soundPackage,voicePlan,provenance:{fileName:'BGM.BIN',toneExtent:soundPackage.toneExtent,
+      sequenceExtent:soundPackage.sequenceExtent,scope:'explicit directory selection; pilot assignment and playback fidelity unverified'}};
+}
+
+export async function previewEditorBattleBackground(session,request,{signal}={}){
+  const cache=battleCache(session);
+  const index=ownData(request,'backgroundIndex');
+  if(!Number.isSafeInteger(index)||index<0||index>=192)
+    fail('EDITOR_PREVIEW_INVALID','Invalid battle background selection.');
+  checkAbort(signal);cache.webBackgrounds??=new Map();
+  const retained=cache.webBackgrounds.get(index);
+  if(retained){cache.webBackgrounds.delete(index);cache.webBackgrounds.set(index,retained);return structuredClone(retained);}
+  const bytes=await readBattleFile(session,'BBACK.BIN',signal);checkAbort(signal);
+  const {readBattleBackgroundPair}=await import('./editor-battle-background.mjs?v=20261015-stocknames2');
+  const {renderBattleBackgroundFragment}=await import('./editor-battle-assets.mjs');
+  const pair=readBattleBackgroundPair(bytes,index);
+  const assets=pair.fragments.map(fragment=>renderBattleBackgroundFragment(bytes,{...pair,fragment,indexed:true}));
+  checkAbort(signal);
+  const result={backgroundIndex:index,assets,provenance:{fileName:'BBACK.BIN',bankOffset:pair.bankOffset,
+    screenOffset:pair.screenOffset,recordEnd:pair.recordEnd}};
+  cache.webBackgrounds.set(index,structuredClone(result));
+  while(cache.webBackgrounds.size>4)cache.webBackgrounds.delete(cache.webBackgrounds.keys().next().value);
+  return result;
+}
+
+// Native loader metadata for one directory-verified sprite record. It includes
+// declared texture slots even when the gallery cannot display every subimage.
+export async function inspectEditorBattleTextureRecord(session,request,{signal}={}){
+  battleCache(session);
+  const fileName=ownData(request,'fileName'),recordOffset=ownData(request,'recordOffset'),recordEnd=ownData(request,'recordEnd');
+  if(!['C_ROBOT.BIN','E_SPR.BIN','BTSR.BIN','FACE.BIN'].includes(fileName)
+    ||!Number.isSafeInteger(recordOffset)||recordOffset<0
+    ||!Number.isSafeInteger(recordEnd)||recordEnd<=recordOffset)
+    fail('EDITOR_PREVIEW_INVALID','Invalid native sprite record.');
+  const bytes=await readBattleFile(session,fileName,signal);checkAbort(signal);
+  const {inspectBattleAssetRecord}=await import('./editor-battle-assets.mjs?v=20261015-stocknames2');
+  const record=inspectBattleAssetRecord(bytes,{fileName,recordOffset,recordEnd,pageSize:1});checkAbort(signal);
+  return {...record,gameId:session.descriptor.gameId};
+}
+
+export async function prepareEditorBattleTextureRegistration(session,request,{signal}={}){
+  battleCache(session);
+  const fileName=ownData(request,'fileName'),recordOffset=ownData(request,'recordOffset'),recordEnd=ownData(request,'recordEnd');
+  if(!['C_ROBOT.BIN','E_SPR.BIN','BTSR.BIN','FACE.BIN'].includes(fileName)
+    ||!Number.isSafeInteger(recordOffset)||recordOffset<0
+    ||!Number.isSafeInteger(recordEnd)||recordEnd<=recordOffset)
+    fail('EDITOR_PREVIEW_INVALID','Invalid native sprite record.');
+  const previous=ownData(request,'previousGeometry');
+  const state={textureBase:ownData(request,'textureBase'),paletteBase:ownData(request,'paletteBase'),
+    subimageStart:ownData(request,'subimageStart'),subimageCount:ownData(request,'subimageCount'),
+    drawColor:ownData(request,'drawColor'),previousFormat:ownData(request,'previousFormat'),
+    previousGeometry:previous instanceof Uint8Array?previous.slice():previous};
+  const bytes=await readBattleFile(session,fileName,signal);checkAbort(signal);
+  const {prepareBattleAssetTextureRegistration}=await import('./editor-battle-assets.mjs?v=20261015-stocknames2');
+  const plan=prepareBattleAssetTextureRegistration(bytes,{fileName,recordOffset,recordEnd,...state});
+  checkAbort(signal);return Object.assign(plan,{gameId:session.descriptor.gameId,sourceSessionToken:session.sessionToken});
 }
 
 // Authoring starts from the authenticated weapon record, never a caller's
@@ -2210,20 +2407,81 @@ export async function catalogEditorBattleAssets(session, request, { signal } = {
 export async function inspectEditorWeaponAnimation(session, request, { signal } = {}) {
   const cache=battleCache(session),weaponIndex=ownData(request,'weaponIndex');
   if(!Number.isSafeInteger(weaponIndex)||weaponIndex<1)fail('EDITOR_PREVIEW_INVALID','Invalid weapon selection.');
-  if(!cache.rows)cache.rows=buildEditorRows(session.root,session.decoded,session.descriptor.gameId);
+  if(!cache.rows)cache.rows=sessionEditorRows(session);
   const weapon=cache.rows.weapons.find(row=>row.recordIndex===weaponIndex);
   if(!weapon?.editable||!weapon.owners?.length)fail('EDITOR_PREVIEW_INVALID','The weapon has no verified editable owner.');
   const data=session.root[29].bytes,selector=readU16BE(data,weapon.byteOffset+3);
   const bytes=await readBattleFile(session,'D_ANIME.BIN',signal);
-  const {inspectWeaponAnimation}=await import('./editor-weapon-authoring.mjs?v=20261012-frames3');
-  const inspection=inspectWeaponAnimation(bytes,selector);
+  const {inspectCopyableWeaponAnimation,inspectWeaponEffectDependencies,importWeaponEffect,weaponEffectImportFailureReason}=await import('./editor-weapon-authoring.mjs?v=20261015-stocknames2');
+  const inspection=inspectCopyableWeaponAnimation(bytes,selector);
   const entry=session.weaponProject?.entries.find(item=>item.weaponIndex===weaponIndex);
   const originSelector=entry?.sourceSelector??selector;
-  const original=inspectWeaponAnimation(session.weaponProject?.canonicalBytes??bytes,originSelector);
+  const {applyWeaponEffectImports,rebaseWeaponEffectEdits}=await import('./editor-weapon-project.mjs?v=20261015-stocknames2');
+  const baseline=applyWeaponEffectImports(session.weaponProject?.canonicalBytes??bytes,originSelector,entry?.imports??[]);
+  const original=inspectCopyableWeaponAnimation(baseline,originSelector);
   const originals=new Map(original.instructions.map(item=>[item.recordOffset,item]));
   inspection.instructions=inspection.instructions.map(item=>({...item,fields:item.fields.map(field=>({...field,
     originalValue:originals.get(item.recordOffset)?.fields.find(old=>old.name===field.name)?.value??field.value,
+    ...(field.name==='spawnSequence'?{choices:originals.get(item.recordOffset)?.fields.find(old=>old.name===field.name)?.choices??field.choices}:{}),
     editable:!['frameBank','frameIndex'].includes(field.name)}))}));
+  const effectIndices=[...new Set(inspection.instructions.flatMap(i=>i.fields.filter(f=>f.name==='spawnSequence').flatMap(f=>f.choices??[])))];
+  const {compileWeaponEffectTrack,assertWeaponEffectRecipientSafe}=await import('./editor-weapon-effect-track.mjs?v=20261015-stocknames2');
+  inspection.effectCatalog=effectIndices.map(index=>{
+    const dependencies=inspectWeaponEffectDependencies(baseline,originSelector,index);
+    try{const track=compileWeaponEffectTrack(baseline,original,index);return {...dependencies,pictureSelectors:track.pictureSelectors,bodyBindings:track.bodyBindings,secondaryTracks:track.secondaryTracks,pictureSteps:track.pictureSteps,screenEffects:track.screenEffects,soundCues:track.soundCues};}
+    catch(error){if(error.code!=='EDITOR_WEAPON_AUTHORING_INVALID')throw error;return dependencies;}
+  });
+  const effectChange=ownData(request,'effectChange');
+  if(effectChange!==undefined){
+    const targetSequence=ownData(effectChange,'targetSequence'),remove=ownData(effectChange,'remove');
+    if(!Number.isSafeInteger(targetSequence)||!effectIndices.includes(targetSequence)||remove!==undefined&&typeof remove!=='boolean')
+      fail('EDITOR_PREVIEW_INVALID','Invalid target effect selection.');
+    if(!remove){
+      const canonical=session.weaponProject?.canonicalBytes??bytes;
+      assertWeaponEffectRecipientSafe(canonical,inspectCopyableWeaponAnimation(canonical,originSelector),targetSequence);
+    }
+    const imports=(entry?.imports??[]).filter(row=>row.targetSequence!==targetSequence).map(row=>({...row}));
+    if(!remove){
+      const donorWeapon=ownData(effectChange,'donorWeapon'),donorSequence=ownData(effectChange,'donorSequence');
+      const donor=cache.rows.weapons.find(row=>row.recordIndex===donorWeapon);
+      if(!Number.isSafeInteger(donorWeapon)||!Number.isSafeInteger(donorSequence)||!await verifiedWeaponEffectDonor(session,donor,signal))
+        fail('EDITOR_PREVIEW_INVALID','Invalid effect donor selection.');
+      const donorEntry=session.weaponProject?.entries.find(item=>item.weaponIndex===donorWeapon);
+      imports.push({targetSequence,donorWeapon,donorSequence,placement:'append',
+        donorSelector:donorEntry?.originalSelector??donorEntry?.sourceSelector??readU16BE(data,donor.byteOffset+3)});
+    }
+    const edits=rebaseWeaponEffectEdits(session.weaponProject?.canonicalBytes??bytes,originSelector,entry?.imports??[],imports,entry?.edits??[]);
+    inspection.effectChange={edits,imports:imports.map(({donorSelector,...row})=>row)};
+  }
+  const effectDonorWeaponIndex=ownData(request,'effectDonorWeaponIndex');
+  if(effectDonorWeaponIndex!==undefined){
+    const donor=cache.rows.weapons.find(row=>row.recordIndex===effectDonorWeaponIndex);
+    if(!Number.isSafeInteger(effectDonorWeaponIndex)||!await verifiedWeaponEffectDonor(session,donor,signal))
+      fail('EDITOR_PREVIEW_INVALID','Select a verified original effect donor.');
+    const canonical=session.weaponProject?.canonicalBytes??bytes;
+    const donorEntry=session.weaponProject?.entries.find(item=>item.weaponIndex===effectDonorWeaponIndex);
+    const donorSelector=donorEntry?.originalSelector??donorEntry?.sourceSelector??readU16BE(data,donor.byteOffset+3);
+    const donorInfo=inspectCopyableWeaponAnimation(canonical,donorSelector);
+    const donorEffects=[...new Set(donorInfo.instructions.flatMap(i=>i.fields.filter(f=>f.name==='spawnSequence').map(f=>f.value)))];
+    inspection.importOptions=[];inspection.importBlocked=[];
+    const recipientBlocked=new Set(),canonicalTarget=inspectCopyableWeaponAnimation(canonical,originSelector);
+    for(const index of effectIndices){
+      try{assertWeaponEffectRecipientSafe(canonical,canonicalTarget,index);}
+      catch(error){if(error.code!=='EDITOR_WEAPON_AUTHORING_INVALID')throw error;recipientBlocked.add(index);}
+    }
+    for(const targetSequence of effectIndices)for(const donorSequence of donorEffects){
+      checkAbort(signal);
+      try{
+        if(donorSelector===originSelector){inspection.importBlocked.push({targetSequence,donorSequence,reason:'same-animation'});continue;}
+        if(recipientBlocked.has(targetSequence)){inspection.importBlocked.push({targetSequence,donorSequence,reason:'recipient-state-required'});continue;}
+        const planned=importWeaponEffect(baseline,originSelector,targetSequence,donorSelector,donorSequence,{relocate:true});
+        inspection.importOptions.push({targetSequence,donorWeapon:effectDonorWeaponIndex,donorSequence,
+          usedBytes:planned.usedBytes,capacityBytes:planned.capacityBytes,bankMap:planned.bankMap,
+          dependencies:{...inspectWeaponEffectDependencies(canonical,donorSelector,donorSequence),pictureSelectors:planned.pictureSelectors,secondaryTracks:planned.secondaryTracks,pictureSteps:planned.pictureSteps,screenEffects:planned.screenEffects,soundCues:planned.soundCues,bodyBindings:planned.bodyBindings}});
+      }catch(error){if(error.code!=='EDITOR_WEAPON_AUTHORING_INVALID')throw error;
+        inspection.importBlocked.push({targetSequence,donorSequence,reason:weaponEffectImportFailureReason(error)});}
+    }
+  }
   checkAbort(signal);
   const sharedWeapons=cache.rows.weapons.filter(row=>row.owners?.length&&readU16BE(data,row.byteOffset+3)===selector)
     .map(row=>({recordIndex:row.recordIndex,name:row.name}));
@@ -2232,23 +2490,1146 @@ export async function inspectEditorWeaponAnimation(session, request, { signal } 
     &&row.recordKind==='unused-filler'&&row.nameStatus==='empty'&&row.ownership==='unowned').map(row=>row.recordIndex);
   return {...inspection,gameId:session.descriptor.gameId,weaponIndex,sharedWeapons,originSelector,
     sourceWeapon:entry?.sourceWeapon??weaponIndex,freeWeaponIndices,
-    editScope:'verified-motion-operands',exportSupported:true};
+    editScope:inspection.scope==='exact-source-copy-only'?'exact-source-copy-only':'verified-motion-operands',exportSupported:true};
 }
 
 export async function previewEditorBattleAsset(session, request, { signal } = {}) {
   battleCache(session);
   const fileName = ownData(request, 'fileName'), assetKey = ownData(request, 'assetKey');
-  if (!BATTLE_FILE_NAMES.has(fileName) || ['0', 'TSR_OBJ.BIN', 'BTSR.BIN', 'E_PAL.BIN', 'E_SC.BIN'].includes(fileName)
+  const indexed=ownData(request,'indexed');
+  if(indexed!==undefined&&typeof indexed!=='boolean')fail('EDITOR_PREVIEW_INVALID','Invalid indexed sprite request.');
+  const nativeTexture=ownData(request,'nativeTexture');
+  if(nativeTexture!==undefined&&typeof nativeTexture!=='boolean'||nativeTexture===true&&indexed!==true)
+    fail('EDITOR_PREVIEW_INVALID','Native texture preview requires indexed decoding.');
+  const paletteOnly=ownData(request,'paletteOnly');
+  if(paletteOnly!==undefined&&typeof paletteOnly!=='boolean'||indexed===true&&paletteOnly===true)
+    fail('EDITOR_PREVIEW_INVALID','Invalid palette bank request.');
+  if (!BATTLE_FILE_NAMES.has(fileName) || ['0', 'TSR_OBJ.BIN', 'BTSR.BIN', 'BMESS.BIN', 'E_PAL.BIN', 'E_SC.BIN'].includes(fileName)
     || typeof assetKey !== 'string'
     || assetKey.length > 160 || !assetKey.startsWith(`battle1:${fileName}:`)) {
     fail('EDITOR_PREVIEW_INVALID', 'Invalid battle picture identity.');
   }
-  const { decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261012-frames3');
+  const { decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261015-stocknames2');
   const bytes = await readBattleFile(session, fileName, signal);
   checkAbort(signal);
-  const image = decodeBattleAsset(bytes, assetKey);
+  const image = decodeBattleAsset(bytes, assetKey,{indexed:indexed===true,paletteOnly:paletteOnly===true,nativeTexture:nativeTexture===true});
   checkAbort(signal);
   return Object.freeze({ ...image, assetKey, fileName });
+}
+
+// Portrait queue identities are explicit. A runtime-assembled protagonist
+// cannot be inferred from a placeholder pilot record or another pilot's art.
+export async function inspectEditorBattlePortraitSources(session,request,{signal}={}){
+  battleCache(session);
+  const requested=ownData(request,'portraits');
+  if(!Array.isArray(requested)||requested.length<1||requested.length>16)
+    fail('EDITOR_PREVIEW_INVALID','Invalid battle portrait queue.');
+  const portraits=requested.map(item=>{
+    const pilotIndex=ownData(item,'pilotIndex'),expressionIndex=ownData(item,'expressionIndex');
+    if(!Number.isSafeInteger(pilotIndex)||pilotIndex<1
+      ||!Number.isInteger(expressionIndex)||expressionIndex<0||expressionIndex>3)
+      fail('EDITOR_PREVIEW_INVALID','Invalid battle portrait identity.');
+    return {pilotIndex,expressionIndex};
+  });
+  const table=imageRecordTable(session.root,'pilot'),gameId=session.descriptor.gameId;
+  const bytes=await readBattleFile(session,'FACE.BIN',signal);checkAbort(signal);
+  const {inspectBattleAssetRecord}=await import('./editor-battle-assets.mjs?v=20261015-stocknames2');
+  const sources=portraits.map(({pilotIndex,expressionIndex})=>{
+    const imageIndex=imageIndexOf(table,'pilot',pilotIndex,gameId);
+    if(imageIndex===null)return {status:'unresolved',pilotIndex,expressionIndex,reason:'native-pilot-face-unresolved'};
+    const cell=imageIndex*8;
+    if(cell+8>readU32BE(bytes,0))fail('EDITOR_PREVIEW_INVALID','Battle portrait directory exceeds its source.');
+    const recordOffset=cell+readU32BE(bytes,cell),recordEnd=cell+4+readU32BE(bytes,cell+4);
+    const record=inspectBattleAssetRecord(bytes,{fileName:'FACE.BIN',recordOffset,recordEnd,pageSize:1});
+    if(!Number.isInteger(record.nativeTextureCount)||expressionIndex>=record.nativeTextureCount)
+      return {status:'unresolved',pilotIndex,imageIndex,expressionIndex,reason:'native-pilot-expression-unresolved'};
+    return {status:'ready',pilotIndex,imageIndex,expressionIndex,fileName:'FACE.BIN',byteLength:bytes.length,
+      recordOffset,recordEnd,frameCacheGroup:12,subimageStart:expressionIndex,subimageCount:1};
+  });
+  checkAbort(signal);return {gameId,sourceSessionToken:session.sessionToken,sources};
+}
+
+// Initial native allocation order: both bodies, portrait queue, BTSR groups
+// 16/18. Weapon effect groups load later; merely reading their source directory
+// must not install them before the native resource request.
+export async function prepareEditorBattleSceneTextures(session,request,{signal}={}){
+  const preloadWeaponGraphics=ownData(request,'preloadWeaponGraphics')??false;
+  const includeDestruction=ownData(request,'includeDestruction')??false;
+  if(typeof includeDestruction!=='boolean')fail('EDITOR_PREVIEW_INVALID','Invalid destruction graphics preparation.');
+  if(typeof preloadWeaponGraphics!=='boolean')fail('EDITOR_PREVIEW_INVALID','Invalid weapon graphics preload request.');
+  const sceneRequest={unitIndex:ownData(request,'unitIndex'),weaponIndex:ownData(request,'weaponIndex'),
+    opponentUnitIndex:ownData(request,'opponentUnitIndex'),weaponAuthoring:ownData(request,'weaponAuthoring'),unlinkedPreview:ownData(request,'unlinkedPreview')};
+  const requested=ownData(request,'portraits');
+  if(!Array.isArray(requested))fail('EDITOR_PREVIEW_INVALID','The native portrait queue is required.');
+  const portraits=requested.map(item=>({pilotIndex:ownData(item,'pilotIndex'),expressionIndex:ownData(item,'expressionIndex')}));
+  const {scene,status}=await inspectEditorBattleSceneSources(session,sceneRequest,{signal});
+  if(status!=='ready'||!scene?.opponentGraphics)fail('EDITOR_PREVIEW_INVALID','Both native battle bodies are required.');
+  const portraitResult=portraits.length?await inspectEditorBattlePortraitSources(session,{portraits},{signal}):{sources:[]};
+  if(portraitResult.sources.some(s=>s.status!=='ready'))
+    return {status:'unresolved',reason:'native-portrait-queue-unresolved',portraits:portraitResult.sources};
+  const bodyPalettes=[];
+  for(const [role,source]of [['attacker',scene.unitGraphics],['defender',scene.opponentGraphics]]){
+    const assetKey=`battle1:${source.fileName}:${source.byteLength}:${source.recordOffset}:${source.recordEnd}:0`;
+    const palette=await previewEditorBattleAsset(session,{fileName:source.fileName,assetKey,paletteOnly:true},{signal});
+    if(!Number.isInteger(palette.nativeBankCount)||palette.nativeBankCount>4)
+      return {status:'unresolved',reason:'native-body-palette-bank-limit',role};
+    bodyPalettes.push({role,...palette});
+  }
+  const {planBattleTextureSourceLoad,completeBattleTextureSourceLoad}=await import('./editor-battle-texture-sources.mjs');
+  const {createBattleClearedTextureState}=await import('./editor-battle-cleared-textures.mjs?v=20261015-stocknames2');
+  const capacity=1024,state=createBattleClearedTextureState(capacity,{sourceCleared:scene.initialTextureClear?.status==='proved'});
+  const ownership={sessionToken:session.sessionToken,nextTextureIndex:0,capacity,sources:new Map()},textureBases=new Uint16Array(32);
+  // Body/common sprite registration starts its local palette byte at0.
+  // The later palette-pool load base is a separate native argument.
+  const loads=[{...scene.unitGraphics,group:8,paletteBase:0,paletteLoadBase:58,drawColor:4},
+    {...scene.opponentGraphics,group:9,paletteBase:0,paletteLoadBase:62,drawColor:4},
+    ...portraitResult.sources.map((s,i)=>({...s,group:12,paletteBase:42+i,paletteLoadBase:42+i,drawColor:7,append:i>0}))];
+  for(const [group,paletteBase]of [[16,74],[18,96]]){
+    const source=scene.commonGraphics.find(s=>s.frameCacheGroup===group);
+    if(!source)fail('EDITOR_PREVIEW_INVALID','Native common sprite source is unresolved.');
+    loads.push({...source,group,paletteBase:0,paletteLoadBase:paletteBase,drawColor:4});
+  }
+  if(includeDestruction){
+    const {readBattleDestructionResources}=await import('./editor-battle-destruction.mjs');
+    const cache=battleCache(session);cache.rows??=sessionEditorRows(session);
+    const target=cache.rows.units.find(row=>row.recordIndex===ownData(request,'opponentUnitIndex'));
+    if(!target)return {status:'partial',reason:'destruction-target-required'};
+    const prepared=readBattleDestructionResources(scene.commonData,{gameId:session.descriptor.gameId,
+      deathType:session.root[27].bytes[target.byteOffset+6]>>>5});
+    if(prepared.status!=='ready')return prepared;
+    if(prepared.sprite)loads.push({...prepared.sprite,group:19,paletteBase:0,paletteLoadBase:128,drawColor:4});
+  }
+  const weaponPalettes=[];
+  if(preloadWeaponGraphics){
+    let bank=128;
+    for(const source of scene.weaponGraphics){
+      const assetKey=`battle1:${source.fileName}:${source.byteLength}:${source.recordOffset}:${source.recordEnd}:0`;
+      const palette=await previewEditorBattleAsset(session,{fileName:source.fileName,assetKey,paletteOnly:true},{signal});
+      weaponPalettes.push({...palette,groups:source.headerSlots.slice(),paletteLoadBase:bank});
+      loads.push({...source,group:source.headerSlots[0],groups:source.headerSlots.slice(),paletteBase:0,paletteLoadBase:bank,drawColor:4});
+      bank+=palette.nativeBankCount;
+      if(bank>256)fail('EDITOR_PREVIEW_INVALID','Weapon palette preload exceeds its browser bank range.');
+    }
+  }
+  const completed=[];
+  for(const load of loads){
+    checkAbort(signal);
+    const record=await inspectEditorBattleTextureRecord(session,load,{signal}),textureBase=state.nextTextureIndex;
+    const sourcePlan=planBattleTextureSourceLoad({sessionToken:session.sessionToken,source:load,record,
+      textureBase,capacity,subimageStart:load.subimageStart??0,subimageCount:load.subimageCount});
+    const registration=await prepareEditorBattleTextureRegistration(session,{...load,textureBase,
+      previousGeometry:textureBase?state.geometry.slice((textureBase-1)*8,textureBase*8):undefined,
+      previousFormat:textureBase?state.textureFormats[textureBase-1]:undefined},{signal});
+    checkAbort(signal);const result=completeBattleTextureSourceLoad(ownership,sourcePlan,registration,state);
+    if(!load.append)textureBases[load.group]=textureBase;
+    if(load.groups)for(const group of load.groups)textureBases[group]=textureBase;
+    completed.push({group:load.group,textureBase,count:result.textureCount,fileName:load.fileName,
+      recordOffset:load.recordOffset,subimageStart:sourcePlan.subimageStart,paletteLoadBase:load.paletteLoadBase});
+  }
+  checkAbort(signal);
+  return {status:'ready',gameId:session.descriptor.gameId,sourceSessionToken:session.sessionToken,
+    textureState:state,textureSourceRegistry:ownership,textureBases,loads:completed,bodyPalettes,weaponPalettes,
+    scope:preloadWeaponGraphics?'browser body/common/selected weapon preload; no native timed-load equivalence claimed':
+      'body/portrait/common texture allocation/upload; message texture, palettes, actors, background and timed weapon loads are separate'};
+}
+
+export async function inspectEditorBattleSceneSources(session,request,{signal}={}){
+  battleCache(session);
+  if(ownData(request,'weaponAuthoring')!==undefined)session=await projectedWeaponSession(session,request,signal);
+  const cache=battleCache(session),gameId=session.descriptor.gameId;
+  const weaponIndex=ownData(request,'weaponIndex'),unitIndex=ownData(request,'unitIndex');
+  const opponentUnitIndex=ownData(request,'opponentUnitIndex');
+  if(!Number.isSafeInteger(weaponIndex)||weaponIndex<1||!Number.isSafeInteger(unitIndex)||unitIndex<1)
+    fail('EDITOR_PREVIEW_INVALID','Invalid battle scene selection.');
+  if(opponentUnitIndex!==undefined&&(!Number.isSafeInteger(opponentUnitIndex)||opponentUnitIndex<1))
+    fail('EDITOR_PREVIEW_INVALID','Invalid opponent scene selection.');
+  checkAbort(signal);
+  if(!cache.rows)cache.rows=sessionEditorRows(session);
+  const weapon=cache.rows.weapons.find(row=>row.recordIndex===weaponIndex);
+  const unit=cache.rows.units.find(row=>row.recordIndex===unitIndex);
+  const opponent=opponentUnitIndex===undefined?undefined:cache.rows.units.find(row=>row.recordIndex===opponentUnitIndex);
+  if(opponentUnitIndex!==undefined&&!opponent)fail('EDITOR_PREVIEW_INVALID','The selected opponent does not exist.');
+  if(!weapon||!unit)fail('EDITOR_PREVIEW_INVALID','The selected scene record does not exist.');
+  if(!(weapon.owners??[]).some(owner=>owner.unit===unitIndex)){
+    const catalog=ownData(request,'unlinkedPreview')===true?await catalogEditorWeaponMotions(session,{}, {signal}):null;
+    const admitted=catalog?.entries.find(row=>row.recordIndex===weaponIndex);
+    if(weapon.ownership!=='unowned'||!admitted?.previewEligible)
+      fail('EDITOR_PREVIEW_INVALID','The selected unit does not own the scene weapon.');
+  }
+  const {resolveBattleSceneSources}=await import('./editor-battle-mapping.mjs?v=20261015-stocknames2');
+  const result=await resolveBattleSceneSources({gameId,weapon,unit,opponent,decodedTsr:session.decoded,root:session.root,
+    readFile:fileName=>readBattleFile(session,fileName,signal)});
+  checkAbort(signal);
+  return {...result,...(result.scene?{scene:{...result.scene,sourceSessionToken:session.sessionToken}}:{}),
+    gameId,weaponIndex,unitIndex,...(opponentUnitIndex===undefined?{}:{opponentUnitIndex})};
+}
+
+export async function inspectEditorBattleBankScreens(session,request,{signal}={}){
+  const selected=await inspectEditorBattleSceneSources(session,request,{signal});
+  if(selected.status!=='ready')return selected;
+  const sources=selected.scene,loads=sources.bankGraphicLoads;
+  if(!Array.isArray(loads))return {status:'blocked',reason:'bank-screen-directory-unresolved'};
+  const bytes=await readBattleFile(session,'E_BNK.BIN',signal);checkAbort(signal);
+  const {decodeBattleAsset,decodeBattleCompressedScreenRecord,renderBattleBackgroundFragment}=await import('./editor-battle-assets.mjs');
+  const {readBattleScreenFragments,readBattleBankPlaneMode}=await import('./editor-battle-background.mjs?v=20261015-stocknames2');
+  const records=[];
+  for(const source of loads){
+    checkAbort(signal);
+    if(source.kind!=='load'){records.push({slot:source.slot,status:'unresolved',reason:'inherited-bank-not-loaded'});continue;}
+    const assetKey=`battle1:E_BNK.BIN:${bytes.length}:${source.recordOffset}:${source.recordEnd}:0`;
+    const palette=decodeBattleAsset(bytes,assetKey,{paletteOnly:true});
+    // Some owned directory entries provide only a bank. The native loader
+    // retains that palette but does not register a missing screen for copies.
+    if(source.mapOffset===source.mapEnd){
+      records.push({slot:source.slot,status:'ready',source:{...source},
+        planeMode:readBattleBankPlaneMode(source.sourceSelector),assetKey,screenStatus:'absent',
+        screen:null,fragments:[],images:[],imageErrors:[],paletteWords:palette.paletteWords,
+        colorCount:palette.colorCount,nativeBankCount:palette.nativeBankCount});
+      continue;
+    }
+    const screen=decodeBattleCompressedScreenRecord(bytes,{recordOffset:source.mapOffset,recordEnd:source.mapEnd});
+    if(screen.payload.length<12)fail('EDITOR_PREVIEW_INVALID','Truncated selected bank screen.');
+    const fragments=readBattleScreenFragments(screen);
+    const imageErrors=fragments.map(()=>null);
+    const images=fragments.map((fragment,index)=>{
+      try{return renderBattleBackgroundFragment(bytes,{
+        bankOffset:source.recordOffset,bankEnd:source.recordEnd,fragment,indexed:true});}
+      catch(error){
+        // The native loader does not draw every fragment up front. Retain
+        // an unsupported fragment's strict error for its actual copy command;
+        // it never becomes a transparent or substituted valid picture.
+        if(error.code!=='BATTLE_BACKGROUND_CELL_BOUNDS')throw error;
+        imageErrors[index]={code:error.code,reason:error.message,...error.details};
+        return null;
+      }
+    });
+    records.push({slot:source.slot,status:'ready',source:{...source},planeMode:readBattleBankPlaneMode(source.sourceSelector),assetKey,screenStatus:'ready',screen,fragments,images,imageErrors,
+      paletteWords:palette.paletteWords,colorCount:palette.colorCount,nativeBankCount:palette.nativeBankCount});
+  }
+  checkAbort(signal);
+  return {status:'ready',gameId:selected.gameId,sourceSessionToken:sources.sourceSessionToken,records,
+    scope:'selected owned bank/screen pairs; native allocation offsets and plane publication are separate'};
+}
+
+export async function prepareEditorBattleWebScene(session,request,{signal}={}){
+  if(ownData(request,'weaponAuthoring')!==undefined){
+    session=await projectedWeaponSession(session,request,signal);
+    request=Object.fromEntries(Object.keys(request).filter(key=>key!=='weaponAuthoring').map(key=>[key,ownData(request,key)]));
+  }
+  const selected=await inspectEditorBattleSceneSources(session,request,{signal});
+  if(selected.status!=='ready')return selected;
+  const sources=selected.scene;
+  const {readBattleStartupAttachmentPlan}=await import('./editor-battle-startup-attachments.mjs');
+  const startupAttachments=readBattleStartupAttachmentPlan({...sources,gameId:session.descriptor.gameId});
+  if(startupAttachments.status!=='ready')return startupAttachments;
+  const allowed=new Map([sources.unitGraphics,sources.opponentGraphics,...sources.commonGraphics]
+    .filter(Boolean).map(source=>[
+      `battle1:${source.fileName}:${source.byteLength}:${source.recordOffset}:${source.recordEnd}:0`,source]));
+  const {decodeBattleAsset}=await import('./editor-battle-assets.mjs');
+  const {prepareBattleWebScene}=await import('./editor-battle-web-scene.mjs');
+  const {createBattleOutcomeContext,createBattleOrdinaryResponseContext}=await import('./editor-battle-outcome-context.mjs');
+  const {resolveBattleWebUnitMotion,findBattleWebCompatibleTerrains}=await import('./editor-battle-motion-metadata.mjs?v=20261015-stocknames2');
+  const combat=await prepareEditorBattleCombat(session,request,{signal});
+  const resolved=combat.status==='ready'?combat.outcome:null;
+  const outcome=resolved?{sideStatusFlags:[resolved.statusWord>>>8,0],sideSecondaryStatusFlags:[resolved.statusWord&255,0]}:
+   createBattleOutcomeContext({mode:ownData(request,'mode')??'attack',directionBit6:false});
+  const response=createBattleOrdinaryResponseContext({gameId:session.descriptor.gameId});
+  if(resolved){response.sideUnitTraitBytes=[resolved.responseTraitByte,0];response.alternateSideUnitTraitBytes=[resolved.responseTraitByte,0];
+   response.responseScope={...response.responseScope,profile:'simulated',barrierKind:combat.barrierKind,combatCalculation:true,forcedDefense:combat.forcedDefense};}
+  const {prepareBattleDeathTraits,readBattleDestructionResources,activateBattleDestructionResources}=await import('./editor-battle-destruction.mjs');
+  const rows=battleCache(session).rows??sessionEditorRows(session);
+  const attackerRow=rows.units.find(row=>row.recordIndex===ownData(request,'unitIndex')),
+    targetRow=rows.units.find(row=>row.recordIndex===ownData(request,'opponentUnitIndex'));
+  if(!attackerRow||!targetRow)return {status:'partial',reason:'destruction-unit-context-unresolved'};
+  const deathTraits=prepareBattleDeathTraits({gameId:session.descriptor.gameId,
+    attackerRecord:session.root[27].bytes.subarray(attackerRow.byteOffset,attackerRow.byteOffset+50),
+    targetRecord:session.root[27].bytes.subarray(targetRow.byteOffset,targetRow.byteOffset+50),
+    responseTraits:response.sideUnitTraitBytes,alternateResponseTraits:response.alternateSideUnitTraitBytes});
+  const killed=Boolean(outcome.sideStatusFlags[0]&16);
+  const destruction=killed?readBattleDestructionResources(sources.commonData,{gameId:session.descriptor.gameId,deathType:deathTraits.deathTypes[0]}):null;
+  const environment={gameId:session.descriptor.gameId,terrainData:sources.terrainDirectory,commonData:sources.commonData,
+    terrainIndex:ownData(request,'terrainIndex')??5,sceneBank:ownData(request,'sceneBank')??0};
+  const motions=[resolveBattleWebUnitMotion({...environment,movementType:sources.unitMovementType,
+    mapClass:ownData(request,'attackerMapClass')}),resolveBattleWebUnitMotion({...environment,
+    movementType:sources.opponentMovementType,mapClass:ownData(request,'defenderMapClass')})];
+  for(let side=0;side<2;side++)if(motions[side].status!=='ready'){
+    const compatible=motions[side].reason==='web-motion-pose-unavailable'?findBattleWebCompatibleTerrains({
+      ...environment,movementTypes:[sources.unitMovementType,sources.opponentMovementType],
+      mapClasses:[ownData(request,'attackerMapClass'),ownData(request,'defenderMapClass')]}):null;
+    return {...motions[side],side,sources,...(compatible?.status==='ready'?{compatibleTerrainIndices:compatible.terrainIndices}:{})};
+  }
+  response.responseScope={...response.responseScope,motionProfile:{terrainIndex:environment.terrainIndex,
+    sceneBank:environment.sceneBank,sides:motions.map(({index,motionType,movementType,mapClass,eligibleMapClasses})=>
+      ({index,motionType,movementType,mapClass,eligibleMapClasses})),
+    scope:'owned movement and terrain; scenario flags, occupancy and equipment excluded'}};
+  const motionIndices=motions.map(motion=>motion.index);
+  const {initializeBattleHudPlaneRequests,initializeBattleHudBackgroundCamera}=await import('./editor-battle-hud-state.mjs?v=20261015-stocknames2');
+  const hudState=initializeBattleHudPlaneRequests(new Uint8Array(132),{gameId:session.descriptor.gameId});
+  initializeBattleHudBackgroundCamera(hudState,{gameId:session.descriptor.gameId});
+  const result=await prepareBattleWebScene({sources,startupAttachments:{...startupAttachments,gameId:session.descriptor.gameId},backgroundMode:0,metadataIndex:motionIndices[0],
+    shared:{flags:0,mainPauseWord:0,reactionStateByte:0,directionBit6:false,directionBit7:false,
+      sceneFlagsByte:0,sceneFlagsLowByte:0,mainExecutionFlagsByte:0,...outcome,...response,sideWord6:[0,0],sideWords:[0,0],
+      sideAnimationBytes:deathTraits.sideAnimationBytes,alternateAnimationBytes:deathTraits.alternateAnimationBytes,
+      alternateSideMotionDescriptors:motions,alternateAnimationFlagsBytes:[0,0],sceneSecondaryControlByte:0,soundControlDisabled:false,...(ownData(request,'effectSoundDisplay')==='on'?{actorOpcodeCounts:{}}:{}),
+      sceneLoadGate:{flagsByte:0,selectedWords:[0,0],pendingWord:0,pendingByte:0},
+      actorD7Latch:{markerWord:0,savedWord:0,sideBytes:[resolved?combat.defender.enCost:0,0]},
+      ...(resolved?{sideDisplayedDamageTotals:[combat.damage,0],
+       wordProgress:{230:{total:0,step:0,accumulated:0,words:[combat.damage,0]},231:{total:0,step:0,accumulated:0,words:[combat.attacker.enCost,0]}},
+       }:{}),
+      hudState,sceneDisplayUpdateWord:0,sceneForegroundPriority:4,backdropFadeGameId:session.descriptor.gameId,backdropFadePhase:0,
+      backgroundMotionGameId:session.descriptor.gameId,
+      sceneTransition:{modeByte:0,flagsByte:0,taskWord:0}},signal,
+    readPalette:async assetKey=>{
+      const source=allowed.get(assetKey);
+      if(!source)fail('EDITOR_PREVIEW_INVALID','The palette is outside the selected scene.');
+      const bytes=await readBattleFile(session,source.fileName,signal);checkAbort(signal);
+      return {...decodeBattleAsset(bytes,assetKey,{paletteOnly:true}),assetKey,fileName:source.fileName};
+    }});
+  checkAbort(signal);
+  if(result.status==='ready'){
+    // A standalone battle preview has no live scenario to mutate. Retain
+    // the proved nonvisual97 operation explicitly instead of fabricating its
+    // host lookup/table state or treating it as a native no-op.
+    result.deferredBattlefieldEvents=[];
+    result.clock.shared.deferBattlefieldStateCommand=event=>{
+      result.deferredBattlefieldEvents.push({...event});
+      return {status:'deferred'};
+    };
+    result.backgroundMotion={manual:false,sourcePlaneMask:0,rowWarp:false};
+    result.clock.shared.backgroundMotion=result.backgroundMotion;
+    result.clock.shared.applyBackgroundMode=plan=>{
+      if(typeof plan?.manual!=='boolean'||plan.rowWarp!==false||plan.sourcePlaneMask!==0)return false;
+      // FA07's proved identity row displacement becomes a web mode change,
+      // with no native scroll table or scratch-memory copy in playback.
+      Object.assign(result.backgroundMotion,{manual:plan.manual,sourcePlaneMask:0,rowWarp:false});
+      return true;
+    };
+    // Fresh owned initializers select offset A for the two backgrounds,
+    // effects and bodies; the front overlay selects B. DE/DD alter offset A
+    // and its enable targets, independently of palette publication.
+    result.backdropColorOffset={rgbOffset:[0,0,0],enabledLayers:
+      ['foreground-background','rear-background','effect','body']};
+    result.clock.shared.applyBackdropFadeStep=plan=>{
+      const roles=['foreground-background','rear-background','effect','front-overlay','body'];
+      if(!Array.isArray(plan?.rgbOffset)||plan.rgbOffset.length!==3
+        ||plan.rgbOffset.some(n=>!Number.isInteger(n)||n<-256||n>255)
+        ||plan.enabledLayers!==null&&(!Array.isArray(plan.enabledLayers)
+          ||plan.enabledLayers.some(role=>!roles.includes(role))))return false;
+      // The returned prepared scene shares this state object. Keep that
+      // identity: replacing it would leave frame preparation on the initial
+      // RGB even while the actor's fade phase advances correctly.
+      const rgbOffset=plan.rgbOffset.slice(),enabledLayers=plan.enabledLayers===null?
+        result.backdropColorOffset.enabledLayers.slice():plan.enabledLayers.slice();
+      result.backdropColorOffset.rgbOffset=rgbOffset;
+      result.backdropColorOffset.enabledLayers=enabledLayers;
+      return true;
+    };
+    const {createBattleSequenceUsageTracker}=await import('./editor-battle-scene-resources.mjs?v=20261015-stocknames2');
+    result.effectSequenceUsage=createBattleSequenceUsageTracker(result.clock.resolvers.resolveActorSequence,sources.program);
+    result.clock.resolvers.resolveActorSequence=result.clock.shared.resolveActorSequence=result.effectSequenceUsage.resolve;
+    const banks=await inspectEditorBattleBankScreens(session,request,{signal});
+    if(banks.status!=='ready')return {...banks,sources};
+    result.weaponScreenResources=banks.records;
+    const {readBattleCommonScreenResource}=await import('./editor-battle-common-screens.mjs');
+    // Both accepted games initialize resource15 from owned BTSR cells8/9,
+    // independently of the selected weapon's six E_BNK loader actions.
+    result.commonScreenResources=[readBattleCommonScreenResource(sources.commonData),
+      ...(destruction?.status==='ready'&&destruction.resource?[destruction.resource]:[])];
+    const {createBattleBankScreenState}=await import('./editor-battle-bank-screen-state.mjs?v=20261015-stocknames2');
+    // Owned startup CRAOFA nibbles are 1/1/2/3 in F and Final.
+    // Color references are converted to web pictures during preparation.
+    result.bankScreenState=createBattleBankScreenState([...banks.records,...result.commonScreenResources],{getDirection:()=>({
+      bit6:Boolean(result.clock.shared.sceneFlagsByte&64),bit7:Boolean(result.clock.shared.sceneFlagsByte&128)}),
+      getPalette:planeIndex=>({words:result.paletteState.destinationWords,offset:[256,256,512,768][planeIndex]})});
+    const copyCommon=result.clock.shared.copyScreenFragment;
+    result.clock.shared.clearScreenPlane=planeIndex=>{
+      // A cleared map is independent of its display-enable request. The
+      // selected source tile0 was checked during this scene's preparation.
+      if(planeIndex<2)result.backdropContent.clear(planeIndex);
+      result.bankScreenState.clear(planeIndex);
+      result.screenPlanes[planeIndex].fill(0);
+    };
+    result.clock.shared.copyScreenFragment=(command,sourceCommand)=>{
+      const copy=result.bankScreenState.hasResource(command.resourceIndex)
+        ?result.bankScreenState.copy(command,{sourceCommand}):copyCommon(command,sourceCommand);
+      if(copy?.planeIndex<2)result.backdropContent.copied(copy.planeIndex,copy.cellsWritten);
+      return copy;
+    };
+    const backgroundIndex=ownData(request,'backgroundIndex')??motionIndices[0];
+    if(!Number.isSafeInteger(backgroundIndex)||backgroundIndex<0||backgroundIndex>=192)
+      fail('EDITOR_PREVIEW_INVALID','Invalid web battle background selection.');
+    const bytes=await readBattleFile(session,'BBACK.BIN',signal);checkAbort(signal);
+    const {readBattleBackgroundPair}=await import('./editor-battle-background.mjs?v=20261015-stocknames2');
+    const {createBattleBackgroundSwitcher}=await import('./editor-battle-background-switch.mjs');
+    const {createBattlePalettePool,loadBattleBankPalette}=await import('./editor-battle-palette.mjs');
+    const pair=readBattleBackgroundPair(bytes,backgroundIndex);
+    const otherBackgroundIndex=ownData(request,'backgroundIndex')??motionIndices[1];
+    const otherPair=readBattleBackgroundPair(bytes,otherBackgroundIndex);
+    const {renderBattleBackgroundFragment}=await import('./editor-battle-assets.mjs');
+    const {createBattleBackdropContent}=await import('./editor-battle-backdrop-content.mjs');
+    const clearTile=renderBattleBackgroundFragment(bytes,{bankOffset:pair.bankOffset,bankEnd:pair.bankEnd,
+      fragment:{width:1,height:1,cells:Uint32Array.of(0)}});
+    // The fresh source maps start at pattern0. Determine its actual content
+    // from the selected owned side0 bank, rather than assuming all backgrounds
+    // share the transparent tile found in the first investigated examples.
+    result.backdropContent=createBattleBackdropContent({clearTile,initialVisibility:[false,false]});
+    if(!result.backdropContent.snapshot().emptyClear)
+      return {status:'blocked',reason:'initial-background-pattern-content-unresolved',sources};
+    const load=createBattlePalettePool({sourceWords:result.paletteState.sourceWords,bankStates:result.bankStates});
+    const {restoreBattleBackgroundPalette,approachBattleBackgroundPalette,approachBattleBackgroundPaletteToSelection}=await import('./editor-battle-background-palette.mjs');
+    result.clock.shared.restoreBackgroundPalette=()=>restoreBattleBackgroundPalette({
+      sceneFlagsByte:result.clock.shared.sceneFlagsByte,mode:result.rendererContext.variant,
+      ...result.paletteState,addressMap:result.rendererContext.addressMap});
+    result.clock.shared.approachBackgroundPalette=()=>approachBattleBackgroundPalette({
+      sceneFlagsByte:result.clock.shared.sceneFlagsByte,mode:result.rendererContext.variant,
+      ...result.paletteState,addressMap:result.rendererContext.addressMap});
+    result.clock.shared.approachBackgroundPaletteToSelection=({selector,weight})=>approachBattleBackgroundPaletteToSelection({selector,weight,mode:result.rendererContext.variant,...result.paletteState,addressMap:result.rendererContext.addressMap,resolveGraphicsSelection:result.clock.shared.resolveGraphicsSelection});
+    for(const [bank,selectedPair] of [[6,pair],[22,otherPair]]){
+      const assetKey=`battle1:BBACK.BIN:${bytes.length}:${selectedPair.bankOffset}:${selectedPair.bankEnd}:0`;
+      const palette=decodeBattleAsset(bytes,assetKey,{paletteOnly:true});
+      const registered=load({bank,count:palette.nativeBankCount,words:palette.paletteWords,sourceAddress:256+bank*4});
+      if(!registered.loaded)fail('EDITOR_PREVIEW_INVALID','Web battle background palette registration failed.');
+    }
+    for(const record of result.commonScreenResources.filter(record=>record.slot!==14)){
+      const registered=load({bank:record.paletteLoadBase,count:record.nativeBankCount,
+        words:record.paletteWords,sourceAddress:512+record.slot*4});
+      if(!registered.loaded)fail('EDITOR_PREVIEW_INVALID','Web common screen palette registration failed.');
+    }
+    result.backgroundPlanes=Array.from({length:2},()=>new Uint32Array(4096));
+    const switchBackground=createBattleBackgroundSwitcher({commonData:sources.commonData,
+      sides:[{modeByte:backgroundIndex,pair},{modeByte:otherBackgroundIndex,pair:otherPair}],
+      getSceneFlagsByte:()=>result.clock.shared.sceneFlagsByte,planes:result.backgroundPlanes,
+      paletteState:{mode:result.rendererContext.variant,...result.paletteState,addressMap:result.rendererContext.addressMap}});
+    const {createBattleBackgroundParallaxState}=await import('./editor-battle-background-parallax.mjs');
+    result.clock.shared.switchBackground=selector=>{
+      const update=switchBackground(selector);
+      // The ordinary battle viewport publishes128 source band rows at32.
+      // Rebuild numeric web preparation state when the owned terrain changes.
+      const parallax=createBattleBackgroundParallaxState({commonData:sources.commonData,mode:update.background.modeByte,rowStart:32});
+      if(parallax.status!=='ready')fail('EDITOR_PREVIEW_INVALID','Owned background bands are unresolved.');
+      update.background.parallaxState=parallax.state;
+      result.backdropContent.published();
+      return update;
+    };
+    // Owned common programs1/3 publish the attacker terrain (6801FE)
+    // before6804 enters D_ANIME. Reconstruct that action-entry context once;
+    // the web action does not execute the game host's prelude or resume RAM.
+    result.clock.shared.background=result.clock.shared.switchBackground(254).background;
+    const textures=await prepareEditorBattleSceneTextures(session,{...request,portraits:[],preloadWeaponGraphics:true,
+      includeDestruction:destruction?.status==='ready'&&Boolean(destruction.sprite)},{signal});
+    if(textures.status!=='ready')return {...textures,sources};
+    result.weaponSpriteResources=sources.weaponGraphics.map(source=>({...source,
+      pictureCount:textures.loads.find(load=>load.fileName==='E_SPR.BIN'&&load.recordOffset===source.recordOffset)?.count??0}));
+    for(const palette of textures.weaponPalettes){
+      const registered=load({bank:palette.paletteLoadBase,count:palette.nativeBankCount,words:palette.paletteWords,sourceAddress:1024+palette.paletteLoadBase*4});
+      if(!registered.loaded)fail('EDITOR_PREVIEW_INVALID','Web weapon palette registration failed.');
+      for(const group of palette.groups)result.rendererContext.bankBases[group]=palette.paletteLoadBase;
+    }
+    // E_BNK slots use the next six palette bases, independently of E_SPR
+    // slots. Otherwise selector6000 reads the beam blade's source colors.
+    result.rendererContext.bankBases[6]=textures.weaponPalettes.reduce((end,palette)=>
+      Math.max(end,palette.paletteLoadBase+palette.nativeBankCount),128);
+    for(const record of banks.records){
+      const cacheIndex=6+record.slot;
+      if(record.status!=='ready'){
+        result.rendererContext.bankBases[cacheIndex+1]=result.rendererContext.bankBases[cacheIndex];continue;
+      }
+      const registered=loadBattleBankPalette(load,result.rendererContext.bankBases,cacheIndex,record,2048+record.slot*4);
+      if(!registered.loaded)fail('EDITOR_PREVIEW_INVALID','Web effect palette registration failed.');
+    }
+    const {createBattleWebFrameContext}=await import('./editor-battle-web-frame-context.mjs');
+    // Fresh source Back is explicitly black: both owned initializers
+    // 060043CE..D4 write RGB0 before slBack1ColSet. A retained game host's
+    // prior Back state is outside this standalone preview profile.
+    // Fresh SGL task setup clears the Back ratio together with its SDK state.
+    result.frameContext=createBattleWebFrameContext(result,textures,{backColor:[0,0,0],backRatio:0});
+    const {planBattleUnitBitmap}=await import('./editor-battle-unit-bitmap.mjs?v=20261015-stocknames2');
+    const bitmapIndices=[textures.textureBases[8],textures.textureBases[9]];
+    const bitmapKeys=[sources.unitGraphics,sources.opponentGraphics].map(source=>
+      `battle1:${source.fileName}:${source.byteLength}:${source.recordOffset}:${source.recordEnd}:0`);
+    result.clock.shared.copyUnitBitmap=(operand,opcode=0xe3)=>{
+      const hud=result.clock.shared.hudState;
+      if(!(hud instanceof Uint8Array)||hud.length<66)return {status:'blocked',reason:'unit-bitmap-hud-unresolved'};
+      const plan=planBattleUnitBitmap({operand,directionBit6:result.clock.shared.directionBit6,
+        sceneFlagsByte:result.clock.shared.sceneFlagsByte,textureIndices:bitmapIndices,
+        textureState:result.frameContext.textureState,assetKeys:bitmapKeys,opcode,sideWord6:result.clock.shared.sideWord6});
+      if(plan.status!=='ready')return plan;
+      result.bankScreenState.copyUnitBitmap(plan);
+      const view=new DataView(hud.buffer,hud.byteOffset,hud.byteLength);
+      hud[51]=hud[52]=0;view.setUint16(62,plan.scrollX);view.setUint16(64,plan.scrollY);
+      return {status:'ready'};
+    };
+    result.frameContext.loadedGroups=new Map(sources.commonGraphics.map(source=>[source.frameCacheGroup,source]));
+    let destructionStarted=false,destructionPublished=false;
+    result.clock.shared.preparePhaseExit=()=>{
+      if(!killed)return {status:'finished'};
+      const side=(result.clock.shared.sceneFlagsByte>>>6)&1;
+      if(side!==0||!(result.clock.shared.sideStatusFlags[side]&16))
+        return {status:'blocked',reason:'destruction-selected-target-context-unresolved'};
+      if(destruction?.status!=='ready')return {status:'blocked',reason:destruction?.reason??'destruction-class-unresolved'};
+      destructionStarted=true;destructionPublished=destruction.deathType===0;
+      result.clock.shared.attachmentPolicies={attacker:0,defender:0};
+      return {status:'ready',visualPhase:'destruction'};
+    };
+    result.clock.shared.prepareDestruction=()=>{
+      if(!destructionStarted||destruction?.status!=='ready')return {status:'blocked',reason:'destruction-phase-context-missing'};
+      const published=activateBattleDestructionResources(destruction,{...result.paletteState,
+        bankStates:result.bankStates,bankBases:result.rendererContext.bankBases,loadPalette:load});
+      if(published.status==='ready'){
+        result.frameContext.loadedGroups.set(19,destruction.sprite);destructionPublished=true;
+      }
+      return published;
+    };
+    result.clock.shared.finishDestruction=()=>{
+      const visible=actor=>(actor.flags1&192)===192&&!(actor.flags1&32);
+      const records=result.clock.pool.records;
+      return destructionStarted&&destructionPublished&&!visible(records[4])
+        &&records.slice(8).every(actor=>!visible(actor))
+        ?{status:'ready'}:{status:'blocked',reason:'destruction-visual-completion-unresolved'};
+    };
+    result.clock.shared.destructionEffectAudio='off';
+    result.destructionPresentation={requested:killed,deathType:deathTraits.deathTypes[0],
+      scope:'selected owned destruction visuals; map restoration, counterattack and effect audio excluded'};
+  }
+  const {prepareBattleHudWindow}=await import('./editor-battle-hud-window.mjs');
+  const {prepareBattleHudGlyphs}=await import('./editor-battle-hud-glyphs.mjs');
+  const {prepareBattleHudBars}=await import('./editor-battle-hud-bars.mjs');
+  result.hudWindow=prepareBattleHudWindow(sources.commonData);result.combat=combat;
+  result.hudGlyphs=prepareBattleHudGlyphs(sources.commonData,{gameId:session.descriptor.gameId});
+  result.hudGlyphs.bars=prepareBattleHudBars(sources.commonData,{gameId:session.descriptor.gameId});
+  const authoring=session.weaponProject?.entries.find(entry=>entry.weaponIndex===ownData(request,'weaponIndex'));
+  result.importedEffectSequences=(authoring?.imports??[]).map(entry=>entry.targetSequence);
+  const originalSession=battleCache(session).originalSession??session;
+  const catalog=await catalogEditorWeaponMotions(originalSession,{}, {signal});
+  result.weaponMotion=catalog.entries.find(row=>row.recordIndex===(authoring?.animationWeapon??authoring?.sourceWeapon??ownData(request,'weaponIndex')));
+  const sourceRows=battleCache(originalSession).rows??sessionEditorRows(originalSession);
+  const donor=sourceRows.weapons.find(row=>row.recordIndex===result.weaponMotion?.recordIndex);
+  const lightEnabled=ownData(ownData(request,'combat'),'lightCorrection')??true;
+  if(typeof lightEnabled!=='boolean')fail('EDITOR_PREVIEW_INVALID','Invalid web light presentation choice.');
+  const {createBattleWebEffectEdgePreparer}=await import('./editor-battle-web-effect-edge.mjs?v=20261015-stocknames2');
+  result.lightPresentation={enabled:lightEnabled,animationBeam:Boolean(donor&&(originalSession.root[29].bytes[donor.byteOffset+1]&128)),correctedTicks:new Set(),
+    edgePreparer:createBattleWebEffectEdgePreparer()};
+  if(resolved)result.hudReadout={targetHp:combat.defender.hpBefore,attackerEn:combat.attacker.enBefore,targetEn:combat.defender.enBefore,pendingDamage:0,pendingAttackEn:0,pendingTargetEn:0};
+  result.hudCues=[];result.hudIndicatorCues=[];
+  result.dialogue=await prepareEditorBattleWebDialogue(session,request,sources,{signal,combat});
+  return {...result,sources,responseScope:response.responseScope};
+}
+
+// Prepare selected, disc-owned speech once. Only semantic pictures/cues leave
+// this boundary. The silent preview uses the source option22-set duration path
+// and the executable's initial NTSC reciprocal, not an invented text timer.
+async function prepareEditorBattleWebDialogue(session,request,sources,{signal,combat}={}){
+  const withVoice=ownData(request,'voiceDisplay')==='on';
+  if(ownData(request,'dialogueDisplay')!=='on'&&!withVoice)return {status:'off'};
+  if(combat?.status==='partial')return {status:'partial',reason:combat.reason};
+  if(combat?.status!=='ready'&&!['attack','hit'].includes(ownData(request,'mode')??'attack'))
+    return {status:'partial',reason:'dialogue-response-profile-unresolved'};
+  if(ownData(request,'weaponAuthoring')!==undefined)session=await projectedWeaponSession(session,request,signal);
+  const gameId=session.descriptor.gameId,cache=battleCache(session);
+  if(!cache.rows)cache.rows=sessionEditorRows(session);
+  const pilots=[ownData(request,'attackerPilotIndex'),ownData(request,'defenderPilotIndex')];
+  if(pilots.some(index=>!Number.isSafeInteger(index)||index<2
+    ||!cache.rows.pilots.some(row=>row.recordIndex===index&&row.role!=='hero-list')))
+    return {status:'partial',reason:'dialogue-pilot-selection-required'};
+  const linkedPilots=['attackerLinkedPilotIds','defenderLinkedPilotIds'].map((key,side)=>{
+    const links=ownData(request,key)??[];
+    if(!Array.isArray(links)||links.length>255||new Set(links).size!==links.length
+      ||Array.from(links).some(index=>!Number.isSafeInteger(index)||index<2||index===pilots[side]
+        ||!cache.rows.pilots.some(row=>row.recordIndex===index&&row.role!=='hero-list')))
+      fail('EDITOR_PREVIEW_INVALID','Invalid linked dialogue pilot selection.');
+    return links.slice();
+  });
+  const hp=combat?.status==='ready'?combat.hpRemainingPercent:ownData(request,'remainingHpPercent')??100,seed=ownData(request,'dialogueSeed')??0;
+  if(!Number.isInteger(hp)||hp<0||hp>100||!Number.isInteger(seed)||seed<0||seed>0xffffffff)
+    fail('EDITOR_PREVIEW_INVALID','Invalid dialogue preview context.');
+  const {selectBattleDialogueChannelRoot,createBattleDialogueUnitConditionContext,withBattleDialogueWeaponKey}=await import('./editor-battle-dialogue-selection.mjs');
+  const {readBattleDialoguePath,composeBattleDialoguePayload}=await import('./editor-battle-dialogue-source.mjs');
+  const {createBattleSceneResolvers}=await import('./editor-battle-scene-resources.mjs?v=20261015-stocknames2');
+  const {createBattleOutcomeContext}=await import('./editor-battle-outcome-context.mjs');
+  const {readBattleSceneDurationRecord,battleScenePacketDelay}=await import('./editor-battle-scene-control.mjs');
+  const {createBattleWebDialogueCompiler}=await import('./editor-battle-web-dialogue.mjs');
+  const {createBattleWebDialogueScheduler}=await import('./editor-battle-web-dialogue-scheduler.mjs');
+  const {prepareBattleDialogueWindow}=await import('./editor-battle-dialogue-window.mjs');
+  const window=prepareBattleDialogueWindow(sources.commonData);
+  const weapon=cache.rows.weapons.find(row=>row.recordIndex===ownData(request,'weaponIndex'));
+  const storedRecord=session.root[29].bytes.slice(weapon.byteOffset,weapon.byteOffset+17);
+  const editedRows=await prepareEditorBattleCombatRows(session,request);
+  const editedWeapon=editedRows.weapons.find(row=>row.recordIndex===weapon.recordIndex);
+  const record=withBattleDialogueWeaponKey(storedRecord,editedWeapon.dialogueKey);
+  const previewDialogueKey=ownData(request,'previewDialogueKey');
+  const attackRecord=previewDialogueKey===undefined?record:withBattleDialogueWeaponKey(record,previewDialogueKey);
+  const executable=await readBattleFile(session,'0',signal);checkAbort(signal);
+  const multiplierAt=(gameId==='srwf-f'?0x06046fd4:0x0604c7d4)-0x06004000;
+  if(multiplierAt<0||multiplierAt+4>executable.length)return {status:'partial',reason:'dialogue-duration-profile-unavailable'};
+  const multiplier=readU32BE(executable,multiplierAt);
+  if(multiplier!==0xa01a01a1)return {status:'partial',reason:'dialogue-duration-profile-unavailable'};
+  const palette=new Uint8Array(64);
+  // The original font palette is white0x7FFF; PMOD0x80 leaves index0
+  // transparent so the owned window's border/interior remain visible.
+  for(let index=1;index<15;index++)palette.set([248,248,248,255],index*4);
+  palette[63]=255;
+  const compiler=createBattleWebDialogueCompiler({font:sources.messageGlyphs,palette,
+    textLayout:{x:56,y:160,width:264,height:48}});
+  const outcome=createBattleOutcomeContext({mode:ownData(request,'mode')??'attack',directionBit6:false});
+  const statusWord=combat?.status==='ready'?combat.outcome.statusWord:(outcome.sideStatusFlags[0]<<8)|outcome.sideSecondaryStatusFlags[0];
+  const resolvers=createBattleSceneResolvers(sources),channels=[[],[],[],[]],portraits=new Map(),voices=new Map();let randomState=seed;
+  // Counterattack is beyond this selected action's phase-exit boundary.
+  for(let channel=0;channel<2;channel++){
+    const selected=selectBattleDialogueChannelRoot(sources.messageData,gameId,{pilotIndex:pilots[channel],channel,
+      weaponRecord:channel===0?attackRecord:record,statusWord,responseTraitByte:combat?.status==='ready'?combat.outcome.responseTraitByte:0,remainingHpPercent:hp});
+    if(selected.status!=='ready')return selected;
+    const path=readBattleDialoguePath(sources.messageData,gameId,selected.recordIndex,selected.root,{randomState,
+      conditions:createBattleDialogueUnitConditionContext({channel,attackerUnitId:ownData(request,'unitIndex'),
+        defenderUnitId:ownData(request,'opponentUnitIndex'),attackerPilotId:pilots[0],defenderPilotId:pilots[1],
+        // Linked pilots are explicit preview casting, not inferred cockpit
+        // assignments or a fabricated extra dialogue after the attack.
+        attackerLinkedPilotIds:linkedPilots[0],defenderLinkedPilotIds:linkedPilots[1]})});
+    if(!path.ended||path.blocked)return {status:'partial',reason:path.blocked?.reason??'dialogue-selection-unresolved'};
+    randomState=path.randomState;let payloadBytes=0;
+    if(path.actions.length*10+2>128)return {status:'partial',reason:'dialogue-channel-capacity'};
+    for(const action of path.actions){
+      checkAbort(signal);
+      const shortName=resolvers.resolveShortName(action.subjectIndex);
+      const speaker=cache.rows.pilots.find(row=>row.recordIndex===action.subjectIndex&&row.role!=='hero-list');
+      if(!shortName||!speaker)return {status:'partial',reason:'dialogue-speaker-unresolved'};
+      const payload=composeBattleDialoguePayload(shortName,action.bodyBytes);payloadBytes+=payload.length;
+      if(payloadBytes>256)return {status:'partial',reason:'dialogue-channel-capacity'};
+      const expression=action.subjectFlags&3,portraitKey=`${action.subjectIndex}:${expression}`;
+      let image=portraits.get(portraitKey);
+      if(!image){
+        const result=await inspectEditorBattlePortraitSources(session,{portraits:[{pilotIndex:action.subjectIndex,expressionIndex:expression}]},{signal});
+        const source=result.sources[0];
+        if(source.status!=='ready')return {status:'partial',reason:source.reason};
+        const assetKey=`battle1:FACE.BIN:${source.byteLength}:${source.recordOffset}:${source.recordEnd}:${expression}`;
+        image=await previewEditorBattleAsset(session,{fileName:'FACE.BIN',assetKey,indexed:true,nativeTexture:true},{signal});
+        portraits.set(portraitKey,image);
+      }
+      const width=Math.min(48,image.width),height=Math.min(48,image.height);
+      const prepared=compiler.prepareMessage({phase:channel?'response':'attack',speakerId:action.subjectIndex,
+        speakerName:speaker.name,portraitId:portraitKey,payload,portraitPicture:image,
+        portraitLayout:{x:16,y:172,width,height}});
+      if(prepared.status!=='ready')return prepared;
+      const duration=readBattleSceneDurationRecord(sources.durationDirectory,action);
+      const voiceId=withVoice?`voice:${action.group}:${action.selection}`:undefined;
+      if(withVoice&&!voices.has(voiceId))voices.set(voiceId,await readBattleVoiceClip(session,duration,voiceId,signal));
+      channels[channel].push({token:action.token,message:prepared.message,
+        delayTicks:battleScenePacketDelay(duration.endBlock,multiplier),...(voiceId?{voiceId}:{})});
+    }
+  }
+  const scheduler=createBattleWebDialogueScheduler(channels);
+  return {status:'ready',scheduler,window,voices,profile:{remainingHpPercent:hp,randomSeed:seed,
+    durationProfile:'owned-option22-set-initial-ntsc',combatCalculation:combat?.status==='ready'}};
+}
+
+// Expose source-command updates while the presentation scheduler is unfinished.
+// This API supplies no guessed milliseconds or fabricated completed timeline.
+export async function previewEditorBattleSceneFrame(session,request,{signal}={}){
+  const cache=battleCache(session),sceneTick=ownData(request,'sceneTick');
+  if(!Number.isSafeInteger(sceneTick)||sceneTick<0||sceneTick>4095
+    ||!BATTLE_MODES.has(ownData(request,'mode'))||!['off','on'].includes(ownData(request,'dialogueDisplay')))
+    fail('EDITOR_PREVIEW_INVALID','Invalid source scene step request.');
+  const key=JSON.stringify([ownData(request,'mode'),ownData(request,'weaponIndex'),ownData(request,'unitIndex'),
+    ownData(request,'opponentUnitIndex'),ownData(request,'backgroundIndex')??null,ownData(request,'weaponAuthoring')??null,
+    ownData(request,'terrainIndex')??5,ownData(request,'sceneBank')??0,
+    ownData(request,'attackerMapClass')??null,ownData(request,'defenderMapClass')??null,
+    ownData(request,'dialogueDisplay')??'off',ownData(request,'voiceDisplay')??'off',ownData(request,'effectSoundDisplay')??'off',ownData(request,'attackerPilotIndex')??null,
+    ownData(request,'defenderPilotIndex')??null,ownData(request,'attackerLinkedPilotIds')??[],ownData(request,'defenderLinkedPilotIds')??[],ownData(request,'remainingHpPercent')??100,ownData(request,'dialogueSeed')??0,ownData(request,'previewDialogueKey')??null,ownData(request,'unlinkedPreview')??false,ownData(request,'combat')??null,ownData(request,'combatRows')??null]);
+  let entry=cache.webFramePreview;
+  if(entry?.key===key&&entry.ended&&sceneTick>entry.cursor){
+    cache.webFramePreview=null;return {status:'script-ended',sceneTick:entry.cursor+1};
+  }
+  if(!entry?.prepared||entry.key!==key||sceneTick<entry.cursor){
+    entry={key,cursor:-1,prepared:null};cache.webFramePreview=entry;
+    try{
+      entry.prepared=await prepareEditorBattleWebScene(session,request,{signal});checkAbort(signal);
+      if(entry.prepared.status!=='ready')return entry.prepared;
+      const withDialogue=entry.prepared.dialogue?.status==='ready';
+      entry.prepared.clock.shared.sceneControlSourceBytes[0]=withDialogue?0:128;
+      entry.prepared.clock.shared.sceneSecondaryControlByte=withDialogue?0:128;
+      if(withDialogue)entry.prepared.clock.shared.onBattleDialogueChannel=event=>{
+        if(event.channel>1)throw new Error('Dialogue counterattack is outside this selected action.');
+        entry.prepared.dialogue.scheduler.begin(event.channel,{disabled:event.disabled});
+      };
+    }catch(error){if(cache.webFramePreview===entry)cache.webFramePreview=null;throw error;}
+  }
+  const {tickBattleSceneClock}=await import('./editor-battle-scene-clock.mjs?v=20261015-stocknames2');
+  const {prepareBattleSceneFrame}=await import('./editor-battle-scene-frame.mjs?v=20261015-stocknames2');
+  const {advanceBattleBackgroundParallax,compileBattleBackgroundParallaxLayers}=await import('./editor-battle-background-parallax.mjs');
+  const {resolveBattleHudIndicatorSource}=await import('./editor-battle-hud-glyphs.mjs');
+  try{
+    while(entry.cursor<sceneTick){
+      checkAbort(signal);
+      if(cache.webFramePreview!==entry)throw new DOMException('Scene selection changed','AbortError');
+      const soundsBefore=entry.prepared.clock.shared.soundEvents?.length??0;
+      const update=tickBattleSceneClock(entry.prepared.clock);
+      // Actor-local ticks restart when slots are reused. Capture sound
+      // requests on the scene's global update so playback can seek/loop
+      // without guessing a time from the emitting actor's age.
+      for(const event of(entry.prepared.clock.shared.soundEvents??[]).slice(soundsBefore)){
+        (entry.prepared.effectSoundCues??=[]).push({sceneTick:entry.cursor+1,id:event.id,
+          kind:event.kind??'scene-effect',sourcePc:event.sourcePc,
+          ...(event.kind==='sequence-start'?{controlNumber:event.controlNumber,sequenceBank:event.sequenceBank,songIndex:event.songIndex}:event.kind==='sequence-stop'?{controlNumber:event.controlNumber}:{} )});
+      }
+      if(update.blocked){cache.webFramePreview=null;return {status:'blocked',sceneTick:entry.cursor+1,reason:update.blocked};}
+      if(update.scriptEnded){
+        if(entry.prepared.clock.main.phaseExit?.phase==='destruction'&&entry.prepared.clock.main.phaseExit.completed){
+          // Shadow attachments update after the main hide command. Check the
+          // resulting source actor state, without suppressing an old picture
+          // or claiming completion while a target/effect remains visible.
+          const records=entry.prepared.clock.pool.records,visible=actor=>(actor.flags1&192)===192&&!(actor.flags1&32);
+          if(visible(records[4])||visible(records[7])||records.slice(8).some(visible)){
+            entry.prepared.clock.main.phaseExit.completed=false;cache.webFramePreview=null;
+            return {status:'blocked',sceneTick:entry.cursor+1,reason:{phase:'presentation',reason:'destruction-exit-actors-still-visible'}};
+          }
+          entry.ended=true;
+        }
+        else{cache.webFramePreview=null;return {status:'script-ended',sceneTick:entry.cursor+1};}
+      }
+      if(entry.prepared.combat?.status==='ready'){
+        const {advanceBattleHudReadout}=await import('./editor-battle-hud-progress.mjs');
+        const shared=entry.prepared.clock.shared,damage=shared.wordProgress[230],energy=shared.wordProgress[231];
+        const shown=advanceBattleHudReadout({gameId:session.descriptor.gameId,...entry.prepared.hudReadout,pendingDamage:damage.accumulated,
+          pendingAttackEn:energy.accumulated,pendingTargetEn:shared.actorD7Latch.savedWord});
+        damage.accumulated=shown.pendingDamage;energy.accumulated=shown.pendingAttackEn;
+        shared.actorD7Latch.savedWord=shown.pendingTargetEn;entry.prepared.hudReadout=shown;
+        const cue={sceneTick:entry.cursor+1,attackerHp:entry.prepared.combat.attacker.hpBefore,attackerEn:shown.attackerEn,defenderHp:shown.targetHp,defenderEn:shown.targetEn};
+        const last=entry.prepared.hudCues.at(-1);
+        if(!last||['attackerHp','attackerEn','defenderHp','defenderEn'].some(key=>last[key]!==cue[key]))entry.prepared.hudCues.push(cue);
+      }
+      const background=entry.prepared.clock.shared.background;
+      const parallax=advanceBattleBackgroundParallax({state:background.parallaxState,groups:background.groups,
+        speed:background.speed,manual:entry.prepared.backgroundMotion.manual});
+      background.parallaxState=parallax.state;background.groups=parallax.groups;
+      if(parallax.cameras){
+        const hudView=new DataView(entry.prepared.clock.shared.hudState.buffer,entry.prepared.clock.shared.hudState.byteOffset,
+          entry.prepared.clock.shared.hudState.byteLength);
+        for(let plane=0;plane<2;plane++){
+          hudView.setInt32(108+plane*8,parallax.cameras[plane].x*65536);
+          hudView.setInt32(112+plane*8,parallax.cameras[plane].y*65536);
+        }
+      }
+      if(entry.prepared.dialogue?.status==='ready'){
+        const progress=entry.prepared.dialogue.scheduler.advance(entry.cursor+1,entry.prepared.clock.shared.sceneControl.byte0>>>6);
+        if(progress.progress!==null)entry.prepared.clock.shared.sceneControl.byte1=progress.progress;
+      }
+      const shared=entry.prepared.clock.shared;
+      const {responseChoice,side}=resolveBattleHudIndicatorSource({
+        headerFlags:(shared.sceneFlagsByte<<8)|shared.sceneFlagsLowByte,sideStatusFlags:shared.sideStatusFlags});
+      const lastIndicator=entry.prepared.hudIndicatorCues.at(-1);
+      if(!lastIndicator||lastIndicator.responseChoice!==responseChoice||lastIndicator.side!==side)
+        entry.prepared.hudIndicatorCues.push({sceneTick:entry.cursor+1,responseChoice,side});
+      if(entry.prepared.clock.shared.sceneDisplayUpdateWord&8){
+        const {advanceBattleHudDisplayRequest}=await import('./editor-battle-hud-state.mjs?v=20261015-stocknames2');
+        const shared=entry.prepared.clock.shared;
+        const display=advanceBattleHudDisplayRequest(shared.hudState,{variant:shared.presentationVariant,
+          updateWord:shared.sceneDisplayUpdateWord});
+        if(display.status!=='ready')return {status:'blocked',sceneTick:entry.cursor+1,
+          reason:{phase:'display-request',reason:display.reason,request:display.request}};
+        shared.sceneDisplayUpdateWord=display.updateWord;
+        if(display.foregroundPriority!==undefined)shared.sceneForegroundPriority=display.foregroundPriority;
+      }
+      entry.cursor++;
+      if(entry.ended&&entry.cursor<sceneTick){cache.webFramePreview=null;return {status:'script-ended',sceneTick:entry.cursor+1};}
+    }
+    // The screen pictures, HUD and sprite palette belong to one source
+    // update, captured before any asynchronous owned-disc read.
+    const hud=entry.prepared.clock.shared.hudState.slice();
+    const parallaxSnapshot=structuredClone({state:entry.prepared.clock.shared.background.parallaxState,
+      groups:entry.prepared.clock.shared.background.groups,manual:entry.prepared.backgroundMotion.manual});
+    const screenPlanes=entry.prepared.bankScreenState.snapshot({cropped:true});
+    const backdropContent=entry.prepared.backdropContent.snapshot();
+    const colorOffset={rgbOffset:entry.prepared.backdropColorOffset.rgbOffset.slice(),
+      enabledLayers:entry.prepared.backdropColorOffset.enabledLayers.slice()};
+    const backgroundIndex=ownData(request,'backgroundIndex')??entry.prepared.clock.shared.background.modeByte
+      ??entry.prepared.responseScope.motionProfile.sides[0].index;
+    const frame=await prepareBattleSceneFrame(entry.prepared.clock,{sources:entry.prepared.sources,
+      context:entry.prepared.frameContext,signal,capturePalette:true});checkAbort(signal);
+    if(cache.webFramePreview!==entry)throw new DOMException('Scene selection changed','AbortError');
+    if(frame.status!=='ready')return {...frame,sceneTick};
+    // Source body-shadow attachments belong to the body track, not to the
+    // weapon-effect track. A reused slot only retains this role while its
+    // authenticated common sequence and size selector still match.
+    for(const command of frame.commands){
+      const slot=command.slot,actor=entry.prepared.clock.pool.records[slot];
+      if((slot===6||slot===7)&&actor?.bytes===entry.prepared.sources.commonActors&&actor.sequenceIndex===8
+        &&actor.selector>=0x100c&&actor.selector<=0x100f&&actor.parentIndex===(slot===6?1:4))
+        command.role=slot===6?'attacker':'target';
+    }
+    // Source-bound effects only. Body/weapon art, portraits, HUD and shadow
+    // pictures retain their original RGB and alpha, including dark details.
+    const edgeProfile=entry.prepared.lightPresentation;
+    const {resolveBattleWebLightEffectStyle}=await import('./editor-battle-web-light-effect.mjs');
+    if(edgeProfile.enabled){
+      const processed=new Set();
+      for(const command of frame.commands){
+        const group=command.selector>>>8&31,subIndex=command.selector&255;
+        if(processed.has(command.assetKey))continue;
+        const weaponSource=group<=5?entry.prepared.weaponSpriteResources.find(source=>source.headerSlots.includes(group)):null;
+        const source=weaponSource??entry.prepared.frameContext.loadedGroups?.get(group);
+        if(!source||!weaponSource&&![16,19].includes(group))continue;
+        const prefix=`battle1:${weaponSource?'E_SPR.BIN':'BTSR.BIN'}:${source.byteLength}:${source.recordOffset}:${source.recordEnd}:`;
+        if(command.sourceAssetKey!==prefix+subIndex)continue;
+        const provenance=weaponSource?{carrier:'owned-weapon-sprite',group,role:'optical-effect',
+          gameId:session.descriptor.gameId,sourceSelector:source.sourceSelector&2047,subIndex,
+          pictureCount:source.pictureCount,recordLength:source.recordEnd-source.recordOffset}
+          :{carrier:'owned-common-sprite',group,sourceTableCell:source.sourceTableCell,
+            subIndex,role:group===16?(subIndex>=42?'booster':'common-effect'):'debris'};
+        if(group===16&&(source.sourceTableCell!==7||subIndex<35||subIndex>43))continue;
+        const picture=frame.assets.get(command.assetKey);
+        const light=resolveBattleWebLightEffectStyle({picture,enabled:true,
+          sourceStyle:{status:'ready',opacity:command.opacity??1,blend:command.blend??'normal'},provenance});
+        if(light.corrected){Object.assign(command,light.style);edgeProfile.correctedTicks.add(sceneTick);continue;}
+        processed.add(command.assetKey);
+        const corrected=edgeProfile.edgePreparer({picture,enabled:true,provenance});
+        if(corrected.corrected){frame.assets.set(command.assetKey,{...picture,...corrected.picture});edgeProfile.correctedTicks.add(sceneTick);}
+      }
+    }
+    const view=new DataView(hud.buffer,hud.byteOffset,hud.byteLength);
+    const {resolveBattleHudTopPlaneComposition,resolveBattleHudSecondPlaneComposition,resolveBattleHudPlaneVisibility}=await import('./editor-battle-hud-composition.mjs?v=20261015-stocknames2');
+    const effectVisibility=resolveBattleHudPlaneVisibility(hud,{gameId:session.descriptor.gameId,
+      presentationVariant:entry.prepared.rendererContext.variant});
+    let effectComposition=resolveBattleHudTopPlaneComposition(hud,{gameId:session.descriptor.gameId});
+    if([18,19].includes(hud[0])&&effectComposition.status!=='ready')return {status:'blocked',sceneTick,
+      reason:{phase:'presentation',reason:effectComposition.reason,displayRequest:hud[0],displayFlags:hud[1]}};
+    const secondComposition=resolveBattleHudSecondPlaneComposition(hud,{gameId:session.descriptor.gameId,
+      backRatio:entry.prepared.frameContext.backRatio});
+    const {resolveBattleForegroundDisplayComposition}=await import('./editor-battle-hud-composition.mjs?v=20261015-stocknames2');
+    const foregroundComposition=resolveBattleForegroundDisplayComposition(hud,{gameId:session.descriptor.gameId,
+      priority:entry.prepared.clock.shared.sceneForegroundPriority});
+    if(foregroundComposition.status!=='ready')return {status:'blocked',sceneTick,
+      reason:{phase:'presentation',reason:foregroundComposition.reason}};
+    const spritePriorities=frame.commands.filter(command=>!command.stateCommand).map(command=>
+      (new DataView(command.bytes.buffer,command.bytes.byteOffset,command.bytes.byteLength).getUint16(6)>>>12)&7);
+    // Request4 enables sprite color calculation with SPCCCS=equal and
+    // SPCCN=6. Only source sprite priorities equal6 are eligible. Independent
+    // per-mesh addition would wrongly expose earlier overlapping sprites.
+    // These eligibility bits feed retained GPU visible-owner composition.
+    if([1,4].includes(hud[0])&&(new DataView(hud.buffer,hud.byteOffset,hud.byteLength).getUint16(2)&64)){
+      if(spritePriorities.some(priority=>priority===0||priority===2))return {status:'blocked',sceneTick,
+        reason:{phase:'presentation',reason:'sprite-additive-priority-context-unresolved',spritePriorities}};
+      let index=0;for(const command of frame.commands)if(!command.stateCommand)
+        command.spriteAdditiveEligible=spritePriorities[index++]===6;
+    }
+    // Keep FA53's ordinary-sprite profile separate. In top mode the source
+    // priority6 plane is above both body4 and type2 destruction sprite5.
+    const ordinarySprites=spritePriorities.every(priority=>priority===4);
+    let topSpriteOwnership=null;
+    let rearSpriteOrder=null;
+    if(effectComposition.status==='ready'&&effectComposition.layerPriority===3){
+      const {resolveBattleHudRearSpriteOrder}=await import('./editor-battle-layer-order.mjs?v=20261015-stocknames2');
+      rearSpriteOrder=resolveBattleHudRearSpriteOrder(effectComposition,spritePriorities,{gameId:session.descriptor.gameId});
+      if(rearSpriteOrder.status!=='ready')return {status:'blocked',sceneTick,
+        reason:{phase:'presentation',reason:rearSpriteOrder.reason,spritePriorities}};
+      // A masked rear plane combined with sprite color calculation also
+      // needs the native second-visible-image selection, not just priority.
+      // Do not infer that coupled blend from independent owner masks.
+      if(rearSpriteOrder.occlusionMaskBySprite&&frame.commands.some(command=>command.spriteAdditiveEligible))
+        return {status:'blocked',sceneTick,reason:{phase:'presentation',reason:'rear-plane-sprite-color-calculation-unresolved',spritePriorities}};
+      if(rearSpriteOrder.occlusionMaskBySprite){let index=0;for(const command of frame.commands)if(!command.stateCommand)
+        command.occludesRearLayers=rearSpriteOrder.occlusionMaskBySprite[index++];}
+    }
+    if(effectComposition.status==='ready'&&effectComposition.layerPriority===6||foregroundComposition.layerPriority===6){
+      const {resolveBattleHudTopSpriteOrder}=await import('./editor-battle-layer-order.mjs?v=20261015-stocknames2');
+      const order=resolveBattleHudTopSpriteOrder(effectComposition.status==='ready'&&effectComposition.layerPriority===6?effectComposition:foregroundComposition,spritePriorities,{gameId:session.descriptor.gameId});
+      if(order.status!=='ready')return {status:'blocked',sceneTick,reason:{phase:'presentation',reason:order.reason,
+        spritePriorities:spritePriorities.slice(),
+        unresolvedSprites:frame.commands.filter(command=>!command.stateCommand).flatMap((command,index)=>
+          spritePriorities[index]===0||spritePriorities[index]===2?[{slot:command.slot,priorityIndex:spritePriorities[index],assetKey:command.assetKey}]:[])}};
+      topSpriteOwnership=order.occlusionMaskBySprite??null;
+      if(topSpriteOwnership){let index=0;for(const command of frame.commands)if(!command.stateCommand)
+        command.occludesFrontLayers=topSpriteOwnership[index++];}
+    }
+    frame.backgroundVisibility=backdropContent.ownedVisible.map((visible,index)=>visible
+      &&(effectVisibility.status!=='ready'||Boolean(effectVisibility.enabledMask&(1<<index))));
+    // These carriers belong only to this prepared selection and never cross
+    // the worker boundary. Public background reads still return fresh copies.
+    entry.prepared.backgroundPreparers??=new Map();
+    let backgroundPreparers=entry.prepared.backgroundPreparers.get(backgroundIndex);
+    if(!backgroundPreparers){
+      const background=await previewEditorBattleBackground(session,{backgroundIndex},{signal});checkAbort(signal);
+      const {createBattleIndexedPicturePreparer}=await import('./editor-battle-indexed-picture.mjs');
+      backgroundPreparers=background.assets.map(createBattleIndexedPicturePreparer);
+      entry.prepared.backgroundPreparers.set(backgroundIndex,backgroundPreparers);
+      while(entry.prepared.backgroundPreparers.size>4)
+        entry.prepared.backgroundPreparers.delete(entry.prepared.backgroundPreparers.keys().next().value);
+    }
+    if(cache.webFramePreview!==entry)throw new DOMException('Scene selection changed','AbortError');
+    const {prepareBattleOffsetPicture}=await import('./editor-battle-backdrop-fade.mjs');
+    const {createBattlePlacementFrame}=await import('./editor-battle-placement-frame.mjs');
+    // Both owned startup profiles select CRAOFA offset256 for NBG0/1.
+    // Palette publication/recovery is baked into RGBA during preparation;
+    // the web timeline retains no palette addresses or mutable source state.
+    const layerRoles=['foreground-background','rear-background','effect','front-overlay'];
+    const offsetPicture=(picture,planeIndex)=>planeIndex!==3
+      &&colorOffset.enabledLayers.includes(layerRoles[planeIndex])&&colorOffset.rgbOffset.some(n=>n!==0)
+      ?prepareBattleOffsetPicture({picture,rgbOffset:colorOffset.rgbOffset}):picture;
+    const backdrop=createBattlePlacementFrame({backgrounds:backgroundPreparers.map(prepare=>
+      prepare({paletteWords:frame.paletteSnapshot,paletteOffset:256})),
+      backgroundCameras:[0,1].map(plane=>({x:view.getInt32(108+plane*8)/65536,y:view.getInt32(112+plane*8)/65536})),
+      backgroundVisibility:frame.backgroundVisibility});
+    const backgroundBands=compileBattleBackgroundParallaxLayers({...parallaxSnapshot,
+      cameras:[0,1].map(plane=>({x:view.getInt32(108+plane*8)/65536,y:view.getInt32(112+plane*8)/65536})),
+      assetKeys:[0,1].map(plane=>backdrop.backgroundLayers.find(layer=>layer.planeIndex===plane)?.assetKey??null)});
+    if(backgroundBands.status!=='ready')return {status:'blocked',sceneTick,reason:{phase:'presentation',reason:backgroundBands.reason}};
+    backdrop.backgroundLayers=backgroundBands.layers;
+    delete frame.paletteSnapshot;
+    const visiblePlane=plane=>effectVisibility.status!=='ready'||Boolean(effectVisibility.enabledMask&(1<<plane.planeIndex));
+    const effectPlanes=screenPlanes;
+    let secondPicturePrepared=false;
+    if(secondComposition.status==='ready'){
+      const {prepareBattleSecondLayerPicture}=await import('./editor-battle-second-layer-picture.mjs');
+      const rear=backdrop.backgroundLayers.filter(layer=>layer.planeIndex===1);
+      const effect=effectPlanes.find(plane=>plane.planeIndex===2&&visiblePlane(plane));
+      const layer=effect?.picture?{picture:effect.picture,
+        x:effect.picture.x-view.getInt32(124)/65536,y:effect.picture.y-view.getInt32(128)/65536,
+        width:effect.picture.width,height:effect.picture.height}:null;
+      const mixed=prepareBattleSecondLayerPicture({viewport:{x:0,y:0,width:320,height:224},
+        rear:rear.length?rear.map(band=>({...band,picture:backdrop.assets.get(band.assetKey)})):null,effect:layer,
+        effectRatio:secondComposition.effectRatio,back:{rgb:frame.clearColor.slice(0,3),ratio:secondComposition.backRatio},
+        colorOffsets:{rear:colorOffset.enabledLayers.includes('rear-background')?colorOffset.rgbOffset:[0,0,0],
+          effect:colorOffset.enabledLayers.includes('effect')?colorOffset.rgbOffset:[0,0,0],back:[0,0,0]},
+        scope:{planeContents:backdropContent.hasCopies.some(Boolean)?'replaced':'no-replacements',
+          frontOverlay:effectPlanes.some(plane=>plane.planeIndex===3&&visiblePlane(plane)&&plane.picture)?'nonempty':'empty',
+          spriteOrder:ordinarySprites?'ordinary':'other',lowerLayers:'back-only'}});
+      if(mixed.status!=='ready')return {status:'blocked',sceneTick,reason:{phase:'presentation',reason:mixed.reason}};
+      for(const band of rear)backdrop.assets.delete(band.assetKey);
+      const mixedLayer={assetKey:'web-second-background',planeIndex:1,x:mixed.x,y:mixed.y,
+        width:mixed.picture.width,height:mixed.picture.height};
+      backdrop.backgroundLayers=backdrop.backgroundLayers.filter(layer=>layer.planeIndex!==1);
+      backdrop.backgroundLayers.unshift(mixedLayer);
+      backdrop.assets.set(mixedLayer.assetKey,{...mixed.picture,assetKey:mixedLayer.assetKey});
+      secondPicturePrepared=true;effectComposition=secondComposition;
+    }
+    const offsetAssets=new Set();
+    for(const layer of backdrop.backgroundLayers){
+      const image=backdrop.assets.get(layer.assetKey);
+      if(offsetAssets.has(layer.assetKey))continue;offsetAssets.add(layer.assetKey);
+      if(secondPicturePrepared&&layer.assetKey==='web-second-background')continue;
+      backdrop.assets.set(layer.assetKey,{...image,...offsetPicture(image,layer.planeIndex)});
+    }
+    for(const [key,image]of backdrop.assets)frame.assets.set(key,image);
+    if(foregroundComposition.layerPriority===6){
+      if(effectPlanes.some(plane=>plane.planeIndex===3&&visiblePlane(plane)&&plane.picture))
+        return {status:'blocked',sceneTick,reason:{phase:'presentation',reason:'promoted-foreground-overlay-priority-unresolved'}};
+      for(const layer of backdrop.backgroundLayers)if(layer.planeIndex===0){
+        layer.aboveSprites=true;layer.opacity=foregroundComposition.opacity;layer.blend=foregroundComposition.blend;
+        if(topSpriteOwnership)layer.occludedBySprites=true;
+      }
+    }
+    frame.backgroundLayers=backdrop.backgroundLayers;
+    frame.backgroundsPrepared=true;
+    for(const plane of effectPlanes){
+      // FA54 retains its pixels but disables their display. Visibility is
+      // independent of blend mode and cannot be inferred from a nonempty plane.
+      if(effectVisibility.status==='ready'&&!(effectVisibility.enabledMask&(1<<plane.planeIndex)))continue;
+      if(secondPicturePrepared&&plane.planeIndex===2)continue;
+      const crop=plane.picture;if(!crop)continue;
+      let picture={...crop,...offsetPicture(crop,plane.planeIndex)};
+      let topStyle=effectComposition.status==='ready'&&plane.planeIndex===effectComposition.planeIndex
+        ?{opacity:effectComposition.opacity,blend:effectComposition.blend,aboveSprites:effectComposition.layerPriority===6,
+          ...(topSpriteOwnership&&effectComposition.layerPriority===6?{occludedBySprites:true}:{})}:{};
+      if(rearSpriteOrder&&plane.planeIndex===2)topStyle={...topStyle,aboveSprites:rearSpriteOrder.aboveSprites,
+        ...(rearSpriteOrder.occlusionMaskBySprite?{occludedBySprites:true,spriteOcclusionLayer:'rear'}:{})};
+      // Preserve the established source-beam profile before softening alpha.
+      // A mixed plane is never classified by its RGB or display name alone.
+      const light=topStyle.aboveSprites?resolveBattleWebLightEffectStyle({picture,enabled:edgeProfile.enabled,sourceStyle:effectComposition,
+        provenance:{carrier:plane.sourceCarriers?.length===1&&plane.sourceCarriers[0]==='E_BNK.BIN'?'owned-weapon-animation-bank':'other',
+          planeIndex:plane.planeIndex,animationBeam:edgeProfile.animationBeam}}):null;
+      if(light?.corrected){topStyle={...topStyle,...light.style};edgeProfile.correctedTicks.add(sceneTick);}
+      if(!light?.corrected&&plane.planeIndex===2&&plane.sourceCarriers?.length===1&&plane.sourceResources?.length===1){
+        const resourceIndex=plane.sourceResources[0];let provenance=null;
+        if(plane.sourceCarriers[0]==='BTSR.BIN'){
+          const resource=entry.prepared.commonScreenResources.find(record=>record.slot===resourceIndex);
+          if(resource&&[14,15].includes(resourceIndex))provenance={carrier:'owned-common-screen',planeIndex:2,resourceIndex,
+            sourceTableCell:resource.source.sourceTableCell,mapTableCell:resource.source.mapTableCell,
+            role:resourceIndex===15?'dust':'explosion'};
+        }else if(plane.sourceCarriers[0]==='E_BNK.BIN'){
+          const resource=entry.prepared.weaponScreenResources.find(record=>record.slot===resourceIndex);
+          if(resource?.status==='ready')provenance={carrier:'owned-weapon-animation-bank',planeIndex:2,resourceIndex,role:'weapon-effect'};
+        }
+        if(provenance){const corrected=edgeProfile.edgePreparer({picture,enabled:edgeProfile.enabled,provenance});
+          if(corrected.corrected){picture={...picture,...corrected.picture};edgeProfile.correctedTicks.add(sceneTick);}}
+      }
+      const assetKey=`web-effect-plane:${plane.planeIndex}`;
+      frame.assets.set(assetKey,{assetKey,width:picture.width,height:picture.height,pixels:picture.pixels});
+      frame.backgroundLayers.push({assetKey,planeIndex:plane.planeIndex,width:picture.width,height:picture.height,
+        x:picture.x-view.getInt32(108+plane.planeIndex*8)/65536,y:picture.y-view.getInt32(112+plane.planeIndex*8)/65536,
+        ...topStyle});
+    }
+    // Equal-priority scroll planes: NBG0 precedes NBG2, hence the promoted
+    // foreground is drawn last among these two front planes. Sprite ownership
+    // still masks both against equal/higher sprite priorities.
+    if(foregroundComposition.layerPriority===6)frame.backgroundLayers.sort((a,b)=>
+      Number(a.aboveSprites&&a.planeIndex===0)-Number(b.aboveSprites&&b.planeIndex===0));
+    return {status:'ready',sceneTick,tickUnit:'interpreter-update',responseScope:entry.prepared.responseScope,backgroundIndex,effectComposition,effectVisibility,
+      frameWire:{...frame,assets:[...frame.assets.values()]}};
+  }catch(error){if(cache.webFramePreview===entry)cache.webFramePreview=null;throw error;}
+}
+
+// The selected web clip includes supported disc-owned destruction visuals.
+// Map restoration/counterattack remain outside this action preview.
+export async function previewEditorBattleWebAction(session,request,{signal}={}){
+  const submittedSoundProfile=ownData(request,'effectSoundProfile');let soundProfile=null;
+  if(submittedSoundProfile!==undefined){
+    const bankIndex=ownData(submittedSoundProfile,'bankIndex'),mixerIndex=ownData(submittedSoundProfile,'mixerIndex');
+    if(!Number.isSafeInteger(bankIndex)||bankIndex<0||bankIndex>64||!Number.isSafeInteger(mixerIndex)||mixerIndex<0||mixerIndex>255)
+      fail('EDITOR_PREVIEW_INVALID','Invalid source sound profile.');
+    soundProfile={bankIndex,mixerIndex};
+  }
+  if(ownData(request,'effectSoundDisplay')!==undefined&&!['off','on'].includes(ownData(request,'effectSoundDisplay')))fail('EDITOR_PREVIEW_INVALID','Invalid effect sound selection.');
+  if(ownData(request,'voiceDisplay')!==undefined&&!['off','on'].includes(ownData(request,'voiceDisplay')))
+    fail('EDITOR_PREVIEW_INVALID','Invalid voice preview selection.');
+  const cache=battleCache(session),key=JSON.stringify([ownData(request,'weaponIndex'),ownData(request,'unitIndex'),
+    ownData(request,'opponentUnitIndex'),ownData(request,'mode')??'attack',ownData(request,'weaponAuthoring')??null,
+    ownData(request,'backgroundIndex')??null,ownData(request,'terrainIndex')??5,ownData(request,'sceneBank')??0,
+    ownData(request,'attackerMapClass')??null,ownData(request,'defenderMapClass')??null,
+    ownData(request,'dialogueDisplay')??'off',ownData(request,'voiceDisplay')??'off',ownData(request,'effectSoundDisplay')??'off',soundProfile,ownData(request,'attackerPilotIndex')??null,
+    ownData(request,'defenderPilotIndex')??null,ownData(request,'attackerLinkedPilotIds')??[],ownData(request,'defenderLinkedPilotIds')??[],ownData(request,'remainingHpPercent')??100,ownData(request,'dialogueSeed')??0,ownData(request,'previewDialogueKey')??null,ownData(request,'unlinkedPreview')??false,ownData(request,'combat')??null,ownData(request,'combatRows')??null]);
+  cache.webActions??=new Map();
+  const cached=cache.webActions.get(key);
+  if(cached){checkAbort(signal);cache.webActions.delete(key);cache.webActions.set(key,cached);return structuredClone(cached.result);}
+  const {compileBattleWebTimeline,exportBattleWebTimeline}=await import('./editor-battle-web-timeline.mjs');
+  const {createBattleVideoClock}=await import('./editor-battle-video-clock.mjs');
+  const clock=createBattleVideoClock({standard:'ntsc',interlaceMode:0});
+  const read=async sceneTick=>previewEditorBattleSceneFrame(session,{...request,mode:ownData(request,'mode')??'attack',dialogueDisplay:ownData(request,'dialogueDisplay')??'off',sceneTick},{signal});
+  let current=await read(0);
+  const responseScope=current.responseScope;
+  if(current.status!=='ready')return {status:'blocked',reason:current.reason??current.evidence?.reason??current.message,blocked:current,frameCount:0,responseScope};
+  const prepared=cache.webFramePreview?.prepared;
+  // A MAP weapon referencing the generic placeholder cannot supply its
+  // battlefield animation through this single-target battle scene path.
+  // Do not turn that placeholder into a supposedly reproduced weapon attack.
+  if(prepared?.weaponMotion?.mapWeapon&&prepared.weaponMotion.motionStatus==='template')
+    return {status:'partial',reason:'map-weapon-scene-not-implemented',frameCount:0,responseScope,
+      weaponMotion:prepared.weaponMotion};
+  const timeline=await compileBattleWebTimeline({signal,webPictures:true,isImmutablePicture:image=>{
+    if(cache.webFramePreview?.prepared.lightPresentation?.edgePreparer.ownsSnapshot(image))return true;
+    for(const preparers of cache.webFramePreview?.prepared.backgroundPreparers?.values()??[])
+      if(preparers.some(prepare=>prepare.ownsSnapshot(image)))return true;
+    return false;
+  },nextFrame:async index=>{
+    if(current.status!=='ready')return {blocked:current};
+    const next=await read(index+1),source=current.frameWire;
+    const ended=next.status==='script-ended';
+    if(next.status!=='ready'&&!ended)return {blocked:next};
+    current=next;
+    return {atUs:clock.fieldTimeUs(index*2),ended,endAtUs:ended?clock.fieldTimeUs((index+1)*2):undefined,
+      frame:{...source,assets:new Map(source.assets.map(image=>[image.assetKey,image]))}};
+  }});
+  if(timeline.status!=='ready')return {...timeline,responseScope,
+    ...(prepared?.destructionPresentation?{destructionPresentation:{...prepared.destructionPresentation,completed:false}}:{}),
+    dialogueStatus:ownData(request,'dialogueDisplay')==='on'?'partial':'off',
+    ...(ownData(request,'dialogueDisplay')==='on'?{dialogueReason:'dialogue-scene-presentation-incomplete'}:{})};
+  if(prepared?.destructionPresentation?.requested&&prepared.clock.main.phaseExit?.completed!==true)
+    return {status:'partial',reason:'destruction-visual-phase-not-completed',frameCount:timeline.frameCount,responseScope,
+      destructionPresentation:{...prepared.destructionPresentation,completed:false},
+      dialogueStatus:ownData(request,'dialogueDisplay')==='on'?'partial':'off'};
+  const result={status:'ready',timelineWire:exportBattleWebTimeline(timeline,{webOnly:true}),
+    scope:'selected-weapon-action',responseScope,timing:'source-nominal-two-ntsc-fields-per-update',
+    timingScope:'decoded script waits; hardware load and render stalls excluded'};
+  const importedSequences=prepared.importedEffectSequences??[];
+  if(importedSequences.length){
+    const active=prepared.effectSequenceUsage.sequences();
+    result.effectImportUsage={requested:importedSequences,called:importedSequences.filter(index=>active.includes(index)),
+      uncalled:importedSequences.filter(index=>!active.includes(index)),scope:'resolved local sequence calls in this selected outcome only'};
+  }
+  if(prepared?.deferredBattlefieldEvents?.length)result.battlefieldStatePresentation={status:'deferred',
+    events:prepared.deferredBattlefieldEvents.map(event=>({...event})),
+    scope:'standalone visual preview; external battlefield writes not applied; source program unchanged'};
+  if(prepared?.destructionPresentation)result.destructionPresentation={...prepared.destructionPresentation,
+    completed:prepared.destructionPresentation.requested?prepared.clock.main.phaseExit?.completed===true:true};
+  if(prepared?.hudWindow)result.hudWindow=prepared.hudWindow;
+  if(prepared?.hudGlyphs)result.hudGlyphs=prepared.hudGlyphs;
+  if(prepared?.lightPresentation)result.lightPresentation={enabled:prepared.lightPresentation.enabled,
+    applied:prepared.lightPresentation.correctedTicks.size>0,correctedFrames:prepared.lightPresentation.correctedTicks.size,
+    edge:prepared.lightPresentation.edgePreparer.stats(),
+    scope:'web-effect-exterior-alpha and beam-light composition; source pictures/palettes/disc data unchanged'};
+  if(prepared?.weaponMotion)result.weaponMotion=prepared.weaponMotion;
+  if(prepared?.combat){const {sourceAddresses,...combat}=prepared.combat;result.combat=combat;}
+  if(prepared?.combat?.status==='ready'){
+    const {resolveBattleHudEnergyPresentation}=await import('./editor-battle-hud-progress.mjs');
+    const shared=prepared.clock.shared,energy=shared.wordProgress[231],target=shared.actorD7Latch;
+    result.hudEnergyPresentation=resolveBattleHudEnergyPresentation({gameId:session.descriptor.gameId,
+      attacker:prepared.combat.attacker,defender:prepared.combat.defender,readout:prepared.hudReadout,
+      remaining:{attacker:energy.words[0],defender:target.sideBytes[0]},
+      pending:{attacker:energy.accumulated,defender:target.savedWord}});
+  }
+  if(prepared?.hudCues?.length)result.hudCues=prepared.hudCues.map(({sceneTick,...values})=>({atUs:clock.fieldTimeUs(sceneTick*2),...values}));
+  if(prepared?.hudIndicatorCues?.length)result.hudIndicatorCues=prepared.hudIndicatorCues.map(({sceneTick,...values})=>({atUs:clock.fieldTimeUs(sceneTick*2),...values}));
+  if(ownData(request,'effectSoundDisplay')==='on')result.effectSoundTrace={observedEvents:prepared?.clock?.shared?.soundEvents?.length??0,capturedEvents:prepared?.effectSoundCues?.length??0,primarySoundStarts:prepared?.clock?.shared?.actorOpcodeCounts?.[253]??0,primarySoundStops:prepared?.clock?.shared?.actorOpcodeCounts?.[229]??0};
+  if(prepared?.effectSoundCues?.length){
+    result.effectSoundCues=prepared.effectSoundCues.map(({sceneTick,sourcePc,...values})=>({atUs:clock.fieldTimeUs(sceneTick*2),...values}));
+    result.effectSoundStatus='mapping-unresolved';
+    if(ownData(request,'effectSoundDisplay')==='on'){
+      const {readBattleSoundPackage}=await import('./editor-battle-sound-package.mjs');
+      const {resolveBattleSeBindings,readBattleAnimationSeFileBank}=await import('./editor-battle-se-bindings.mjs?v=20261015-stocknames2');
+      const {prepareBattleEffectSoundCues}=await import('./editor-battle-effect-sound-cues.mjs?v=20261015-stocknames2');
+      const areaMap=prepared.sources?.soundAreaMap;
+      if(areaMap){
+        const bytes=await readBattleFile(session,'SE.BIN',signal);checkAbort(signal);
+        const commonPackage=readBattleSoundPackage(bytes,{fileName:'SE.BIN',bankIndex:0});
+        const binding=resolveBattleSeBindings(commonPackage,areaMap);
+        const sequenceBindings=new Map([[binding.sequenceBank,binding]]);
+        const selection=readBattleAnimationSeFileBank(prepared.sources.program);
+        result.effectSoundTrace={...result.effectSoundTrace,fileBankSelection:selection};
+        if(selection.status==='ready'&&selection.bankIndex!==0){
+          const weaponPackage=readBattleSoundPackage(bytes,{fileName:'SE.BIN',bankIndex:selection.bankIndex});
+          const weaponBinding=resolveBattleSeBindings(weaponPackage,areaMap,{commonPackage});
+          sequenceBindings.set(weaponBinding.sequenceBank,weaponBinding);
+        }
+        let effectGraph,effectOutputLevels,effectMixerCount;
+        if(soundProfile){
+          const musicBytes=await readBattleFile(session,'BGM.BIN',signal);checkAbort(signal);
+          const musicPackage=readBattleSoundPackage(musicBytes,{fileName:'BGM.BIN',bankIndex:soundProfile.bankIndex});
+          const {compileBattleEffectSignalGraph}=await import('./editor-battle-effect-signal-graph.mjs');
+          const {resolveBattleEffectOutputMix}=await import('./editor-battle-effect-output-mix.mjs');
+          effectGraph=compileBattleEffectSignalGraph(musicPackage.effect);effectMixerCount=musicPackage.toneTables.mixers.length;
+          if(effectGraph.status!=='reference')fail('EDITOR_PREVIEW_INVALID','Unsupported source effect graph.');
+          effectOutputLevels=resolveBattleEffectOutputMix(musicPackage.toneTables,{mixerIndex:soundProfile.mixerIndex}).levels;
+        }
+        const {resolveBattleWebToneMix}=await import('./editor-battle-web-tone-mix.mjs?v=20261015-stocknames2');
+        result.effectSoundPrepared={...prepareBattleEffectSoundCues(result.effectSoundCues,{sequenceBindings,durationUs:timeline.durationUs,clipAtSceneEnd:true,
+          resolveMix:args=>resolveBattleWebToneMix(args,{effectAvailable:Boolean(effectGraph)})}),
+          ...(effectGraph?{effectGraph,effectOutputLevels,effectMixerCount,effectProfile:soundProfile}:{})};
+        result.effectSoundPrepared.phaseProfile='web-sequence-epoch';
+        result.effectSoundStatus=result.effectSoundPrepared.status;
+      }else result.effectSoundReason='effect-sound-area-map-unresolved';
+    }
+  }
+  const showText=ownData(request,'dialogueDisplay')==='on',withVoice=ownData(request,'voiceDisplay')==='on';
+  result.dialogueStatus=showText?(prepared?.dialogue?.status??'off'):'off';
+  result.audioStatus=withVoice?(prepared?.dialogue?.status==='ready'?'ready':'unavailable'):'off';
+  if(withVoice&&prepared?.dialogue?.status!=='ready')result.audioReason=prepared?.dialogue?.reason??'voice-pilot-selection-required';
+  if(prepared?.dialogue?.reason)result.dialogueReason=prepared.dialogue.reason;
+  if(prepared?.dialogue?.status==='ready'){
+    const {compileBattleWebDialogueTimeline,exportBattleWebDialogueTimeline}=await import('./editor-battle-web-dialogue.mjs');
+    const timed=prepared.dialogue.scheduler.finish(timeline.frameCount,tick=>clock.fieldTimeUs(tick*2));
+    if(showText){
+      const events=timed.map(({voiceId,...event})=>({format:'battle-web-dialogue-event-v1',...event}));
+      result.dialogueWire=exportBattleWebDialogueTimeline(compileBattleWebDialogueTimeline({events,durationUs:timeline.durationUs}));
+      result.dialogueWindow=prepared.dialogue.window;result.dialogueProfile=prepared.dialogue.profile;
+    }
+    if(withVoice){
+      const cues=timed.filter(event=>event.voiceId).map(event=>({id:event.voiceId,fromUs:event.fromUs,toUs:event.toUs}));
+      const ids=[...new Set(cues.map(cue=>cue.id))];
+      const clips=ids.map(id=>prepared.dialogue.voices.get(id));
+      if(clips.some(clip=>!clip)||clips.reduce((sum,clip)=>sum+clip.pcm16.byteLength,0)>16*1024*1024)
+        fail('EDITOR_AUDIO_UNSUPPORTED','The selected voice exceeds its playback budget.');
+      // Transfer owns its PCM; neither decoded-clip nor prepared-scene caches may detach.
+      result.audioWire={format:'battle-web-audio-v1',clips:clips.map(clip=>({...clip,pcm16:clip.pcm16.slice()})),cues,durationUs:timeline.durationUs};
+    }
+  }
+  const {battleWebPictureBytes}=await import('./editor-battle-web-picture.mjs');
+  const hudGlyphs=result.hudGlyphs;
+  const dialoguePictures=[...new Set([result.hudWindow?.picture,...(hudGlyphs?[...hudGlyphs.hp.digits,hudGlyphs.hp.blank,hudGlyphs.hp.hidden,...hudGlyphs.en.digits,hudGlyphs.en.blank,hudGlyphs.en.infinity,...Object.values(hudGlyphs.indicators),...(hudGlyphs.bars?.pictures??[])]:[]),result.dialogueWindow?.picture,...(result.dialogueWire?.events??[]).flatMap(event=>[event.text.picture,event.portrait?.picture])].filter(Boolean))];
+  const bytes=[...result.timelineWire.pictures,...dialoguePictures].reduce((sum,image)=>sum+battleWebPictureBytes(image),0)
+    +(result.audioWire?.clips??[]).reduce((sum,clip)=>sum+clip.pcm16.byteLength,0);
+  if(bytes>64*1024*1024)return {status:'partial',reason:'picture-budget',frameCount:timeline.frameCount,responseScope,
+    dialogueStatus:result.dialogueStatus==='ready'?'partial':result.dialogueStatus};
+  cache.webActions.set(key,{bytes,result:structuredClone(result)});
+  while(cache.webActions.size>3||[...cache.webActions.values()].reduce((sum,entry)=>sum+entry.bytes,0)>64*1024*1024)
+    cache.webActions.delete(cache.webActions.keys().next().value);
+  return result;
 }
 
 export async function previewEditorBattle(session, request, { signal } = {}) {
@@ -2261,13 +3642,13 @@ export async function previewEditorBattle(session, request, { signal } = {}) {
     fail('EDITOR_PREVIEW_INVALID', 'Invalid battle preview selection.');
   }
   checkAbort(signal);
-  if (!cache.rows) cache.rows = buildEditorRows(session.root, session.decoded, gameId);
+  if (!cache.rows) cache.rows = sessionEditorRows(session);
   const weapon = cache.rows.weapons.find(row => row.recordIndex === weaponIndex);
   const unit = cache.rows.units.find(row => row.recordIndex === unitIndex);
   if (!weapon || !unit || !(weapon.owners ?? []).some(owner => owner.unit === unitIndex)) {
     fail('EDITOR_PREVIEW_INVALID', 'The selected unit does not have a verified link to this weapon.');
   }
-  const { resolveBattleAssetPlan } = await import('./editor-battle-mapping.mjs?v=20261012-frames3');
+  const { resolveBattleAssetPlan } = await import('./editor-battle-mapping.mjs?v=20261015-stocknames2');
   const plan = await resolveBattleAssetPlan({ gameId, weapon, unit, mode, defenseId,
     decodedTsr: session.decoded, root: session.root, playback: ownData(request,'playback')===true,
     readFile: fileName => readBattleFile(session, fileName, signal) });
@@ -2281,7 +3662,7 @@ export async function previewEditorBattle(session, request, { signal } = {}) {
   if (!Array.isArray(plan.assets) || !plan.assets.length || plan.assets.length > 64) {
     fail('EDITOR_PREVIEW_INVALID', 'The battle picture mapping exceeds its inspection limit.');
   }
-  const { inspectBattleAssetRecord, decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261012-frames3');
+  const { inspectBattleAssetRecord, decodeBattleAsset } = await import('./editor-battle-assets.mjs?v=20261015-stocknames2');
   const assets = [], diagnostics = [], seen = new Set(), diagnosed = new Set();
   let pixelBytes = 0;
   for (const reference of plan.assets) {
@@ -2396,15 +3777,16 @@ function requireReadOnlyUnchanged(segment, start, before, label, recordIndex, re
   }
 }
 
-// Unit and pilot terrain grades are edited as A..E, so a CHANGED grade must stay in 0..4 (a nibble above 4 has no
-// known meaning and the combat code treats it as 0 percent). A stored value that is already outside that domain may
+// Ordinary unit grades stay in0..4. Pilot5 is a pre-average correction, not
+// a standalone multiplier. Other already-stored out-of-domain nibbles may
 // be echoed back unchanged: it only blocks an edit that would move it to another out-of-domain value.
 function requireGradeDomain(values, storedWord, label, recordIndex) {
   const stored = splitTerrainWord(storedWord);
   for (const key of TERRAIN_DATA_ORDER) {
-    if (!isGradeEditAllowed(values[key], stored[key])) {
-      fail("EDITOR_VALUE_OUT_OF_RANGE", `${label} #${recordIndex} ${key} must be an integer from 0 to ${GRADE_EDIT_MAX}.`,
-        { details: { kind: label.toLowerCase(), recordIndex, field: key, minimum: 0, maximum: GRADE_EDIT_MAX } });
+    const maximum=label.toLowerCase()==="pilot"?PILOT_GRADE_EDIT_MAX:GRADE_EDIT_MAX;
+    if (!isGradeEditAllowed(values[key], stored[key],{kind:label.toLowerCase()})) {
+      fail("EDITOR_VALUE_OUT_OF_RANGE", `${label} #${recordIndex} ${key} must be an integer from 0 to ${maximum}.`,
+        { details: { kind: label.toLowerCase(), recordIndex, field: key, minimum: 0, maximum } });
     }
   }
 }
@@ -2526,6 +3908,8 @@ function writeWeaponEdits(segment, edits, readOnly, offsets, records, gameId) {
     const lockedReason = readOnly.get(recordIndex) ?? null;
     const before = lockedReason ? segment.slice(start, start + 17) : null;
     if (!lockedReason) requireWeaponDomain(segment, start, values, recordIndex, gameId);
+    writeU16BE(segment,start,writeWeaponCombatAttributes(readU16BE(segment,start),values));
+    segment[start+2]=(segment[start+2]&192)|values.dialogueKey;
     writeU16BE(segment, start + 5, values.attack);
     segment[start + 7] = values.hit & 0xff;
     segment[start + 8] = (values.critical << 4) | (segment[start + 8] & 0x0f);
@@ -2953,16 +4337,26 @@ function preparePilotExpansion(segment, edits, readOnly, gameId) {
 // irregular) have no range at all. Known hero lists have only their fixed pair block, excluding four reserved zeros.
 // Which records those are is derived from the image itself, but a change that moves a
 // record from one class to the other changes the ranges, so such an image no longer matches the stored profile.
-export function editorDecodedMasks(root, gameId, { rewards = true, terrain = true, heroTemplates = true } = {}) {
+export function editorDecodedMasks(root, gameId, { rewards = true, terrain = true, heroTemplates = true, weaponAttributes = true, weaponDialogue = true, weaponConditions = true } = {}) {
   if (!ownEntry(PILOT_SKILL_EDIT_RANGE, gameId)) {
     fail("EDITOR_RELEASE_INVALID", "The editable ranges are defined for a known game only.");
   }
   const ranges = [];
+  const weaponRecords=dataRecordOffsets(root[29].bytes,17);
   const add = (start, length, mask = 255) => ranges.push([start, length, mask]);
   // Units: the shield and parry bits of +9, move +24 and +26..+45 (terrain, armor, speed, limit, EN, HP and the abilities).
   for (const record of dataRecordOffsets(root[27].bytes, 48).records) {
     const start = root[27].start + record.start;
     add(start + UNIT_FLAG_OFFSET, 1, UNIT_FLAG_BITS.shield | UNIT_FLAG_BITS.parry); add(start + 24, 1); add(start + 26, 20);
+  }
+  if(weaponConditions){
+    const length=Math.max(...root.map(segment=>segment.end)),first=root[0],base=first.bytes.byteOffset-first.start;
+    let maskDecoded;
+    if(base>=0&&base+length<=first.bytes.buffer.byteLength&&root.every(segment=>segment.bytes.buffer===first.bytes.buffer&&segment.bytes.byteOffset===base+segment.start))maskDecoded=new Uint8Array(first.bytes.buffer,base,length);
+    else{maskDecoded=new Uint8Array(length);for(const segment of root)maskDecoded.set(segment.bytes,segment.start);}
+    const nameMap=gameId==='srwf-final'?FINAL_NAME_MAP:new Map([...F_NAME_SUPPLEMENT,...F_NAME_MAP]);
+    const conditionUnits=unitRows(root,maskDecoded,[],nameMap,gameId);
+    for(const row of unitWeaponConditionRows(conditionUnits,[],gameId))if(row.editable)add(root[27].start+row.byteOffset,1,128);
   }
   const pilotData = root[28].bytes;
   const pilots = pilotRecordOffsets(pilotData);
@@ -2982,8 +4376,10 @@ export function editorDecodedMasks(root, gameId, { rewards = true, terrain = tru
   // Weapons: attack and hit +5..+7, the critical nibble of +8, ranges and terrain +9..+11, EN +13..+14, required morale +15,
   // required skill +16, and the ammo byte +12 only where it is not 0 (the writer never moves a weapon into or out of the set
   // that has ammo, so every image it can make from an accepted one has the same ranges).
-  for (const record of dataRecordOffsets(root[29].bytes, 17).records) {
+  for (const record of weaponRecords.records) {
     const start = root[29].start + record.start;
+    if(weaponAttributes)add(start + 1, 1, 0x70);
+    if(weaponDialogue)add(start + 2, 1, 0x3f);
     add(start + 5, 3); add(start + 8, 1, 240); add(start + 9, 3);
     if (root[29].bytes[record.start + WEAPON_AMMO_OFFSET] > 0) add(start + WEAPON_AMMO_OFFSET, 1);
     add(start + 13, 4);
@@ -3039,7 +4435,7 @@ async function createProfile(trust, session, options = {}) {
   rawMasks.push([file.recordLba * SECTOR_SIZE + MODE1_EDC_OFFSET, SECTOR_SIZE - MODE1_EDC_OFFSET, 255]);
   rawMasks.sort((a, b) => a[0] - b[0]);
   const scenario = session.scenario;
-  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261012-frames3') : null;
+  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261015-stocknames2') : null;
   const completeRawMasks = scenario ? scenarioModule.mergeFullByteMasks([...rawMasks,
     ...scenarioModule.scenarioRawMasks(scenario.files, scenario.inspected)]) : rawMasks;
   const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId);
@@ -3166,7 +4562,7 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
       animationFile.byteLength-sectorOffset,{signal:options.signal});
     if(new TextDecoder().decode(tail.subarray(tailOffset-sectorOffset,tailOffset-sectorOffset+8))==='SRWFWPN1'){
       const animationBytes=await readCdUserExtent(blob,animationFile.extentLba,animationFile.byteLength,{signal:options.signal});
-      const {readWeaponProject}=await import('./editor-weapon-project.mjs?v=20261012-frames3');
+      const {readWeaponProject}=await import('./editor-weapon-project.mjs?v=20261015-stocknames2');
       const project=readWeaponProject(animationBytes);
       if(!project||project.gameId!==descriptor.gameId)fail('EDITOR_CUSTOM_PROVENANCE','Weapon project game identity mismatch.');
       requireLatestEditorBase(trust,descriptor.gameId,project.baseTargetSha256);
@@ -3186,7 +4582,7 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
       || file.byteLength > profile.allocatedSectors * SECTOR_USER_SIZE) continue;
     if(weaponProject&&profile.baseTargetSha256!==weaponProject.baseTargetSha256)continue;
     const masks = JSON.stringify(profile.decodedMasks);
-    if (![{}, { terrain: false }, { rewards: false, terrain: false }].some(options => JSON.stringify(editorDecodedMasks(canonicalRoot, descriptor.gameId, options)) === masks)) continue;
+    if (![{}, { terrain: false }, { rewards: false, terrain: false }].some(options => [true,false].some(heroTemplates=>[true,false].some(weaponAttributes=>[true,false].some(weaponDialogue=>[true,false].some(weaponConditions=>JSON.stringify(editorDecodedMasks(canonicalRoot, descriptor.gameId, {...options,heroTemplates,weaponAttributes,weaponDialogue,weaponConditions})) === masks)))))) continue;
     if (immutableBytesHash(canonicalDecoded, profile.decodedMasks) !== profile.immutableTsrSha256) continue;
     if (profile.scenarioScopes && (!scenario
       || JSON.stringify(profile.scenarioFiles) !== JSON.stringify(scenarioFileIdentity(scenario.files))
@@ -3203,10 +4599,14 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
   fail("EDITOR_CUSTOM_PROVENANCE", "The BIN is neither a registered editor export nor a bounded modification of an accepted image.");
 }
 
+function sessionEditorRows(session, root = session.root, decoded = session.decoded) {
+  return buildEditorRows(root, decoded, session.descriptor.gameId, null, session.descriptor.nameVariant);
+}
+
 // Every row of every table, built from one authenticated decoded TSR. Names are looked up by record index.
-export function buildEditorRows(root, decoded, gameId, lockLayout = null) {
+export function buildEditorRows(root, decoded, gameId, lockLayout = null, nameVariant = null) {
   const final = gameId === "srwf-final";
-  const nameMap = final ? FINAL_NAME_MAP : new Map([...F_NAME_SUPPLEMENT, ...F_NAME_MAP]);
+  const nameMap = !final && nameVariant === "stock" ? F_STOCK_NAME_MAP : final ? FINAL_NAME_MAP : new Map([...F_NAME_SUPPLEMENT, ...F_NAME_MAP]);
   const pilotNameMap = final ? FINAL_PILOT_NAME_MAP : nameMap;
   // Immutable stock table layouts: F root18 72B / root17 236B; Final 76B / 208B.
   // Accepted patches relocate strings, preserving these pointer entry counts.
@@ -3245,7 +4645,7 @@ export function buildEditorRows(root, decoded, gameId, lockLayout = null) {
       row.identity = `${kind}:1:${new Sha256().update(header).hex()}`;
     }
   }
-  return { units, pilots, pilotAliases, weapons, unitAbilityNames, pilotAbilityNames, rewards, partNames, terrains };
+  return { units, pilots, pilotAliases, weapons, weaponConditions:unitWeaponConditionRows(units,weapons,gameId), unitAbilityNames, pilotAbilityNames, rewards, partNames, terrains };
 }
 
 function attachWeaponAuthoringRows(rows,root,gameId,project){
@@ -3257,7 +4657,7 @@ function attachWeaponAuthoringRows(rows,root,gameId,project){
       row.identity=`weapon:1:${new Sha256().update(tag).hex()}`;
     }else{
       const header=root[29].bytes.slice(row.byteOffset,row.byteOffset+5);
-      writeU16BE(header,3,entry.sourceSelector);row.identity=`weapon:1:${new Sha256().update(header).hex()}`;
+      writeU16BE(header,3,entry.originalSelector??entry.sourceSelector);row.identity=`weapon:1:${new Sha256().update(header).hex()}`;
     }
   }
   return rows;
@@ -3346,14 +4746,18 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
   }
   const root = splitRootSegments(decoded);
   if (root.length <= 29) fail("EDITOR_TSR_STRUCTURE_UNSUPPORTED", "Required editor tables are absent.");
-  const { units, pilots, pilotAliases, weapons, unitAbilityNames, pilotAbilityNames, rewards, partNames, terrains } = buildEditorRows(
+  let { units, pilots, pilotAliases, weapons, unitAbilityNames, pilotAbilityNames, rewards, partNames, terrains } = buildEditorRows(
     root, decoded, descriptor.gameId, ownEntry(trust.lockLayouts, descriptor.gameId) ?? null,
   );
   if (scenarioEnabled) onProgress?.({ phase: "scenario-data", indeterminate: true });
   const scenario = scenarioEnabled ? await inspectDiscScenario(trust, blob, actualHash, descriptor.gameId, files, units, pilots, signal) : null;
   const provenance = await establishEditorProvenance(trust, blob, actualHash, descriptor, receipts, file, decoded, root, streamEnd, scenario, { signal, onProgress }, pilots);
-  attachWeaponAuthoringRows({weapons},root,descriptor.gameId,provenance.weaponProject);
   const baseIdentity = ownEntry(trust.targets, provenance.baseTargetSha256);
+  const nameVariant = baseIdentity.kind === "stock" ? "stock" : null;
+  if (nameVariant === "stock" && descriptor.gameId === "srwf-f") {
+    ({ units, pilots, pilotAliases, weapons, unitAbilityNames, pilotAbilityNames, rewards, partNames, terrains } = buildEditorRows(root, decoded, descriptor.gameId, ownEntry(trust.lockLayouts, descriptor.gameId) ?? null, nameVariant));
+  }
+  attachWeaponAuthoringRows({weapons},root,descriptor.gameId,provenance.weaponProject);
   const scenarioProfile=trust.profiles.find(profile=>profile.baseTargetSha256===provenance.baseTargetSha256&&profile.scenarioScopes);
   const sessionToken = `${actualHash}:${file.extentLba}:${file.byteLength}:${decoded.length}`;
   const session = Object.freeze({
@@ -3364,6 +4768,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
       targetSize: descriptor.targetSize,
       targetSha256: actualHash,
       baseTargetSha256: provenance.baseTargetSha256,
+      nameVariant,
     }),
     file,
     mediaFiles: Object.freeze({ face: files.face, robot: files.c_robot }),
@@ -3397,6 +4802,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
     view: Object.freeze({
       sessionToken,
       gameId: descriptor.gameId,
+      battlePilotAssignments: Object.freeze([...readBattlePilotRegistrationExamples(root[0].bytes,{unitCount:Math.max(...units.map(r=>r.recordIndex))+1,pilotCount:Math.max(...pilots.map(r=>r.recordIndex))+1}),...(scenario?scenario.inspected.archive.bodies.flatMap(body=>readScenarioPilotAssignments(body,scenario.inspected.maps,scenario.tables)):[])]),
       targetHash: actualHash,
       acceptedReleaseMatch: provenance.mode === "accepted" && actualHash === descriptor.targetSha256,
       baseImageKind: baseIdentity.kind === "stock" ? "stock" : "korean",
@@ -3410,6 +4816,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress } 
       pilots: Object.freeze(pilots.map((row) => Object.freeze(row))),
       pilotAliases: Object.freeze(pilotAliases),
       weapons: Object.freeze(weapons.map((row) => Object.freeze(row))),
+      weaponConditions:Object.freeze(unitWeaponConditionRows(units,weapons,descriptor.gameId).map(Object.freeze)),
       weaponAuthoring: Object.freeze(provenance.weaponProject?.entries??[]),
       unitAbilityNames,
       pilotAbilityNames,
@@ -3483,7 +4890,7 @@ function scenarioFileIdentity(files) {
 }
 
 async function inspectDiscScenario(trust, blob, actualHash, gameId, files, units, pilots, signal) {
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261012-frames3');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261015-stocknames2');
   const identity = scenarioFileIdentity(files), target = ownEntry(trust.targets, actualHash);
   let scenarioLayout;
   if (target) scenarioLayout = target.kind === 'stock' ? 'stock' : 'latest';
@@ -3932,18 +5339,26 @@ export async function prepareEditorWeaponProject(session,submitted,{signal}={}){
   battleCache(session);checkAbort(signal);
   const gameId=session.descriptor.gameId,final=gameId==='srwf-final';
   const source=session.weaponProject?normalizeWeaponProjectTsr(session.decoded,session.root,gameId,session.weaponProject):session.decoded;
-  const decoded=source.slice(),root=splitRootSegments(decoded),rows=buildEditorRows(root,decoded,gameId);
-  const loadedRows=session.weaponProject?buildEditorRows(session.root,session.decoded,gameId):rows;
+  const decoded=source.slice(),root=splitRootSegments(decoded),rows=sessionEditorRows(session,root,decoded);
+  const loadedRows=session.weaponProject?sessionEditorRows(session):rows;
   const {list}=readDenseList(submitted,24);
   if(!list)fail('EDITOR_EDIT_INVALID','Weapon authoring needs a dense bounded list.');
   const snapshots=list.map(item=>{
     const weaponIndex=ownData(item,'weaponIndex'),sourceWeapon=ownData(item,'sourceWeapon'),unitIndex=ownData(item,'unitIndex');
     if(![weaponIndex,sourceWeapon,unitIndex].every(Number.isSafeInteger))fail('EDITOR_EDIT_INVALID','Invalid weapon authoring identity.');
+    const animationWeapon=ownData(item,'animationWeapon');
+    if(animationWeapon!==undefined&&!Number.isSafeInteger(animationWeapon))fail('EDITOR_EDIT_INVALID','Invalid animation weapon identity.');
+    const rawImports=ownData(item,'imports');
+    const {list:importList}=rawImports===undefined?{list:[]}:readDenseList(rawImports,16);
+    if(!importList)fail('EDITOR_EDIT_INVALID','Effect imports need a dense bounded list.');
+    const imports=importList.map(row=>{const values=['targetSequence','donorWeapon','donorSequence'].map(key=>ownData(row,key));if(values.some(v=>!Number.isSafeInteger(v)))fail('EDITOR_EDIT_INVALID','Invalid effect donor identity.');const placement=ownData(row,'placement');if(placement!==undefined&&placement!=='append')fail('EDITOR_EDIT_INVALID','Invalid effect placement.');return {...Object.fromEntries(['targetSequence','donorWeapon','donorSequence'].map((key,i)=>[key,values[i]])),...(placement!==undefined?{placement}:{})};});
+    const name=ownData(item,'name');
+    if(name!==undefined&&typeof name!=='string')fail('EDITOR_EDIT_INVALID','Invalid custom weapon name.');
     const {list:operandList}=readDenseList(ownData(item,'edits'),4096);
     if(!operandList)fail('EDITOR_EDIT_INVALID','Animation operands need a dense bounded list.');
     const edits=operandList.map(edit=>({
       recordOffset:ownData(edit,'recordOffset'),field:ownData(edit,'field'),value:ownData(edit,'value')}));
-    return {weaponIndex,sourceWeapon,unitIndex,edits};
+    return {weaponIndex,sourceWeapon,unitIndex,edits,...(imports.length?{imports}:{}),...(animationWeapon!==undefined?{animationWeapon}:{}),...(name!==undefined?{name}:{})};
   });
   const seen=new Set(),entries=[],first=final?1331:1248,last=final?1343:1278;
   const donors=rows.units.filter(row=>row.recordIndex>=(final?430:354)&&!row.editable&&row.recordKind==='unused-filler'
@@ -3967,20 +5382,64 @@ export async function prepareEditorWeaponProject(session,submitted,{signal}={}){
       if(previous){
         const old=loadedRows.weapons.find(row=>row.recordIndex===weaponIndex),current=rows.weapons.find(row=>row.recordIndex===weaponIndex);
         const original=session.root[29].bytes;
+        root[29].bytes[current.byteOffset+1]=(root[29].bytes[current.byteOffset+1]&~0x70)|(original[old.byteOffset+1]&0x70);
+        root[29].bytes[current.byteOffset+2]=(root[29].bytes[current.byteOffset+2]&192)|(original[old.byteOffset+2]&63);
         for(let offset=5;offset<17;offset++)root[29].bytes[current.byteOffset+offset]=offset===8
           ?(root[29].bytes[current.byteOffset+8]&15)|(original[old.byteOffset+8]&240):original[old.byteOffset+offset];
       }
-    }else if(weaponIndex!==sourceWeapon)fail('EDITOR_EDIT_INVALID','An original weapon keeps its own animation origin.');
-    // Source selectors are read from the canonical original table, not request.
-    const sourceSelector=readU16BE(source,root[29].start+sourceRow.byteOffset+3);
-    entries.push({...entry,donorUnit,sourceSelector});
+    }else if(weaponIndex!==sourceWeapon||entry.name!==undefined)fail('EDITOR_EDIT_INVALID','An original weapon keeps its own identity.');
+    // The copied numeric weapon and the animation donor have distinct identities.
+    // Resolve the donor from the authenticated canonical rows, never raw selectors.
+    const animationWeapon=entry.animationWeapon??sourceWeapon;
+    const motionRow=rows.weapons.find(row=>row.recordIndex===animationWeapon);
+    const unlinkedMotion=motionRow?.ownership==='unowned'&&animationWeapon!==sourceWeapon
+      ?(await catalogEditorWeaponMotions(session,{}, {signal})).entries.find(row=>row.recordIndex===animationWeapon)?.previewEligible:false;
+    if(animationWeapon>=first||!motionRow?.editable||!motionRow.owners?.length&&!unlinkedMotion
+      )fail('EDITOR_EDIT_INVALID','Animation needs a verified original weapon donor.');
+    const sourceSelector=readU16BE(source,root[29].start+motionRow.byteOffset+3);
+    const imports=[];
+    for(const item of entry.imports??[]){
+      const donor=rows.weapons.find(row=>row.recordIndex===item.donorWeapon);
+      if(!await verifiedWeaponEffectDonor(session,donor,signal))fail('EDITOR_EDIT_INVALID','Effect needs a verified original weapon donor.');
+      imports.push({...item,donorSelector:readU16BE(source,root[29].start+donor.byteOffset+3)});
+    }
+    entries.push({...entry,donorUnit,sourceSelector,...(!donorUnit&&animationWeapon!==sourceWeapon?{originalSelector:readU16BE(source,root[29].start+sourceRow.byteOffset+3)}:{}),...(imports.length?{imports}:{})});
+  }
+  if(entries.some(entry=>entry.name!==undefined)){
+    const {allocateWeaponNames,usesStockWeaponNames}=await import('./editor-weapon-names.mjs?v=20261015-stocknames2');
+    const named=allocateWeaponNames(root[14].bytes,gameId,usesStockWeaponNames(gameId,session.descriptor.baseTargetSha256)?entries:entries.filter(entry=>entry.name!==undefined),session.descriptor.baseTargetSha256);
+    root[14].bytes.set(named.bytes);
   }
   const animationBytes=session.weaponProject?.bytes??await readBattleFile(session,'D_ANIME.BIN',signal);
-  const {writeWeaponProject}=await import('./editor-weapon-project.mjs?v=20261012-frames3');
+  const canonicalAnimation=session.weaponProject?.canonicalBytes??animationBytes;
+  const {inspectWeaponAnimation}=await import('./editor-weapon-authoring.mjs?v=20261015-stocknames2');
+  const {assertWeaponEffectRecipientSafe}=await import('./editor-weapon-effect-track.mjs?v=20261015-stocknames2');
+  const recipientRecords=new Map();
+  const editKey=edits=>edits.every(edit=>Number.isSafeInteger(edit.recordOffset)&&typeof edit.field==='string'
+    &&edit.field.length<=64&&Number.isSafeInteger(edit.value))?JSON.stringify(edits.map(edit=>
+      [edit.recordOffset,edit.field,edit.value]).sort((a,b)=>a[0]-b[0]||a[1].localeCompare(b[1]))):null;
+  for(const entry of entries){
+    if(!entry.imports?.length)continue;
+    const previous=session.weaponProject?.entries.find(old=>old.weaponIndex===entry.weaponIndex
+      &&old.sourceWeapon===entry.sourceWeapon&&old.unitIndex===entry.unitIndex&&old.sourceSelector===entry.sourceSelector
+      &&(old.animationWeapon??old.sourceWeapon)===(entry.animationWeapon??entry.sourceWeapon));
+    // Older personal images must remain readable/restorable. Keep unchanged
+    // inherited recipes, or allow their removal, but never extend that
+    // exception to a new connection or altered movement/control operands.
+    const key=editKey(entry.edits),retained=previous&&key!==null&&key===editKey(previous.edits)
+      &&entry.imports.every(item=>previous.imports?.some(old=>old.targetSequence===item.targetSequence
+        &&old.donorWeapon===item.donorWeapon&&old.donorSequence===item.donorSequence
+        &&old.donorSelector===item.donorSelector&&old.placement===item.placement));
+    if(retained)continue;
+    let recipient=recipientRecords.get(entry.sourceSelector);
+    if(!recipient){recipient=inspectWeaponAnimation(canonicalAnimation,entry.sourceSelector);recipientRecords.set(entry.sourceSelector,recipient);}
+    for(const item of entry.imports)assertWeaponEffectRecipientSafe(canonicalAnimation,recipient,item.targetSequence);
+  }
+  const {writeWeaponProject}=await import('./editor-weapon-project.mjs?v=20261015-stocknames2');
   const built=writeWeaponProject(animationBytes,{gameId,baseTargetSha256:session.descriptor.baseTargetSha256},entries);
   const project=built.project??{gameId,baseTargetSha256:session.descriptor.baseTargetSha256,entries:[],
     canonicalBytes:built.bytes,directoryBytes:built.bytes.slice(0,6168),allocatedBytes:0,capacityBytes:46400};
-  const changedRows=buildEditorRows(root,decoded,gameId);
+  const changedRows=sessionEditorRows(session,root,decoded);
   for(const entry of project.entries){
     const row=changedRows.weapons.find(row=>row.recordIndex===entry.weaponIndex);
     writeU16BE(root[29].bytes,row.byteOffset+3,entry.targetSelector);
@@ -3988,7 +5447,7 @@ export async function prepareEditorWeaponProject(session,submitted,{signal}={}){
   root[6].bytes.set(built.bytes.subarray(0,6168),0);
   const file=session.weaponProject?.file??battleCache(session).files.get('D_ANIME.BIN');
   if(!file)fail('EDITOR_SESSION_MISSING','The authenticated animation extent is unavailable.');
-  return {decoded,animationBytes:built.bytes,project,file,rows:attachWeaponAuthoringRows(buildEditorRows(root,decoded,gameId),root,gameId,project)};
+  return {decoded,animationBytes:built.bytes,project,file,rows:attachWeaponAuthoringRows(sessionEditorRows(session,root,decoded),root,gameId,project)};
 }
 
 export async function viewEditorWeaponProject(session,request,{signal}={}){
@@ -4000,6 +5459,7 @@ export async function viewEditorWeaponProject(session,request,{signal}={}){
 async function projectedWeaponSession(session,request,signal){
   const planned=await prepareEditorWeaponProject(session,ownData(request,'weaponAuthoring'),{signal});
   const projected=Object.freeze({...session,decoded:planned.decoded,root:splitRootSegments(planned.decoded),
+    readOnly:Object.freeze({unit:readOnlyRecordMap(planned.rows.units),pilot:readOnlyRecordMap(planned.rows.pilots),weapon:readOnlyRecordMap(planned.rows.weapons)}),
     weaponProject:Object.freeze({...planned.project,bytes:planned.animationBytes,file:planned.file})});
   const cache=battleCache(projected);cache.rows=planned.rows;cache.files.set('D_ANIME.BIN',planned.file);cache.bytes.set('D_ANIME.BIN',planned.animationBytes);
   cache.originalSession=session;
@@ -4046,7 +5506,11 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   if (!readOnly?.unit || !readOnly.pilot || !readOnly.weapon) {
     fail("EDITOR_SESSION_MISSING", "The authenticated editor session has no record classification.");
   }
+  const conditionEdits=ownData(request,'weaponConditionEdits');
+  if(Object.hasOwn(request,'weaponConditionEdits')&&conditionEdits===undefined)fail('EDITOR_REQUEST_INVALID','Weapon conditions must be an own data list.');
+  const conditionRows=conditionEdits===undefined?null:(authoring?.rows??sessionEditorRows(session,root,decoded)).weaponConditions;
   updateUnitRecords(unitData, ownData(request, "unitEdits"), readOnly.unit);
+  if(conditionRows)updateUnitWeaponConditions(unitData,conditionRows,conditionEdits);
   updatePilotRecords(pilotData, ownData(request, "pilotEdits"), readOnly.pilot, session.descriptor.gameId);
   updateWeaponRecords(weaponData, ownData(request, "weaponEdits"), readOnly.weapon, session.descriptor.gameId);
   updateRewardRecords(root[32], ownData(request, "rewardEdits"));
@@ -4070,7 +5534,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   if (session.scenario && (deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || mapEdits.length)) {
     const current = session.scenario, gameId = session.descriptor.gameId;
     const [{ repackScenarioDeployments }, { repackMapTiles }] = await Promise.all([
-      import('./editor-deployments.mjs?v=20261012-frames3'), import('./editor-map-archive.mjs?v=20261012-frames3'),
+      import('./editor-deployments.mjs?v=20261015-stocknames2'), import('./editor-map-archive.mjs?v=20261015-stocknames2'),
     ]);
     [scenarioChange, mapChange] = await Promise.all([
       deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length ? repackScenarioDeployments(current.scenarioBytes, gameId, current.inspected.maps, current.tables,
@@ -4093,7 +5557,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   }
   if (tsrChanged && session.scenario?.tables.pilotContext) {
     const current = session.scenario;
-    const { pilots } = buildEditorRows(root, decoded, session.descriptor.gameId);
+    const { pilots } = sessionEditorRows(session,root,decoded);
     const checked = snapshotPilotObjectiveContext({ gameId: session.descriptor.gameId,
       scenarioLayout: current.inspected.archive.scenarioLayout, unitCount: current.tables.unitCount,
       pilotCount: current.tables.pilotCount, pilots });
@@ -4121,7 +5585,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
     outputBlob = result.outputBlob; changedSectors.push(...result.changedSectors);
   }
   bytesChanged += new Set(changedSectors).size * SECTOR_SIZE;
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261012-frames3');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261015-stocknames2');
   const checked = inspectScenarioScopes({ gameId: session.descriptor.gameId,
     scenarioBytes: scenarioChange?.bytes ?? current.scenarioBytes, mapBytes: mapChange?.bytes ?? current.mapBytes,
     bankBytes: current.bankBytes, tables: current.tables, sectorMode: current.inspected.scope.scenario.sectorMode,

@@ -1,7 +1,7 @@
 // Derived from all six latest accepted TSR profiles and the two exact stock profiles.
 // Only verified root-32 part/probability bytes are additionally mutable. Old profiles remain supported.
-import { EDITOR_PROVENANCE_PROFILES } from './editor-provenance-profiles.mjs?v=20261012-frames3';
-import { STOCK_EDITOR_PROFILES } from './editor-stock-profiles.mjs?v=20261012-frames3';
+import { EDITOR_PROVENANCE_PROFILES } from './editor-provenance-profiles.mjs?v=20261015-stocknames2';
+import { STOCK_EDITOR_PROFILES } from './editor-stock-profiles.mjs?v=20261015-stocknames2';
 const pins = [
   {
     "baseTargetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",
@@ -132,7 +132,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "1e1f79e6a6d5028852658861c525aae069b5fe49ee4a2cefdbaa1081f416e0dd"
+    "immutableTsrSha256": "376b8c1a6d14cd10d974a74bce09716fb5bc884508a0af6f0ad32bec13df482e"
   },
   {
     "baseTargetSha256": "85b9cbf349c421d621f3a6e6819d94f9ee1405137430046469562a2176e798a3",
@@ -263,7 +263,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "7043b3cd20e2e5528d5584595913c371842fc70e699aec35510821766dc59ba1"
+    "immutableTsrSha256": "864cc1618705f37e76f0fdcfb6009294f79dc9e855bad67d542130c27a6541e6"
   },
   {
     "baseTargetSha256": "0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d",
@@ -419,7 +419,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "1adf98b9f2a2b97eb8b6e34bd7ae8861f98aa6cb470299932a32c023cd93b7b1"
+    "immutableTsrSha256": "33532a015de1a819a8ecf4f02258aed97a731bc8f5ba67ad72beb6512ad34b3d"
   },
   {
     "baseTargetSha256": "75555116f784115e7104c593fd990491ae182b9493d9f159201e17b3e3d88202",
@@ -550,7 +550,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "77479441bdecf2071351a80c09bd4dfe6de9fddec707867efd4ca00b1019f1a7"
+    "immutableTsrSha256": "dd717f21c9bb56262ba9f7f06cff4a84821354b6511a6f31a978ed4f81da417c"
   },
   {
     "baseTargetSha256": "fd8df11fc7a933cea000d40695325fb290900c72b64f8b316e18b06afee8d73e",
@@ -706,7 +706,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "23220b540e17dd4a9bad0b94db51383e43a1ea90a36fc0e9e6bd376d9af1cfb8"
+    "immutableTsrSha256": "eb0876931193e59bb1d8522a5a01897440ed1a754a08a172a5260e8ba520ad39"
   },
   {
     "baseTargetSha256": "9d22ab0ac45e2f8a3728c18825ddd2ea96035704a2ef56b291e077e93e885e23",
@@ -862,7 +862,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "ad8a4633cd3bf95b5958a4bcec892a590ee7418bcd66f3bd74b66eaece909791"
+    "immutableTsrSha256": "62577b8be61a82892c2dd84584a9f5802fa89beb9b32a7fb627829f16656e1ee"
   },
   {
     "baseTargetSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",

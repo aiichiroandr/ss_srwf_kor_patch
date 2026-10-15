@@ -1,6 +1,6 @@
 // Verified root-34 combat/recovery bytes in the six latest accepted and two exact stock TSRs.
 // EN's control bit, pointers, names, and layout remain immutable. Reward-only/legacy profiles remain supported.
-import { REWARD_EDITOR_PROFILES } from './editor-reward-profiles.mjs?v=20261012-frames3';
+import { REWARD_EDITOR_PROFILES } from './editor-reward-profiles.mjs?v=20261015-stocknames2';
 const pins = [
   {
     "baseTargetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",
@@ -1806,7 +1806,7 @@ const pins = [
         127
       ]
     ],
-    "immutableTsrSha256": "bf3904add3a7869e32df373367264fb1dccb8100962216323e33cf593fbf6e45"
+    "immutableTsrSha256": "dac0b09b564e78a7b91973dde484b2a87c177660409f53fc2b824c3e2af76579"
   },
   {
     "baseTargetSha256": "85b9cbf349c421d621f3a6e6819d94f9ee1405137430046469562a2176e798a3",
@@ -3612,7 +3612,7 @@ const pins = [
         127
       ]
     ],
-    "immutableTsrSha256": "69a51e8c82085df7e22f35ef0dee93d6b42616a1f13498ac1a4588d2c9b29bab"
+    "immutableTsrSha256": "b02064021b1ed2a034fdcfd49be019964f9070535ebde0b25d322e9dd79ad86a"
   },
   {
     "baseTargetSha256": "0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d",
@@ -5778,7 +5778,7 @@ const pins = [
         127
       ]
     ],
-    "immutableTsrSha256": "f22151d7719f5c8a29694cf8a5442dc2054c4a506b562008687c160b566a1bb9"
+    "immutableTsrSha256": "227557fcd8d0eccc27d55d62ab93dec84e256aa8d3a6438fd056b74cc642f1f2"
   },
   {
     "baseTargetSha256": "75555116f784115e7104c593fd990491ae182b9493d9f159201e17b3e3d88202",
@@ -7584,7 +7584,7 @@ const pins = [
         127
       ]
     ],
-    "immutableTsrSha256": "deaa37b1bfee74333ee9da5afa5260b90bf0e7046743230efab5f1555008cef2"
+    "immutableTsrSha256": "eccc65b8d6807ec03f80d0d25b6d11c8e638acf5ce7d7aee953b2fb6a8794055"
   },
   {
     "baseTargetSha256": "fd8df11fc7a933cea000d40695325fb290900c72b64f8b316e18b06afee8d73e",
@@ -9750,7 +9750,7 @@ const pins = [
         127
       ]
     ],
-    "immutableTsrSha256": "46693323785aa2eae8f454109ff4a71af47335239753fcf290629c73a82193e9"
+    "immutableTsrSha256": "95f227a9b89072c6f30113079873c59a857c03afbbfebd19a63d8aa9429c7b00"
   },
   {
     "baseTargetSha256": "9d22ab0ac45e2f8a3728c18825ddd2ea96035704a2ef56b291e077e93e885e23",
@@ -11916,7 +11916,7 @@ const pins = [
         127
       ]
     ],
-    "immutableTsrSha256": "bca064dcd3d67601661725a4a989ba9a885bb0e3c6480e78b8f069f7127f0930"
+    "immutableTsrSha256": "d033645fe97987b820ab2d30a091f98c3919eb6e2e612fc4eb7b4821b2c836ea"
   },
   {
     "baseTargetSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",

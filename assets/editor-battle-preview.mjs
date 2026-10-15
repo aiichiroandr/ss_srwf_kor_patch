@@ -90,7 +90,7 @@ export function createBattlePreview({ container, requestPreview }) {
   let choices = { defense: [], evade: [] };
   let currentResult = null, assetFilter = null, galleryPage = 0, generation = 0, controller = null, busy = false, destroyed = false, pending = null;
   const memories = new Map(), listeners = [];
-  let playbackTimer=null,playing=true,playbackFrames=[];
+  let playbackTimer=null,playing=false,playbackFrames=[];
   const stopPlayback=()=>{if(playbackTimer!==null)clearInterval(playbackTimer);playbackTimer=null;playbackFrames=[];play.hidden=true;};
   const listen = (node, event, callback) => { node.addEventListener(event, callback); listeners.push([node, event, callback]); };
   const memoryKey = () => selection ? `${selection.gameId}:${selection.weaponIndex}` : null;
@@ -140,24 +140,35 @@ export function createBattlePreview({ container, requestPreview }) {
         ancestorBottom += numericStyle(node, ['paddingBottom', 'borderBottomWidth']);
       }
       const formStyle = form && globalThis.getComputedStyle?.(form);
+      const panel = container.closest('.weapon-preview-panel');
+      const panelBottom = panel?.getBoundingClientRect().bottom ?? Infinity;
       const availableHeight = form?.clientHeight > 0
-        ? Math.max(0, form.getBoundingClientRect().top + (form.clientTop || 0) + form.clientHeight
+        ? Math.max(0, Math.min(panelBottom, form.getBoundingClientRect().top + (form.clientTop || 0) + form.clientHeight)
           - (parseFloat(formStyle?.paddingBottom) || 0) - ancestorBottom - gallery.getBoundingClientRect().top)
         : 240;
       const card = frame.parentNode, caption = card.querySelector('figcaption');
       const overhead = numericStyle(card, ['borderTopWidth', 'borderBottomWidth'])
         + numericStyle(frame, ['paddingTop', 'paddingBottom'])
         + (caption?.getBoundingClientRect().height || 0);
-      const rows = assetFilter === 'all' ? Math.ceil(gallery.children.length / 2) : 1;
+      // Reserve the same stage across frames and gallery pages. Its size is
+      // determined by the viewport and the complete result, never this sprite.
+      const rows = assetFilter === 'all' ? Math.min(2, Math.ceil((currentResult?.assets.length ?? 1) / 2)) : 1;
       const gaps = numericStyle(gallery, ['rowGap']) * (rows - 1);
       const heightLimit = Math.min(assetFilter === 'all' ? 96 : 200,
         Math.max(1, (availableHeight - gaps) / rows - overhead - 2));
-      const fitting = available > 0 ? Math.min((available - 8) / canvas.width, heightLimit / canvas.height) : 1;
+      const nativeStageHeight = Math.max(...(currentResult?.assets ?? []).map(asset => {
+        const widthFit = Math.max(.01, (available - 8) / asset.width);
+        return asset.height * (widthFit >= 1 ? Math.min(3, Math.floor(widthFit)) : widthFit);
+      }), 1);
+      const stageHeight = Math.min(heightLimit, nativeStageHeight);
+      frame.style.height = `${Math.ceil(stageHeight) + numericStyle(frame, ['paddingTop', 'paddingBottom'])}px`;
+      const fitting = available > 0 ? Math.min((available - 8) / canvas.width, stageHeight / canvas.height) : 1;
       const scale = fitting >= 1 ? Math.min(3, Math.floor(fitting)) : Math.max(.01, fitting);
       canvas.style.width = `${canvas.width * scale}px`; canvas.style.height = `${canvas.height * scale}px`;
     }
   }
   const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(resizePictures) : null;
+  listen(container, 'editor-layout-measure', resizePictures);
   observer?.observe(container);
   const form = container.closest('.editor-game-screen');
   if (form) observer?.observe(form);
@@ -211,14 +222,14 @@ export function createBattlePreview({ container, requestPreview }) {
     if(result.playback?.verifiedReferences){
       const source=assets.find(a=>a.role==='weapon-state-sprite')??assets[0];
       playbackFrames=assets.filter(a=>a.fileName===source.fileName&&a.actorId===source.actorId&&a.sequence===source.sequence);
-      assetFilter=source.assetKey;assetSelect.value=assetFilter;playing=true;play.textContent='일시정지';play.hidden=playbackFrames.length<2;
+      assetFilter=source.assetKey;assetSelect.value=assetFilter;playing=false;play.textContent='자료 자동 넘김';play.hidden=playbackFrames.length<2;
       if(assets.length>1){playbackTimer=setInterval(()=>{
         if(!playing||playbackFrames.length<2||busy||panel.hidden||!container.getClientRects().length)return;
         const at=playbackFrames.findIndex(a=>a.assetKey===assetFilter);assetFilter=playbackFrames[(at+1)%playbackFrames.length].assetKey;
         assetSelect.value=assetFilter;showGallery();
       },250);playbackTimer.unref?.();}
     }
-    note.hidden = true; say('ready', result.playback?.verifiedReferences?'실제 참조 프레임 · 0.25초 간격 반복 (게임 재생 시간과 다름)':result.message || '사용자 디스크 원본 그림'); showGallery(); remember();
+    note.hidden = true; say('ready', result.playback?.verifiedReferences?'원본 그림 자료 · 전투 재생 아님':result.message || '사용자 디스크 원본 그림'); showGallery(); remember();
   }
   function load() {
     cancel(); currentResult = null; gallery.replaceChildren(); gallery.hidden = true; assetSelect.hidden = true; pager.hidden = true; note.hidden = true;
@@ -262,13 +273,13 @@ export function createBattlePreview({ container, requestPreview }) {
   });
   function pauseAtSelection(){
     if(!currentResult?.playback?.verifiedReferences)return;
-    playing=false;play.textContent='반복 재생';
+    playing=false;play.textContent='자료 자동 넘김';
     const source=currentResult.assets.find(a=>a.assetKey===assetFilter);
     playbackFrames=source?currentResult.assets.filter(a=>a.fileName===source.fileName&&a.actorId===source.actorId&&a.sequence===source.sequence):[];
     play.hidden=playbackFrames.length<2;
   }
   listen(assetSelect, 'change', () => { if (!busy && currentResult) { assetFilter = assetSelect.value; pauseAtSelection();remember(); showGallery(); } });
-  listen(play,'click',()=>{playing=!playing;play.textContent=playing?'일시정지':'반복 재생';});
+  listen(play,'click',()=>{playing=!playing;play.textContent=playing?'자료 넘김 정지':'자료 자동 넘김';});
   for (const [button, direction] of [[previous, -1], [next, 1]]) listen(button, 'click', () => {
     if (busy || !currentResult || button.disabled) return;
     if (assetFilter === 'all') galleryPage += direction;

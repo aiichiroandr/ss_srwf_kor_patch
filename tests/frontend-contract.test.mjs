@@ -60,6 +60,17 @@ class FakeElement {
     return child;
   }
 
+  prepend(...children) {
+    for (const child of [...children].reverse()) {
+      if (child && typeof child === "object") {
+        if (child.parentNode) child.parentNode.children = child.parentNode.children.filter(node => node !== child);
+        child.parentNode = this;
+      }
+      this.children.unshift(child);
+    }
+    this.lastChild = this.children.at(-1) ?? { textContent: "" };
+  }
+
   close() {
     this.open = false;
     this.removeAttribute("open");
@@ -354,7 +365,7 @@ const WIZARD_STEP_COPY = /\bSTEP(?:\s*[123])?\b(?!\s*=)/i;
 // 배포 자산의 캐시 개정판은 하나뿐이다. 이 상수를 고쳐야만 고정값이 함께
 // 움직이도록 한 곳에만 적는다. 여러 시험이 각자 literal 을 들고 있으면
 // 개정판을 올릴 때 일부만 따라가서 모듈이 두 번 적재된다.
-const STATIC_ASSET_REVISION = "20261012-frames3";
+const STATIC_ASSET_REVISION = "20261015-stocknames2";
 
 test("public page exposes the legal and accessibility contracts", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
@@ -4140,7 +4151,7 @@ test("every editor error code the core and the worker can raise has natural Kore
   const names = [
     "editor-core", "editor-worker", "editor-provenance", "editor-provenance-profiles", "editor-directory",
     "editor-grades", "editor-weapon-links", "editor-facts",
-    "editor-weapon-authoring", "editor-weapon-layout", "editor-weapon-project",
+    "editor-weapon-authoring", "editor-weapon-layout", "editor-weapon-project", "editor-weapon-names", "editor-stock-weapon-names",
     "editor-rewards", "editor-terrain",
     "editor-scenario-archive", "editor-deployments", "editor-map-archive", "editor-scenario-provenance",
     "editor-scenario-deadlines", "editor-scenario-objectives", "editor-scenario-spawns",
@@ -4354,4 +4365,11 @@ test("choosing the source again permits replacing the previous BIN and CUE", asy
     harness.reply({ type: "complete", result: {} }); await settle();
     assert.equal(element("patchButton").classList.contains("is-complete"), true);
   } finally { harness.restore(); }
+});
+
+test('weapon name capacity reports a shorter-name remedy without leaking worker errors',()=>{
+ const capacity=__testHooks.friendlyEditorError('EDITOR_WEAPON_NAME_CAPACITY','untrusted worker detail');
+ assert.match(capacity.title,/이름.*공간/);assert.match(capacity.message,/이름.*짧게/);assert.doesNotMatch(capacity.message,/untrusted/);
+ const invalid=__testHooks.friendlyEditorError('EDITOR_WEAPON_NAME_INVALID','native offset detail');
+ assert.match(invalid.message,/글꼴/);assert.doesNotMatch(invalid.message,/offset/);
 });

@@ -44,3 +44,13 @@ test('name clone preserves absolute string target across distinct relative point
  assert.deepEqual([...result.keys()].filter(i=>result[i]!==b[i]),[31]);
  assert.throws(()=>cloneWeaponNameReference(b,16,3,1,3),{code:'EDITOR_WEAPON_LAYOUT_INVALID'});
 });
+
+test('a transformed unit avoids upgrade and ammo slots of its other form',()=>{
+ const normal=unitRecordWithWeapons({entries:Array.from({length:6},(_,i)=>({slot:i+1,weapon:2,ammo:i<3?i+1:0}))});normal[7]=8;
+ const flight=unitRecordWithWeapons({entries:[{slot:1,weapon:2,ammo:4},{slot:2,weapon:2,ammo:1},{slot:6,weapon:2,ammo:0}]});flight[7]=9;
+ const donor=unitRecordWithWeapons({entries:[{slot:1,weapon:1}]});
+ const units=recordTable([0,1,2,3],[donor,normal,flight,donor]),f=fixture(12),request={unitIndex:2,sourceWeapon:2,targetWeapon:3,donorUnit:3};
+ const out=cloneWeaponIntoVerifiedSlot(units,f.weapon,request,request);
+ assert.equal(out.slot,7);assert.equal(out.ammoSlot,5);
+ assert.deepEqual(read(out.unitBytes,1,4).entries,read(units,1,4).entries);
+});

@@ -9,7 +9,7 @@
 // 공 육 해 우), which is NOT the data order. The stored value stays an integer; letters are only a view.
 // Evidence for each letter and percentage is recorded in docs/EDITOR_FACTS.md (section "terrain grades").
 
-import { ownEntry } from "./editor-own.mjs?v=20261012-frames3";
+import { ownEntry } from "./editor-own.mjs?v=20261015-stocknames2";
 
 export const TERRAIN_DATA_ORDER = Object.freeze(["ground", "sea", "air", "space"]);
 export const TERRAIN_SCREEN_ORDER = Object.freeze(["air", "ground", "sea", "space"]);
@@ -22,8 +22,10 @@ export const GRADE_LETTERS = Object.freeze(["E", "D", "C", "B", "A"]); // index 
 export const GRADE_PERCENT = Object.freeze([0, 60, 80, 100, 120]);
 export const GRADE_EDIT_MIN = 0;
 export const GRADE_EDIT_MAX = 4;
-// Stored nibbles above 4 exist only in the pilot-table tail rows that are not pilots (which the row model marks
-// read-only); the game computes 0 percent for them and no screen showing them was found.
+export const PILOT_GRADE_EDIT_MAX = 5;
+// Accepted stock tables use0..4 for ordinary pilots; tail-only rows can hold
+// other nibbles. Personal pilots may use5 as a pre-average correction. A
+// combined index outside1..4 still yields0; no standalone percentage for5.
 export const GRADE_NIBBLE_MAX = 15;
 
 const GRADE_ZERO_DEFAULT = "-";
@@ -42,8 +44,8 @@ export function isEditableGrade(value) {
 
 // A changed grade must stay inside the edit domain; an unchanged stored value is always accepted, so a record that
 // already holds an out-of-domain nibble keeps it instead of blocking the whole export.
-export function isGradeEditAllowed(next, original) {
-  return isEditableGrade(next) || (Number.isInteger(next) && next === original);
+export function isGradeEditAllowed(next, original, {kind} = {}) {
+  return (kind === "pilot" && next === 5) || isEditableGrade(next) || (Number.isInteger(next) && next === original);
 }
 
 export function gradePercent(value) {
@@ -51,7 +53,8 @@ export function gradePercent(value) {
 }
 
 // 0 -> `zero` ('-' by default; pass "E" for the status-tab style), 1..4 -> D..A, anything else -> "?N".
-export function gradeLabel(value, { zero = GRADE_ZERO_DEFAULT } = {}) {
+export function gradeLabel(value, { zero = GRADE_ZERO_DEFAULT, kind } = {}) {
+  if(kind === "pilot" && value === 5)return "α";
   if (!Number.isInteger(value) || value < 0) return `?${value}`;
   if (value === 0) return zero;
   return value <= GRADE_EDIT_MAX ? GRADE_LETTERS[value] : `?${value}`;
@@ -75,6 +78,8 @@ export const GRADE_CHOICES = Object.freeze([4, 3, 2, 1, 0].map((value) => Object
   percent: GRADE_PERCENT[value],
   label: `${gradeLabel(value)} ${GRADE_PERCENT[value]}%`,
 })));
+
+export const PILOT_GRADE_CHOICES = Object.freeze([Object.freeze({value:5,letter:"α",percent:null,label:"α · 합산 보정값 5"}),...GRADE_CHOICES]);
 
 // Splits and joins the 16-bit terrain word of a unit or pilot record (data order).
 export function splitTerrainWord(word) {
@@ -241,6 +246,7 @@ const UNKNOWN_GRADE = gradeEvidence("unknown", false, "no game screen shows this
 
 // One reading per stored value. `kind` is "unit", "pilot" or "weapon".
 export function gradeVerification(kind, value) {
+  if(kind === "pilot" && value === 5)return Object.freeze({kind,value,letter:"α",percent:null,status:"inferred",screenshot:false,badge:"inferred",note:"합산 전 보정값5. 기체 B(3)와 평균하면 종합 A(4). 게임의 글자 표시는 미확인."});
   const table = kind === "unit" ? UNIT_GRADE_STATUS : kind === "pilot" ? PILOT_GRADE_STATUS
     : kind === "weapon" ? WEAPON_GRADE_STATUS : null;
   if (!table) throw new RangeError("kind must be unit, pilot or weapon");

@@ -1,8 +1,9 @@
 // Structural local experiment: clone a weapon into a VERIFIED free record and
 // fund one new unit entry by removing a VERIFIED unused unit's sentinel entry.
 // The caller must supply authenticated admission; this is not a public writer.
-import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261012-frames3';
-import {isWeaponRequiredSkillEditable} from './editor-facts.mjs?v=20261012-frames3';
+import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261015-stocknames2';
+import {isWeaponRequiredSkillEditable} from './editor-facts.mjs?v=20261015-stocknames2';
+import {normalizeAllocatedWeaponNames,stockReservedWeaponNameOffset} from './editor-weapon-names.mjs?v=20261015-stocknames2';
 const own=(o,k)=>o&&typeof o==='object'?Object.getOwnPropertyDescriptor(o,k)?.value:undefined;
 const dv=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 function fail(message){const e=new Error(message);e.code='EDITOR_WEAPON_LAYOUT_INVALID';throw e;}
@@ -15,6 +16,24 @@ function table(bytes,minimum){
  const unique=[...new Set(offsets)].sort((a,b)=>a-b),ends=new Map(unique.map((p,i)=>[p,unique[i+1]??bytes.length]));
  if(unique.some(p=>ends.get(p)-p<minimum))fail('Truncated record.');
  return {size,offsets,ends,unique};
+}
+// Standard transform destinations from the native transform consumer. Record
+// +7 packs mode in bits 6:3 and current form in bits 2:0. Modes 1/2 change
+// to the adjacent record; modes 3/4/5 iterate the three-record base family.
+// Special combine/separate/event transformations are not inferred here.
+function slotPeerGraph(unitBytes,units){
+ const graph=Array.from({length:units.offsets.length},()=>new Set());
+ const link=(a,b)=>{if(b>0&&b<graph.length&&a!==b){graph[a].add(b);graph[b].add(a);}};
+ for(let id=1;id<graph.length;id++){
+  const flags=unitBytes[units.offsets[id]+7],mode=flags>>>3&15,index=flags&7;
+  if(mode===1||mode===2)link(id,id+(index?-1:1));
+  else if(mode===3||mode===4||mode===5){const base=id-index;for(let peer=base;peer<base+3;peer++)link(id,peer);}
+ }
+ return graph;
+}
+function slotPeers(graph,id){const peers=new Set([id]),queue=[id];for(let at=0;at<queue.length;at++)for(const peer of graph[queue[at]])if(!peers.has(peer)){peers.add(peer);queue.push(peer);}return peers;}
+function peerEntries(unitBytes,units,weaponCount,graph,id){
+ return [...slotPeers(graph,id)].flatMap(peer=>weaponsOfUnit(unitBytes,units.offsets[peer],units.ends.get(units.offsets[peer]),weaponCount).rawEntries);
 }
 export function cloneWeaponIntoVerifiedSlot(unitBytes,weaponBytes,request,admission){
  const unitIndex=own(request,'unitIndex'),sourceWeapon=own(request,'sourceWeapon'),targetWeapon=own(request,'targetWeapon'),donorUnit=own(request,'donorUnit');
@@ -45,9 +64,10 @@ export function cloneWeaponIntoVerifiedSlot(unitBytes,weaponBytes,request,admiss
   ||units.offsets.filter(p=>p===units.offsets[donorUnit]).length!==1
   ||units.offsets.filter(p=>p===units.offsets[unitIndex]).length!==1)fail('An aliased record cannot be allocated.');
  if(!selected.entries.some(e=>e.weaponIndex===sourceWeapon))fail('The source weapon is not owned by the selected unit.');
- const slot=Array.from({length:16},(_,i)=>i+1).find(s=>!selected.entries.some(e=>e.slot===s));
+ const relatedEntries=peerEntries(unitBytes,units,weapons.offsets.length,slotPeerGraph(unitBytes,units),unitIndex);
+ const slot=Array.from({length:16},(_,i)=>i+1).find(s=>!relatedEntries.some(e=>e.slot===s));
  const ammo=weaponBytes[weapons.offsets[sourceWeapon]+12];
- const ammoSlot=ammo?Array.from({length:16},(_,i)=>i+1).find(s=>!selected.entries.some(e=>e.ammoSlot===s)):0;
+ const ammoSlot=ammo?Array.from({length:16},(_,i)=>i+1).find(s=>!relatedEntries.some(e=>e.ammoSlot===s)):0;
  if(!slot||(ammo&&!ammoSlot))fail('No independent upgrade or ammo storage slot.');
  if(selected.notes.length||donor.notes.length)fail('Noncanonical unit entries require separate investigation.');
  const nextUnits=unitBytes.slice(),nextWeapons=weaponBytes.slice(),payloads=new Map();
@@ -102,6 +122,8 @@ export function normalizeWeaponProjectTsr(decoded,root,gameId,project){
  const result=decoded.slice(),unitRoot=root[27],weaponRoot=root[29],nameRoot=root[14],directoryRoot=root[6];
  for(const segment of [unitRoot,weaponRoot,nameRoot,directoryRoot])if(!segment||!Number.isSafeInteger(segment.start)
   ||!Number.isSafeInteger(segment.end)||segment.start<0||segment.end>decoded.length||segment.end<segment.start)fail('Invalid project root.');
+ if(project.entries.some(entry=>entry.name!==undefined))result.set(
+  normalizeAllocatedWeaponNames(result.subarray(nameRoot.start,nameRoot.end),gameId,project.entries,project.baseTargetSha256),nameRoot.start);
  const units=table(decoded.subarray(unitRoot.start,unitRoot.end),50),weapons=table(decoded.subarray(weaponRoot.start,weaponRoot.end),17);
  if(units.offsets.length!==(final?448:368)||weapons.offsets.length!==(final?1408:1280)
   ||units.offsets.some((p,i)=>i&&p<=units.offsets[i-1]))fail('Unknown project table layout.');
@@ -117,7 +139,9 @@ export function normalizeWeaponProjectTsr(decoded,root,gameId,project){
   if(d.getUint16(at+3,false)!==targetSelector)fail('Weapon does not reference its project animation.');
   if(!donorUnit){
    if(weaponIndex!==sourceWeapon||weaponIndex>=reserveFirst)fail('Invalid original weapon animation binding.');
-   d.setUint16(at+3,sourceSelector,false);
+   const originalSelector=entry.originalSelector??sourceSelector;
+   if(!Number.isSafeInteger(originalSelector)||originalSelector<0||originalSelector>=0x560||(originalSelector&255)>=128)fail('Invalid original animation identity.');
+   d.setUint16(at+3,originalSelector,false);
   }else{
    if(weaponIndex<reserveFirst||weaponIndex>reserveLast||donorUnit<(final?430:354)
     ||donorUnit>=units.offsets.length||donorUnit===unitIndex||donors.has(donorUnit)||creations.has(weaponIndex))fail('Invalid new weapon allocation.');
@@ -125,10 +149,17 @@ export function normalizeWeaponProjectTsr(decoded,root,gameId,project){
   }
  }
  for(const entry of entries){
-  const source=weaponRoot.start+weapons.offsets[entry.sourceWeapon];
+  const animationWeapon=entry.animationWeapon??entry.sourceWeapon;
+  if(!Number.isSafeInteger(animationWeapon)||animationWeapon<1||animationWeapon>=reserveFirst
+   ||!entry.donorUnit&&animationWeapon!==entry.sourceWeapon&&entry.originalSelector===undefined)fail('Invalid project motion donor.');
+  const source=weaponRoot.start+weapons.offsets[animationWeapon];
   if(d.getUint16(source+3,false)!==entry.sourceSelector)fail('Project origin does not match its original weapon.');
+  for(const imported of entry.imports??[]){
+   if(!Number.isSafeInteger(imported.donorWeapon)||imported.donorWeapon<1||imported.donorWeapon>=reserveFirst
+    ||d.getUint16(weaponRoot.start+weapons.offsets[imported.donorWeapon]+3,false)!==imported.donorSelector)fail('Project effect origin does not match its original weapon.');
+  }
  }
- const payloads=new Map(),newReferences=new Map();
+ const payloads=new Map(),newReferences=new Map(),peerGraph=slotPeerGraph(unitBytes,units);
  for(let id=0;id<units.offsets.length;id++){
   const start=units.offsets[id],end=units.ends.get(start),list=weaponsOfUnit(unitBytes,start,end,weapons.offsets.length);
   const current=unitBytes.slice(start,end);
@@ -139,7 +170,7 @@ export function normalizeWeaponProjectTsr(decoded,root,gameId,project){
   const added=list.entries.filter(e=>creations.has(e.weaponIndex));
   if(!added.length){payloads.set(start,current);continue;}
   if(list.status!=='known'||list.notes.length)fail('Project changed a noncanonical unit list.');
-  const original=list.entries.filter(e=>!creations.has(e.weaponIndex)),slots=new Set(original.map(e=>e.slot)),ammoSlots=new Set(original.filter(e=>e.ammoSlot).map(e=>e.ammoSlot));
+  const original=list.entries.filter(e=>!creations.has(e.weaponIndex)),otherEntries=[...slotPeers(peerGraph,id)].filter(peer=>peer!==id).flatMap(peer=>weaponsOfUnit(unitBytes,units.offsets[peer],units.ends.get(units.offsets[peer]),weapons.offsets.length).rawEntries),occupied=[...original,...otherEntries],slots=new Set(occupied.map(e=>e.slot)),ammoSlots=new Set(occupied.filter(e=>e.ammoSlot).map(e=>e.ammoSlot));
   let removedAmmo=0;
   for(const weapon of added){
    const binding=creations.get(weapon.weaponIndex),source=weapons.offsets[binding.sourceWeapon],hasAmmo=weaponBytes[source+12]>0;
@@ -167,14 +198,16 @@ export function normalizeWeaponProjectTsr(decoded,root,gameId,project){
  template[8]=(template[8]&0xf0)|1;
  for(const [id,entry] of creations){
   const source=weapons.offsets[entry.sourceWeapon],at=weapons.offsets[id];
-  if(!weaponBytes.subarray(at,at+3).every((v,i)=>v===weaponBytes[source+i])
+  if(!weaponBytes.subarray(at,at+3).every((v,i)=>(i===1?(v&~0x70)===(weaponBytes[source+i]&~0x70):i===2?(v&192)===(weaponBytes[source+i]&192):v===weaponBytes[source+i]))
    ||(weaponBytes[at+8]&15)!==(weaponBytes[source+8]&15)
    ||(weaponBytes[source+12]===0)!==(weaponBytes[at+12]===0)
    ||weaponBytes[at+15]>150&&weaponBytes[at+15]!==weaponBytes[source+15]
    ||weaponBytes[at+16]!==weaponBytes[source+16]&&!isWeaponRequiredSkillEditable(gameId,weaponBytes[at+16]))fail('New weapon changed an unverified type or usage domain.');
   const nameCell=nameRoot.start+id*4,sourceCell=nameRoot.start+entry.sourceWeapon*4;
   if(nameCell+d.getInt32(nameCell,false)!==sourceCell+d.getInt32(sourceCell,false))fail('New weapon changed an unverified name reference.');
-  weaponBytes.set(template,at);d.setInt32(nameCell,emptyAddress-nameCell,false);
+  const stockEmpty=stockReservedWeaponNameOffset(gameId,project.baseTargetSha256,id),canonicalEmpty=stockEmpty===null?emptyAddress:nameRoot.start+stockEmpty;
+  if(canonicalEmpty<nameRoot.start||canonicalEmpty>=nameRoot.end||result[canonicalEmpty]!==255)fail('Invalid canonical reserved name reference.');
+  weaponBytes.set(template,at);d.setInt32(nameCell,canonicalEmpty-nameCell,false);
  }
  if(directoryRoot.end-directoryRoot.start<6168||!(project.directoryBytes instanceof Uint8Array)
   ||project.directoryBytes.length!==6168||!decoded.subarray(directoryRoot.start,directoryRoot.start+6168)

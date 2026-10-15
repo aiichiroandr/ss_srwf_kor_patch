@@ -260,17 +260,22 @@ test('unit rows carry their weapon list; weapon rows carry owners, owner names a
   assert.ok(weapons.every((row) => row.editable === (row.recordKind !== 'unused-filler')));
 });
 
-test('provenance: no editable (masked) byte range touches a unit weapon list, so it stays in the hashed region', () => {
+test('provenance: only the known condition bit is mutable in a unit weapon list', () => {
   const { decoded } = linkedWorld({ rooted: true });
   const root = splitRootSegments(decoded);
   const units = unitRows(root, decoded, [], GLYPHS, 'srwf-final');
   const masks = editorDecodedMasks(root, 'srwf-final');
   assert.ok(masks.length > 0);
+  const flagged=units.find(row=>row.recordIndex===2);assert.ok(masks.some(([at,length,mask])=>at===root[27].start+flagged.byteOffset+52&&length===1&&mask===128));
+  const legacy=editorDecodedMasks(root,'srwf-final',{weaponConditions:false});assert.ok(!legacy.some(([, ,mask])=>mask===128));
   for (const row of units) {
     const from = root[27].start + row.byteOffset + 46;
     const to = root[27].start + row.byteOffset + row.weaponList.recordLength;
-    for (const [start, length] of masks) {
-      assert.ok(start + length <= from || start >= to, `unit ${row.recordIndex}: mask [${start}, ${start + length}) overlaps its list [${from}, ${to})`);
+    const allowed=root[27].start+row.byteOffset+48+4;
+    for (const [start, length, mask] of masks) {
+      if(start+length<=from||start>=to)continue;
+      assert.equal(row.recordIndex,2,'only the fixture binding with retained flag77 is eligible');
+      assert.equal(start,allowed);assert.equal(length,1);assert.equal(mask,128,'slot, weapon, ammo, investment and flag target stay immutable');
     }
   }
 });

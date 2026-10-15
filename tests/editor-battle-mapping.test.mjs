@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveBattleAssetPlan } from '../assets/editor-battle-mapping.mjs';
+import { resolveBattleAssetPlan,resolveBattleSceneSources,battleActorInstructionBytes } from '../assets/editor-battle-mapping.mjs';
 import { recordTable, world } from './helpers/synthetic-tsr.mjs';
+import {resolveBattleSceneSprite} from '../assets/editor-battle-scene-resources.mjs';
+test('actor counter operand widths preserve following picture and wait boundaries',()=>{
+ for(const [sub,width]of [[0xf2,3],[0xf3,3],[0xf4,4]])assert.equal(battleActorInstructionBytes(0xfa,sub),width);
+ assert.equal(battleActorInstructionBytes(0xfa,0xf1),3);
+ assert.equal(battleActorInstructionBytes(0xfa,0xfe),null);
+});
 
 const put16 = (b, p, v) => new DataView(b.buffer, b.byteOffset).setUint16(p, v, false);
 const put32 = (b, p, v) => new DataView(b.buffer, b.byteOffset).setUint32(p, v, false);
@@ -33,6 +39,120 @@ function fixture() {
   return { gameId: 'srwf-final', mode: 'attack', weapon: { recordIndex: 1, name: 'Synthetic' },
     root, decodedTsr: decoded, battleFiles: { 'D_ANIME.BIN': animation } };
 }
+
+function sceneFixture(){
+  const input=fixture(),source=input.battleFiles['D_ANIME.BIN'];
+  for(let slot=0;slot<6;slot++)put16(source,6168+20+slot*2,65535);
+  const bankDirectory=new Uint8Array(24+768*6);
+  for(let bank=0;bank<6;bank++)put32(bankDirectory,bank*4,24+bank*768);
+  new DataView(source.buffer).setUint32(6168+4,48,true);put16(source,6168+48,50);source[6168+50]=1;
+  const bodyDirectory=new Uint8Array(24);put32(bodyDirectory,0,24);put32(bodyDirectory,8,16);put32(bodyDirectory,12,16);
+  const unit=new Uint8Array(50);put16(unit,2,1);
+  const {segments:root,decoded}=world({1:bodyDirectory,6:input.root[6].bytes,7:input.root[7].bytes,8:bankDirectory,
+    27:recordTable([0,0],[unit]),29:input.root[29].bytes});
+  return {...input,root,decodedTsr:decoded,unit:{recordIndex:1},battleFiles:{...input.battleFiles,
+    'BTSR.BIN':recordTable([0,0,0,0],[Uint8Array.from([0,2,1])]),'C_ROBOT.BIN':new Uint8Array(28),'E_SPR.BIN':new Uint8Array(8100)}};
+}
+test('scene loader preserves empty slots separately from reuse without borrowing another image',async()=>{
+ const input=sceneFixture();put32(input.root[7].bytes,24+5*1024+8+4,8000);
+ const result=await resolveBattleSceneSources(input);
+ assert.equal(result.status,'ready');
+ assert.deepEqual(result.scene.weaponGraphicLoads[1],{slot:1,kind:'empty',sourceSelector:0x0501,recordOffset:8000,recordEnd:8000});
+ assert.equal(result.scene.weaponGraphicLoads[3].kind,'reuse');
+ assert.equal(result.scene.weaponGraphics.length,1);
+});
+test('scene sources retain the selected native program, unit body and physical weapon slots without mixing copies',async()=>{
+  const input=sceneFixture();
+  input.root[24]={bytes:Uint8Array.from([0,0,0,4,0xff])};
+  input.root[36]={bytes:new Uint8Array(32)};input.root[36].bytes[0]=128;
+  input.battleFiles['BMESS.BIN']=Uint8Array.from([1,2,3]);
+  const result=await resolveBattleSceneSources(input);
+  assert.equal(result.status,'ready');assert.equal(result.scene.graphicsSelector,1);
+  assert.deepEqual(result.scene.unitGraphics,{fileName:'C_ROBOT.BIN',byteLength:28,recordOffset:24,recordEnd:28});
+  assert.deepEqual(result.scene.weaponGraphics.map(x=>x.headerSlots),[[0,2],[1]]);
+  assert.deepEqual(result.scene.weaponGraphicLoads.map(x=>[x.slot,x.kind,x.sourceSelector]),
+    [[0,'load',0x4104],[1,'load',0x0501],[2,'load',0x0104],[3,'reuse',65535],[4,'reuse',65535],[5,'reuse',65535]]);
+  assert.equal(result.scene.weaponGraphicLoads[0].recordOffset,result.scene.weaponGraphicLoads[2].recordOffset);
+  assert.notEqual(result.scene.weaponGraphicLoads[0],result.scene.weaponGraphicLoads[2]);
+  assert.deepEqual(result.scene.commonActors,Uint8Array.from([0,2,1]));
+  assert.deepEqual(result.scene.messagePrograms,input.root[24].bytes);
+  result.scene.messagePrograms[4]=0;assert.equal(input.root[24].bytes[4],255);
+  assert.deepEqual(result.scene.messageGlyphs,input.root[36].bytes);
+  result.scene.messageGlyphs[0]=0;assert.equal(input.root[36].bytes[0],128);
+  assert.deepEqual(result.scene.messageData,input.battleFiles['BMESS.BIN']);
+  result.scene.messageData[0]=0;assert.equal(input.battleFiles['BMESS.BIN'][0],1);
+  result.scene.program[0]=0;assert.equal(input.battleFiles['D_ANIME.BIN'][6168],46);
+});
+test('scene depth initialization reads each game executable at its actual load-relative address',async()=>{
+  for(const [gameId,address]of [['srwf-f',0x060b3430],['srwf-final',0x060b9a68]]){
+    const input=sceneFixture();input.gameId=gameId;
+    const offset=address-0x06004000,executable=new Uint8Array(Math.max(offset+40,
+      (gameId==='srwf-f'?0x060abee8:0x060b23c8)-0x06004000+16384));
+    executable.set(Uint8Array.from({length:32},(_,i)=>i+1),offset);input.battleFiles['0']=executable;
+    const result=await resolveBattleSceneSources(input);
+    assert.equal(result.status,'ready');assert.deepEqual([...result.scene.initialRenderDepthTables],Array.from({length:32},(_,i)=>i+1));
+    result.scene.initialRenderDepthTables.fill(0);assert.equal(executable[offset],1);
+    assert.equal(result.scene.initialRotationTables.quadrants.length,16);
+    assert.equal(result.scene.initialRotationTables.sine.length,16384);
+    result.scene.initialRotationTables.sine[0]=255;
+    assert.equal(executable[(gameId==='srwf-f'?0x060abee8:0x060b23c8)-0x06004000],0);
+    input.battleFiles['0']=executable.subarray(0,offset+31);
+    assert.equal((await resolveBattleSceneSources(input)).evidence.reason,'scene-render-depth-bounds');
+  }
+  assert.equal((await resolveBattleSceneSources(sceneFixture())).scene.initialRenderDepthTables,null);
+});
+
+test('scene sources reject missing common programs and out-of-file body pointers',async()=>{
+  const a=sceneFixture();delete a.battleFiles['BTSR.BIN'];
+  assert.equal((await resolveBattleSceneSources(a)).evidence.reason,'scene-source-context-missing');
+  const b=sceneFixture();b.battleFiles['C_ROBOT.BIN']=new Uint8Array(26);
+  assert.equal((await resolveBattleSceneSources(b)).evidence.reason,'scene-unit-graphics-bounds');
+});
+test('an explicit opponent binds its own body record without borrowing the attacker picture',async()=>{
+ const input=sceneFixture(),dir=new Uint8Array(32);put32(dir,0,32);
+ put32(dir,8,24);put32(dir,12,24);put32(dir,16,20);put32(dir,20,20);
+ const first=new Uint8Array(50),second=new Uint8Array(50);put16(first,2,1);put16(second,2,2);second[10]=7;
+ input.root[1]={bytes:dir};input.root[27]={bytes:recordTable([0,0,1],[first,second])};
+ input.battleFiles['C_ROBOT.BIN']=new Uint8Array(40);input.opponent={recordIndex:2};
+ const result=await resolveBattleSceneSources(input);assert.equal(result.status,'ready');
+ assert.equal(result.scene.unitGraphics.recordOffset,32);assert.equal(result.scene.opponentGraphics.recordOffset,36);
+ assert.equal(result.scene.opponentByte10,7);assert.equal(result.scene.opponentRecordIndex,2);
+ assert.equal(resolveBattleSceneSprite(result.scene,0x0900).assetKey,'battle1:C_ROBOT.BIN:40:36:40:0');
+ put32(dir,20,21);assert.equal((await resolveBattleSceneSources(input)).evidence.reason,'scene-opponent-graphics-bounds');
+ delete input.opponent;const without=await resolveBattleSceneSources(input);
+ assert.equal(without.scene.opponentGraphics,null);assert.equal(resolveBattleSceneSprite(without.scene,0x0900).status,'unresolved');
+});
+test('scene background bank slots retain their paired tile-map ranges and never substitute another bank',async()=>{
+ const input=sceneFixture(),source=input.battleFiles['D_ANIME.BIN'],dir=input.root[8].bytes;
+ const cell=24+768+2*12,start=24+768*6;
+ put16(source,6168+20,0x4102);put32(dir,cell,start);put32(dir,cell+4,start+18);put32(dir,cell+8,start+30);
+ input.battleFiles['E_BNK.BIN']=new Uint8Array(start+30);
+ const result=await resolveBattleSceneSources(input);assert.equal(result.status,'ready');
+ assert.deepEqual(result.scene.bankGraphicLoads[0],{slot:0,kind:'load',sourceSelector:0x4102,fileName:'E_BNK.BIN',byteLength:start+30,
+  recordOffset:start,recordEnd:start+18,mapOffset:start+18,mapEnd:start+30});
+ assert.ok(result.scene.bankGraphicLoads.slice(1).every(x=>x.kind==='reuse'));
+ put32(dir,cell+8,start+31);assert.equal((await resolveBattleSceneSources(input)).evidence.reason,'scene-bank-graphics-bounds');
+ put16(source,6168+20,0x0140);assert.equal((await resolveBattleSceneSources(input)).evidence.reason,'scene-bank-selector-invalid');
+});
+test('a trailing table-start cell does not hide otherwise valid scene sources',async()=>{
+  const input=sceneFixture(),source=input.battleFiles['D_ANIME.BIN'];
+  put16(source,6168+48,52);put16(source,6168+50,48);source[6168+52]=1;
+  assert.equal((await resolveBattleSceneSources(input)).status,'ready');
+  put16(source,6168+50,49);
+  assert.equal((await resolveBattleSceneSources(input)).evidence.reason,'scene-actor-directory-invalid');
+});
+
+test('native common sprite candidates retain cache16/cell7 and cache18/cell20 physical identities',async()=>{
+  const input=sceneFixture(),indices=Array(21).fill(0);indices[7]=1;indices[20]=2;
+  input.battleFiles['BTSR.BIN']=recordTable(indices,[Uint8Array.from([0,2,1]),
+    Uint8Array.from([0x70,0x58,0,0,0,0,0,0]),Uint8Array.from([0x70,0x58,0,0,0,0,0,0])]);
+  const result=await resolveBattleSceneSources(input);
+  assert.equal(result.status,'ready');
+  assert.deepEqual(result.scene.commonGraphics.map(r=>[r.frameCacheGroup,r.sourceTableCell,r.recordOffset,r.recordEnd]),
+    [[16,7,87,95],[18,20,95,103]]);
+  input.battleFiles['BTSR.BIN'][95]=0;
+  assert.deepEqual((await resolveBattleSceneSources(input)).scene.commonGraphics.map(r=>r.frameCacheGroup),[16]);
+});
 
 test('weapon record selects D_ANIME then absolute bank pairs select physical E_SPR records', async () => {
   const plan = await resolveBattleAssetPlan(fixture());

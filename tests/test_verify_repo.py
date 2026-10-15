@@ -11,6 +11,7 @@ import random
 from pathlib import Path
 import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 from typing import Any
@@ -534,6 +535,115 @@ class AcceptanceReceiptTests(unittest.TestCase):
 
 
 class RepositoryPolicyTests(unittest.TestCase):
+    def static_errors(self, sources: dict[str, str], *, vendor_pins=None, node_pins=None) -> list[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / "index.html").write_text(exact_csp_meta(), encoding="utf-8")
+            write_json(root / "package.json", {"private":True, "scripts":verifier.EXPECTED_PACKAGE_SCRIPTS})
+            files = [root / "index.html", root / "package.json"]
+            for name, text in sources.items():
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+                files.append(path)
+            with verifier_root(root), mock_patch.object(verifier, "PINNED_VENDOR_MODULES",
+                    verifier.PINNED_VENDOR_MODULES if vendor_pins is None else vendor_pins), \
+                    mock_patch.object(verifier, "PINNED_NODE_ONLY_MODULES",
+                    verifier.PINNED_NODE_ONLY_MODULES if node_pins is None else node_pins):
+                verifier.validate_static_site(files)
+                return list(verifier.errors)
+
+    def test_pinned_pixi_modules_keep_real_same_origin_dependencies_without_cdn_defaults(self) -> None:
+        sources = {name:(PROJECT_ROOT/name).read_text(encoding="utf-8") for name in verifier.PINNED_VENDOR_MODULES}
+        self.assertNotIn("cdn.jsdelivr.net", sources["assets/vendor/pixi/pixi-8.22.0.min.mjs"])
+        self.assertEqual(self.static_errors(sources), [])
+
+    def test_vendor_exception_requires_exact_path_and_bytes(self) -> None:
+        name = "assets/vendor/pixi/pixi-8.22.0.min.mjs"
+        original = (PROJECT_ROOT/name).read_text(encoding="utf-8")
+        joined = "\n".join(self.static_errors({name:original+"\nexport const changed = true;"}))
+        self.assertIn("pinned module SHA-256 does not match", joined)
+        self.assertIn("external/CDN URL is forbidden", joined)
+        copied = "assets/vendor/other/pixi-copy.mjs"
+        joined = "\n".join(self.static_errors({copied:original}))
+        self.assertIn(f"{copied}: external/CDN URL is forbidden", joined)
+
+    def test_vendor_dependencies_are_parsed_and_remain_same_origin(self) -> None:
+        name = "assets/vendor/synthetic.mjs"
+        for specifier in ("./local.mjs", "https://remote.example/code.mjs", "node:fs"):
+            source = "const warning = 'copy from\\\" warning';\n"+f"import {json.dumps(specifier)};"
+            policy = {"sha256":hashlib.sha256(source.encode()).hexdigest(), "imports":(),
+                "url_tokens":{}, "false_import_tokens":{}}
+            joined = "\n".join(self.static_errors({name:source}, vendor_pins={name:policy}))
+            self.assertIn("parsed module imports do not match", joined)
+            if not specifier.startswith("./"):
+                self.assertIn("non-local module import is forbidden", joined)
+        # Even an explicitly pinned dependency list cannot authorize a remote import.
+        source = 'import "https://remote.example/code.mjs";'
+        policy = {"sha256":hashlib.sha256(source.encode()).hexdigest(),
+            "imports":("https://remote.example/code.mjs",),
+            "url_tokens":{"https://remote.example/code.mjs":1}, "false_import_tokens":{}}
+        joined = "\n".join(self.static_errors({name:source}, vendor_pins={name:policy}))
+        self.assertIn("non-local module import is forbidden", joined)
+
+    def test_vendor_pins_do_not_bypass_network_writes_or_csp(self) -> None:
+        name = "assets/vendor/synthetic.mjs"
+        source = 'navigator.sendBeacon("./collect");'
+        policy = {"sha256":hashlib.sha256(source.encode()).hexdigest(), "imports":(),
+            "url_tokens":{}, "false_import_tokens":{}}
+        joined = "\n".join(self.static_errors({name:source}, vendor_pins={name:policy}))
+        self.assertIn("upload or network-write API is forbidden", joined)
+        joined = "\n".join(self.static_errors({name:"", "index.html":'<meta http-equiv="Content-Security-Policy" content="default-src *">'},
+            vendor_pins={name:{**policy,"sha256":hashlib.sha256(b"").hexdigest()}}))
+        self.assertIn("Content-Security-Policy meta is missing or invalid", joined)
+
+    def test_pinned_module_parser_never_executes_source_and_fails_closed_on_parser_errors(self) -> None:
+        verifier.errors.clear()
+        self.assertEqual(verifier.parse_module_dependencies('throw new Error("must not execute");', "synthetic"), ())
+        self.assertEqual(verifier.errors, [])
+        with mock_patch.object(verifier.subprocess, "run", side_effect=OSError("missing local Node")):
+            self.assertIsNone(verifier.parse_module_dependencies("", "synthetic"))
+        self.assertIn("module syntax/import validation failed", "\n".join(verifier.errors))
+        verifier.errors.clear()
+
+    def test_exact_node_cli_is_allowed_only_as_an_unreferenced_analysis_tool(self) -> None:
+        name = "scripts/editor-battle-task-timing.mjs"
+        source = (PROJECT_ROOT/name).read_text(encoding="utf-8")
+        self.assertEqual(self.static_errors({name:source}), [])
+        imports = {name:source,
+            "assets/loader.mjs":'import "../scripts/editor-battle-task-timing.mjs";',
+            "loader.html":'<script src="./scripts/editor-battle-task-timing.mjs"></script>',
+            "loader.css":'@import url("./%73cripts/editor-battle-task-timing.mjs");'}
+        joined = "\n".join(self.static_errors(imports))
+        for path in ("assets/loader.mjs", "loader.html", "loader.css"):
+            self.assertIn(f"{path}: browser source cannot reference Node-only CLI", joined)
+        joined = "\n".join(self.static_errors({name:source+"\n// changed"}))
+        self.assertIn("pinned module SHA-256 does not match", joined)
+        self.assertIn("non-local module import is forbidden: node:fs/promises", joined)
+        joined = "\n".join(self.static_errors({"scripts/unapproved.mjs":'import "node:fs/promises";'}))
+        self.assertIn("scripts/unapproved.mjs: non-local module import is forbidden", joined)
+
+    def test_disabled_pixi_transcoders_fail_before_network_or_worker_creation(self) -> None:
+        module_url = (PROJECT_ROOT / "assets/vendor/pixi/pixi-8.22.0.min.mjs").as_uri()
+        program = """
+import assert from 'node:assert/strict';
+let requests=0;
+globalThis.fetch=()=>{requests++;throw Error('network attempt');};
+globalThis.Worker=class {constructor(){requests++;throw Error('worker attempt');}};
+const PIXI=await import(MODULE_URL);
+for(const configure of [PIXI.setBasisTranscoderPath,PIXI.setKTXTranscoderPath])
+ assert.throws(()=>configure({jsUrl:'./unused.js',wasmUrl:'./unused.wasm'}),/transcoding is disabled/);
+for(const loader of [PIXI.loadBasis,PIXI.loadKTX2])
+ await assert.rejects(loader.load('./unused.texture',{},{}),/transcoding is disabled/);
+assert.equal(requests,0);
+for(const name of ['Application','MeshSimple','Texture','BufferImageSource','Graphics'])
+ assert.equal(typeof PIXI[name],'function');
+process.stdout.write(JSON.stringify({requests,version:PIXI.VERSION}));
+""".replace("MODULE_URL", json.dumps(module_url))
+        result = subprocess.run(["node","--input-type=module","-e",program], text=True,
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10, cwd=PROJECT_ROOT)
+        self.assertEqual(json.loads(result.stdout), {"requests":0,"version":"8.22.0"})
+
     def test_schema_contract_detects_nested_weakening(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()

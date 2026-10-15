@@ -80,7 +80,7 @@ function expectedMasks(decoded, locked) {
   for (const [offset] of uniqueCells(offsetsOf(root[29]))) {
     const at = root[29].start + offset;
     // weapons: +5..+7, the high nibble of +8, +9..+11, the ammo +12 only where it is not 0, EN +13..+14, morale +15, skill +16
-    ranges.push([at + 5, 3, 255], [at + 8, 1, 240], [at + 9, 3, 255], [at + 13, 4, 255]);
+    ranges.push([at + 1, 1, 0x70], [at + 2, 1, 0x3f], [at + 5, 3, 255], [at + 8, 1, 240], [at + 9, 3, 255], [at + 13, 4, 255]);
     if (root[29].bytes[offset + 12] !== 0) ranges.push([at + 12, 1, 255]);
   }
   ranges.sort((a, b) => a[0] - b[0]);

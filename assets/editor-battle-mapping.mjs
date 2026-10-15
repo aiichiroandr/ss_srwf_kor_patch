@@ -1,6 +1,13 @@
+import {readBattleTextureClearProfile} from './editor-battle-cleared-textures.mjs?v=20261015-stocknames2';
 // Read-only weapon -> animation dependency -> sprite mapping.
 // The executable consumers, coordinate systems and limits are documented in
 // docs/EDITOR_BATTLE_IMAGE_MAPPING.md. No name or editable stat selects a picture.
+
+import {readBattleRenderDepthTables} from './editor-battle-actor-layout.mjs';
+import {readBattlePaletteRendererTables} from './editor-battle-palette.mjs';
+import {readBattleRotationTables} from './editor-battle-sprite-attributes.mjs';
+import {readBattleDrawColorTable} from './editor-battle-materials.mjs';
+import {readBattleSoundAreaMap} from './editor-battle-sound-area-map.mjs';
 
 const GAMES = new Set(['srwf-f', 'srwf-final']);
 const MODES = new Set(['attack', 'hit', 'evade', 'defense', 'destroyed']);
@@ -141,15 +148,24 @@ const MAIN_WIDTH = new Map(Object.entries({
 }).map(([key, value]) => [Number(key), value]));
 const MACRO_WIDTH = new Map([[8, 2], [9, 1], [11, 3], [18, 4], [19, 4],
   [6, 1], [7, 1], [13, 1], [38, 2], [72, 1], [73, 1], [74, 1], [39, 2], [31, 1], [1, 2]]);
-const ACTOR_WIDTH = new Map([[0xbf, 2], [0xc0, 2], [0xc1, 1], [0xc2, 1],
+const ACTOR_WIDTH = new Map([[0xe3, 2], [0xe4, 2], [0xd4, 2], [0xd5, 2], [0xd6, 2], [0xd7, 2], [0xbf, 2], [0xc0, 2], [0xc1, 1], [0xc2, 1],
   [0xc3, 1], [0xc4, 1], [0xc5, 1], [0xc8, 4], [0xcc, 3], [0xed, 1],
   [0xfe, 1], [0xff, 1], [0xf5, 2], [0xf8, 4], [0xf9, 3], [0xe0, 7], [0xe1, 7],
   [0xc7, 1], [0xca, 6], [0xcd, 3], [0xfd, 4], [0xec, 1], [0xf6, 2],
   [0xf0, 12], [0xf1, 11], [0xf2, 5], [0xd8, 3], [0xf4, 2], [0xc9, 6]]);
-const ACTOR_FA_WIDTH = new Map([[0x44, 6], [0x2c, 2], [0x2d, 2], [0xf6, 3],
+const ACTOR_FA_WIDTH = new Map([[0x29, 6], [0xbb, 2], [0xfd, 2], [0x33, 5], [0x44, 6], [0x2c, 2], [0x2d, 2], [0xf6, 3],
   [0xf7, 3], [0xfa, 3], [0xba, 4], [0xbb, 2], [0xa7, 4], [0xf9, 2], [0xfc, 3],
   [0x10, 4], [0x16, 4], [0x17, 4], [0xd7, 2], [0xfb, 2], [0x46, 3],
-  [0x45, 3], [0xc4, 7], [0xe6, 2], [0x06, 3]]);
+  [0x45, 3], [0x52,2], [0x53,2], [0x55,6], [0x56,2], [0xc4, 7], [0xd0,4], [0xd3,4], [0xe6, 2], [0xe7, 2], [0xe8, 4], [0xf2,3], [0xf3,3], [0xf4,4], [0x06, 3]]);
+// Authoring walks both source branches instead of selecting a representative
+// outcome. Its width admission must not silently make the representative
+// sprite reader skip a branch whose condition it cannot yet resolve.
+const INSPECTION_ACTOR_WIDTH=new Map([...ACTOR_WIDTH,
+  [0xc6,1],[0xcb,1],[0xd0,1],[0xd1,1],[0xd2,1],[0xd3,1],
+  [0xd9,1],[0xda,1],[0xdb,3],[0xdc,3],[0xdd,1],[0xde,1],[0xe2,2],[0xe5,2],[0xf7,4]]);
+const INSPECTION_ACTOR_FA_WIDTH=new Map([...ACTOR_FA_WIDTH,
+  [0x02,10],[0x03,3],[0x04,3],[0x05,7],[0x07,3],[0x11,4],
+  [0x35,5],[0x54,2],[0x57,6],[0x58,2],[0xd6,3],[0xf0,3],[0xf1,3]]);
 // Shared with the local authoring reader. Widths alone do not authorize an
 // operand edit: that module maintains a smaller native-proven field contract.
 export function battleActorInstructionBytes(opcode, subopcode) {
@@ -158,9 +174,9 @@ export function battleActorInstructionBytes(opcode, subopcode) {
   if (opcode === 0xfa) {
     if ([0x36,0x37,0x38,0x39,0x3a,0x3e,0xcf,0xee].includes(subopcode)) return 4;
     if ([0x3b,0xef].includes(subopcode)) return 6;
-    return ACTOR_FA_WIDTH.get(subopcode) ?? null;
+    return INSPECTION_ACTOR_FA_WIDTH.get(subopcode) ?? null;
   }
-  return ACTOR_WIDTH.get(opcode) ?? null;
+  return INSPECTION_ACTOR_WIDTH.get(opcode) ?? null;
 }
 const MAX_STEPS = 4096;
 
@@ -209,7 +225,8 @@ function sequenceSpan(record, index, common = false) {
   let end = record.length;
   for (let p = table; p < minimum; p += 2) {
     const target = u16(record, p) + (common ? table : 0);
-    if (target < minimum || target > record.length) return null;
+    const trailingTableCell = p === minimum - 2 && target === table;
+    if ((target < minimum && !trailingTableCell) || target > record.length) return null;
     if (target > start && target < end) end = target;
   }
   return { start, end };
@@ -217,7 +234,7 @@ function sequenceSpan(record, index, common = false) {
 
 // root0 nested cell3 has aliases/backward targets. Its first target is not its
 // table size. Only the 24 independently validated program cells are consumed.
-function commonProgram(root0, index) {
+export function resolveBattleCommonProgram(root0, index) {
   if (!root0 || !Number.isInteger(index) || index < 0 || index >= 24 || root0.length < 16) return null;
   const table = 12 + (u32(root0, 12) | 0);
   if (table < 0 || table + 96 > root0.length) return null;
@@ -312,7 +329,7 @@ function traceMain(source, state, { root0, start = 46, end = le32(source, 4), la
         source: label, pc, reaction: phase.reaction });
     }
     if (opcode === 0x7e) {
-      const program = commonProgram(root0, source[operand]);
+      const program = resolveBattleCommonProgram(root0, source[operand]);
       if (!program) { diagnostics.push({ source: label, pc, reason: 'common-program-unavailable', program: source[operand] }); return false; }
       if (!traceMain(program.bytes, state, { root0, ...program, onSequence, diagnostics, mainEvidence, phase }, depth + 1)) return false;
     }
@@ -604,4 +621,210 @@ export async function resolveBattleAssetPlan(input = {}) {
   if (input.mode === 'defense') plan.defenseOptions = [...STATE_DEFENSE_OPTIONS, ...DEFENSE_OPTIONS].map(({ id, label }) => ({ id, label }));
   if (input.mode === 'evade') plan.evadeOptions = [{ id: 'afterimage', label: '공통 회피능력 표시' }];
   return plan;
+}
+
+// Retain the selected native program and its physical resource identities.
+// This is input for the scene interpreter, not an eagerly flattened timeline.
+export async function resolveBattleSceneSources(input = {}) {
+  const plan=await resolvePlan({...input,mode:'attack',playback:false});
+  const evidence=plan.evidence;
+  if(!Number.isSafeInteger(evidence?.animationRecordOffset)
+    ||!Number.isSafeInteger(evidence?.animationRecordEnd)
+    ||!['ready','empty'].includes(plan.status))return {...plan,scene:null};
+  const animations=await fileBytes(input,'D_ANIME.BIN');
+  const common=await fileBytes(input,'BTSR.BIN');
+  const messageData=await fileBytes(input,'BMESS.BIN');
+  const executable=await fileBytes(input,'0');
+  let initialRenderDepthTables=null;
+  let initialPaletteRendererTables=null;
+  let initialRotationTables=null;
+  let initialDrawColors=null;
+  let soundAreaMap=null;
+  if(executable){
+    // The original initialization passes this literal pointer and240-byte
+    // bound to its sound API. This is metadata for web audio preparation,
+    // not a copied sound-memory image or a claim about current bank contents.
+    const literal=input.gameId==='srwf-f'?0x06005d3c:0x06005f04;
+    const at=literal-0x06004000;
+    if(at>=0&&at+4<=executable.length){
+      const start=u32(executable,at)-0x06004000;
+      if(start>=0&&start+240<=executable.length){
+        try{soundAreaMap=readBattleSoundAreaMap(executable.subarray(start,start+240));}catch{}
+      }
+    }
+    try{initialRenderDepthTables=readBattleRenderDepthTables(executable,{baseAddress:0x06004000,
+      address:input.gameId==='srwf-f'?0x060b3430:0x060b9a68});}
+    catch{return result('unmapped','전투 렌더링 초기값의 파일 범위를 확인할 수 없습니다.',
+      {...evidence,reason:'scene-render-depth-bounds'});}
+    try{initialPaletteRendererTables=readBattlePaletteRendererTables(executable,{baseAddress:0x06004000,
+      bankBasesAddress:input.gameId==='srwf-f'?0x060b32c8:0x060b9900,
+      addressMapAddress:input.gameId==='srwf-f'?0x060b32e6:0x060b991e});}
+    catch{return result('unmapped','팔레트 초기 표의 파일 범위를 확인할 수 없습니다.',
+      {...evidence,reason:'scene-palette-table-bounds'});}
+    try{initialRotationTables=readBattleRotationTables(executable,{baseAddress:0x06004000,
+      quadrantAddress:input.gameId==='srwf-f'?0x060a7870:0x060add60,
+      sineAddress:input.gameId==='srwf-f'?0x060abee8:0x060b23c8});}
+    catch{return result('unmapped','회전 연출 표의 파일 범위를 확인할 수 없습니다.',
+      {...evidence,reason:'scene-rotation-table-bounds'});}
+    try{initialDrawColors=readBattleDrawColorTable(executable,{baseAddress:0x06004000,
+      address:input.gameId==='srwf-f'?0x060b3450:0x060b9a88});}
+    catch{return result('unmapped','그림 색상 처리 표의 파일 범위를 확인할 수 없습니다.',
+      {...evidence,reason:'scene-draw-color-table-bounds'});}
+  }
+  const actors=relativeRecord(common,3,2);
+  const rawUnits=rootBytes(input.root,27,input.decodedTsr);
+  const unit=relativeRecord(rawUnits,input.unit?.recordIndex,50);
+  if(!actors||!unit||!sequenceSpan(common.subarray(actors.start,actors.end),0,true))return result('unmapped','전투 실행에 필요한 기체·공통 프로그램 참조를 확인할 수 없습니다.',
+    {...evidence,reason:'scene-source-context-missing'});
+  const graphicsSelector=u16(rawUnits,unit.start+2)&0x01ff;
+  const directory=rootBytes(input.root,1,input.decodedTsr),cell=graphicsSelector*8;
+  const count=input.gameId==='srwf-f'?356:369;
+  if(!directory||graphicsSelector<1||graphicsSelector>=count||cell+8>directory.length)
+    return result('unmapped','기체 전투 그림의 참조를 확인할 수 없습니다.',{...evidence,reason:'scene-unit-graphics-invalid'});
+  const start=cell+(u32(directory,cell)|0),end=cell+4+(u32(directory,cell+4)|0);
+  const body=await fileBytes(input,'C_ROBOT.BIN');
+  if(!body||start<u32(directory,0)||end<=start||end>body.length)
+    return result('unmapped','기체 전투 그림이 파일 범위를 벗어납니다.',{...evidence,reason:'scene-unit-graphics-bounds'});
+  let opponentGraphics=null,opponentByte10=null,opponentRecordIndex=null,opponentMovementType=null;
+  if(input.opponent!==undefined){
+    const other=relativeRecord(rawUnits,input.opponent?.recordIndex,50);
+    const selector=other?u16(rawUnits,other.start+2)&0x01ff:0,otherCell=selector*8;
+    if(!other||selector<1||selector>=count||otherCell+8>directory.length)
+      return result('unmapped','상대 기체의 전투 그림 참조를 확인할 수 없습니다.',{...evidence,reason:'scene-opponent-graphics-invalid'});
+    const otherStart=otherCell+(u32(directory,otherCell)|0),otherEnd=otherCell+4+(u32(directory,otherCell+4)|0);
+    if(otherStart<u32(directory,0)||otherEnd<=otherStart||otherEnd>body.length)
+      return result('unmapped','상대 기체 전투 그림이 파일 범위를 벗어납니다.',{...evidence,reason:'scene-opponent-graphics-bounds'});
+    opponentGraphics={fileName:'C_ROBOT.BIN',byteLength:body.length,recordOffset:otherStart,recordEnd:otherEnd};
+    opponentByte10=rawUnits[other.start+10];opponentRecordIndex=input.opponent.recordIndex;
+    opponentMovementType=rawUnits[other.start+25]&15;
+  }
+  const program=animations.slice(evidence.animationRecordOffset,evidence.animationRecordEnd);
+  if(!sequenceSpan(program,0))return result('unmapped','연출 객체의 시작 표를 확인할 수 없습니다.',
+    {...evidence,reason:'scene-actor-directory-invalid'});
+  let bankGraphicLoads=null;
+  const bankDirectory=rootBytes(input.root,8,input.decodedTsr);
+  if(bankDirectory){
+    const payloadStart=24+768*6;
+    if(bankDirectory.length<payloadStart||Array.from({length:6},(_,i)=>u32(bankDirectory,i*4)).some((v,i)=>v!==24+i*768))
+      return result('unmapped','배경 타일 뱅크의 참조 표를 확인할 수 없습니다.',{...evidence,reason:'scene-bank-directory-invalid'});
+    const carrier=await fileBytes(input,'E_BNK.BIN');bankGraphicLoads=[];
+    for(let slot=0;slot<6;slot++){
+      const sourceSelector=u16(program,20+slot*2);
+      if(sourceSelector===0xffff){bankGraphicLoads.push({slot,kind:'reuse',sourceSelector});continue;}
+      const selector=sourceSelector&0x07ff,bank=selector>>>8,index=selector&255;
+      if(bank>=6||index>=64)return result('unmapped','배경 타일 뱅크 선택값이 범위를 벗어납니다.',{...evidence,reason:'scene-bank-selector-invalid'});
+      const cell=24+bank*768+index*12,start=u32(bankDirectory,cell),bankEnd=u32(bankDirectory,cell+4),mapEnd=u32(bankDirectory,cell+8);
+      if(!carrier||start<payloadStart||bankEnd<=start||mapEnd<bankEnd||mapEnd>carrier.length)
+        return result('unmapped','배경 타일·맵 연결이 파일 범위를 벗어납니다.',{...evidence,reason:'scene-bank-graphics-bounds'});
+      bankGraphicLoads.push({slot,kind:'load',sourceSelector,fileName:'E_BNK.BIN',byteLength:carrier.length,
+        recordOffset:start,recordEnd:bankEnd,mapOffset:bankEnd,mapEnd});
+    }
+  }
+  const sprites=plan.assets.length?await fileBytes(input,'E_SPR.BIN'):null;
+  if(plan.assets.some(asset=>!sprites||asset.recordEnd>sprites.length))
+    return result('unmapped','무기 효과 그림이 파일 범위를 벗어납니다.',{...evidence,reason:'scene-weapon-graphics-bounds'});
+  const commonGraphics=[];
+  for(const [frameCacheGroup,sourceTableCell]of [[16,7],[18,20]]){
+    const record=relativeRecord(common,sourceTableCell,8);
+    if(record&&common[record.start]===0x70&&common[record.start+1]===0x58)
+      commonGraphics.push({fileName:'BTSR.BIN',byteLength:common.length,recordOffset:record.start,
+        recordEnd:record.end,frameCacheGroup,sourceTableCell});
+  }
+  // Keep all six loader actions, including repeated physical records and
+  // inherited slots. Unique gallery records are not the native load sequence.
+  const weaponGraphicLoads=[],spriteDirectory=rootBytes(input.root,7,input.decodedTsr);
+  for(let slot=0;slot<6;slot++){
+    const sourceSelector=u16(program,8+slot*2);
+    if(sourceSelector===0xffff){weaponGraphicLoads.push({slot,kind:'reuse',sourceSelector});continue;}
+    const span=pairSpan(spriteDirectory,sourceSelector&0x07ff);
+    if(!span)return result('unmapped','전투 로더의 그림 슬롯 참조를 확인할 수 없습니다.',
+      {...evidence,reason:'scene-weapon-loader-directory',slot});
+    if(span.start===span.end){
+      weaponGraphicLoads.push({slot,kind:'empty',sourceSelector,recordOffset:span.start,recordEnd:span.end});continue;
+    }
+    const asset=plan.assets.find(record=>record.headerSlots.includes(slot));
+    if(!asset||!sprites)return result('unmapped','전투 로더의 그림 자료를 확인할 수 없습니다.',
+      {...evidence,reason:'scene-weapon-loader-asset',slot});
+    weaponGraphicLoads.push({slot,kind:'load',sourceSelector,fileName:'E_SPR.BIN',byteLength:sprites.length,
+      recordOffset:asset.recordOffset,recordEnd:asset.recordEnd});
+  }
+  return {status:'ready',message:'선택한 기체·무기의 원본 전투 실행 자료',evidence,
+    scene:{program,commonActors:common.slice(actors.start,actors.end),commonGraphics,initialRenderDepthTables,initialPaletteRendererTables,initialRotationTables,initialDrawColors,initialTextureClear:readBattleTextureClearProfile(executable,{gameId:input.gameId}),
+      commonData:common.slice(),soundAreaMap,soundAreaMapStatus:soundAreaMap?'ready':'unresolved',commonPrograms:rootBytes(input.root,0,input.decodedTsr)?.slice()??null,
+      durationDirectory:rootBytes(input.root,5,input.decodedTsr)?.slice()??null,
+      subjectDirectory:rootBytes(input.root,28,input.decodedTsr)?.slice()??null,
+      messagePrograms:rootBytes(input.root,24,input.decodedTsr)?.slice()??null,
+      messageGlyphs:rootBytes(input.root,36,input.decodedTsr)?.slice()??null,
+      messageData:messageData?.slice()??null,
+      // Accepted names may be relocated into another physical TSR root.
+      shortNames:input.decodedTsr instanceof Uint8Array&&Number.isSafeInteger(input.root?.[13]?.start)
+        &&Number.isSafeInteger(input.root?.[13]?.end)
+        ?{bytes:input.decodedTsr.slice(),start:input.root[13].start,end:input.root[13].end}:null,
+      unitRecordIndex:input.unit.recordIndex,unitByte10:rawUnits[unit.start+10],graphicsSelector,
+      unitMovementType:rawUnits[unit.start+25]&15,
+      terrainDirectory:rootBytes(input.root,34,input.decodedTsr)?.slice()??null,
+      opponentRecordIndex,opponentByte10,opponentGraphics,opponentMovementType,
+      unitGraphics:{fileName:'C_ROBOT.BIN',byteLength:body.length,recordOffset:start,recordEnd:end},
+      weaponGraphicLoads,bankGraphicLoads,
+      weaponGraphics:plan.assets.map(asset=>({...asset,byteLength:sprites.length,headerSlots:[...asset.headerSlots]}))}};
+}
+
+export function readBattleSceneSubjectRecord(bytes,index){
+  const record=relativeRecord(bytes,index,2);
+  return record?bytes.slice(record.start,record.end):null;
+}
+
+export function readBattleSceneShortName(source,index){
+  // Follow the existing editor name reader: the cell belongs to root13, but
+  // its signed target may live anywhere in the bounded decoded TSR. Cell0 is
+  // not a count. FF terminates only at encoded token boundaries.
+  const bytes=source instanceof Uint8Array?source:source?.bytes;
+  const base=source instanceof Uint8Array?0:source?.start,end=source instanceof Uint8Array?source.length:source?.end;
+  if(!(bytes instanceof Uint8Array)||!Number.isInteger(index)||index<0||index>1023
+    ||!Number.isInteger(base)||!Number.isInteger(end)||base<0||end>bytes.length||base>=end)return null;
+  const cell=base+index*4;
+  if(cell+4>end)return null;
+  const target=cell+(u32(bytes,cell)|0);
+  if(target<0||target>=bytes.length)return null;
+  const limit=Math.min(bytes.length,target+161);let cursor=target;
+  while(cursor<limit){
+    if(bytes[cursor]===255)return bytes.slice(target,cursor+1);
+    const length=bytes[cursor]>=235&&bytes[cursor]<=245?2:1;
+    if(cursor+length>limit)return null;
+    cursor+=length;
+  }
+  return null;
+}
+
+export function readBattleMessageProgram(bytes,index){
+  // F06015A28 selects an unsigned-byte index in root24 via060A0B24.
+  // Cell0 is a program pointer, not a directory byte count. Some other cells
+  // reference data outside this physical root; they cannot be used to infer
+  // the selected program's end. Retain this bounded root and refuse escapes.
+  if(!(bytes instanceof Uint8Array)||!Number.isInteger(index)||index<0||index>255)return null;
+  const cell=index*4;
+  if(cell+4>bytes.length)return null;
+  const start=cell+(u32(bytes,cell)|0);
+  if(start<cell+4||start>=bytes.length)return null;
+  return {bytes,start,end:bytes.length,lowerBound:0,
+    label:`TSR-message-${index}`};
+}
+
+export function readBattleSceneMetadataType(bytes,index){
+  if(!(bytes instanceof Uint8Array)||!Number.isInteger(index)||index<0||index>255)return null;
+  const record=relativeRecord(bytes,0,2);
+  if(!record||index*2+2>record.end-record.start)return null;
+  return (bytes[record.start+index*2+1]>>>5)&3;
+}
+
+export function readBattleSceneAnchorTable(bytes){
+  if(!(bytes instanceof Uint8Array))return null;
+  const record=relativeRecord(bytes,19,64);
+  if(!record)return null;
+  const table=bytes.subarray(record.start,record.end);
+  for(let index=0;index<32;index++){
+    const start=index*2+u16(table,index*2);
+    if(start<64||start+4>table.length)return null;
+  }
+  return table;
 }
