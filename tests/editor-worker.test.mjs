@@ -27,6 +27,19 @@ function harness(api = {}) {
 
 const job = (type, extra = {}) => ({ type, jobId: 'job-00001', ...extra });
 const growth = { packedBytes: 216000, slotBytes: 215040, writableBytes: 215040 };
+test('native texture metadata routes through the current authenticated session without picture transfers',async()=>{
+ let reads=0;
+ const run=harness({inspectEditorBattleTextureRecord:async(session,request)=>{
+  reads++;assert.equal(session.sessionToken,'session-1');assert.equal(request.fileName,'E_SPR.BIN');
+  return {nativeTextureCount:3,assets:[{subIndex:0},{subIndex:2}],diagnostics:[{subIndex:1}]};
+ }});
+ await run.send(job('INSPECT',{}));
+ await run.send({type:'BATTLE_TEXTURE_RECORD',previewId:'native-1',sessionToken:'another',request:{fileName:'E_SPR.BIN'}});
+ assert.equal(reads,0);assert.equal(run.last().type,'BATTLE_PREVIEW_ERROR');
+ await run.send({type:'BATTLE_TEXTURE_RECORD',previewId:'native-2',sessionToken:'session-1',request:{fileName:'E_SPR.BIN'}});
+ assert.equal(reads,1);assert.equal(run.last().type,'BATTLE_PREVIEW_COMPLETE');
+ assert.equal(run.last().result.nativeTextureCount,3);assert.deepEqual(run.posts.at(-1).transfer,[]);
+});
 
 test('an error travels with its code, its message and only the whole numbers of its details', async () => {
   const error = Object.assign(new Error('The edited TSR.BIN needs 216000 bytes'), {
@@ -441,4 +454,25 @@ test('details with an own __proto__ key cross as nothing and do not touch the pr
   assert.equal(Object.getPrototypeOf(details), Object.prototype);
   assert.equal(Object.prototype.hasOwnProperty.call(details, '__proto__'), false);
   assert.equal({}.reason, undefined);
+});
+
+test('portrait sources use the live session route and return metadata without pixel transfer',async()=>{
+ let reads=0;const run=harness({inspectEditorBattlePortraitSources:async(session,request)=>{
+  reads++;assert.equal(session.sessionToken,'session-1');assert.deepEqual(request.portraits,[{pilotIndex:22,expressionIndex:3}]);
+  return {sources:[{fileName:'FACE.BIN',subimageStart:3,subimageCount:1}]};
+ }});
+ await run.send(job('INSPECT',{}));
+ await run.send({type:'BATTLE_PORTRAIT_SOURCES',previewId:'face-1',sessionToken:'foreign',request:{portraits:[{pilotIndex:22,expressionIndex:3}]}});
+ assert.equal(reads,0);assert.equal(run.last().type,'BATTLE_PREVIEW_ERROR');
+ await run.send({type:'BATTLE_PORTRAIT_SOURCES',previewId:'face-2',sessionToken:'session-1',request:{portraits:[{pilotIndex:22,expressionIndex:3}]}});
+ assert.equal(reads,1);assert.equal(run.last().type,'BATTLE_PREVIEW_COMPLETE');assert.equal(run.last().result.sources[0].subimageStart,3);assert.deepEqual(run.posts.at(-1).transfer,[]);
+});
+
+test('player unit pictures use authenticated unit identities and transfer only their own pixels',async()=>{
+ const pixels=new Uint8ClampedArray([1,2,3,255]);let reads=0;
+ const run=harness({previewEditorRecord:async(session,kind,recordIndex)=>{reads++;assert.equal(session.sessionToken,'session-1');assert.equal(kind,'unit');assert.equal(recordIndex,9);return {image:{width:1,height:1,pixels}};}});
+ await run.send(job('INSPECT',{}));
+ await run.send({type:'BATTLE_UNIT_PREVIEW',previewId:'unit-1',sessionToken:'foreign',request:{recordIndex:9}});assert.equal(reads,0);
+ await run.send({type:'BATTLE_UNIT_PREVIEW',previewId:'unit-2',sessionToken:'session-1',request:{recordIndex:9}});
+ assert.equal(reads,1);assert.equal(run.last().type,'BATTLE_PREVIEW_COMPLETE');assert.deepEqual(run.posts.at(-1).transfer,[pixels.buffer]);
 });

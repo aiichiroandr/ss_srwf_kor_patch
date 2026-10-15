@@ -1,3 +1,4 @@
+import {encodeWeaponName,STOCK_F_NAME_SOURCE} from './editor-weapon-names.mjs?v=20261015-stocknames2';
 // Editor presets: the changes of one editor session as a small JSON file that can be saved and loaded into another session
 // of the same game (for example the next public patch with the same personal balance changes). Pure functions over plain
 // rows: no DOM, no files, no game text. The format is documented in docs/LOCAL_EDITOR.md ("변경 내용 목록·저장·불러오기").
@@ -20,14 +21,14 @@
 // still has the `from` value, is a conflict when it has another value, is already done when it has the `to` value, and is
 // skipped (with a reason) when the session could not take it: a record that does not exist or is read-only, a structural
 // unit ability (editor-locks.mjs), a terrain grade the writer refuses, a skill list the record cannot hold.
-import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261012-frames3';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261012-frames3';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261012-frames3';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261012-frames3';
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261012-frames3";
-import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261012-frames3";
-import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261012-frames3";
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261012-frames3";
+import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261015-stocknames2';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261015-stocknames2';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261015-stocknames2';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261015-stocknames2';
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261015-stocknames2";
+import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261015-stocknames2";
+import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261015-stocknames2";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261015-stocknames2";
 import {
   DEFAULT_CONSUMER_LIMIT,
   countConsumers,
@@ -39,18 +40,18 @@ import {
   skillRequest,
   spiritRequest, spiritCatalog, isSpiritLocked,
   pilotPairRequirement, syncPilotExpansionBudget,
-} from "./editor-skill-list.mjs?v=20261012-frames3";
+} from "./editor-skill-list.mjs?v=20261015-stocknames2";
 
-import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261012-frames3";
-import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261012-frames3";
+import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261015-stocknames2";
+import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261015-stocknames2";
 
 export const PRESET_FORMAT = "srwf.editor-preset";
 export const PRESET_VERSION = 1;
 // A bounded 20,000-cell map edit can exceed the original balance-only limit.
 export const PRESET_MAX_BYTES = 8 * 1024 * 1024;
 export const PRESET_GAME_IDS = Object.freeze(["srwf-f", "srwf-final"]);
-export const PRESET_KINDS = Object.freeze(["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"]);
-export const PRESET_TABLE_KEYS = Object.freeze({ unit: "units", pilot: "pilots", weapon: "weapons", reward: "rewards", terrain: "terrains", deployment: "deployments", event: "events", objective: "objectives", reinforcement: "reinforcements", map: "mapCells" });
+export const PRESET_KINDS = Object.freeze(["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map", "weaponCondition"]);
+export const PRESET_TABLE_KEYS = Object.freeze({ unit: "units", pilot: "pilots", weapon: "weapons", reward: "rewards", terrain: "terrains", deployment: "deployments", event: "events", objective: "objectives", reinforcement: "reinforcements", map: "mapCells", weaponCondition:"weaponConditions" });
 // The field order of each table (the writers' bounds table); a screen may list them in its own order.
 export const PRESET_FIELDS = Object.freeze(Object.fromEntries(
   PRESET_KINDS.map((kind) => [kind, Object.freeze(Object.keys(EDITOR_FIELD_BOUNDS[kind]))]),
@@ -76,7 +77,7 @@ const MAX_NAME_LENGTH = 200;
 const MAX_CREATED_AT_LENGTH = 64;
 const RECORD_INDEX_MAX = 0xffff;
 const RELEASE_ID = /^[a-z0-9][a-z0-9.-]{0,99}$/;
-const TOP_KEYS = Object.freeze(["format", "version", "gameId", "base", "createdAt", "units", "pilots", "weapons", "rewards", "terrains", "deployments", "events", "objectives", "reinforcements", "mapCells", "weaponAuthoring", "weaponAuthoringFrom"]);
+const TOP_KEYS = Object.freeze(["format", "version", "gameId", "base", "createdAt", "units", "pilots", "weapons", "rewards", "terrains", "deployments", "events", "objectives", "reinforcements", "mapCells", "weaponAuthoring", "weaponAuthoringFrom", "weaponConditions"]);
 const REQUIRED_TOP_KEYS = Object.freeze(["format", "version", "gameId", "units", "pilots", "weapons"]);
 const ENTRY_KEYS = Object.freeze({
   unit: Object.freeze(["recordIndex", "name", "fields", "identity"]),
@@ -89,6 +90,7 @@ const ENTRY_KEYS = Object.freeze({
   objective: Object.freeze(["recordIndex", "name", "fields", "identity"]),
   reinforcement: Object.freeze(["recordIndex", "name", "fields", "identity"]),
   map: Object.freeze(["recordIndex", "name", "fields", "identity"]),
+  weaponCondition: Object.freeze(["recordIndex", "name", "fields", "identity"]),
 });
 // The two keys of a change, spelled as template literals: the repository's import scan takes the word from followed by a
 // quote mark for a module import.
@@ -133,7 +135,7 @@ export function diffEditorRows(kind, rows, { fields = PRESET_FIELDS[kind], nameO
     // Scenario display rows describe inspected positions, not pending edits.
     // Keep them out of both the change list and saved JSON, even if a caller
     // changes a copied display row directly.
-    if (["deployment", "event", "objective", "reinforcement", "map"].includes(kind) && row?.editable === false) continue;
+    if (["deployment", "event", "objective", "reinforcement", "map", "weaponCondition"].includes(kind) && row?.editable === false) continue;
     const original = row?.original;
     if (!original) continue;
     // A head-less learning table has no numeric pilot header. Its parsed
@@ -170,7 +172,7 @@ export function buildPreset({ gameId, releaseId = null, createdAt = new Date() }
   };
   for (const kind of PRESET_KINDS) {
     const changes = diffEditorRows(kind, tables?.[kind] ?? [], options);
-    if (["reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"].includes(kind) && changes.length === 0) continue;
+    if (["reward", "terrain", "deployment", "event", "objective", "reinforcement", "map", "weaponCondition"].includes(kind) && changes.length === 0) continue;
     preset[PRESET_TABLE_KEYS[kind]] = changes.map((change) => {
       const entry = {
         recordIndex: change.recordIndex,
@@ -240,20 +242,37 @@ function requireKeys(value, allowed, required, details) {
 
 export function parseWeaponAuthoringSettings(value,gameId){
   const rows=readList(value,24,{where:'weaponAuthoring'}),seen=new Set();
-  const motion=['horizontalVelocity','horizontalDisplacement','verticalDisplacement','horizontalPosition','verticalPosition','motionDuration'];
+  const motion=['horizontalVelocity','horizontalDisplacement','verticalDisplacement','horizontalPosition','verticalPosition','motionDuration','holdDuration','frameInterval','scale','scaleDelta','spawnX','spawnDepth','spawnDelay','spawnSequence'];
   return rows.map(row=>{
-    if(!isPlainRecord(row))fail('PRESET_BAD_VALUE');requireKeys(row,['weaponIndex','sourceWeapon','unitIndex','edits'],['weaponIndex','sourceWeapon','unitIndex','edits'],{where:'weaponAuthoring'});
+    if(!isPlainRecord(row))fail('PRESET_BAD_VALUE');requireKeys(row,['weaponIndex','sourceWeapon','unitIndex','edits','animationWeapon','name','imports'],['weaponIndex','sourceWeapon','unitIndex','edits'],{where:'weaponAuthoring'});
     const weaponIndex=ownData(row,'weaponIndex'),sourceWeapon=ownData(row,'sourceWeapon'),unitIndex=ownData(row,'unitIndex');
     if(![weaponIndex,sourceWeapon,unitIndex].every(Number.isSafeInteger)||weaponIndex<1||weaponIndex>(gameId==='srwf-f'?1279:1407)
       ||sourceWeapon<1||sourceWeapon>=(gameId==='srwf-f'?1248:1331)||unitIndex<1||unitIndex>(gameId==='srwf-f'?367:447)||seen.has(weaponIndex))fail('PRESET_BAD_VALUE');
+    const animationWeapon=ownData(row,'animationWeapon'),name=ownData(row,'name'),first=gameId==='srwf-f'?1248:1331;
+    if(Object.hasOwn(row,'animationWeapon')&&(!Number.isSafeInteger(animationWeapon)||animationWeapon<1||animationWeapon>=first))fail('PRESET_BAD_VALUE');
+    if(Object.hasOwn(row,'name')){
+      if(weaponIndex<first||typeof name!=='string')fail('PRESET_BAD_VALUE');
+      try{encodeWeaponName(name,gameId);}catch{
+        // A preset is portable syntax; its actual target font/capacity is
+        // checked by the authenticated project preparer before any write.
+        if(gameId!=='srwf-f')fail('PRESET_BAD_VALUE');
+        try{encodeWeaponName(name,gameId,STOCK_F_NAME_SOURCE);}catch{fail('PRESET_BAD_VALUE');}
+      }
+    }
+    const importTargets=new Set(),imports=Object.hasOwn(row,'imports')?readList(ownData(row,'imports'),16,{where:'weaponAuthoring'}).map(item=>{
+      if(!isPlainRecord(item))fail('PRESET_BAD_VALUE');requireKeys(item,['targetSequence','donorWeapon','donorSequence','placement'],['targetSequence','donorWeapon','donorSequence'],{where:'weaponAuthoring'});
+      const targetSequence=ownData(item,'targetSequence'),donorWeapon=ownData(item,'donorWeapon'),donorSequence=ownData(item,'donorSequence');
+      if(![targetSequence,donorWeapon,donorSequence].every(Number.isSafeInteger)||targetSequence<0||targetSequence>1023||donorSequence<0||donorSequence>1023||donorWeapon<1||donorWeapon>=first||importTargets.has(targetSequence))fail('PRESET_BAD_VALUE');
+      const placement=ownData(item,'placement');if(placement!==undefined&&placement!=='append')fail('PRESET_BAD_VALUE');importTargets.add(targetSequence);return {targetSequence,donorWeapon,donorSequence,...(placement!==undefined?{placement}:{})};
+    }):[];
     seen.add(weaponIndex);const keys=new Set();
     const edits=readList(ownData(row,'edits'),4096,{where:'weaponAuthoring'}).map(edit=>{
       if(!isPlainRecord(edit))fail('PRESET_BAD_VALUE');requireKeys(edit,['recordOffset','field','value'],['recordOffset','field','value'],{where:'weaponAuthoring'});
       const recordOffset=ownData(edit,'recordOffset'),field=ownData(edit,'field'),value=ownData(edit,'value'),key=`${recordOffset}:${field}`;
       if(!Number.isSafeInteger(recordOffset)||recordOffset<0||recordOffset>8*1024*1024||!motion.includes(field)||!Number.isSafeInteger(value)
-        ||value<(field==='motionDuration'?1:-32768)||value>(field==='motionDuration'?255:32767)||keys.has(key))fail('PRESET_BAD_VALUE');
+        ||field==='spawnSequence'&&(value<0||value>1023)||field==='spawnDelay'&&(value<0||value>255)||value<(['motionDuration','holdDuration','frameInterval'].includes(field)?1:-32768)||value>(['holdDuration','frameInterval'].includes(field)?256:field==='motionDuration'?255:32767)||field==='holdDuration'&&value>190&&value!==256||keys.has(key))fail('PRESET_BAD_VALUE');
       keys.add(key);return {recordOffset,field,value};
-    });return {weaponIndex,sourceWeapon,unitIndex,edits};
+    });return {weaponIndex,sourceWeapon,unitIndex,edits,...(imports.length?{imports}:{}),...(animationWeapon!==undefined?{animationWeapon}:{}),...(name!==undefined?{name}:{})};
   });
 }
 
@@ -312,7 +331,7 @@ function parseEntry(kind, value, index, gameId) {
     : !Number.isSafeInteger(recordIndex) || recordIndex < (kind === "terrain" ? 0 : 1) || recordIndex > RECORD_INDEX_MAX) fail("PRESET_BAD_RECORD", details);
   const recordDetails = { kind, recordIndex };
   const identity = ownData(value, "identity");
-  if (scenarioKind && !Object.hasOwn(value, "identity")) fail("PRESET_MISSING_KEY", recordDetails);
+  if ((scenarioKind||kind==="weaponCondition") && !Object.hasOwn(value, "identity")) fail("PRESET_MISSING_KEY", recordDetails);
   if (Object.hasOwn(value, "identity") && (typeof identity !== "string" || !new RegExp(`^${kind}:1:[a-f0-9]{64}$`).test(identity))) fail("PRESET_BAD_VALUE", recordDetails);
   let name = "";
   if (Object.hasOwn(value, "name")) {
@@ -399,7 +418,7 @@ export function parsePreset(text, { gameId = null } = {}) {
   let changeCount = 0;
   for (const kind of PRESET_KINDS) {
     const value = ownData(data, PRESET_TABLE_KEYS[kind]);
-    const list = readList(value === undefined && ["reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"].includes(kind) ? [] : value,
+    const list = readList(value === undefined && ["reward", "terrain", "deployment", "event", "objective", "reinforcement", "map", "weaponCondition"].includes(kind) ? [] : value,
       kind === "map" ? 20000 : kind === "deployment" ? 5000 : MAX_ENTRIES, { where: "table", kind });
     const seen = new Set();
     entries[kind] = Object.freeze(list.map((value, index) => {
@@ -480,7 +499,7 @@ function planField(kind, item, row, gameId, unitCount, objectiveContext) {
     ||item.field==='x'&&item.to>=row.width||item.field==='y'&&item.to>=row.height
     ||item.field==='rewardSelector'&&!(item.to<48||item.to===255)))return skipItem(item,'scenario-domain');
   // a changed unit or pilot grade stays 0..4; a stored odd value may only be kept (the writer's rule)
-  if (kind !== "weapon" && TERRAIN_DATA_ORDER.includes(item.field) && !isGradeEditAllowed(item.to, stored)) return skipItem(item, "grade");
+  if (kind !== "weapon" && TERRAIN_DATA_ORDER.includes(item.field) && !isGradeEditAllowed(item.to, stored,{kind})) return skipItem(item, "grade");
   if (kind === "weapon" && item.to !== stored) {
     if (item.field === "ammo" && (stored === 0 || item.to < 1)) return skipItem(item, "weapon-domain");
     if (item.field === "requiredMorale" && item.to > 150) return skipItem(item, "weapon-domain");
@@ -722,7 +741,7 @@ export function planPresetApplication(preset, session) {
         && !(kind === "deployment" && rows.get(index)?.identityAliases?.includes(entry.identity))) {
         // Scenario locations are part of their identity. Never remap them by a
         // repeated body/plane hash or by a display name across another layout.
-        const matches = ["deployment", "event", "objective", "reinforcement", "map"].includes(kind) ? [] : [...rows.values()].filter((row) => row.identity === entry.identity);
+        const matches = ["deployment", "event", "objective", "reinforcement", "map", "weaponCondition"].includes(kind) ? [] : [...rows.values()].filter((row) => row.identity === entry.identity);
         if (matches.length === 1) index = matches[0].recordIndex;
         else identityReason = matches.length === 0 ? "identity-missing" : "identity-ambiguous";
       }

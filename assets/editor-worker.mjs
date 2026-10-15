@@ -3,10 +3,15 @@ import {
   inspectPatchedImage,
   previewEditorRecord,
   previewEditorBattle,
-  catalogEditorBattleAssets,
+  previewEditorBattleSceneFrame,previewEditorBattleWebAction,
+  previewEditorBattleBackground,previewEditorBattleMusic,
+  inspectEditorBattleSceneSources,
+  inspectEditorBattleTextureRecord,
+  inspectEditorBattlePortraitSources,
+  catalogEditorBattleAssets,catalogEditorWeaponMotions,inspectEditorWeaponDialogueChoices,
   previewEditorBattleAsset,
   viewEditorWeaponProject,inspectEditorWeaponProjectAnimation,previewEditorWeaponProject,
-} from "./editor-core.mjs?v=20261012-frames3";
+} from "./editor-core.mjs?v=20261015-stocknames2";
 
 // The worker body takes its scope and the three core operations so that a test can drive it with a fake scope and fake
 // operations. The page's worker starts it below with the real ones.
@@ -51,7 +56,7 @@ export function createEditorWorker(scope, api) {
     if (message.type === "PREVIEW") {
       void runPreview(message);
     }
-    if (["BATTLE_PREVIEW", "BATTLE_CATALOG", "BATTLE_ASSET_PREVIEW","WEAPON_AUTHORING_PLAN","WEAPON_AUTHORING_INSPECT","WEAPON_AUTHORING_PREVIEW"].includes(message.type)) {
+    if (["BATTLE_PREVIEW", "BATTLE_SCENE_FRAME", "BATTLE_WEB_ACTION", "BATTLE_BACKGROUND_PREVIEW", "BATTLE_MUSIC_PREVIEW", "BATTLE_CATALOG", "BATTLE_WEAPON_MOTIONS", "BATTLE_DIALOGUE_CHOICES", "BATTLE_ASSET_PREVIEW","BATTLE_SCENE_SOURCES","BATTLE_TEXTURE_RECORD","BATTLE_UNIT_PREVIEW","BATTLE_PORTRAIT_SOURCES","WEAPON_AUTHORING_PLAN","WEAPON_AUTHORING_INSPECT","WEAPON_AUTHORING_PREVIEW"].includes(message.type)) {
       void runBattlePreview(message);
     }
     if (message.type === "BATTLE_PREVIEW_CANCEL" && message.previewId === battlePreview?.previewId) {
@@ -72,15 +77,30 @@ export function createEditorWorker(scope, api) {
         throw makeError("EDITOR_SESSION_MISSING", "The authenticated editor session is no longer available.");
       }
       const operation = message.type === "BATTLE_CATALOG" ? api.catalogEditorBattleAssets
+        : message.type === "BATTLE_WEAPON_MOTIONS" ? api.catalogEditorWeaponMotions
+        : message.type === "BATTLE_DIALOGUE_CHOICES" ? api.inspectEditorWeaponDialogueChoices
+        : message.type==='BATTLE_WEB_ACTION'?api.previewEditorBattleWebAction
+        : message.type==='BATTLE_SCENE_FRAME'?api.previewEditorBattleSceneFrame
+        : message.type==='BATTLE_MUSIC_PREVIEW'?api.previewEditorBattleMusic
+        : message.type==='BATTLE_BACKGROUND_PREVIEW'?api.previewEditorBattleBackground
+        : message.type==='BATTLE_SCENE_SOURCES'?api.inspectEditorBattleSceneSources
+        : message.type==='BATTLE_TEXTURE_RECORD'?api.inspectEditorBattleTextureRecord
+        : message.type==='BATTLE_PORTRAIT_SOURCES'?api.inspectEditorBattlePortraitSources
+        : message.type==='BATTLE_UNIT_PREVIEW'?((session,request,options)=>api.previewEditorRecord(session,'unit',request.recordIndex,options))
         : message.type==='WEAPON_AUTHORING_PLAN'?api.viewEditorWeaponProject
         : message.type==='WEAPON_AUTHORING_INSPECT'?api.inspectEditorWeaponProjectAnimation
         : message.type==='WEAPON_AUTHORING_PREVIEW'?api.previewEditorWeaponProject
         : message.type === "BATTLE_ASSET_PREVIEW" ? api.previewEditorBattleAsset : api.previewEditorBattle;
       const result = await operation(session, message.request, { signal: controller.signal });
       if (!live()) return;
-      const images = message.type === "BATTLE_ASSET_PREVIEW" ? [result] : result.assets ?? [];
-      const buffers = [...new Set(images.filter(image => image.pixels instanceof Uint8Array || image.pixels instanceof Uint8ClampedArray)
-        .map(image => image.pixels.buffer))];
+      const images = [...(message.type === "BATTLE_ASSET_PREVIEW" ? [result] : message.type==='BATTLE_UNIT_PREVIEW'?[result.image].filter(Boolean):result.assets ?? []),
+        ...(result.timelineWire?.pictures??[]),...(result.frameWire?.assets??[]),
+        ...(result.dialogueWindow?.picture?[result.dialogueWindow.picture]:[]),...(result.hudWindow?.picture?[result.hudWindow.picture]:[]),
+        ...(result.hudGlyphs?[...result.hudGlyphs.hp.digits,result.hudGlyphs.hp.blank,result.hudGlyphs.hp.hidden,...result.hudGlyphs.en.digits,result.hudGlyphs.en.blank,result.hudGlyphs.en.infinity,...Object.values(result.hudGlyphs.indicators),...(result.hudGlyphs.bars?.pictures??[])]:[]),
+        ...(result.dialogueWire?.events??[]).flatMap(event=>[event.text?.picture,event.portrait?.picture].filter(Boolean))];
+      const buffers = [...new Set([...images.flatMap(image=>[image.pixels,image.colorSlots,image.colors]
+        .filter(bytes=>bytes instanceof Uint8Array||bytes instanceof Uint8ClampedArray).map(bytes=>bytes.buffer)),
+        ...(result.audioWire?.clips??[]).flatMap(clip=>clip.pcm16 instanceof Int16Array?[clip.pcm16.buffer]:[])])];
       scope.postMessage({ type: "BATTLE_PREVIEW_COMPLETE", previewId: message.previewId,
         sessionToken: session.sessionToken, result }, buffers);
     } catch (error) {
@@ -262,6 +282,6 @@ function makeError(code, message) {
 
 if (typeof self !== "undefined" && typeof self.addEventListener === "function") {
   createEditorWorker(self, { exportEditedImage, inspectPatchedImage, previewEditorRecord,
-    previewEditorBattle, catalogEditorBattleAssets, previewEditorBattleAsset,
+    previewEditorBattle, previewEditorBattleSceneFrame,previewEditorBattleWebAction, previewEditorBattleBackground,previewEditorBattleMusic, catalogEditorBattleAssets,catalogEditorWeaponMotions,inspectEditorWeaponDialogueChoices, previewEditorBattleAsset,inspectEditorBattleSceneSources,inspectEditorBattleTextureRecord,inspectEditorBattlePortraitSources,
     viewEditorWeaponProject,inspectEditorWeaponProjectAnimation,previewEditorWeaponProject });
 }

@@ -45,6 +45,19 @@ test('the combined grade is a floor average and either grade being 0 gives 0', (
   assert.equal(combinedGradePercent(0, 4), 0);
   assert.equal(combinedGradePercent(16, 4), 0, 'a value that is not a nibble is never averaged');
 });
+test('pilot correction5 has no standalone percentage and cannot grant a unit edit',()=>{
+ assert.equal(isGradeEditAllowed(5,3,{kind:'pilot'}),true);
+ assert.equal(isGradeEditAllowed(5,3,{kind:'unit'}),false);
+ assert.equal(isGradeEditAllowed(6,3,{kind:'pilot'}),false);
+ assert.equal(gradeLabel(5,{kind:'pilot'}),'α');
+ assert.equal(gradeLabel(5,{kind:'unit'}),'?5');
+ const reading=gradeVerification('pilot',5);
+ assert.equal(reading.percent,null);assert.equal(reading.screenshot,false);
+ assert.equal(combinedGradePercent(5,3),120);
+ assert.equal(combinedGradePercent(5,4),120);
+ assert.equal(combinedGradePercent(5,2),100);
+ assert.equal(combinedGradePercent(5,0),0);
+});
 
 test('reverse map for editing: A..D to 4..1 and both E and "-" to 0; anything else is rejected', () => {
   assert.deepEqual(['A', 'b', ' c ', 'D'].map(parseGradeLetter), [4, 3, 2, 1]);
@@ -188,6 +201,7 @@ test('a pilot whose six combat stats are all 0 carries a caution about its terra
 test('verification: stored values 5..15 are unknown for units and pilots and 4+ for weapons', () => {
   for (const value of [5, 6, 7, 9, 15]) {
     for (const kind of ['unit', 'pilot']) {
+      if(kind==='pilot'&&value===5)continue;
       const reading = gradeVerification(kind, value);
       assert.equal(reading.status, 'unknown', `${kind} ${value}`);
       assert.equal(reading.badge, 'unknown');
@@ -250,7 +264,7 @@ test('unit writer: a changed grade must be 0..4, an unchanged stored grade passe
   }
 });
 
-test('pilot writer: a changed grade must be 0..4, an unchanged stored grade passes through', () => {
+test('pilot writer: the combined-grade correction5 is editable but other unknown values remain locked', () => {
   const stored = [0x49, 0x43]; // ground 4, sea 9, air 4, space 3
   const built = pilotWorld({ cells: 3, records: [pilotRecord({ header: [0x14, 1, 0, 0] }), pilotRecord({ terrain: stored }), pilotRecord()] });
   const rows = pilotRows(built.segments, built.decoded, [], GLYPHS, GLYPHS, 'srwf-final');
@@ -265,7 +279,9 @@ test('pilot writer: a changed grade must be 0..4, an unchanged stored grade pass
   updatePilotRecords(echo, edits({}), new Map());
   assert.deepEqual(echo, original);
   updatePilotRecords(original.slice(), edits({ sea: 2, space: 1 }), new Map());
-  for (const bad of [{ sea: 10 }, { air: 5 }, { ground: 15 }]) {
+  const corrected=original.slice();updatePilotRecords(corrected,edits({space:5}),new Map());
+  assert.equal(corrected[rows[0].byteOffset+10]&15,5);
+  for (const bad of [{ sea: 10 }, { air: 6 }, { ground: 15 }]) {
     assert.throws(() => updatePilotRecords(original.slice(), edits(bad), new Map()),
       (error) => error.code === 'EDITOR_VALUE_OUT_OF_RANGE', JSON.stringify(bad));
   }

@@ -348,14 +348,15 @@ test('320/390px preview fits five modes, dynamic full-width effects and native p
   } finally {await browser.close();}
 });
 
-test('verified source frames repeat only within one actor sequence, pause, and stop on clear',async()=>{
+test('reference pictures remain still until explicit gallery cycling, stay within one actor sequence, and stop on clear',async()=>{
  const savedInterval=globalThis.setInterval,savedClear=globalThis.clearInterval;let tick=null,cleared=0;
  globalThis.setInterval=callback=>{tick=callback;return 91;};globalThis.clearInterval=()=>{cleared++;};
  let f;
  try {
   f=fixture(async request=>({...ready(request,[{...asset(0),role:'weapon-state-sprite',actorId:24,sequence:16},{...asset(1),role:'weapon-state-sprite',actorId:24,sequence:16},{...asset(2),role:'weapon-state-sprite',actorId:3,sequence:99}]),playback:{verifiedReferences:true}}));
   await f.preview.select(selection());assert.equal(f.query('.battle-preview-count').textContent,'1 / 3');
-  tick();assert.equal(f.query('.battle-preview-count').textContent,'2 / 3');tick();assert.equal(f.query('.battle-preview-count').textContent,'1 / 3');
+  tick();assert.equal(f.query('.battle-preview-count').textContent,'1 / 3');
+  f.query('.battle-preview-play').click();tick();assert.equal(f.query('.battle-preview-count').textContent,'2 / 3');tick();assert.equal(f.query('.battle-preview-count').textContent,'1 / 3');
   f.query('.battle-preview-play').click();tick();assert.equal(f.query('.battle-preview-count').textContent,'1 / 3');
   const picker=f.query('.battle-preview-assets');picker.value='asset-2';picker.dispatchEvent({type:'change',target:picker});tick();assert.equal(f.query('.battle-preview-count').textContent,'3 / 3');assert.equal(f.query('.battle-preview-play').hidden,true);
   f.preview.clear();assert.ok(cleared>0);assert.equal(f.query('.battle-preview-play').hidden,true);

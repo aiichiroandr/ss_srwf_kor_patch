@@ -1,7 +1,7 @@
 // Authenticated TSR ordinary-head context for Final/latest C0.11 objectives.
 // These records describe lookup identity, never unique actor or killed history.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261012-frames3';
-import { Sha256 } from './sha256.mjs?v=20261012-frames3';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261015-stocknames2';
+import { Sha256 } from './sha256.mjs?v=20261015-stocknames2';
 function fail(message) { const error=new Error(message);error.code='EDITOR_OBJECTIVE_INVALID';throw error; }
 const ordinaryId=id=>Number.isInteger(id)&&id>=1&&id<400&&!(id>=302&&id<=319);
 function identityOf(id,value) { if(!ordinaryId(id)||typeof value!=='string'||!/^pilot:1:[a-f0-9]{64}$/.test(value))fail('Invalid immutable ordinary pilot identity.');return value; }

@@ -1,6 +1,7 @@
 // Read-only graphics catalog for files obtained from the user's authenticated disc.
 // Byte formats follow fin_effect_lzss.py and extract_fin_disc_images.py. A decoded
 // picture is evidence of a graphics record, never of a weapon/action assignment.
+import {prepareBattleTextureRegistration} from './editor-battle-texture-registration.mjs';
 
 const FILE_NAMES = new Set([
   'EFFECT.BIN', 'E_SPR.BIN', 'E_BNK.BIN', 'FACE.BIN', 'C_ROBOT.BIN',
@@ -92,6 +93,21 @@ function candidatesFor(bytes, diagnostics, fileName, { scan = true } = {}) {
   // D_ANIME have 128 start/end pairs per bank, E_BNK 64 start/bankEnd/mapEnd
   // triples. These are file offsets, not recursive aliases or guessed scans.
   const nested = ['E_SPR.BIN', 'E_BNK.BIN', 'D_ANIME.BIN'].includes(fileName) && bytes.length >= 24 && u32(bytes, 0) === 24;
+  // BBACK's192 triples are cell-relative start/map/end pointers. Native
+  // side buffers retain a bank followed by its own sc02 screen; never pair
+  // a screen with the nearest unrelated signature from an archive scan.
+  if(fileName==='BBACK.BIN'&&bytes.length>=12){
+    const tableEnd=u32(bytes,0);
+    if(tableEnd>=12&&tableEnd%12===0&&tableEnd<=2304&&tableEnd<=bytes.length){
+      for(let cell=0;cell<tableEnd;cell+=12){
+        const start=cell+u32(bytes,cell),map=cell+4+u32(bytes,cell+4),end=cell+8+u32(bytes,cell+8);
+        if(start<tableEnd||start>=map||map>=end||end>bytes.length
+          ||signature(bytes,start)!=='bk01'||signature(bytes,map)!=='sc02')continue;
+        add(start,map,'background-directory',cell/12);
+        add(map,end,'background-directory',cell/12,{bankOffset:start,bankEnd:map});
+      }
+    }
+  }
   if (nested) {
     const bankBytes = fileName === 'E_BNK.BIN' ? 768 : 1024;
     const cellBytes = fileName === 'E_BNK.BIN' ? 12 : 8;
@@ -209,6 +225,19 @@ function decompress(bytes, start, end) {
   }
 }
 
+// Native sc0 decoder0603AE58 accepts the first three signature bytes and
+// retains byte3 as the screen format. Return packed screen data, not a sprite
+// sheet or a rendered battle background; its bank is resolved separately.
+export function decodeBattleCompressedScreenRecord(bytes,{recordOffset,recordEnd}={}){
+  if(!(bytes instanceof Uint8Array)||!Number.isSafeInteger(recordOffset)
+    ||!Number.isSafeInteger(recordEnd)||recordOffset<0||recordOffset+4>=recordEnd
+    ||recordEnd>bytes.length||bytes[recordOffset]!==0x73
+    ||bytes[recordOffset+1]!==0x63||bytes[recordOffset+2]!==0x30)
+    throw new Error('Battle screen: invalid bounded sc0 record');
+  const decoded=decompress(bytes,recordOffset+4,recordEnd);
+  return {...decoded,formatByte:bytes[recordOffset+3],recordOffset,recordEnd};
+}
+
 function parseImage(bytes, candidate) {
   const decoded = decompress(bytes, candidate.offset + 2, candidate.end);
   const { payload } = decoded;
@@ -228,23 +257,28 @@ function parseImage(bytes, candidate) {
     const storedWidth = u16(payload, base + 10);
     const width = storedWidth + (storedWidth % 2);
     const height = u16(payload, base + 12);
+    const pivotX = (u16(payload, base + 14) << 16) >> 16;
+    const pivotY = (u16(payload, base + 16) << 16) >> 16;
     const paletteIndex = payload[base + 9];
     const colorCount = kind === 0x50 ? 256 : 16;
     const paletteOffset = paletteStart + (kind === 0x70 ? paletteIndex * 32 : 0);
-    const rowStride = Math.ceil(width / 8) * (kind === 0x50 ? 8 : 4);
+    // Native loader F06009F32..06009F56 rounds p textures to eight
+    // pixels and P textures to four before registering/uploading rows.
+    const rowStride = kind === 0x50 ? Math.ceil(storedWidth / 4) * 4 : Math.ceil(storedWidth / 8) * 4;
     let code = null;
     if (!width || !height || width > 512 || height > 512) code = 'IMAGE_DIMENSIONS';
     else if (paletteOffset + colorCount * 2 > payload.length) code = 'IMAGE_PALETTE_BOUNDS';
     else if (pixelOffset < palettesEnd || pixelOffset + rowStride * height > payload.length) {
       code = 'IMAGE_PIXEL_BOUNDS';
     }
-    subs.push({ subIndex, storedWidth, width, height, paletteIndex, paletteOffset, pixelOffset,
+    subs.push({ subIndex, storedWidth, width, height, pivotX, pivotY, paletteIndex, paletteOffset, pixelOffset,
       rowStride, colorCount, code });
   }
-  return { ...decoded, kind, subs };
+  return { ...decoded, kind, subs, paletteStart, palettesEnd,
+    declaredColorCount:u32(payload,count*16+2) };
 }
 
-function parseBank(bytes, candidate) {
+function parseBank(bytes, candidate, {validateTileAttributes=true}={}) {
   const decoded = decompress(bytes, candidate.offset + 4, candidate.end);
   const { payload } = decoded;
   if (payload.length < 4) fail('BANK_HEADER', 'Tile bank header is missing.');
@@ -257,7 +291,7 @@ function parseBank(bytes, candidate) {
   const tileStart = attrStart + tileCount;
   if (tileStart + tileCount * 32 > payload.length) fail('BANK_PIXEL_BOUNDS', 'Tile bank pixels exceed the payload.');
   const paletteCount = Math.ceil(colorCount / 16);
-  for (let tile = 0; tile < tileCount; tile += 1) {
+  for (let tile = 0; validateTileAttributes && tile < tileCount; tile += 1) {
     const attr = payload[attrStart + tile];
     // The offline extractor wraps unknown attributes modulo palette count.
     // There is no proven flag interpretation for that case; fail closed here.
@@ -272,9 +306,58 @@ function parseBank(bytes, candidate) {
   return { ...decoded, kind: 'bk01', colorCount, tileCount, attrStart, tileStart, subs };
 }
 
+// BBACK screen cells carry their own palette/flip attributes. Do not replace
+// those with the tile-sheet gallery's per-tile attribute byte.
+export function renderBattleBackgroundFragment(bytes,{bankOffset,bankEnd,fragment,indexed=false}={}){
+  if(!(bytes instanceof Uint8Array)||!Number.isSafeInteger(bankOffset)||!Number.isSafeInteger(bankEnd)
+    ||bankOffset<0||bankOffset+4>=bankEnd||bankEnd>bytes.length||signature(bytes,bankOffset)!=='bk01'
+    ||!(fragment?.cells instanceof Uint32Array)||!Number.isInteger(fragment.width)||fragment.width<1||fragment.width>64
+    ||!Number.isInteger(fragment.height)||fragment.height<1||fragment.height>64
+    ||fragment.cells.length!==fragment.width*fragment.height)
+    throw new Error('Battle background pixels: invalid paired fragment');
+  const bank=parseBank(bytes,{offset:bankOffset,end:bankEnd},{validateTileAttributes:false});
+  const blankTiles=new Map();
+  const transparentTile=tile=>{if(blankTiles.has(tile))return blankTiles.get(tile);const start=bank.tileStart+tile*32;const blank=bank.payload.subarray(start,start+32).every(value=>value===0);blankTiles.set(tile,blank);return blank;};
+  for(const [cellIndex,cell]of fragment.cells.entries()){
+    if(cell===0xffffffff)continue;
+    const tile=cell&0x7fff,palette=(cell>>>16)&0x7f;
+    // An all-zero tile performs no palette reads: source color0 is transparent.
+    // Still reject every out-of-range tile and any colored missing palette.
+    if(tile>=bank.tileCount||palette*16+15>=bank.colorCount&&!transparentTile(tile)){
+      const error=new Error('Battle background pixels: cell outside paired bank');
+      error.code='BATTLE_BACKGROUND_CELL_BOUNDS';
+      error.details={bankOffset,bankEnd,fragmentIndex:fragment.index,cellIndex,
+        ...(Number.isInteger(fragment.cellOffset)?{cellOffset:fragment.cellOffset+cellIndex*4,
+          coordinateSystem:'decompressed sc0 payload-relative byte offset'}:{}),
+        cell,tile,palette,tileCount:bank.tileCount,colorCount:bank.colorCount,
+        boundary:tile>=bank.tileCount?(palette*16+15>=bank.colorCount?'tile-and-palette':'tile'):'palette'};
+      throw error;
+    }
+  }
+  const width=fragment.width*8,height=fragment.height*8,pixels=new Uint8ClampedArray(width*height*4);
+  // Effect planes retain color references until their scene palette is
+  // published. Baking the bank's source RGB here loses scripted recoloring.
+  const colorIndices=indexed?new Uint8Array(width*height):null;
+  const paletteIndices=indexed?new Uint8Array(width*height):null;
+  for(let row=0;row<fragment.height;row++)for(let column=0;column<fragment.width;column++){
+    const cell=fragment.cells[row*fragment.width+column];if(cell===0xffffffff)continue;
+    const tile=cell&0x7fff,palette=(cell>>>16)&0x7f;
+    for(let y=0;y<8;y++)for(let x=0;x<8;x++){
+      const sx=cell&0x40000000?7-x:x,sy=cell&0x80000000?7-y:y;
+      const packed=bank.payload[bank.tileStart+tile*32+sy*4+(sx>>1)],index=sx&1?packed&15:packed>>>4;
+      const target=((row*8+y)*width+column*8+x)*4;
+      paletteColor(bank.payload,4+palette*32,index,pixels,target);
+      if(indexed){colorIndices[target/4]=index;paletteIndices[target/4]=palette;}
+    }
+  }
+  return {width,height,pixels,...(indexed?{colorIndices,paletteIndices}:{})};
+}
+
 function parseCandidate(bytes, candidate) {
   if (candidate.format === 'image') return parseImage(bytes, candidate);
   if (candidate.format === 'bk01') return parseBank(bytes, candidate);
+  if(candidate.methods?.includes('background-directory'))
+    fail('SC02_BATTLE_SCREEN_LAYOUT_UNIMPLEMENTED', 'Battle screens have multiple native fragments and require their own compositor.');
   if (candidate.bindingAmbiguous) fail('SC02_BANK_BINDING_AMBIGUOUS', 'This tile map has conflicting directory bank references.');
   if (candidate.bankOffset !== undefined) {
     if (candidate.bankEnd !== candidate.offset || candidate.bankOffset >= candidate.offset
@@ -405,7 +488,8 @@ export function inspectBattleAssetRecord(value, { fileName, recordOffset, record
   try { parsed = parseCandidate(bytes, candidate); }
   catch (error) {
     diagnostic(diagnostics, error.code ?? 'GRAPHICS_RECORD_INVALID', candidate.offset);
-    return { fileName: name, byteLength: bytes.length, assets: [], hasMore: false, nextCursor: null, diagnostics };
+    return { fileName: name, byteLength: bytes.length, recordOffset, recordEnd,
+      nativeTextureCount:null,assets: [], hasMore: false, nextCursor: null, diagnostics };
   }
   if (cursor >= parsed.subs.length) fail('BATTLE_ASSET_CURSOR', 'Graphics cursor exceeds this record.');
   const assets = [];
@@ -416,7 +500,9 @@ export function inspectBattleAssetRecord(value, { fileName, recordOffset, record
       width: sub.width, height: sub.height, ...provenance(name, bytes, candidate, parsed, sub) });
   }
   const hasMore = cursor < parsed.subs.length;
-  return { fileName: name, byteLength: bytes.length, assets, hasMore, nextCursor: hasMore ? cursor : null, diagnostics };
+  return { fileName: name, byteLength: bytes.length, recordOffset, recordEnd,
+    nativeTextureCount:[0x50,0x70].includes(parsed.kind)?parsed.subs.length:null,
+    assets, hasMore, nextCursor: hasMore ? cursor : null, diagnostics };
 }
 
 function paletteColor(payload, offset, index, pixels, target) {
@@ -438,7 +524,50 @@ function bankPixel(bank, tile, x, y, pixels, target) {
 }
 
 /** Revalidate a catalog key and decode just that subimage into local RGBA. */
-export function decodeBattleAsset(value, key) {
+export function prepareBattleAssetTextureRegistration(value,{fileName,recordOffset,recordEnd,...state}={}){
+  const bytes=inputBytes(value),name=checkedFileName(fileName);
+  const candidate=candidateAt(bytes,name,recordOffset,recordEnd),parsed=parseCandidate(bytes,candidate);
+  const start=state.subimageStart??0,count=state.subimageCount??(parsed.subs.length-start);
+  if(![0x50,0x70].includes(parsed.kind)||!Number.isInteger(start)||start<0
+    ||!Number.isInteger(count)||count<1||start+count>parsed.subs.length)
+    fail('BATTLE_TEXTURE_REGISTRATION','Invalid native subimage range.');
+  const selected=parsed.subs.slice(start,start+count);
+  // Registration/upload uses source-bounded uint16 geometry independently
+  // of the gallery/draw cap. Native F06009FC0..0600A172 and Final0600A210..
+  // 0600A39A preserve the1024x64 terminal storage image without cropping.
+  // Recheck palette/pixel bounds explicitly: IMAGE_DIMENSIONS can precede
+  // those diagnostics in the gallery parser, so accepting it alone is unsafe.
+  const paletteEnd=parsed.paletteStart+parsed.declaredColorCount*2;
+  if(!Number.isSafeInteger(parsed.declaredColorCount)||parsed.declaredColorCount<16
+    ||parsed.declaredColorCount>4096||parsed.declaredColorCount%16
+    ||paletteEnd>parsed.payload.length||paletteEnd>Math.min(...parsed.subs.map(sub=>sub.pixelOffset))
+    ||selected.some(sub=>{
+      const width=parsed.kind===0x50?sub.rowStride:sub.rowStride*2;
+      return sub.code&&sub.code!=='IMAGE_DIMENSIONS'
+        ||!sub.storedWidth||!sub.height||width>65535
+        ||sub.rowStride*sub.height>0x80000
+        ||sub.paletteOffset+sub.colorCount*2>paletteEnd
+        ||sub.pixelOffset<Math.max(paletteEnd,parsed.palettesEnd)
+        ||sub.pixelOffset+sub.rowStride*sub.height>parsed.payload.length;
+    }))fail('BATTLE_TEXTURE_REGISTRATION','Native registration requires every selected subimage.');
+  const images=selected.map(sub=>{
+    const width=parsed.kind===0x50?sub.rowStride:sub.rowStride*2;
+    const colorIndices=new Uint8Array(width*sub.height);
+    for(let y=0;y<sub.height;y++)for(let x=0;x<width;x++){
+      const packed=parsed.payload[sub.pixelOffset+y*sub.rowStride+(parsed.kind===0x50?x:x>>>1)];
+      colorIndices[y*width+x]=parsed.kind===0x50?packed:(x&1?packed&15:packed>>>4);
+    }
+    return {subIndex:sub.subIndex,nativeTexture:true,width,height:sub.height,colorIndices,
+      colorCount:sub.colorCount,paletteIndex:sub.paletteIndex,pivot:{x:sub.pivotX,y:sub.pivotY}};
+  });
+  // Source workspace/palette counts are observations, not resource-write admission.
+  return Object.assign(prepareBattleTextureRegistration({...state,subimageStart:start,images,kind:parsed.kind}),
+    {fileName:name,byteLength:bytes.length,recordOffset,recordEnd,
+      decodedByteLength:parsed.payload.length,nativePaletteBankCount:parsed.declaredColorCount>>>4});
+}
+
+export function decodeBattleAsset(value, key, {indexed=false,paletteOnly=false,nativeTexture=false}={}) {
+  if(nativeTexture&&(!indexed||paletteOnly))fail('BATTLE_ASSET_KEY','Native texture decoding requires an indexed sprite request.');
   const bytes = inputBytes(value);
   if (typeof key !== 'string' || key.length > 128) fail('BATTLE_ASSET_KEY', 'Invalid graphics asset key.');
   const match = /^battle1:([A-Z0-9_]+\.BIN):(\d{1,8}):(\d{1,8}):(\d{1,8}):(\d{1,3})$/.exec(key);
@@ -451,10 +580,39 @@ export function decodeBattleAsset(value, key) {
   // The key names only a known carrier. The session owner must additionally
   // match that name to the requested ISO file and authenticated source bytes.
   const candidate = candidateAt(bytes, fileName, offset, end);
-  const parsed = parseCandidate(bytes, candidate);
+  const parsed = paletteOnly&&candidate.format==='bk01'
+    ?parseBank(bytes,candidate,{validateTileAttributes:false}):parseCandidate(bytes, candidate);
   const sub = parsed.subs[subIndex];
-  if (!sub || sub.code) fail(sub?.code ?? 'BATTLE_ASSET_KEY', 'Graphics subimage is invalid.');
-  const pixels = new Uint8ClampedArray(sub.width * sub.height * 4);
+  if (!sub || (sub.code&&!paletteOnly)) fail(sub?.code ?? 'BATTLE_ASSET_KEY', 'Graphics subimage is invalid.');
+  if(paletteOnly){
+    if(indexed||![0x50,0x70,'bk01'].includes(parsed.kind))fail('BATTLE_ASSET_KEY','Whole-bank palette decoding requires a bk01 or sprite record.');
+    const sprite=parsed.kind!=='bk01';
+    const start=sprite?parsed.paletteStart:4;
+    // The native header declares the entire palette, including unused banks.
+    // Pixel offsets bound that block but do not define its count.
+    const colorCount=sprite?parsed.declaredColorCount:parsed.colorCount;
+    // Native palette transfer F0600A18A..0600A21A / Final0600A3B0..0600A446
+    // reads the declared count immediately after the complete descriptor table.
+    // A valid palette can accompany a raster beyond the web512-pixel cap.
+    // Keep its source/pixel boundaries checked; this grants no raster decode
+    // or native texture registration for an unsupported image size.
+    if(!Number.isSafeInteger(colorCount)||colorCount<16||colorCount>4096||colorCount%16
+      ||start+colorCount*2>parsed.payload.length||sprite&&(parsed.subs.some(item=>
+        (item.code&&item.code!=='IMAGE_DIMENSIONS')||!item.storedWidth||!item.height
+        ||item.pixelOffset+item.rowStride*item.height>parsed.payload.length
+        ||item.paletteOffset+item.colorCount*2>start+colorCount*2)
+        ||start+colorCount*2>Math.min(...parsed.subs.map(item=>item.pixelOffset))
+        ||parsed.palettesEnd>start+colorCount*2))
+      fail('IMAGE_PALETTE_BOUNDS','Whole sprite palette exceeds its verified record.');
+    return {paletteWords:Uint16Array.from({length:colorCount},(_,i)=>u16(parsed.payload,start+i*2)),
+      colorCount,nativeBankCount:colorCount>>>4,
+      provenance:provenance(fileName,bytes,candidate,parsed,sub)};
+  }
+  if(indexed&&parsed.kind!==0x50&&parsed.kind!==0x70)
+    fail('BATTLE_ASSET_KEY','Indexed sprite decoding requires an image record.');
+  const width=nativeTexture?(parsed.kind===0x50?sub.rowStride:sub.rowStride*2):sub.width;
+  const colorIndices=indexed?new Uint8Array(width*sub.height):null;
+  const pixels = new Uint8ClampedArray(width * sub.height * 4);
   if (parsed.kind === 'bk01') {
     for (let tile = 0; tile < sub.sheetTileCount; tile += 1) {
       const sourceTile = sub.firstTile + tile;
@@ -475,14 +633,18 @@ export function decodeBattleAsset(value, key) {
     }
   } else {
     for (let y = 0; y < sub.height; y += 1) {
-      for (let x = 0; x < sub.width; x += 1) {
+      for (let x = 0; x < width; x += 1) {
         const source = sub.pixelOffset + y * sub.rowStride + (parsed.kind === 0x50 ? x : x >> 1);
         const packed = parsed.payload[source];
         const index = parsed.kind === 0x50 ? packed : (x % 2 ? packed & 15 : packed >> 4);
-        paletteColor(parsed.payload, sub.paletteOffset, index, pixels, (y * sub.width + x) * 4);
+        if(colorIndices)colorIndices[y*width+x]=index;
+        paletteColor(parsed.payload, sub.paletteOffset, index, pixels, (y * width + x) * 4);
       }
     }
   }
-  return { width: sub.width, height: sub.height, pixels, subIndex,
+  return { width, height: sub.height, pixels, subIndex,
+    ...(nativeTexture?{nativeTexture:true}:{}),
+    ...(indexed?{colorIndices,colorCount:sub.colorCount,paletteIndex:sub.paletteIndex,pivot:{x:sub.pivotX,y:sub.pivotY},
+      paletteWords:Uint16Array.from({length:sub.colorCount},(_,i)=>u16(parsed.payload,sub.paletteOffset+i*2))}:{}),
     provenance: provenance(fileName, bytes, candidate, parsed, sub) };
 }

@@ -1,12 +1,15 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261012-frames3';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261012-frames3';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261012-frames3";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261012-frames3";
-import { createBattlePreview } from "./editor-battle-preview.mjs?v=20261012-frames3";
-import {createWeaponAuthoringUI} from './editor-weapon-authoring-ui.mjs?v=20261012-frames3';
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261012-frames3";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261012-frames3";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261012-frames3";
+import {WEAPON_CRITICAL_CHOICES,weaponCriticalLabel} from './editor-weapon-critical.mjs?v=20261015-stocknames2';
+import {battlePilotDefault} from './editor-battle-pilot-defaults.mjs?v=20261015-stocknames2';
+import {createBattlePlayer} from './editor-battle-player.mjs?v=20261015-stocknames2';
+import {copyWeaponAuthoringEntries,weaponAnimationPreviewEntries,changedWeaponAuthoringIndices} from './editor-weapon-settings.mjs?v=20261015-stocknames2';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261015-stocknames2';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261015-stocknames2';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261015-stocknames2";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261015-stocknames2";
+import {createWeaponAuthoringUI} from './editor-weapon-authoring-ui.mjs?v=20261015-stocknames2';
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261015-stocknames2";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261015-stocknames2";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261015-stocknames2";
 import {
   canStep,
   filterRecords,
@@ -15,9 +18,9 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261012-frames3";
+} from "./editor-list.mjs?v=20261015-stocknames2";
 import {
-  GRADE_CHOICES,
+  GRADE_CHOICES, PILOT_GRADE_CHOICES,
   TERRAIN_LABELS,
   TERRAIN_SCREEN_ORDER,
   WEAPON_GRADE_CHOICES,
@@ -26,7 +29,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261012-frames3";
+} from "./editor-grades.mjs?v=20261015-stocknames2";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -60,27 +63,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261012-frames3";
+} from "./editor-skill-list.mjs?v=20261015-stocknames2";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261012-frames3";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261012-frames3";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261012-frames3";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261012-frames3";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261012-frames3";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261012-frames3";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261012-frames3";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261012-frames3";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261012-frames3";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261012-frames3";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261012-frames3";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261012-frames3";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261012-frames3";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261012-frames3";
+} from "./editor-facts.mjs?v=20261015-stocknames2";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261015-stocknames2";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261015-stocknames2";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261015-stocknames2";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261015-stocknames2";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261015-stocknames2";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261015-stocknames2";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261015-stocknames2";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261015-stocknames2";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261015-stocknames2";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261015-stocknames2";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261015-stocknames2";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261015-stocknames2";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261015-stocknames2";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -88,14 +91,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261012-frames3";
+} from "./font-revisions.mjs?v=20261015-stocknames2";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261012-frames3";
+} from "./release-notes.mjs?v=20261015-stocknames2";
 
-const STATIC_ASSET_REVISION = "20261012-frames3";
+const STATIC_ASSET_REVISION = "20261015-stocknames2";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -562,11 +565,13 @@ const state = {
   editorUnits: [],
   editorPilots: [],
   editorWeapons: [],
+  editorWeaponConditions: [],
   editorWeaponAuthoring: [],
   editorOriginalWeaponAuthoring: [],
   editorTerrains: [],
   editorRewards: [],
   editorScenario: createScenarioModel(),
+  editorBattlePilotAssignments: [],
   editorPartNames: [],
   editorUnitAbilityNames: [],
   editorPilotAbilityNames: [],
@@ -595,16 +600,63 @@ const optionNodes = { unit: new Map(), pilot: new Map(), weapon: new Map() };
 const rowIndexMaps = { unit: new Map(), pilot: new Map(), weapon: new Map() };
 const listNeedsBuild = { unit: false, pilot: false, weapon: false };
 const battlePreviewRequests = new Map();
-const weaponBattlePreview = createBattlePreview({ container: elements.weaponBattlePreview,
-  requestPreview: requestBattlePreview });
 const weaponAuthoringUI=createWeaponAuthoringUI({container:elements.weaponAuthoring,
-  getEntries:()=>state.editorWeaponAuthoring,getOwner:()=>weaponBattlePreview.snapshot().unitIndex,
-  inspect:request=>requestBattleJob('WEAPON_AUTHORING_INSPECT',{...request,weaponAuthoring:weaponAuthoringRequest()}),
+  getWeapons:()=>state.editorWeapons,getUnits:()=>state.editorUnits,
+  getGame:()=>state.editorGameId,getBaseHash:()=>state.editorBaseTargetHash,
+  getEntries:()=>state.editorWeaponAuthoring,getOwner:()=>state.editorWeapons.find(row=>row.recordIndex===state.editorSelected.weapon)?.owners?.[0]?.unit??null,
+  inspect:request=>{const {weaponAuthoring=weaponAuthoringRequest(),...inspection}=request;return requestBattleJob('WEAPON_AUTHORING_INSPECT',{...inspection,weaponAuthoring:copyWeaponAuthoringEntries(weaponAuthoring)});},
+  readMotionCatalog:()=>requestBattleJob('BATTLE_WEAPON_MOTIONS',{signal:new AbortController().signal}),
   apply:applyWeaponAuthoring,
-  onToggle:open=>{elements.weaponBattlePreview.hidden=open;weaponBattlePreview.setBusy(open);},
+  onDraftChange:()=>editorChanges.refresh(),
+  onPreview:id=>{if(state.editorSessionToken){battlePlayerOriginalPreview=true;battlePlayerPreviewEntries=null;battlePlayerReturnWeapon=state.editorSelected.weapon;ensureBattlePlayer().open(id,{sourcePreview:true});}},
+  onPreviewEffect:({weaponIndex,entries})=>{if(state.editorSessionToken){battlePlayerOriginalPreview=false;battlePlayerPreviewEntries=copyWeaponAuthoringEntries(entries);battlePlayerReturnWeapon=state.editorSelected.weapon;ensureBattlePlayer().open(weaponIndex,{effectPreview:true});}},
   onSelect:id=>{state.editorSelected.weapon=id;EDITOR_UI.weapon.search.value='';editorSearchTools.clear?.('weapon');renderRecordList('weapon',{build:true});selectEditorRecord('weapon');},
 });
-function weaponAuthoringRequest(){return state.editorWeaponAuthoring.map(({weaponIndex,sourceWeapon,unitIndex,edits})=>({weaponIndex,sourceWeapon,unitIndex,edits:edits.map(e=>({...e}))}));}
+const battlePlayerPanel=document.createElement('div');battlePlayerPanel.className='bp-overlay';battlePlayerPanel.hidden=true;document.body.append(battlePlayerPanel);
+let battlePlayer=null,battlePlayerReturnWeapon=null,battlePlayerOriginalPreview=false,battlePlayerPreviewEntries=null;
+const ensureBattlePlayer=()=>battlePlayer??=createBattlePlayer({container:battlePlayerPanel,
+ getWeapons:()=>state.editorWeapons.filter(r=>r.editable&&r.nameStatus==='decoded').map(r=>({...r,name:editorRowName(r)})),
+ getUnits:()=>state.editorUnits.map(r=>({...r,name:editorRowName(r)})),
+ getTerrains:()=>state.editorTerrains.map(r=>({...r,name:editorRowName(r)})),
+ getPilots:()=>state.editorPilots.map(r=>({...r,name:editorRowName(r)})),
+ getPilotForUnit:unitId=>battlePilotDefault(unitId,state.editorBattlePilotAssignments,state.editorScenario.deployments,state.editorPilots),
+ getCombatRows:request=>{
+  const rows=(type,ids)=>editorRowsFor(type).filter(row=>ids.includes(row.recordIndex)).map(row=>({recordIndex:row.recordIndex,fields:Object.fromEntries(editorFieldsFor(type).map(field=>[field,row[field]])),
+   ...(type==='pilot'?{specialAbilities:skillRequest(row.specialAbilities??[]),...(Array.isArray(row.spirits)?{spirits:spiritRequest(row.spirits)}:{})}:{})}));
+  return {units:rows('unit',[request.unitIndex,request.opponentUnitIndex]),pilots:rows('pilot',[request.attackerPilotIndex,request.defenderPilotIndex]),weapons:rows('weapon',[request.weaponIndex]),
+   terrains:state.editorTerrains.filter(row=>row.recordIndex===request.terrainIndex).map(row=>({recordIndex:row.recordIndex,fields:Object.fromEntries(MAP_TERRAIN_FIELDS.map(field=>[field,row[field]]))}))};
+ },
+ readDialogueChoices:request=>requestBattleJob('BATTLE_DIALOGUE_CHOICES',request),
+ onApplyDialogue:(weaponIndex,key)=>{const row=state.editorWeapons.find(row=>row.recordIndex===weaponIndex);if(!row||isLockedRecord(row)||!Number.isInteger(key)||key<0||key>63)return false;row.dialogueKey=key;invalidateEditorDownloads();if(state.editorSelected.weapon===weaponIndex){renderEditorRecord('weapon',row);}refreshRecordOption('weapon',row);updateEditorStatus('weapon',row);return true;},
+ readMotionCatalog:({signal})=>requestBattleJob('BATTLE_WEAPON_MOTIONS',{signal}),
+ readMusic:request=>requestBattleJob('BATTLE_MUSIC_PREVIEW',request),
+ readScene:async({signal,...request})=>{
+  const {weaponIndex,unitIndex,opponentUnitIndex,terrainIndex,mode}=request;
+  const previewAuthoring=weaponAnimationPreviewEntries(battlePlayerPreviewEntries??state.editorWeaponAuthoring,weaponIndex,{original:battlePlayerOriginalPreview});
+  const images=[];for(const recordIndex of [unitIndex,opponentUnitIndex]){
+   const result=await requestBattleJob('BATTLE_UNIT_PREVIEW',{recordIndex,signal});images.push(result.image);
+  }
+  const background=await requestBattleJob('BATTLE_BACKGROUND_PREVIEW',{backgroundIndex:1,signal});
+  const action=await requestBattleJob('BATTLE_WEB_ACTION',{...request,weaponAuthoring:previewAuthoring,signal});
+  return {images,backgrounds:background.assets,timelineWire:action?.timelineWire,
+    effectSoundPrepared:action?.effectSoundPrepared,effectSoundStatus:action?.effectSoundStatus,effectSoundReason:action?.effectSoundReason,effectSoundTrace:action?.effectSoundTrace,
+    previewStatus:action?.status,previewReason:action?.reason??action?.blocked?.evidence?.reason??null,previewMotionSide:action?.blocked?.side,previewCompatibleTerrains:action?.blocked?.compatibleTerrainIndices,battlefieldStatePresentation:action?.battlefieldStatePresentation,effectImportUsage:action?.effectImportUsage,dialogueWire:action?.dialogueWire,dialogueWindow:action?.dialogueWindow,
+    dialogueStatus:action?.dialogueStatus,dialogueReason:action?.dialogueReason,audioStatus:action?.audioStatus,audioReason:action?.audioReason,audioWire:action?.audioWire,hudWindow:action?.hudWindow,hudGlyphs:action?.hudGlyphs,hudEnergyPresentation:action?.hudEnergyPresentation,lightPresentation:action?.lightPresentation,hudCues:action?.hudCues,hudIndicatorCues:action?.hudIndicatorCues,combat:action?.combat,weaponMotion:action?.weaponMotion,destructionPresentation:action?.destructionPresentation};
+ },readSceneFrame:async request=>{
+  const frame=await requestBattleJob('BATTLE_SCENE_FRAME',{...request,dialogueDisplay:'off',weaponAuthoring:weaponAnimationPreviewEntries(battlePlayerPreviewEntries??state.editorWeaponAuthoring,request.weaponIndex,{original:battlePlayerOriginalPreview})});
+  if(frame.status!=='ready')return frame;
+  const background=await requestBattleJob('BATTLE_BACKGROUND_PREVIEW',{backgroundIndex:frame.backgroundIndex,signal:request.signal});
+  return {...frame,backgrounds:background.assets};
+ },
+ onEditWeapon:weaponIndex=>{battlePlayerPreviewEntries=null;battlePlayerOriginalPreview=false;battlePlayerReturnWeapon=null;if(Number.isSafeInteger(weaponIndex)&&jumpToEditorRecord('weapon',weaponIndex))weaponAuthoringUI.show();},
+ onClose:weaponIndex=>{battlePlayerPreviewEntries=null;battlePlayerOriginalPreview=false;if(battlePlayerReturnWeapon!==null){weaponIndex=battlePlayerReturnWeapon;battlePlayerReturnWeapon=null;}if(Number.isSafeInteger(weaponIndex)&&weaponIndex!==state.editorSelected.weapon)jumpToEditorRecord('weapon',weaponIndex);battlePlayerOpen.focus();}});
+const battlePlayerOpen=document.createElement('button');battlePlayerOpen.type='button';battlePlayerOpen.className='battle-player-open';battlePlayerOpen.textContent='전투 플레이어 열기';
+battlePlayerOpen.addEventListener('click',async()=>{
+  const sessionToken=state.editorSessionToken;battlePlayerOpen.disabled=true;
+  try{if(await weaponAuthoringUI.flush()&&sessionToken&&sessionToken===state.editorSessionToken){battlePlayerOriginalPreview=false;battlePlayerPreviewEntries=null;ensureBattlePlayer().open(state.editorSelected.weapon);}}
+  finally{battlePlayerOpen.disabled=false;}
+});elements.weaponBattlePreview.prepend(battlePlayerOpen);
+function weaponAuthoringRequest(){return copyWeaponAuthoringEntries(state.editorWeaponAuthoring);}
 async function applyWeaponAuthoring(entries,seed=null){
   const controller=new AbortController();
   const seedRow=seed?state.editorWeapons.find(row=>row.recordIndex===seed.copyFrom):null;
@@ -615,7 +667,7 @@ async function applyWeaponAuthoring(entries,seed=null){
   state.editorUnits=mergeAuthoringRows('unit',result.units);state.editorWeapons=mergeAuthoringRows('weapon',result.weapons);
   if(seedRow){const row=state.editorWeapons.find(item=>item.recordIndex===seed.copyTo);for(const field of editorFieldsFor('weapon'))row[field]=seedRow[field];row.original=Object.freeze({...row.original,...Object.fromEntries(editorFieldsFor('weapon').map(field=>[field,row[field]]))});}
   state.editorWeaponAuthoring=result.weaponAuthoring;
-  rebuildEditorRowIndex();listNeedsBuild.unit=listNeedsBuild.weapon=true;
+  rebuildEditorRowIndex();optionNodes.unit.clear();optionNodes.weapon.clear();listNeedsBuild.unit=listNeedsBuild.weapon=true;
   invalidateEditorDownloads();renderRecordList('weapon',{build:true});selectEditorRecord('weapon');updateEditorStatus('weapon');
   }finally{state.editorAuthoringBusy=false;updateControls();}
 }
@@ -627,16 +679,12 @@ function mergeAuthoringRows(kind,incoming){
 }
 
 function clearBattlePreview() {
+  battlePlayer?.clear();battlePlayerReturnWeapon=null;battlePlayerOriginalPreview=false;battlePlayerPreviewEntries=null;
   weaponAuthoringUI.clear();state.editorWeaponAuthoring=[];state.editorOriginalWeaponAuthoring=[];
-  weaponBattlePreview.clear();
   for (const pending of battlePreviewRequests.values()) pending.cancel();
   battlePreviewRequests.clear();
 }
 
-function requestBattlePreview({ signal, ...request }) {
-  return requestBattleJob(state.editorWeaponAuthoring.length?'WEAPON_AUTHORING_PREVIEW':'BATTLE_PREVIEW',
-    {...request,playback:request.mode==='attack',...(state.editorWeaponAuthoring.length?{weaponAuthoring:weaponAuthoringRequest()}:{}),signal});
-}
 function requestBattleJob(type,{ signal, ...request }) {
   return new Promise((resolve, reject) => {
     if (signal.aborted || !state.editorSessionToken || !state.editorWorker) {
@@ -843,12 +891,14 @@ const editorChanges = createEditorChanges({
   jumpTo: (kind, recordIndex, fields) => focusEditorChange(kind, recordIndex, fields),
   afterApply: () => refreshEditorAfterPreset(),
   weaponAuthoring:()=>weaponAuthoringRequest(),
+  weaponAuthoringChanges:()=>changedWeaponAuthoringIndices(state.editorWeaponAuthoring,state.editorOriginalWeaponAuthoring).map(weaponIndex=>({weaponIndex,entry:state.editorWeaponAuthoring.find(entry=>entry.weaponIndex===weaponIndex)??null,original:state.editorOriginalWeaponAuthoring.find(entry=>entry.weaponIndex===weaponIndex)??null})),
   hasWeaponAuthoring:()=>state.editorWeaponAuthoring.length>0||state.editorOriginalWeaponAuthoring.length>0,
   flushWeaponAuthoring:()=>weaponAuthoringUI.flush(),
+  hasPendingWeaponAuthoring:()=>weaponAuthoringUI.hasPending(),
   extendPreset:preset=>{
     if(!state.editorWeaponAuthoring.length&&!state.editorOriginalWeaponAuthoring.length)return;
     preset.weaponAuthoring=weaponAuthoringRequest();
-    preset.weaponAuthoringFrom=state.editorOriginalWeaponAuthoring.map(({weaponIndex,sourceWeapon,unitIndex,edits})=>({weaponIndex,sourceWeapon,unitIndex,edits}));
+    preset.weaponAuthoringFrom=copyWeaponAuthoringEntries(state.editorOriginalWeaponAuthoring);
     for(const entry of preset.weaponAuthoring){
       const row=state.editorWeapons.find(item=>item.recordIndex===entry.weaponIndex);
       if(!row?.authoring?.isNew)continue;
@@ -3447,10 +3497,12 @@ function clearEditorState() {
   state.editorUnits = [];
   state.editorPilots = [];
   state.editorWeapons = [];
+  state.editorWeaponConditions = [];
   state.editorRewards = [];
   state.editorTerrains = [];
   terrainEditor.reset();
   state.editorScenario = createScenarioModel();
+  state.editorBattlePilotAssignments = [];
   state.editorPartNames = [];
   state.editorPilotAliases = [];
   state.showUnused = { unit: false, pilot: false, weapon: false };
@@ -4098,10 +4150,12 @@ function dropEditorSession() {
   state.editorUnits = [];
   state.editorPilots = [];
   state.editorWeapons = [];
+  state.editorWeaponConditions = [];
   state.editorRewards = [];
   state.editorTerrains = [];
   terrainEditor.reset();
   state.editorScenario = createScenarioModel();
+  state.editorBattlePilotAssignments = [];
   state.editorPartNames = [];
   state.editorPilotAliases = [];
   state.editorDisc = null;
@@ -4147,7 +4201,7 @@ function handleEditorWorkerMessage(event) {
     const pending = battlePreviewRequests.get(message.previewId);
     if (!pending || pending.sessionToken !== state.editorSessionToken || message.sessionToken !== pending.sessionToken) return;
     if (message.type === "BATTLE_PREVIEW_COMPLETE") pending.resolve(message.result);
-    else pending.reject(Object.assign(new Error(message.error?.message ?? "Preview unavailable"), { code: message.error?.code }));
+    else {const code=message.error?.code,copy=Object.hasOwn(EDITOR_ERROR_COPY,code)?friendlyEditorError(code):null;pending.reject(Object.assign(new Error(message.error?.message ?? "Preview unavailable"), {code,...(copy?{userMessage:copy.message??copy.title}:{})}));}
     return;
   }
   if (message.type === "PREVIEW_COMPLETE" || message.type === "PREVIEW_ERROR") {
@@ -4305,12 +4359,14 @@ function installEditorRows(view) {
   state.editorPilots = prepareEditorRows(view.pilots, "pilot");
   syncPilotExpansionBudget(state.editorPilots);
   state.editorWeapons = prepareEditorRows(view.weapons, "weapon");
+  state.editorWeaponConditions=prepareEditorRows(view.weaponConditions??[],"weaponCondition");
   state.editorWeaponAuthoring=structuredClone(view.weaponAuthoring??[]);
   state.editorOriginalWeaponAuthoring=structuredClone(view.weaponAuthoring??[]);
   state.editorTerrains = prepareEditorRows(view.terrains ?? [], "terrain");
   state.editorRewards = prepareEditorRows(view.rewards ?? [], "reward");
   state.editorPartNames = view.partNames ?? [];
   state.editorScenario = createScenarioModel(view);
+  state.editorBattlePilotAssignments = view.battlePilotAssignments??[];
   terrainEditor.reset();
   rewardEditor.reset();
   scenarioEditor.reset();
@@ -4478,7 +4534,10 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_EDIT_INVALID: ["수정 요청을 받아들일 수 없습니다", "고친 내용이 현재 열린 데이터와 맞지 않거나 읽기 전용 레코드를 바꾸려 해서 수정본을 만들지 않았습니다. 읽기 전용 레코드는 목록에서 이유가 안내됩니다. 디스크를 다시 열어 처음부터 시도해 주세요."],
   EDITOR_VALUE_OUT_OF_RANGE: ["허용 범위를 벗어난 값이 있습니다", "저장할 수 없는 크기의 값이 있어 수정본을 만들지 않았습니다. 지형 적응도는 A~E에 해당하는 0~4만 저장할 수 있고, 다른 칸도 칸마다 정해진 범위 안이어야 합니다. 값을 확인한 뒤 다시 시도해 주세요."],
   EDITOR_PREVIEW_INVALID: ["그림을 불러오지 못했습니다", "선택한 항목의 그림 정보를 확인할 수 없습니다. 다른 항목을 골랐다가 다시 선택해 주세요."],
+  EDITOR_AUDIO_UNSUPPORTED: ["전투 음성을 읽지 못했습니다", "선택한 음성 구간의 형식이나 길이가 지원 범위를 벗어납니다. 다른 파일럿이나 무기를 선택해 주세요."],
   EDITOR_BATTLE_PREVIEW_FAILED: ["무기 그림을 읽지 못했습니다", "상태를 다시 선택해 주세요. 같은 문제가 계속되면 디스크 폴더를 다시 열어 주세요."],
+  EDITOR_WEAPON_NAME_CAPACITY: ["무기 이름 공간이 부족합니다", "이름을 더 짧게 입력해주세요. 현재 내용은 유지됩니다."],
+  EDITOR_WEAPON_NAME_INVALID: ["무기 이름을 적용할 수 없습니다", "현재 디스크의 글꼴과 이름 데이터를 확인해주세요. 현재 내용은 유지됩니다."],
   EDITOR_WEAPON_CAPACITY: ["신규 무기를 넣을 공간이 부족합니다", "기체의 무장·개조·탄약 칸과 남은 편집 공간을 확인해 주세요. 현재 내용은 유지됩니다."],
   EDITOR_WEAPON_AUTHORING_INVALID: ["연출 편집값을 적용할 수 없습니다", "확인된 이동·좌표·시간 항목에 허용 범위의 값을 입력해 주세요. 현재 내용은 유지됩니다."],
   EDITOR_WEAPON_LAYOUT_INVALID: ["무장 연결을 확인하지 못했습니다", "무기와 기체의 참조 또는 저장 공간이 원본 구조와 맞지 않습니다. 현재 내용은 유지됩니다."],
@@ -4659,6 +4718,7 @@ function editorGameLabel(gameId) {
 }
 
 function editorRowsFor(type) {
+  if(type==="weaponCondition")return state.editorWeaponConditions;
   if (["deployment", "event", "objective", "reinforcement", "map"].includes(type)) return state.editorScenario.rows(type);
   if (type === "unit") return state.editorUnits;
   if (type === "pilot") return state.editorPilots;
@@ -4674,6 +4734,7 @@ function selectedEditorRow(type) {
 }
 
 function editorFieldsFor(type) {
+  if(type==="weaponCondition")return ["requiresFlag"];
   if (type === "event") return ["turn",...EVENT_PHASE_FIELDS];
   if (type === "objective") return ["deadline",...CRITERIA_FIELDS];
   if (type === "reinforcement") return ["enabled","templateOffset","turn","x","y","rewardSelector"];
@@ -4696,7 +4757,7 @@ function editorFieldsFor(type) {
       "mindGrowth", "syncGrowth", "ground", "sea", "air", "space",
     ];
   }
-  return ["attack", "hit", "critical", "minRange", "maxRange", "terrain", "energy", "ammo", "requiredMorale", "requiredSkill"];
+  return ["attack", "hit", "critical", "minRange", "maxRange", "terrain", "energy", "ammo", "requiredMorale", "requiredSkill", "ranged", "postMove", "parryable", "dialogueKey"];
 }
 
 function prepareEditorRows(rows, type) {
@@ -4734,7 +4795,7 @@ function editorFieldLabel(field) {
     ground: "지상", sea: "바다", air: "공중", space: "우주",
     attack: "공격력", hit: "명중 보정", critical: "크리티컬", minRange: "최소 사거리",
     maxRange: "최대 사거리", terrain: "지형", energy: "소비 EN",
-    ammo: "탄수", requiredMorale: "필요 기력", requiredSkill: "필요 기능", shield: "실드", parry: "베어내기 가능",
+    ammo: "탄수", requiredMorale: "필요 기력", requiredSkill: "필요 기능", shield: "실드", parry: "베어내기 가능", ranged: "공격 분류", postMove: "이동 후 공격", parryable: "베어내기 대상", dialogueKey: "전투대사 연결", requiresFlag:"등장 조건",
     atk: "격투", shot: "사격", agi: "회피", tech: "기량", cnt: "반응", mp: "정신 포인트",
     exp: "초기 경험치", attackGrowth: "격투 성장 보정", shotGrowth: "사격 성장 보정",
     hitGrowth: "명중 성장 보정", techGrowth: "기량 성장 보정", agiGrowth: "회피 성장 보정",
@@ -4957,6 +5018,7 @@ function visibleRecordRows(type) {
 }
 
 function recordRowIsModified(type, row) {
+  if(type==="unit"&&state.editorWeaponConditions.some(condition=>condition.unitIndex===row.recordIndex&&condition.requiresFlag!==condition.original.requiresFlag))return true;
   const original = row.original;
   if (!original) return false;
   if (editorFieldsFor(type).some((field) => row[field] !== original[field])) return true;
@@ -5318,7 +5380,7 @@ function handleHeroEditorLink(event) {
 // 저장값은 정수 그대로다(기체·파일럿 0..4, 무기는 2비트 네 칸을 한 바이트로 묶은 값). 화면만 글자로 보여 준다.
 
 function buildTerrainGrid(container, kind) {
-  const choices = kind === "weapon" ? WEAPON_GRADE_CHOICES : GRADE_CHOICES;
+  const choices = kind === "weapon" ? WEAPON_GRADE_CHOICES : kind === "pilot" ? PILOT_GRADE_CHOICES : GRADE_CHOICES;
   const fields = TERRAIN_SCREEN_ORDER.map((key) => {
     const label = document.createElement("label");
     label.className = "terrain-field";
@@ -5355,7 +5417,7 @@ function buildTerrainGrid(container, kind) {
     legend.className = "terrain-legend";
     heading.append(legend);
   }
-  if (legend) legend.textContent = choices.map((choice) => choice.label).join(" · ");
+  if (legend) legend.textContent = choices.filter(choice=>choice.percent!==null).map((choice) => choice.label).join(" · ");
   if (kind === "weapon") {
     weaponTerrainReset.type = "button";
     weaponTerrainReset.className = "editor-diff-reset is-empty";
@@ -5546,9 +5608,10 @@ function renderUnitWeapons(record) {
     const name = weapon ? editorRowName(weapon) : `무기 #${entry.weaponIndex}`;
     const { wrapper, button } = jumpButton("weapon", entry.weaponIndex, "unit-weapon-entry");
     if (!weapon) button.disabled = true;
+    const condition=state.editorWeaponConditions.find(row=>row.unitIndex===record.recordIndex&&row.entryIndex===entry.entryIndex&&row.weaponIndex===entry.weaponIndex);
     const flags = [];
     if (entry.requiresInvestment) flags.push("추가 투자 필요");
-    if (entry.requiresFlag) flags.push(`조건 플래그 ${entry.flagNumber}`);
+    if (condition?.requiresFlag??entry.requiresFlag) flags.push(`조건 플래그 ${condition?.flagNumber??entry.flagNumber}`);
     const stats = weapon ? `공격 ${formatEditorValue(weapon.attack)} · 사정 ${weapon.minRange}–${weapon.maxRange}` : "무기 표에서 찾을 수 없음";
     button.title = `슬롯 ${entry.slot}은 같은 번호의 무기끼리 개조를 나누어 쓰는 칸입니다. 누르면 무기 항목으로 이동합니다.`;
     button.setAttribute(
@@ -5560,7 +5623,21 @@ function renderUnitWeapons(record) {
       textSpan("weapon-entry-name", name),
       textSpan("weapon-entry-stats", stats),
     );
-    if (flags.length) button.append(textSpan("weapon-entry-flags", flags.join(" · ")));
+    const visibleFlags=condition?flags.filter(flag=>flag!==`조건 플래그 ${condition.flagNumber}`):flags;
+    if (visibleFlags.length) button.append(textSpan("weapon-entry-flags", visibleFlags.join(" · ")));
+    if(condition){
+      wrapper.classList.add('unit-weapon-condition-row');
+      const box=document.createElement('div'),header=document.createElement('div'),label=document.createElement('label'),select=document.createElement('select'),reset=document.createElement('button');
+      box.className='unit-weapon-condition-controls';header.className='unit-weapon-condition-heading';label.textContent='등장 조건';select.id=`weapon-condition-${condition.recordIndex}`;label.htmlFor=select.id;
+      select.dataset.editorWeaponCondition=String(condition.recordIndex);select.setAttribute('aria-label',`${name} 등장 조건`);
+      for(const [value,text]of [[true,`플래그 #${condition.flagNumber}`],[false,'조건 해제']]){const option=document.createElement('option');option.value=String(value);option.textContent=text;select.append(option);}
+      select.value=String(condition.requiresFlag);select.disabled=!condition.editable;
+      select.title=condition.editable?`이 기체에 장착된 무기의 플래그 #${condition.flagNumber} 검사만 변경합니다. 조건을 해제해도 필요 기력·기능·탄수·EN 조건은 유지됩니다.`:'여러 기체가 같은 장착 데이터를 공유하거나 읽기 전용인 항목입니다. 개별 등장 조건 편집은 지원하지 않습니다.';
+      const change=value=>{condition.requiresFlag=value;renderUnitWeapons(record);refreshRecordOption('unit',record);updateEditorStatus('unit',record);elements.unitWeaponList.querySelector(`[data-editor-weapon-condition="${condition.recordIndex}"]`)?.focus();};
+      select.addEventListener('change',()=>change(select.value==='true'));
+      reset.type='button';reset.textContent='원복';reset.hidden=condition.requiresFlag===condition.original.requiresFlag;reset.disabled=!condition.editable;reset.setAttribute('aria-label',`${name} 등장 조건 불러온 값으로 되돌리기`);reset.addEventListener('click',()=>change(condition.original.requiresFlag));
+      header.append(label,reset);box.append(header,select);wrapper.append(box);
+    }
     return wrapper;
   });
   container.replaceChildren(...items);
@@ -5639,8 +5716,8 @@ function renderWeaponOwners(record) {
 // ---- 무기 사용 조건(탄수·필요 기력·필요 기능)과 기체의 실드·베어내기 가능 --------------------------------------
 // 편집 코어가 행에 싣는 값을 그대로 쓴다. 실드·베어내기 가능은 참·거짓이고 선택칸에서는 "1"(있음)과 "0"(없음)이다.
 // 행에 값이 없으면(이 칸을 모르는 코어) 칸을 잠근다.
-const EDITOR_FLAG_FIELDS = new Set(["shield", "parry"]);
-const OPTIONAL_EDITOR_FIELDS = new Set(["shield", "parry", "ammo", "requiredMorale", "requiredSkill"]);
+const EDITOR_FLAG_FIELDS = new Set(["shield", "parry", "ranged", "postMove", "parryable"]);
+const OPTIONAL_EDITOR_FIELDS = new Set(["shield", "parry", "ranged", "postMove", "parryable", "dialogueKey", "critical", "ammo", "requiredMorale", "requiredSkill"]);
 const FIELD_RULE_FACTS = Object.freeze({
   ammo: "weaponAmmo", requiredMorale: "weaponRequiredMorale", requiredSkill: "weaponRequiredSkill", shield: "unitShield", parry: "unitParry",
 });
@@ -5664,6 +5741,9 @@ function editorControlText(field, value) {
 }
 
 function formatEditorFieldValue(field, value) {
+  if(field==='critical')return weaponCriticalLabel(value);
+  if(field==="ranged"&&typeof value==="boolean")return value?"사격":"격투";
+  if(field==="parryable"&&typeof value==="boolean")return value?"대상":"제외";
   if (typeof value === "boolean") return value ? "있음" : "없음";
   if (field === "requiredSkill" && Number.isSafeInteger(value)) return requiredSkillLabel(value);
   if (field === "requiredMorale" && value === 0) return "없음";
@@ -5708,6 +5788,19 @@ function fillRequiredSkillSelect(select, record, value) {
   return allowed.length > 0;
 }
 
+function fillWeaponDialogueSelect(select,record,value){
+  const owners=new Set((record?.owners??[]).map(owner=>owner.unit??owner.unitIndex));
+  select.replaceChildren(...Array.from({length:64},(_,key)=>{
+    const peers=state.editorWeapons.filter(row=>(row.original?.dialogueKey??row.dialogueKey)===key&&(row.owners??[]).some(owner=>owners.has(owner.unit??owner.unitIndex)));
+    const names=[...new Set(peers.map(row=>row.name).filter(Boolean))];
+    const option=document.createElement('option');option.value=String(key);
+    option.textContent=names.length?`${key} · ${names.join(' / ')}`:`대사 연결 ${key}`;
+    return option;
+  }));
+  select.value=String(value);
+  select.title='같은 연결 번호라도 사용 파일럿에 따라 대사가 달라집니다. 전투 플레이어에서 원문과 음성을 확인하세요.';
+}
+
 // 있음/없음 선택칸의 두 선택지(처음 그릴 때 한 번 만든다).
 function ensureFlagOptions(select) {
   if (select.options.length === 2) return;
@@ -5723,8 +5816,18 @@ function ensureFlagOptions(select) {
 function renderUseConditionControl(control, record, value, locked) {
   const field = control.dataset.editorField;
   let enabled = !locked && value !== null;
-  if (EDITOR_FLAG_FIELDS.has(field)) ensureFlagOptions(control);
+  if (EDITOR_FLAG_FIELDS.has(field)) {
+    ensureFlagOptions(control);
+    if(field==="ranged"){control.options[0].textContent="격투";control.options[1].textContent="사격";}
+    if(field==="parryable"){control.options[0].textContent="제외";control.options[1].textContent="대상";}
+  }
   if (field === "requiredSkill") enabled = fillRequiredSkillSelect(control, record, value) && enabled;
+  else if(field==='dialogueKey')fillWeaponDialogueSelect(control,record,value);
+  else if(field==='critical'){
+    const choices=[...WEAPON_CRITICAL_CHOICES];
+    for(const stored of [record?.original?.critical,value])if(Number.isInteger(stored)&&!choices.some(choice=>choice.value===stored))choices.push({value:stored,label:`${weaponCriticalLabel(stored)} · 코드 ${stored}`});
+    control.replaceChildren(...choices.map(choice=>{const option=document.createElement('option');option.value=String(choice.value);option.textContent=choice.label;return option;}));control.value=value===null?'':String(value);
+  }
   else control.value = editorControlText(field, value);
   if (field === "ammo") {
     const info = control.closest("label")?.querySelector(".editor-field-info") ?? null;
@@ -5742,8 +5845,8 @@ function renderUseConditionControl(control, record, value, locked) {
 
 // ---- 레코드 그리기 -------------------------------------------------------------------------------------------
 
-function isEditableGradeValue(value) {
-  return Number.isInteger(value) && value >= 0 && value <= 4;
+function isEditableGradeValue(value,kind) {
+  return Number.isInteger(value) && value >= 0 && value <= (kind === "pilot" ? 5 : 4);
 }
 
 // 습득표에서 달라진 항목 수: 새로 들어온 능력, 빠진 능력, 습득 레벨이 바뀐 능력을 번호로 센다(특수능력 창의 되돌리기 단추와 같은 셈).
@@ -5778,7 +5881,7 @@ function renderEditorRecord(type, record) {
     const value = showStats && isEditorValue(record[field]) ? record[field] : null;
     if (control.dataset.gradeKind) {
       setGradeSelectValue(control, value);
-      control.disabled = locked || !showStats || (value !== null && !isEditableGradeValue(value));
+      control.disabled = locked || !showStats || (value !== null && !isEditableGradeValue(value,type));
     } else if (OPTIONAL_EDITOR_FIELDS.has(field)) {
       renderUseConditionControl(control, record, value, locked);
     } else {
@@ -6045,6 +6148,7 @@ function terrainHelpInfo(type) {
     return { label: check.letter, value: check.percent, unit: "%", badge: check.badge };
   });
   const cautions = [];
+  if(kind === "pilot")cautions.push({badge:"inferred",text:"α는 독립 배율이 아닌 합산 전 보정값 5입니다. 기체 B(3)와 평균하면 종합 A(4)가 됩니다. α 표기는 사용자 확인을 반영했습니다."});
   if (kind === "weapon") {
     for (const key of ["ground", "air"]) {
       const position = weaponPositionVerification(key);
@@ -7144,7 +7248,7 @@ function renderEditorDiff(type, record) {
 }
 
 function gradeText(kind, value) {
-  const choices = kind === "weapon" ? WEAPON_GRADE_CHOICES : GRADE_CHOICES;
+  const choices = kind === "weapon" ? WEAPON_GRADE_CHOICES : kind === "pilot" ? PILOT_GRADE_CHOICES : GRADE_CHOICES;
   return choices.find((choice) => choice.value === value)?.letter ?? `?${value}`;
 }
 
@@ -7187,11 +7291,6 @@ function isCurrentEditorPreview(requests, message) {
 function requestEditorPreview(type, record) {
   if (type === "weapon") {
     weaponAuthoringUI.select(record);
-    if (!record || !state.editorSessionToken) { weaponBattlePreview.clear(); return; }
-    const owners = [...new Set((record.owners ?? []).map(owner => owner.unit))]
-      .map(unitIndex => ({ unitIndex, name: unitNameForOwner(unitIndex) }));
-    void weaponBattlePreview.select({ sessionToken: state.editorSessionToken, gameId: state.editorGameId,
-      weaponIndex: record.recordIndex, weaponName: editorRowName(record), owners });
     return;
   }
   const image = type === "unit" ? elements.unitPreviewImage : elements.pilotPreviewImage;
@@ -7369,8 +7468,8 @@ function invalidateEditorDownloads() {
 
 // 지금 세션에서 원래 값과 달라진 칸(기체·파일럿·무기 수치와 습득표, 정신커맨드)의 수.
 function countEditorChanges() {
-  const authoringChanged=JSON.stringify(weaponAuthoringRequest())!==JSON.stringify(state.editorOriginalWeaponAuthoring.map(({weaponIndex,sourceWeapon,unitIndex,edits})=>({weaponIndex,sourceWeapon,unitIndex,edits})));
-  return (authoringChanged?1:0)+["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"].reduce((count, kind) => {
+  const authoringChanged=changedWeaponAuthoringIndices(state.editorWeaponAuthoring,state.editorOriginalWeaponAuthoring).length;
+  return authoringChanged+["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map", "weaponCondition"].reduce((count, kind) => {
     const fields = editorFieldsFor(kind);
     return count + editorRowsFor(kind).reduce((rowCount, candidate) => {
       const changedFields = fields.filter((field) => candidate[field] !== candidate.original?.[field]).length;
@@ -7388,7 +7487,10 @@ function updateEditorStatus(type, row = null) {
   state.editorChangeCount = changedCount;
   renderEditorModeLabel();
   const selected = row ?? (type === "reward" ? rewardEditor.selectedRow() : type === "terrain" ? terrainEditor.selectedRow() : EDITOR_TYPES.includes(type) ? findEditorDisplayRow(type, state.editorSelected[type]) : null);
-  const selectedName = selected ? ` · ${editorRowName(selected)}${Number.isInteger(selected.recordIndex) ? ` #${selected.recordIndex}` : ""}` : "";
+  const selectedChanged=selected&&(editorFieldsFor(type).some(field=>selected[field]!==selected.original?.[field])
+    ||type==='pilot'&&(pilotSkillsChanged(selected)||pilotSpiritsChanged(selected))
+    ||type==='weapon'&&changedWeaponAuthoringIndices(state.editorWeaponAuthoring,state.editorOriginalWeaponAuthoring).includes(selected.recordIndex));
+  const selectedName = selectedChanged ? ` · ${editorRowName(selected)}${Number.isInteger(selected.recordIndex) ? ` #${selected.recordIndex}` : ""}` : "";
   setEditorStatus(changedCount === 0
     ? "변경 없음"
     : `변경값 ${changedCount}개${selectedName}`);
@@ -7401,10 +7503,12 @@ function updateEditorStatus(type, row = null) {
 
 // 바뀐 값 목록에서 고른 레코드로 가서 바뀐 칸을 표시하고 첫 칸에 초점을 둔다. 좁은 화면은 그 칸이 있는 구역으로 넘긴다.
 function focusEditorChange(kind, recordIndex, fields = []) {
+  if(kind==="weaponCondition"){const row=state.editorWeaponConditions.find(row=>row.recordIndex===recordIndex);if(!row||!jumpToEditorRecord("unit",row.unitIndex))return false;const control=elements.unitWeaponList.querySelector(`[data-editor-weapon-condition="${recordIndex}"]`);editorLayouts.get("unit")?.reveal(control);control?.focus();return Boolean(control);}
   if (["deployment", "event", "objective", "reinforcement", "map"].includes(kind)) { selectEditorTab("scenario", { render: false }); return scenarioEditor.focus(kind, recordIndex, fields); }
   if (kind === "terrain") { selectEditorTab("terrain", { render: false }); return terrainEditor.focus(recordIndex, fields); }
   if (kind === "reward") { selectEditorTab("reward", { render: false }); return rewardEditor.focus(recordIndex, fields); }
   if (!EDITOR_TYPES.includes(kind) || !jumpToEditorRecord(kind, recordIndex)) return false;
+  if(kind==='weapon'&&fields.includes('weaponAuthoring'))return weaponAuthoringUI.show();
   if (kind === "unit" && fields.some((field) => field.startsWith("abilityValue")) && !state.unitFlagsOpen) {
     state.unitFlagsOpen = true;
     renderUnitSpecialAbilities(selectedEditorRow("unit"));
@@ -7511,6 +7615,7 @@ function buildEditorExportRequest() {
   return Object.freeze({
     sessionToken: state.editorSessionToken,
     ...(state.editorWeaponAuthoring.length||state.editorOriginalWeaponAuthoring.length?{weaponAuthoring:weaponAuthoringRequest()}:{}),
+    weaponConditionEdits:state.editorWeaponConditions.filter(row=>row.requiresFlag!==row.original.requiresFlag).map(row=>({recordIndex:row.recordIndex,identity:row.identity,requiresFlag:row.requiresFlag})),
     deploymentEdits: state.editorScenario.exportDeployments(),
     eventEdits: state.editorScenario.exportEvents(),
     deadlineEdits: state.editorScenario.exportDeadlines(),
@@ -7541,7 +7646,7 @@ function buildEditorExportRequest() {
 async function exportEditorImage() {
   if (!state.editorSessionToken || !state.release || state.editorBusy) return;
   const pendingMotion=weaponAuthoringUI.flush();
-  if(!(pendingMotion instanceof Promise?await pendingMotion:pendingMotion))return;
+  if(!(pendingMotion instanceof Promise?await pendingMotion:pendingMotion)){navigateWorkflow("editor");return;}
   if (!validateEditorForms()) { navigateWorkflow("editor"); return; }
   clearEditorDownloads();
   const request = buildEditorExportRequest();
@@ -8462,7 +8567,7 @@ function sourceSelectionMeta(source, suffix) {
 }
 
 function updateControls() {
-  weaponBattlePreview.setBusy(anyJobBusy()||weaponAuthoringUI.snapshot().open);
+  battlePlayerOpen.disabled=anyJobBusy();
   weaponAuthoringUI.setBusy(anyJobBusy());
   const releaseReady = state.availability === "ready" && Boolean(state.release);
   const interactionBusy = state.busy || state.cueSaving;

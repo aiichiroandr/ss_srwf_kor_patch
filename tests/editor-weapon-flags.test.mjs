@@ -30,7 +30,7 @@ const UNIT_FIELDS = [
   'hp', 'en', 'armor', 'speed', 'limit', 'move', 'ground', 'sea', 'air', 'space',
   'ability1', 'ability2', 'ability3', 'ability4', 'abilityValue1', 'abilityValue2', 'abilityValue3', 'abilityValue4', 'shield', 'parry',
 ];
-const WEAPON_FIELDS = ['attack', 'hit', 'critical', 'minRange', 'maxRange', 'terrain', 'energy', 'ammo', 'requiredMorale', 'requiredSkill'];
+const WEAPON_FIELDS = ['attack', 'hit', 'critical', 'minRange', 'maxRange', 'terrain', 'energy', 'ammo', 'requiredMorale', 'requiredSkill', 'ranged', 'postMove', 'parryable', 'dialogueKey'];
 const pick = (row, fields) => Object.fromEntries(fields.map((field) => [field, row[field]]));
 const edits = (rows, fields, change = () => {}) => rows.map((row) => {
   const values = pick(row, fields);
@@ -328,3 +328,21 @@ for (const [lane, gameId] of Object.entries(LANES)) {
     }
   });
 }
+
+test('dialogue binding edits only byte2 low6, preserves the animation domain and refuses invalid keys atomically',()=>{
+ for(const gameId of ['srwf-f','srwf-final']){
+  const f=weaponWorld(),segment=f.built.segments[29].bytes,at=f.rows.find(row=>row.recordIndex===1).byteOffset;
+  segment[at+2]=0xc1;
+  const rows=weaponRows(f.built.segments,f.built.decoded,GLYPHS,gameId,[]),before=segment.slice();
+  assert.equal(rows.find(row=>row.recordIndex===1).dialogueKey,1);
+  const request=edits(rows,WEAPON_FIELDS,(index,fields)=>{if(index===1)fields.dialogueKey=43;});
+  updateWeaponRecords(segment,request,readOnlyMap(rows),gameId);
+  assert.deepEqual(changedOffsets(before,segment),[at+2]);assert.equal(segment[at+2],0xeb);
+  assert.deepEqual(segment.slice(at+3,at+5),before.slice(at+3,at+5));
+  const saved=segment.slice();
+  for(const key of [-1,64,1.25,'43']){
+   const bad=structuredClone(request);bad.find(row=>row.recordIndex===1).fields.dialogueKey=key;
+   assert.throws(()=>updateWeaponRecords(segment,bad,readOnlyMap(rows),gameId));assert.deepEqual(segment,saved);
+  }
+ }
+});

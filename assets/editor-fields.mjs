@@ -4,7 +4,7 @@
 //
 // Unit and pilot terrain grades are nibbles here (0..15, what the record can hold); the narrower rule for a CHANGED
 // grade (0..4) is isGradeEditAllowed in editor-grades.mjs, which the writers and the preset check share as well.
-import {isRegionRuleWireValue,decodeRegionRule} from './editor-scenario-region-context.mjs?v=20261012-frames3';
+import {isRegionRuleWireValue,decodeRegionRule} from './editor-scenario-region-context.mjs?v=20261015-stocknames2';
 const range = (minimum, maximum) => Object.freeze([minimum, maximum]);
 const BYTE = range(0, 0xff);
 const WORD = range(0, 0xffff);
@@ -70,7 +70,9 @@ export const EDITOR_FIELD_BOUNDS = Object.freeze({
     attack: WORD, hit: range(-128, 127), critical: NIBBLE,
     minRange: BYTE, maxRange: BYTE, terrain: BYTE, energy: WORD,
     ammo: BYTE, requiredMorale: BYTE, requiredSkill: BYTE,
+    ranged: "boolean", postMove: "boolean", parryable: "boolean", dialogueKey: range(0,63),
   }),
+  weaponCondition: Object.freeze({requiresFlag:"boolean"}),
   terrain: Object.freeze({ avoidanceBonus: range(0, 100), defenseBonus: range(0, 100), hpRecovery: range(0, 100), enRecovery: range(0, 100) }),
   reward: Object.freeze({ part1: range(1, 22), chance1: range(0, 100), part2: range(1, 22), chance2: range(0, 100) }),
   deployment: Object.freeze({ x: range(0, 63), y: range(0, 63), rewardSelector: BYTE }),

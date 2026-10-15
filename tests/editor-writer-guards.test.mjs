@@ -25,7 +25,7 @@ const PILOT_FIELDS = [
   'exp', 'atk', 'shot', 'agi', 'hit', 'tech', 'cnt', 'mp', 'ground', 'sea', 'air', 'space',
   'attackGrowth', 'shotGrowth', 'hitGrowth', 'techGrowth', 'agiGrowth', 'cntGrowth', 'mindGrowth', 'syncGrowth',
 ];
-const WEAPON_FIELDS = ['attack', 'hit', 'critical', 'minRange', 'maxRange', 'terrain', 'energy', 'ammo', 'requiredMorale', 'requiredSkill'];
+const WEAPON_FIELDS = ['attack', 'hit', 'critical', 'minRange', 'maxRange', 'terrain', 'energy', 'ammo', 'requiredMorale', 'requiredSkill', 'ranged', 'postMove', 'parryable', 'dialogueKey'];
 const pick = (row, fields) => Object.fromEntries(fields.map((field) => [field, row[field]]));
 const flat = (...pairs) => pairs.flat();
 const code = (expected) => (error) => {
@@ -163,7 +163,7 @@ test('a read-only weapon is compared over its whole record: the energy behind by
   updateWeaponRecords(bytes(), weaponEdits(rows), locked);
   for (const field of WEAPON_FIELDS) {
     const base = rows.find((row) => row.recordIndex === 1)[field];
-    assert.throws(() => updateWeaponRecords(bytes(), weaponEdits(rows, (id, fields) => { if (id === 1) fields[field] = base === 2 ? 3 : 2; }), locked),
+    assert.throws(() => updateWeaponRecords(bytes(), weaponEdits(rows, (id, fields) => { if (id === 1) fields[field] = typeof base === "boolean" ? !base : base === 2 ? 3 : 2; }), locked),
       (error) => error.code === 'EDITOR_EDIT_INVALID' && /read-only/.test(error.message), `locked weapon field ${field}`);
   }
   updateWeaponRecords(bytes(), weaponEdits(rows, (id, fields) => { if (id === 2) fields.energy = 5; }), locked);
@@ -203,7 +203,7 @@ test('a refused value carries the kind of record, its number, the field and its 
   assert.deepEqual(refused(() => updatePilotRecords(table(), echoEdits(pilotList, (id, edit) => { if (id === PILOT) edit.fields.agi = 65536; }), noLocks, 'srwf-final')).details,
     { kind: 'pilot', recordIndex: PILOT, field: 'agi', minimum: 0, maximum: 65535 });
   assert.deepEqual(refused(() => updatePilotRecords(table(), echoEdits(pilotList, (id, edit) => { if (id === PILOT) edit.fields.sea = 7; }), noLocks, 'srwf-final')).details,
-    { kind: 'pilot', recordIndex: PILOT, field: 'sea', minimum: 0, maximum: 4 });
+    { kind: 'pilot', recordIndex: PILOT, field: 'sea', minimum: 0, maximum: 5 });
   assert.deepEqual(refused(() => updatePilotRecords(table(), echoEdits(pilotList, (id, edit) => { if (id === PILOT) edit.fields.atk += 1; }), new Map([[PILOT, 'hero-slot']]), 'srwf-final')).details,
     { kind: 'pilot', recordIndex: PILOT, reason: 'read-only', cause: 'hero-slot' });
 });

@@ -1,5 +1,6 @@
-import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261012-frames3';
-import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261012-frames3';
+import {weaponCriticalLabel} from './editor-weapon-critical.mjs?v=20261015-stocknames2';
+import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261015-stocknames2';
+import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261015-stocknames2';
 // The change list of the editor and its preset file: the button at the bottom of the editor (the change count) opens a
 // dialog that lists every changed record grouped by unit, pilot and weapon; an entry jumps to that record and field. The
 // footer saves the changes as a preset file (.json) and loads one: a loaded file is checked, judged against the open
@@ -12,8 +13,8 @@ import {
   gradeLabel,
   splitWeaponTerrain,
   weaponGradeLabel,
-} from "./editor-grades.mjs?v=20261012-frames3";
-import { skillDiff } from "./editor-skill-list.mjs?v=20261012-frames3";
+} from "./editor-grades.mjs?v=20261015-stocknames2";
+import { skillDiff } from "./editor-skill-list.mjs?v=20261015-stocknames2";
 import {
   PresetError,
   applyPreset,
@@ -25,10 +26,10 @@ import {
   presetChangeCount,
   presetFileName,
   serializePreset,
-} from "./editor-preset.mjs?v=20261012-frames3";
+} from "./editor-preset.mjs?v=20261015-stocknames2";
 
-export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"]);
-const KIND_HEADINGS = Object.freeze({ unit: "기체", pilot: "파일럿", weapon: "무기", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 증원", map: "맵 타일" });
+export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map", "weaponCondition"]);
+const KIND_HEADINGS = Object.freeze({ unit: "기체", pilot: "파일럿", weapon: "무기", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 증원", map: "맵 타일", weaponCondition:"무장 등장 조건" });
 const GAME_LABELS = Object.freeze({ "srwf-f": "슈퍼로봇대전 F", "srwf-final": "F 완결편" });
 
 // Why a file was refused, in one short sentence each. Every code of editor-preset.mjs has one (a test checks it).
@@ -101,13 +102,17 @@ export function formatFieldValue(kind, field, value, { abilityName = (id) => `#$
     if(field==='objectivePriority')return value?'패배':'승리';
     if(['victoryJoin','defeatJoin'].includes(field))return value?'하나라도':'모두';
   }
+  if(kind==='weaponCondition'&&field==='requiresFlag'){const flag=typeof rows==='function'?rows(kind).find(row=>row.recordIndex===recordIndex)?.flagNumber:null;return value?(flag?`플래그 #${flag}`:'플래그 적용'):'해제';}
   if(kind==='reinforcement'&&field==='enabled')return value?'추가됨':'없음';
-  if (kind !== "weapon" && TERRAIN_DATA_ORDER.includes(field)) return gradeLabel(value);
+  if (kind !== "weapon" && TERRAIN_DATA_ORDER.includes(field)) return gradeLabel(value,{kind});
   if (kind === "weapon" && field === "terrain") {
     const parts = splitWeaponTerrain(value);
     return TERRAIN_SCREEN_ORDER.map((key) => `${TERRAIN_LABELS[key]}${weaponGradeLabel(parts[key])}`).join(" ");
   }
   if (kind === "unit" && ABILITY_ID_FIELD.test(field)) return abilityName(value);
+  if(kind==="weapon"&&field==="critical")return weaponCriticalLabel(value);
+  if(kind==="weapon"&&field==="ranged"&&typeof value==="boolean")return value?"사격":"격투";
+  if(kind==="weapon"&&field==="parryable"&&typeof value==="boolean")return value?"대상":"제외";
   if (typeof value === "boolean") return value ? "있음" : "없음";
   return String(value);
 }
@@ -157,6 +162,7 @@ export function createEditorChanges(host) {
     title: byId("editorChangesTitle"),
     close: byId("editorChangesClose"),
     save: byId("editorPresetSaveButton"),
+    download: byId("editorPresetDownloadLink"),
     load: byId("editorPresetLoadButton"),
     file: byId("editorPresetFile"),
     message: byId("editorChangesMessage"),
@@ -170,6 +176,9 @@ export function createEditorChanges(host) {
     cancel: byId("editorPresetCancel"),
   };
   // A loaded and checked file that waits for the user's choice: { preset, plan, fileName }.
+  let downloadUrl=null;
+  function clearDownload(){if(downloadUrl)URL.revokeObjectURL(downloadUrl);downloadUrl=null;ui.download.hidden=true;ui.download.removeAttribute('href');ui.download.removeAttribute('download');ui.save.hidden=false;}
+  ui.download.addEventListener('click',()=>host.announce('편집값 다운로드를 요청했습니다. 브라우저의 다운로드 목록을 확인하세요.'));
   let pending = null;
   // Set while the dialog closes because an entry was chosen: the focus goes to that field, not back to the button.
   let navigating = false;
@@ -183,6 +192,7 @@ export function createEditorChanges(host) {
     weapons: host.rows("weapon"),
     rewards: host.rows("reward"),
     terrains: host.rows("terrain"),
+    weaponConditions:host.rows("weaponCondition"),
     deployments: host.rows("deployment"),
     events: host.rows("event"),
     objectives: host.rows("objective"),
@@ -216,7 +226,8 @@ export function createEditorChanges(host) {
 
   function renderList() {
     const byKind = changes();
-    const records = CHANGE_KINDS.reduce((sum, kind) => sum + byKind[kind].length, 0)+(host.hasWeaponAuthoring?.()?Math.max(1,host.weaponAuthoring().length):0);
+    const authoring=host.weaponAuthoringChanges?.()??(host.hasWeaponAuthoring?.()?host.weaponAuthoring().map(entry=>({weaponIndex:entry.weaponIndex,entry,original:null})):[]);
+    const records = CHANGE_KINDS.reduce((sum, kind) => sum + byKind[kind].length, 0)+authoring.length;
     const count = typeof host.changeCount === "function" ? host.changeCount() : records;
     ui.title.textContent = count > 0 ? `바뀐 값 ${count}개` : "바뀐 값";
     syncButtons(records > 0);
@@ -239,7 +250,7 @@ export function createEditorChanges(host) {
         button.dataset.changeKind = kind;
         button.dataset.recordIndex = String(change.recordIndex);
         button.dataset.changeFields = [...change.fields.map(({ field }) => field), ...(change.skills ? ["skills"] : []), ...(change.spirits ? ["spirits"] : [])].join(",");
-        const name = node("span", "editor-changes-name", `${nameOf(kind, change.recordIndex, change.name)}${typeof change.recordIndex==='number'?` #${change.recordIndex}`:''}`);
+        const name = node("span", "editor-changes-name", `${nameOf(kind, change.recordIndex, change.name)}${typeof change.recordIndex==='number'&&kind!=='weaponCondition'?` #${change.recordIndex}`:''}`);
         const description=describe(kind,change),detail = node("span", "editor-changes-detail", kind==='event'?null:description);
         if(kind==='event')for(const entry of change.fields){
           const value=node('span','editor-event-change-value',describeFieldChange(kind,entry,host));
@@ -253,7 +264,24 @@ export function createEditorChanges(host) {
       group.append(heading, list);
       return group;
     });
-    if(host.hasWeaponAuthoring?.())groups.push(node('p','editor-changes-detail',`무기 연출·신규 무기 이력 ${host.weaponAuthoring().length}개 · BIN 및 편집값 파일에 함께 저장됩니다`));
+    if(authoring.length){
+      const group=node('section','editor-changes-group'),list=node('ul','editor-changes-items');
+      group.append(node('h3','editor-changes-heading',`무기 연출 ${authoring.length}`));
+      for(const {weaponIndex,entry,original} of authoring){
+        const item=node('li'),button=node('button','editor-changes-item');button.type='button';
+        button.dataset.changeKind='weapon';button.dataset.recordIndex=String(weaponIndex);button.dataset.changeFields='weaponAuthoring';
+        button.disabled=!(host.rows('weapon')??[]).some(row=>row.recordIndex===weaponIndex);
+        const title=node('span','editor-changes-name',`${nameOf('weapon',weaponIndex,entry?.name??original?.name??'무기')} #${weaponIndex}`);
+        const parts=!entry?['연출 편집 해제']:entry.sourceWeapon!==weaponIndex?['신규 무기']:['연출 편집'];
+        if(entry?.animationWeapon!==undefined&&entry.animationWeapon!==(entry.sourceWeapon??weaponIndex))parts.push(`공격 연출 #${entry.animationWeapon}`);
+        if(entry?.edits?.length)parts.push(`동작 ${entry.edits.length}곳`);
+        if(entry?.imports?.length)parts.push(`효과 조합 ${entry.imports.length}개`);
+        const detail=node('span','editor-changes-detail',parts.join(' · '));
+        button.append(title,detail);button.setAttribute('aria-label',`${title.textContent}: ${detail.textContent}.${button.disabled?' 삭제된 무기입니다.':' 누르면 연출 편집으로 이동합니다.'}`);
+        item.append(button);list.append(item);
+      }
+      group.append(list);groups.push(group);
+    }
     ui.list.replaceChildren(...groups);
   }
 
@@ -423,33 +451,37 @@ export function createEditorChanges(host) {
     say("불러오기를 취소했습니다.");
   }
 
-  async function writeWithPicker(picker, text, name) {
-    const handle = await picker({
-      suggestedName: name,
-      types: [{ description: "에디터 변경 내용", accept: { "application/json": [".json"] } }],
-    });
-    const writable = await handle.createWritable();
-    await writable.write(text);
-    await writable.close();
-    return typeof handle.name === "string" && handle.name ? handle.name : name;
+  function beginSavePicker(picker,name){
+    // Invoke while the original click still has transient user activation.
+    // Capture rejection now so cancellation cannot become unhandled while
+    // a worker finishes validating the pending weapon edits.
+    try{return Promise.resolve(picker({suggestedName:name,types:[{description:'에디터 변경 내용',accept:{'application/json':['.json']}}]})).then(handle=>({handle}),error=>({error}));}
+    catch(error){return Promise.resolve({error});}
+  }
+  async function writeWithPicker(destination,text,name){
+    const result=await destination;if(result.error)throw result.error;
+    const handle=result.handle,writable=await handle.createWritable();
+    await writable.write(text);await writable.close();
+    return typeof handle.name==='string'&&handle.name?handle.name:name;
   }
 
   function download(text, name) {
-    const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-    const link = node("a");
-    link.href = url;
-    link.download = name;
-    link.hidden = true;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    // the download has started by then; a timer of a non-browser host must not keep it alive
-    setTimeout(() => URL.revokeObjectURL(url), 30_000)?.unref?.();
+    clearDownload();
+    downloadUrl=URL.createObjectURL(new Blob([text], {type:'application/json'}));
+    ui.download.href=downloadUrl;ui.download.download=name;ui.download.hidden=false;ui.save.hidden=true;
+    ui.download.focus();
+    // Keep the ordinary one-click download path, but retain a visible retry
+    // link when a browser blocks it instead of removing the only URL.
+    ui.download.click();
   }
 
   async function save() {
     if (!host.hasSession() || !host.canEdit()) return null;
-    if(host.flushWeaponAuthoring){const flushed=host.flushWeaponAuthoring();if(flushed?.then){if(!await flushed)return null;}else if(flushed===false)return null;}
+    clearDownload();
+    const flushed=host.flushWeaponAuthoring?.();if(flushed===false)return null;
+    const name=presetFileName(host.gameId()),picker=globalThis.showSaveFilePicker;
+    const destination=typeof picker==='function'?beginSavePicker(picker.bind(globalThis),name):null;
+    try{if(flushed?.then&&!await flushed)return null;}catch(error){say(error?.userMessage??'편집값을 확인하지 못했습니다. 파일은 쓰지 않았습니다.','error');return null;}
     const preset = buildPreset(
       { gameId: host.gameId(), releaseId: host.releaseId(), createdAt: new Date() },
       Object.fromEntries(CHANGE_KINDS.map((kind) => [kind, (host.rows(kind) ?? [])])),
@@ -465,11 +497,9 @@ export function createEditorChanges(host) {
       host.announce(PRESET_ERROR_COPY.PRESET_TOO_LARGE);
       return null;
     }
-    const name = presetFileName(preset.gameId);
-    const picker = globalThis.showSaveFilePicker;
-    if (typeof picker === "function") {
+    if (destination) {
       try {
-        const saved = await writeWithPicker(picker.bind(globalThis), text, name);
+        const saved = await writeWithPicker(destination, text, name);
         say(`변경 내용을 저장했습니다 · ${saved}`);
         host.announce(`편집값을 저장했습니다 · ${saved}`);
         return preset;
@@ -483,8 +513,8 @@ export function createEditorChanges(host) {
     }
     try {
       download(text, name);
-      say(`변경 내용 파일을 내려받았습니다 · ${name}`);
-      host.announce(`편집값 파일을 내려받았습니다 · ${name}`);
+      say(`다운로드 요청 · 파일이 보이지 않으면 편집값 받기를 누르세요 · ${name}`);
+      host.announce(`다운로드를 요청했습니다. 파일이 보이지 않으면 편집값 받기를 누르세요 · ${name}`);
       return preset;
     } catch {
       say("이 브라우저에서는 파일을 저장하지 못했습니다.", "error");
@@ -500,7 +530,7 @@ export function createEditorChanges(host) {
   function syncButtons(hasChanges = CHANGE_KINDS.some((kind) => diffEditorRows(kind, (host.rows(kind) ?? []), { fields: host.fields(kind) }).length > 0)) {
     ui.button.dataset.changeCount = String(host.changeCount?.() ?? 0);
     const editable = host.hasSession() && host.canEdit();
-    ui.save.disabled = !editable || !hasChanges;
+    ui.save.disabled = !editable || !(hasChanges || (host.changeCount?.() ?? 0) > 0 || host.hasPendingWeaponAuthoring?.());
     ui.load.disabled = !editable;
     ui.applyAll.disabled = !editable || !pending || pending.plan.counts.apply + pending.plan.counts.conflict === 0;
     ui.applyMatching.disabled = !editable || !pending || pending.plan.counts.apply === 0;
@@ -508,11 +538,13 @@ export function createEditorChanges(host) {
 
   // Footer actions follow the session and its busy state even when the dialog is closed.
   function refresh() {
+    clearDownload();
     syncButtons();
     if (ui.dialog.open && !pending) renderList();
   }
 
   function reset() {
+    clearDownload();
     navigating = false;
     pending = null;
     say("");

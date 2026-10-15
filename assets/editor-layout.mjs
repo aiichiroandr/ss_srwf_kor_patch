@@ -24,8 +24,8 @@ const DEFINITIONS = {
     ['성장', ['.pilot-growth-grid label']], ['지형', ['.pilot-terrain-panel']],
   ],
   weapon: [
-    ['무기 그림', ['.weapon-preview-panel', '.weapon-scope-note']],
-    ...['attack','hit','critical','minRange','maxRange','energy','ammo','requiredMorale','requiredSkill'].map(field => ['무기 수치', [`.weapon-detail-grid label:has([data-editor-field="${field}"])`]]),
+    ['무기 연출', ['.weapon-preview-panel', '.weapon-scope-note']],
+    ...['attack','hit','critical','minRange','maxRange','energy','ammo','requiredMorale','requiredSkill','ranged','postMove','parryable','dialogueKey'].map(field => ['무기 수치', [`.weapon-detail-grid label:has([data-editor-field="${field}"])`]]),
     ['무기 지형', ['.weapon-terrain-panel']], ['사용 기체', ['.weapon-owner-panel']],
   ],
 };
@@ -60,6 +60,9 @@ export function createEditorLayout(type, panel, form, onSelect) {
   }
   refreshGroups();
   let pages = [], selected = 'main', active = false, frame = 0, measuring = false;
+  let lastContentFocus=null;
+  form.addEventListener('focusin',event=>{lastContentFocus=event.target;});
+  nav.addEventListener('click',()=>{lastContentFocus=null;});
   const areas = node => getComputedStyle(node).gridArea.split(' / ')[0];
 
   function show(groupsOnPage) {
@@ -96,13 +99,29 @@ export function createEditorLayout(type, panel, form, onSelect) {
     }
     form.style.gridTemplateColumns = columns;
     form.style.gridTemplateAreas = rows.map(row => `"${row.join(' ')}"`).join(' ');
-    form.style.gridTemplateRows = rows.map(row => row.some(area => area === 'weapons' || area === 'owners') ? 'minmax(80px, 1fr)' : 'max-content').join(' ');
+    form.style.gridTemplateRows = rows.map(row => row.includes('preview') ? 'minmax(0, 1fr)' : row.some(area => area === 'weapons' || area === 'owners') ? 'minmax(80px, 1fr)' : 'max-content').join(' ');
     form.style.alignContent = 'start';
     form.style.overflowY = 'hidden';
   }
 
   function fits(page) {
     show(page);
+    if (type === 'weapon') form.querySelector('#weaponBattlePreview')?.dispatchEvent(new Event('editor-layout-measure'));
+    return measuredContentFits(page);
+  }
+
+  function measuredContentFits(page) {
+    if (type === 'weapon' && page.some(group => group.nodes.some(node => node.matches('.weapon-preview-panel')))) {
+      const gallery = form.querySelector('.battle-preview-gallery');
+      const preview = form.querySelector('.weapon-preview-panel');
+      if (gallery?.getClientRects().length && preview.getBoundingClientRect().bottom - gallery.getBoundingClientRect().top < 108) return false;
+      // An open motion editor must participate in measured paging. Its own
+      // bounded scroller otherwise makes the outer panel look as if it fits,
+      // allowing stats/terrain groups to squeeze editing down to one row.
+      const authoring=form.querySelector('#weaponAuthoring');
+      if(authoring?.querySelector('.weapon-authoring-panel:not([hidden])')
+        &&authoring.getClientRects().length&&authoring.scrollHeight>authoring.clientHeight+1)return false;
+    }
     if (form.scrollHeight > form.clientHeight + 1 || form.scrollWidth > form.clientWidth + 1) return false;
     const bounds = form.getBoundingClientRect();
     for (const node of new Set(page.flatMap(group => group.nodes).map(node => node.closest('.game-panel') ?? node))) {
@@ -133,11 +152,15 @@ export function createEditorLayout(type, panel, form, onSelect) {
       for (const node of nodes) node.style.display = originals.get(node);
       for (const node of containers) node.style.display = containerOriginals.get(node);
       for (const property of ['grid-template-columns','grid-template-areas','grid-template-rows','align-content','overflow-y']) form.style.removeProperty(property);
-      nav.replaceChildren(...legacy); return;
+      nav.replaceChildren(...legacy);
+      // Desktop dimensions do not prove that the actual record fits. Fonts,
+      // six spirit slots and growth rows can overflow a short desktop pane.
+      if(measuredContentFits(groups))return;
     }
     active = true; panel.dataset.autoPages = '';
     const wasList = panel.dataset.page === 'list';
     const focused = form.contains(document.activeElement) ? document.activeElement : null;
+    const focusAnchor=focused??(lastContentFocus?.isConnected&&form.contains(lastContentFocus)?lastContentFocus:null);
     const oldPage = pages[selected === 'main' ? 0 : Number(selected.replace('pack-', ''))];
     const anchor = oldPage?.[0]?.id;
     const focusedNav = nav.contains(document.activeElement) ? document.activeElement?.dataset.editorPage : null;
@@ -157,7 +180,7 @@ export function createEditorLayout(type, panel, form, onSelect) {
       }));
     }
     measuring = false;
-    const focusedIndex = focused ? pages.findIndex(page => page.some(group => group.nodes.some(node => node.contains(focused)))) : -1;
+    const focusedIndex = focusAnchor ? pages.findIndex(page => page.some(group => group.nodes.some(node => node.contains(focusAnchor)))) : -1;
     const index = focusedIndex >= 0 ? focusedIndex : anchor ? Math.max(0, pages.findIndex(page => page.some(group => group.id === anchor))) : 0;
     const key = wasList ? 'list' : index ? `pack-${index}` : 'main';
     onSelect(key);

@@ -20,6 +20,17 @@ const { state, EDITOR_UI, editorChanges } = hooks;
 const byId = (id) => document.getElementById(id);
 const GAME = "srwf-final";
 
+test('authoring-only weapon changes enable preset saving without numeric changes',()=>{
+ openSession();
+ const entry={weaponIndex:1331,sourceWeapon:1,unitIndex:1,animationWeapon:245,name:'웨이브라이더어택',edits:[]};
+ try{
+  state.editorWeaponAuthoring=[entry];state.editorOriginalWeaponAuthoring=[];
+  editorChanges.refresh();assert.equal(byId('editorPresetSaveButton').disabled,false);
+  state.editorOriginalWeaponAuthoring=structuredClone(state.editorWeaponAuthoring);
+  editorChanges.refresh();assert.equal(byId('editorPresetSaveButton').disabled,true);
+ }finally{state.editorWeaponAuthoring=[];state.editorOriginalWeaponAuthoring=[];}
+});
+
 // ---- synthetic rows -------------------------------------------------------------------------------------------------------
 
 function unitRow(recordIndex, extra = {}) {
@@ -450,6 +461,36 @@ test("a busy session or no session cannot load or apply", async () => {
   assert.equal(byId("editorChangesDialog").open, false);
 });
 
+test('authoring changes name each changed weapon, include removals and navigate to its own record',()=>{
+ openSession();
+ const edited={weaponIndex:2,sourceWeapon:2,unitIndex:1,animationWeapon:3,edits:[{recordOffset:40,field:'holdDuration',value:8}],imports:[{targetSequence:0,donorWeapon:3,donorSequence:1,placement:'append'}]};
+ const removed={weaponIndex:3,sourceWeapon:3,unitIndex:1,edits:[]};
+ try{
+  state.editorWeaponAuthoring=[edited];state.editorOriginalWeaponAuthoring=[removed];
+  editorChanges.open();
+  const buttons=byId('editorChangesList').querySelectorAll('button[data-change-kind="weapon"]');
+  assert.deepEqual(buttons.map(b=>Number(b.dataset.recordIndex)),[2,3]);
+  assert.match(buttons[0].textContent,/무기2 #2/);assert.match(buttons[0].textContent,/공격 연출 #3.*동작 1곳.*효과 조합 1개/);
+  assert.match(buttons[1].textContent,/무기3 #3.*연출 편집 해제/);
+  buttons[0].click();assert.equal(state.editorSelected.weapon,2);assert.equal(byId('editorChangesDialog').open,false);
+  state.editorOriginalWeaponAuthoring=structuredClone(state.editorWeaponAuthoring);
+  editorChanges.open();assert.ok(byId('editorChangesList').querySelector('.editor-changes-empty'));
+ }finally{editorChanges.close();state.editorWeaponAuthoring=[];state.editorOriginalWeaponAuthoring=[];}
+});
+
+test('an unchanged selected record is not presented as the weapon changed by an imported authoring project',()=>{
+ openSession();
+ try{
+  state.editorWeaponAuthoring=[{weaponIndex:2,sourceWeapon:2,unitIndex:1,edits:[{recordOffset:40,field:'holdDuration',value:8}]}];
+  state.editorOriginalWeaponAuthoring=[];
+  type('weapon',1,'attack',1001);
+  assert.match(byId('editorState').textContent,/변경값 1개/);
+  assert.doesNotMatch(byId('editorState').textContent,/무기1|#1/);
+  type('weapon',1,'attack',1100);
+  assert.match(byId('editorState').textContent,/무기1 #1/);
+ }finally{state.editorWeaponAuthoring=[];state.editorOriginalWeaponAuthoring=[];}
+});
+
 test('a cloned weapon preset includes changed values only and can be parsed again', async () => {
   const view=makeView();
   view.weapons.push({...weaponRow(1),recordIndex:1331,attack:1999,identity:`weapon:1:${'a'.repeat(64)}`,authoring:{isNew:true,sourceWeapon:1,unitIndex:1}});
@@ -461,4 +502,70 @@ test('a cloned weapon preset includes changed values only and can be parsed agai
     assert.deepEqual(parsed.weaponAuthoring,[{weaponIndex:1331,sourceWeapon:1,unitIndex:1,edits:[]}]);
     assert.deepEqual(parsed.entries.weapon[0].fields,[{field:'attack',from:1001,to:1999}]);
   } finally {state.editorWeaponAuthoring=[];state.editorOriginalWeaponAuthoring=[];}
+});
+
+test('a weapon-condition change navigates with a numeric binding ID and focuses its unit control',()=>{
+ const view=makeView({unit:{1:{weaponList:{status:'known',placeholder:false,entries:[{entryIndex:0,slot:1,weaponIndex:1,requiresFlag:true,flagNumber:83,requiresInvestment:false}]}}}});
+ view.weaponConditions=[{recordIndex:17,unitIndex:1,weaponIndex:1,entryIndex:0,flagNumber:83,name:'기체1 · 무기1',identity:`weaponCondition:1:${'a'.repeat(64)}`,requiresFlag:true,editable:true,statsValid:true}];
+ openSession(view);state.editorWeaponConditions[0].requiresFlag=false;
+ byId('editorChangesButton').click();const entry=byId('editorChangesList').querySelector('button[data-change-kind="weaponCondition"]');assert.ok(entry);assert.ok(!entry.textContent.includes('#17'));
+ entry.click();assert.equal(byId('editorChangesDialog').open,false);assert.equal(state.editorTab,'unit');assert.equal(state.editorSelected.unit,1);assert.equal(document.activeElement.dataset.editorWeaponCondition,'17');
+});
+
+test('change dialog counts each changed weapon animation including removal after reopening',()=>{
+ openSession();const one={weaponIndex:1,sourceWeapon:1,unitIndex:1,edits:[{recordOffset:50,field:'holdDuration',value:11}]},two={weaponIndex:2,sourceWeapon:2,unitIndex:1,edits:[]};
+ try{
+  state.editorWeaponAuthoring=[one,two];state.editorOriginalWeaponAuthoring=[];editorChanges.open();assert.equal(byId('editorChangesTitle').textContent,'바뀐 값 2개');editorChanges.close();
+  state.editorOriginalWeaponAuthoring=structuredClone(state.editorWeaponAuthoring);state.editorWeaponAuthoring=[one];editorChanges.open();assert.equal(byId('editorChangesTitle').textContent,'바뀐 값 1개');editorChanges.close();
+ }finally{state.editorWeaponAuthoring=[];state.editorOriginalWeaponAuthoring=[];editorChanges.reset();}
+});
+
+test('fallback save prepares a persistent user-clicked link and invalidates it when edits refresh',async()=>{
+ openSession();makeEdits();const create=URL.createObjectURL,revoke=URL.revokeObjectURL;let file;const revoked=[];
+ URL.createObjectURL=blob=>{file=blob;return 'blob:prepared-preset';};URL.revokeObjectURL=url=>revoked.push(url);
+ try{
+  const preset=await editorChanges.save(),link=byId('editorPresetDownloadLink');
+  assert.equal(link.hidden,false);assert.equal(byId('editorPresetSaveButton').hidden,true);assert.equal(link.href,'blob:prepared-preset');assert.match(link.download,/\.json$/);
+  assert.deepEqual(JSON.parse(await file.text()),JSON.parse(serializePreset(preset)));
+  link.click();await new Promise(resolve=>setTimeout(resolve,0));assert.match(byId('liveRegion').textContent,/다운로드를 요청/);
+  editorChanges.refresh();assert.equal(link.hidden,true);assert.equal(byId('editorPresetSaveButton').hidden,false);assert.ok(revoked.includes('blob:prepared-preset'));
+ }finally{editorChanges.reset();URL.createObjectURL=create;URL.revokeObjectURL=revoke;}
+});
+
+async function deferredSaveController(flush){
+ const {createEditorChanges}=await import('../assets/editor-changes.mjs');
+ return createEditorChanges({hasSession:()=>true,canEdit:()=>true,gameId:()=>GAME,releaseId:()=>null,
+  rows:kind=>({unit:state.editorUnits,pilot:state.editorPilots,weapon:state.editorWeapons}[kind]??[]),aliases:()=>[],fields:kind=>kind==='unit'?['hp']:[],
+  changeCount:()=>6,flushWeaponAuthoring:flush,announce(){}});
+}
+test('native save picker opens before asynchronous authoring flush but writes only after validation',async()=>{
+ openSession();makeEdits();let finish,opened=0;const writes=[];
+ const flush=new Promise(resolve=>{finish=resolve;}),controller=await deferredSaveController(()=>flush);
+ globalThis.showSaveFilePicker=()=>{opened++;return Promise.resolve({name:'native.json',async createWritable(){return{async write(text){writes.push(text);},async close(){}};}});};
+ try{
+  const saving=controller.save();assert.equal(opened,1);assert.equal(writes.length,0);
+  finish(true);const preset=await saving;assert.equal(writes.length,1);assert.deepEqual(JSON.parse(writes[0]),JSON.parse(serializePreset(preset)));
+ }finally{delete globalThis.showSaveFilePicker;controller.reset();}
+});
+test('a failed async authoring flush cannot open a writable or overwrite the selected destination',async()=>{
+ openSession();makeEdits();let finish,opened=0,writable=0;
+ const flush=new Promise(resolve=>{finish=resolve;}),controller=await deferredSaveController(()=>flush);
+ globalThis.showSaveFilePicker=()=>{opened++;return Promise.resolve({async createWritable(){writable++;throw Error('must not write invalid data');}});};
+ try{const saving=controller.save();assert.equal(opened,1);finish(false);assert.equal(await saving,null);assert.equal(writable,0);}
+ finally{delete globalThis.showSaveFilePicker;controller.reset();}
+});
+
+test('a cancelled picker can settle while validation is pending without writing or falling back',async()=>{
+ openSession();makeEdits();let finish,created=0;
+ const flush=new Promise(resolve=>{finish=resolve;}),controller=await deferredSaveController(()=>flush),oldCreate=URL.createObjectURL;
+ globalThis.showSaveFilePicker=()=>Promise.reject(Object.assign(Error('cancelled'),{name:'AbortError'}));URL.createObjectURL=()=>{created++;return 'blob:unexpected';};
+ try{const saving=controller.save();await new Promise(resolve=>setTimeout(resolve,0));finish(true);assert.equal(await saving,null);assert.equal(created,0);}
+ finally{delete globalThis.showSaveFilePicker;URL.createObjectURL=oldCreate;controller.reset();}
+});
+
+test('a pending authoring input enables saving before the first committed change',async()=>{
+ openSession();const {createEditorChanges}=await import('../assets/editor-changes.mjs');let pending=true;
+ const controller=createEditorChanges({hasSession:()=>true,canEdit:()=>true,gameId:()=>GAME,releaseId:()=>null,rows:()=>[],fields:()=>[],changeCount:()=>0,hasPendingWeaponAuthoring:()=>pending,announce(){}});
+ controller.refresh();assert.equal(byId('editorPresetSaveButton').disabled,false);
+ pending=false;controller.refresh();assert.equal(byId('editorPresetSaveButton').disabled,true);controller.reset();
 });

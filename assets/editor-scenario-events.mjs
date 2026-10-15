@@ -1,7 +1,14 @@
 // A bounded control-flow reader. Only instructions proved against both game
 // executables are admitted. Unknown calls remain frontiers, never byte scans.
-const FIXED = new Map([[0x05,3], [0x6f,7], [0x5e,1], [0x1d,2], [0x13,2]]);
+// 24/25/26 only consume/set/clear the fixed global animation flag word.
+// Both native handlers and their 32-bit shift helper were executed for every
+// masked bit index; no opaque calls, indirect stores or map writes remain.
+const FIXED = new Map([[0x05,3], [0x24,2], [0x25,2], [0x26,2], [0x6f,7], [0x5e,1], [0x1d,2], [0x13,2]]);
 const SUB = new Map([
+  // Native palette/window operations write fixed presentation-work bytes,
+  // with no indirect stores or calls. Their map context is preserved in both
+  // executables; this is separate from the display-only width catalogue.
+  [0x17,new Map([[2,3],[3,2],[4,4]])], [0x54,new Map([[0,2]])],
   [0x80,new Map([[0,3],[1,2],[2,2],[11,3]])], [0x81,new Map([[0,2],[2,2]])],
   [0x82,new Map([[0,3],[1,3],[2,3]])], [0x90,new Map([[0,2],[1,2],[2,3]])],
   [0xc0,new Map([[0,2],[1,2],[2,4],[3,2],[4,4],[5,2],[6,4],[7,2],[8,2],[9,2],[10,2],[11,4],[13,5],[14,4],[15,8],[18,5],[29,5]])],

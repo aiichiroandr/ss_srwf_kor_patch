@@ -2,8 +2,8 @@
 // Only fixed hero-list footprints 308..311, excluding their final four zero
 // padding bytes, are additionally mutable. Pointer cells and destination slots
 // remain pinned; the parser/writer require exactly six spirits and 00 00.
-import { SCENARIO_EDITOR_PROFILES } from './editor-scenario-profiles.mjs?v=20261012-frames3';
-import { TERRAIN_EDITOR_PROFILES } from './editor-terrain-profiles.mjs?v=20261012-frames3';
+import { SCENARIO_EDITOR_PROFILES } from './editor-scenario-profiles.mjs?v=20261015-stocknames2';
+import { TERRAIN_EDITOR_PROFILES } from './editor-terrain-profiles.mjs?v=20261015-stocknames2';
 const pins = [
   {
     "baseTargetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",
@@ -29,7 +29,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "9ddc35b8fa306af8043cbde371b2473b87bbec17c6c611807806d2fbb5093f15"
+    "immutableTsrSha256": "d35c19e5f77f3bd1966dbf010a828795c687211ab2120956ad19a6aa8bade937"
   },
   {
     "baseTargetSha256": "85b9cbf349c421d621f3a6e6819d94f9ee1405137430046469562a2176e798a3",
@@ -55,7 +55,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "4c8c7f2b6d67053fed06302d2b39bc702031d1dd51b1718be0d4685df132da9b"
+    "immutableTsrSha256": "4d7f6ccd91e6da595d209454d85b1bf3603ba8e97edc669941d1d9dd6f8419f4"
   },
   {
     "baseTargetSha256": "0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d",
@@ -81,7 +81,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "06de96078aa2ef66c22445b208f114fa7b3f08ae19799c48dda535b8c7d49e19"
+    "immutableTsrSha256": "ed4c567f34efb7fa043498e9b1acb09045a9a3a77464ae9f3bb4822be75c4a66"
   },
   {
     "baseTargetSha256": "75555116f784115e7104c593fd990491ae182b9493d9f159201e17b3e3d88202",
@@ -107,7 +107,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "fce3d7292c9ce5cd43a7bd6141ff893d945d870bad932a29de9049c763d388e8"
+    "immutableTsrSha256": "129a3cd3dbdd023962e14777f930d75febb3f8bf133348b7236f4e3d189b43d4"
   },
   {
     "baseTargetSha256": "fd8df11fc7a933cea000d40695325fb290900c72b64f8b316e18b06afee8d73e",
@@ -133,7 +133,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "28144882b8da931b634f4f2b488bc6da2bd0b9f745d776fd8b48faa09bfe4cc4"
+    "immutableTsrSha256": "1c07b80a570020fd9bbadeed735e8dada98aa6abfa509a69b42b278968ba23fa"
   },
   {
     "baseTargetSha256": "9d22ab0ac45e2f8a3728c18825ddd2ea96035704a2ef56b291e077e93e885e23",
@@ -159,7 +159,7 @@ const pins = [
         255
       ]
     ],
-    "immutableTsrSha256": "df2592eab0287e5aef826a2e9863e22d5e0623d30d2c0cb5719ed7e99fd19015"
+    "immutableTsrSha256": "85603e6ac38d4d1eb4a45889e8153269cf9f55b495eade72143297d05ebe22cb"
   },
   {
     "baseTargetSha256": "c198a93007d46161abe769b6f579f01cae89e23737c0a2ff38ec314d43b3adf8",

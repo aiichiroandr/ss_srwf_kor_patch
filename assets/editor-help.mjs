@@ -9,9 +9,9 @@
 import {
   CUT_CHANCE_TABLE, FACT_BADGE_LABELS, GAME_IDS, SHIELD_CHANCE_TABLE, badgeLabel, factFor, factHelpText, factOrUnknown,
   pilotLadderId, skillChancePercent, weakestBadge,
-} from "./editor-facts.mjs?v=20261012-frames3";
-import { ownEntry } from "./editor-own.mjs?v=20261012-frames3";
-import { GRADE_PERCENT, WEAPON_GRADE_PERCENT } from "./editor-grades.mjs?v=20261012-frames3";
+} from "./editor-facts.mjs?v=20261015-stocknames2";
+import { ownEntry } from "./editor-own.mjs?v=20261015-stocknames2";
+import { GRADE_PERCENT, WEAPON_GRADE_PERCENT } from "./editor-grades.mjs?v=20261015-stocknames2";
 
 const GAME_LABEL = Object.freeze({ 'srwf-f': 'F', 'srwf-final': '완결편' });
 const EMPTY_SLOT = '이 슬롯에는 특수능력을 넣지 않습니다.';
@@ -81,7 +81,7 @@ export function gameplayHelp(kind, label, context = null) {
 const gradeLine = (values) => ['A', 'B', 'C', 'D'].map((letter, index) => `${letter} ${values[4 - index]}%`).join(' · ');
 export function fieldHelp(field) {
   if (typeof field !== "string") return null;
-  const fields={exp:'레벨업에 필요한 경험치의 진행 상태입니다.',terrain:`무기의 지형별 성능 등급입니다. 네 지형 칸(공·육·해·우)이 한 바이트에 들어 있고 A ${WEAPON_GRADE_PERCENT[3]}% · B ${WEAPON_GRADE_PERCENT[2]}% · C ${WEAPON_GRADE_PERCENT[1]}% · - ${WEAPON_GRADE_PERCENT[0]}%로 계산됩니다(C는 화면으로 확인하지 못했습니다). 단순히 큰 숫자를 넣는다고 모든 지형이 강해지는 항목은 아닙니다.`,hp:'기체가 버틸 수 있는 체력입니다. 피해를 받아 0이 되면 격추됩니다.',en:'무기와 일부 방어능력에 쓰는 에너지입니다.',armor:'장갑이 높으면 받는 피해가 줄어듭니다.',speed:'기체의 운동성입니다. 명중과 회피에 영향을 줍니다.',limit:'기체가 활용할 수 있는 파일럿 명중·회피 능력의 한계입니다.',move:'한 번에 이동할 수 있는 거리입니다.',attack:'무기의 기본 공격력입니다. 실제 피해는 파일럿·기력·장갑 등에 따라 달라집니다.',minRange:'공격할 수 있는 가장 가까운 거리입니다.',maxRange:'공격할 수 있는 가장 먼 거리입니다.',hit:'공격 명중에 영향을 줍니다.',agi:'공격을 피하는 능력입니다.',atk:'격투 계열 무기의 공격에 영향을 줍니다.',shot:'사격 계열 무기의 공격에 영향을 줍니다.',tech:'크리티컬과 봐주기 등에 영향을 주는 기량입니다.',cnt:'반응이 높아지면 2회 행동을 할 수 있게 됩니다.',mp:'정신기를 사용하는 데 쓰는 SP입니다.',energy:'이 무기를 한 번 쓸 때 필요한 EN입니다.',ammo:'이 무기를 사용할 수 있는 잔탄 수입니다.',morale:'이 무기를 쓰기 위해 필요한 기력입니다.',critical:'이 무기의 크리티컬 발생에 영향을 주는 보정입니다.'};
+  const fields={dialogueKey:'파일럿의 무기별 전투대사 분기를 고르는 연결 번호입니다. 무기 이름·공격 연출과 별개이며, 같은 번호라도 파일럿마다 다른 대사 또는 공통 대사를 사용합니다. 전투 플레이어에서 실제 원문과 음성을 미리 확인하세요.',ranged:'사격은 파일럿의 사격 능력, 격투는 격투 능력을 공격 계산에 사용합니다. 공격 연출과는 별개입니다.',postMove:'이동한 뒤 이 무기를 사용할 수 있는 P병기 속성입니다.',parryable:'상대가 이 공격을 베어내기로 막을 수 있는 속성입니다. 사용 기체의 베어내기 능력을 부여하는 설정이 아닙니다.',exp:'레벨업에 필요한 경험치의 진행 상태입니다.',terrain:`무기의 지형별 성능 등급입니다. 네 지형 칸(공·육·해·우)이 한 바이트에 들어 있고 A ${WEAPON_GRADE_PERCENT[3]}% · B ${WEAPON_GRADE_PERCENT[2]}% · C ${WEAPON_GRADE_PERCENT[1]}% · - ${WEAPON_GRADE_PERCENT[0]}%로 계산됩니다(C는 화면으로 확인하지 못했습니다). 단순히 큰 숫자를 넣는다고 모든 지형이 강해지는 항목은 아닙니다.`,hp:'기체가 버틸 수 있는 체력입니다. 피해를 받아 0이 되면 격추됩니다.',en:'무기와 일부 방어능력에 쓰는 에너지입니다.',armor:'장갑이 높으면 받는 피해가 줄어듭니다.',speed:'기체의 운동성입니다. 명중과 회피에 영향을 줍니다.',limit:'기체가 활용할 수 있는 파일럿 명중·회피 능력의 한계입니다.',move:'한 번에 이동할 수 있는 거리입니다.',attack:'무기의 기본 공격력입니다. 실제 피해는 파일럿·기력·장갑 등에 따라 달라집니다.',minRange:'공격할 수 있는 가장 가까운 거리입니다.',maxRange:'공격할 수 있는 가장 먼 거리입니다.',hit:'공격 명중에 영향을 줍니다.',agi:'공격을 피하는 능력입니다.',atk:'격투 계열 무기의 공격에 영향을 줍니다.',shot:'사격 계열 무기의 공격에 영향을 줍니다.',tech:'크리티컬과 봐주기 등에 영향을 주는 기량입니다.',cnt:'반응이 높아지면 2회 행동을 할 수 있게 됩니다.',mp:'정신기를 사용하는 데 쓰는 SP입니다.',energy:'이 무기를 한 번 쓸 때 필요한 EN입니다.',ammo:'이 무기를 사용할 수 있는 잔탄 수입니다.',morale:'이 무기를 쓰기 위해 필요한 기력입니다.',critical:'공격자와 상대의 기량 차이에 더하는 크리티컬 판정 보정입니다. +20은 저장 코드4에 해당합니다. 실제 확률은 상대 분류 등 조건에 따라 달라지며, 크리티컬 피해 배율을 바꾸는 값이 아닙니다.'};
   if (/^(ground|sea|air|space)$/.test(field)) return `이 지형에서 성능을 얼마나 낼 수 있는지 나타내는 등급입니다. 저장값 4=A 3=B 2=C 1=D 0=E(화면에 따라 -)이고 ${gradeLine(GRADE_PERCENT)}로 계산됩니다(검증됨). 파일럿의 C·D는 화면으로 확인하지 못했습니다(추정). 게임은 기체와 파일럿의 등급을 합쳐 공격과 방어에 곱하며, 어느 두 등급을 합치는지는 추정입니다.`;
   if (/^abilityValue\d$/.test(field)) return '효과의 크기가 아니라 조건 플래그 번호입니다. 0이면 이벤트 제한 없이 등록되고, 0이 아니면 그 번호의 이벤트 플래그가 켜져 있어야 등록됩니다. 번호 옆 설명에서 해당 게임의 발동 시나리오와 조건을 확인하세요. 번호를 입력해도 이벤트가 실행되거나 세이브 플래그가 켜지지는 않습니다.';
   if (/Growth$/.test(field)) return '레벨업 때 이 능력치가 자라는 성향입니다. 여기 입력한 숫자가 레벨마다 그대로 더해지는 것은 아닙니다.';

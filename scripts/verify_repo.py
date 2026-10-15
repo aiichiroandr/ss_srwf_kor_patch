@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from collections import Counter
 import hashlib
 from html.parser import HTMLParser
 import json
@@ -345,6 +346,46 @@ EXPECTED_PACKAGE_SCRIPTS = {
     "build": "npm test",
     "verify": "python3 scripts/verify_repo.py",
     "test": "node --test && PYTHONDONTWRITEBYTECODE=1 python3 -m scripts.verify_repo --test",
+}
+
+# Reviewed dependency artifacts, never a directory or extension exemption.
+# Their exact bytes and real ESM dependency lists are both checked. The URL
+# tokens include license/namespace identifiers, shader text and console copy.
+# Remote compressed-texture loading is disabled. The exact self-only CSP remains
+# mandatory and the battle renderer supplies owned pixel buffers, not URLs.
+PINNED_VENDOR_MODULES = {
+    "assets/vendor/pixi/pixi-8.22.0.min.mjs": {
+        "sha256": "d1b98b8574bea51021e07453566797bba6334e2bb7941de6e434a9d738371be7",
+        "imports": (),
+        "url_tokens": {
+            "http://www.opensource.org/licenses/mit-license": 1,
+            "//.exec": 1,
+            "///4r+AAB1oZ2mm+6BAaWWgkmDQgAAEAAWADgkHBhKAAAgIABIQBxTu2uRu4+zgQC3iveBAfGCAXHwgQM=": 1,
+            "//g,": 1, "///8WfhwB8+ErK42A=": 1, "//73v/+BiOh/AAA=": 1,
+            "//----${e}----//": 1, "//-----${s}": 1, "//----${s}": 1,
+            "//-": 1, "http://www.w3.org/2000/svg": 2,
+            "http://www.w3.org/1999/xhtml": 1, "http://www.pixijs.com/": 2, "//#": 1,
+        },
+        # The old text regex sees `from` inside a warning string. V8's
+        # parser separately confirms that this standalone module imports none.
+        "false_import_tokens": {
+            ");return}const a=e.source;if(!a.format.includes(": 1,
+        },
+    },
+    "assets/vendor/pixi/unsafe-eval-csp.mjs": {
+        "sha256": "6b9443330689333b2e3f45b4d9ee702da44993f311ad21e6bf090307820b339e",
+        "imports": ("./pixi-8.22.0.min.mjs",),
+        "url_tokens": {"http://www.opensource.org/licenses/mit-license": 1},
+        "false_import_tokens": {},
+    },
+}
+# This analysis CLI is not a browser module. Other scripts are still scanned;
+# every browser/markup reference to this exact CLI path is forbidden.
+PINNED_NODE_ONLY_MODULES = {
+    "scripts/editor-battle-task-timing.mjs": {
+        "sha256": "9348d42a0d869283cf82a4a6d93a180caa323e06b46ab18ec9631b78d541cfea",
+        "imports": ("node:fs/promises",),
+    },
 }
 
 EXPECTED_PRE_COMMIT_LINES = [
@@ -2722,6 +2763,44 @@ def validate_active_reference(path: Path, reference: str, context: str) -> None:
         complain(
             f"{relative(path)}: deployable source cannot reference excluded test source: {reference}"
         )
+    elif target is not None and target.as_posix() in PINNED_NODE_ONLY_MODULES:
+        complain(f"{relative(path)}: browser source cannot reference Node-only CLI: {reference}")
+
+
+def parse_module_dependencies(text: str, context: str) -> tuple[str, ...] | None:
+    """Use the local Node/V8 parser without linking or evaluating the module."""
+    program = (
+        "const fs=require('node:fs'),vm=require('node:vm');"
+        "const module=new vm.SourceTextModule(fs.readFileSync(0,'utf8'));"
+        "process.stdout.write(JSON.stringify(module.dependencySpecifiers));"
+    )
+    try:
+        result = subprocess.run(
+            ["node", "--experimental-vm-modules", "--no-warnings", "-e", program],
+            input=text, text=True, check=True, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, timeout=10, cwd=ROOT,
+        )
+        imports = json.loads(result.stdout)
+        if not isinstance(imports, list) or not all(isinstance(value, str) for value in imports):
+            raise ValueError("invalid parser result")
+    except (OSError, subprocess.SubprocessError, UnicodeError, ValueError) as exc:
+        complain(f"{context}: exact module syntax/import validation failed: {type(exc).__name__}")
+        return None
+    return tuple(imports)
+
+
+def validate_pinned_module(path: Path, text: str, policy: dict[str, Any]) -> bool:
+    name = relative(path)
+    if sha256_file(path) != policy["sha256"]:
+        complain(f"{name}: pinned module SHA-256 does not match its reviewed source")
+        return False
+    imports = parse_module_dependencies(text, name)
+    if imports is None:
+        return False
+    if imports != tuple(policy["imports"]):
+        complain(f"{name}: parsed module imports do not match its reviewed dependency list")
+        return False
+    return True
 
 
 def parse_csp_directives(content: str) -> dict[str, tuple[str, ...]] | None:
@@ -2800,10 +2879,18 @@ def validate_static_site(files: list[Path]) -> None:
             complain(f"{relative(path)}: deployable site file is not UTF-8: {exc}")
             continue
         suffix = path.suffix.lower()
+        name = relative(path)
+        vendor = PINNED_VENDOR_MODULES.get(name)
+        node_only = PINNED_NODE_ONLY_MODULES.get(name)
+        vendor_approved = vendor is not None and validate_pinned_module(path, text, vendor)
+        node_approved = node_only is not None and validate_pinned_module(path, text, node_only)
         scanned = (
             svg_namespace_declaration.sub("", text) if suffix == ".svg" else text
         )
-        if external_url.search(scanned):
+        tokens = Counter(external_url.findall(scanned))
+        if vendor_approved and tokens != vendor["url_tokens"]:
+            complain(f"{name}: URL token inventory does not match its reviewed source")
+        elif tokens and not vendor_approved:
             complain(f"{relative(path)}: external/CDN URL is forbidden")
         if network_write.search(text):
             complain(f"{relative(path)}: upload or network-write API is forbidden")
@@ -2825,7 +2912,18 @@ def validate_static_site(files: list[Path]) -> None:
             for reference in css_references(text):
                 validate_active_reference(path, reference, "CSS reference")
         elif suffix in {".js", ".mjs"}:
-            for specifier in import_specifier.findall(text):
+            imports = import_specifier.findall(text)
+            if vendor_approved:
+                false_tokens = Counter(value for value in imports if value in vendor["false_import_tokens"])
+                if false_tokens != vendor["false_import_tokens"]:
+                    complain(f"{name}: textual import token inventory does not match its reviewed source")
+                imports = [value for value in imports if value not in vendor["false_import_tokens"]]
+                # Real parsed dependencies remain subject to same-origin and
+                # excluded-source checks, even for an exact pinned artifact.
+                imports.extend(vendor["imports"])
+            for specifier in imports:
+                if node_approved and specifier in node_only["imports"]:
+                    continue
                 if not specifier.startswith(("./", "../")):
                     complain(f"{relative(path)}: non-local module import is forbidden: {specifier}")
                     continue

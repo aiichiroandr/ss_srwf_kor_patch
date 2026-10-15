@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   catalogEditorBattleAssets, createEditorInspector, previewEditorBattle,
-  previewEditorBattleAsset, splitRootSegments,
+  previewEditorBattleAsset, splitRootSegments,inspectEditorBattleSceneSources,previewEditorBattleWebAction,
 } from '../assets/editor-core.mjs';
 import { buildDisc, packGreedy, SECTOR, sha256, tsrStream } from './helpers/synthetic-iso.mjs';
 import { buildGame, descriptorFor, PRODUCT, trustFor } from './helpers/synthetic-game.mjs';
@@ -15,6 +15,12 @@ const codeIs = code => error => {
   assert.equal(error?.code, code, `expected ${code}, got ${error?.code}: ${error?.message}`);
   return true;
 };
+test('sound profiles reject out-of-range or accessor-backed selectors before touching a disc',async()=>{
+ for(const effectSoundProfile of [{bankIndex:-1,mixerIndex:0},{bankIndex:65,mixerIndex:0},{bankIndex:0,mixerIndex:-1},{bankIndex:0,mixerIndex:256},{bankIndex:0.5,mixerIndex:0}])
+  await assert.rejects(()=>previewEditorBattleWebAction(null,{effectSoundProfile}),codeIs('EDITOR_PREVIEW_INVALID'));
+ let invoked=false;const profile={mixerIndex:0};Object.defineProperty(profile,'bankIndex',{get(){invoked=true;return 0;}});
+ await assert.rejects(()=>previewEditorBattleWebAction(null,{effectSoundProfile:profile}),codeIs('EDITOR_PREVIEW_INVALID'));assert.equal(invoked,false);
+});
 
 function directory(selector, start, end) {
   const bytes = new Uint8Array(DIRECTORY_SIZE);
@@ -156,11 +162,17 @@ test('battle APIs refuse absent session state and unknown carrier names before r
     await assert.rejects(catalogEditorBattleAssets(session, request), codeIs('EDITOR_SESSION_MISSING'));
     await assert.rejects(previewEditorBattleAsset(session, request), codeIs('EDITOR_SESSION_MISSING'));
     await assert.rejects(previewEditorBattle(session, selection), codeIs('EDITOR_SESSION_MISSING'));
+    await assert.rejects(inspectEditorBattleSceneSources(session, selection), codeIs('EDITOR_SESSION_MISSING'));
   }
   const before = valid.slices;
-  for (const fileName of ['UNKNOWN.BIN', '../E_SPR.BIN', '0', 'TSR_OBJ.BIN', 'BTSR.BIN', 'E_PAL.BIN', 'E_SC.BIN']) {
+  for(const flags of [{nativeTexture:true},{nativeTexture:true,indexed:false},{nativeTexture:1,indexed:true}])
+    await assert.rejects(previewEditorBattleAsset(valid.session,
+      {fileName:'E_SPR.BIN',assetKey:'battle1:E_SPR.BIN:1:0:1:0',...flags}),codeIs('EDITOR_PREVIEW_INVALID'));
+  for (const fileName of ['UNKNOWN.BIN', '../E_SPR.BIN', '0', 'TSR_OBJ.BIN', 'BTSR.BIN', 'BMESS.BIN', 'E_PAL.BIN', 'E_SC.BIN']) {
     await assert.rejects(catalogEditorBattleAssets(valid.session, { fileName }), codeIs('EDITOR_PREVIEW_INVALID'));
   }
+  await assert.rejects(previewEditorBattleAsset(valid.session,
+    {fileName:'BMESS.BIN',assetKey:'battle1:BMESS.BIN:1:0:1:0'}),codeIs('EDITOR_PREVIEW_INVALID'));
   assert.equal(valid.slices, before);
 });
 
@@ -172,6 +184,11 @@ test('battle request fields must be own data properties; getters are never evalu
   await assert.rejects(catalogEditorBattleAssets(f.session,
     Object.defineProperty({}, 'fileName', { get: getter })), codeIs('EDITOR_PREVIEW_INVALID'));
   await assert.rejects(previewEditorBattle(f.session, Object.create(selection)), codeIs('EDITOR_PREVIEW_INVALID'));
+  await assert.rejects(inspectEditorBattleSceneSources(f.session, Object.create(selection)), codeIs('EDITOR_PREVIEW_INVALID'));
+  await assert.rejects(inspectEditorBattleSceneSources(f.session,
+    Object.defineProperty({unitIndex:1},'weaponIndex',{get:getter})),codeIs('EDITOR_PREVIEW_INVALID'));
+  await assert.rejects(inspectEditorBattleSceneSources(f.session,
+    Object.defineProperty({unitIndex:1,weaponIndex:1},'opponentUnitIndex',{get:getter})),codeIs('EDITOR_MEDIA_NOT_FOUND'));
   await assert.rejects(previewEditorBattle(f.session,
     Object.defineProperty({ weaponIndex: 1, unitIndex: 1 }, 'mode', { get: getter })), codeIs('EDITOR_PREVIEW_INVALID'));
   const optionalGetter = Object.defineProperty({ fileName: 'E_SPR.BIN' }, 'cursor', { get: getter });
@@ -224,6 +241,10 @@ test('a picture key cannot select a different named carrier, and caches stay wit
   await assert.rejects(previewEditorBattleAsset(red.session, { fileName: 'E_SPR.BIN', assetKey: key.replace('E_SPR.BIN', 'EFFECT.BIN') }), codeIs('EDITOR_PREVIEW_INVALID'));
   assert.equal(red.slices, before, 'mismatched carrier keys fail before any extent read');
   const a = await previewEditorBattleAsset(red.session, { fileName: 'E_SPR.BIN', assetKey: key });
+  const indexed=await previewEditorBattleAsset(red.session,{fileName:'E_SPR.BIN',assetKey:key,indexed:true});
+  assert.deepEqual(Array.from(indexed.colorIndices),[1,0]);
+  assert.equal(indexed.paletteWords.length,16);assert.deepEqual(indexed.pixels,a.pixels);
+  await assert.rejects(previewEditorBattleAsset(red.session,{fileName:'E_SPR.BIN',assetKey:key,indexed:'true'}),codeIs('EDITOR_PREVIEW_INVALID'));
   const b = await previewEditorBattleAsset(green.session, { fileName: 'E_SPR.BIN', assetKey: key });
   assert.deepEqual([...a.pixels.slice(0,4)], [248,0,0,255]);
   assert.deepEqual([...b.pixels.slice(0,4)], [0,248,0,255]);

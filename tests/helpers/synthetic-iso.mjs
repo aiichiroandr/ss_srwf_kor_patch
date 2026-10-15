@@ -438,7 +438,7 @@ const UNIT_FIELDS = ['hp', 'en', 'armor', 'speed', 'limit', 'move', 'ground', 's
   'ability1', 'ability2', 'ability3', 'ability4', 'abilityValue1', 'abilityValue2', 'abilityValue3', 'abilityValue4', 'shield', 'parry'];
 const PILOT_FIELDS = ['exp', 'atk', 'shot', 'agi', 'hit', 'tech', 'cnt', 'mp', 'ground', 'sea', 'air', 'space',
   'attackGrowth', 'shotGrowth', 'hitGrowth', 'techGrowth', 'agiGrowth', 'cntGrowth', 'mindGrowth', 'syncGrowth'];
-const WEAPON_FIELDS = ['attack', 'hit', 'critical', 'minRange', 'maxRange', 'terrain', 'energy', 'ammo', 'requiredMorale', 'requiredSkill'];
+const WEAPON_FIELDS = ['attack', 'hit', 'critical', 'minRange', 'maxRange', 'terrain', 'energy', 'ammo', 'requiredMorale', 'requiredSkill', 'ranged', 'postMove', 'parryable', 'dialogueKey'];
 const pick = (row, fields) => Object.fromEntries(fields.map((field) => [field, row[field]]));
 
 // A request that echoes every row of the session unchanged; `change(kind, row, fields)` may edit a copy of the fields.

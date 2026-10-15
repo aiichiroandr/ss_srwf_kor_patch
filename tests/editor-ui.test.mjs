@@ -499,9 +499,9 @@ test("unit and pilot terrain are four letter selects in the in-game order; each 
     const selects = terrainSelects(gridId);
     assert.deepEqual(selects.map((select) => select.dataset.editorField), ["air", "ground", "sea", "space"], kind);
     assert.deepEqual(byId(gridId).querySelectorAll(".editor-field-name").map((name) => name.textContent), ["공", "육", "해", "우"]);
-    assert.deepEqual(selects[0].options.map((option) => option.textContent), ["A", "B", "C", "D", "-"], "the letters as on the game's screen");
-    assert.deepEqual(selects[0].options.map((option) => option.getAttribute("aria-label")), ["A 120%", "B 100%", "C 80%", "D 60%", "- 0%"]);
-    assert.deepEqual(selects[0].options.map((option) => option.value), ["4", "3", "2", "1", "0"], "values stay the stored integers");
+    assert.deepEqual(selects[0].options.map((option) => option.textContent), (kind === "pilot" ? ["α", "A", "B", "C", "D", "-"] : ["A", "B", "C", "D", "-"]), "ordinary letters and the separately identified pilot correction");
+    assert.deepEqual(selects[0].options.map((option) => option.getAttribute("aria-label")), (kind === "pilot" ? ["α · 합산 보정값 5", "A 120%", "B 100%", "C 80%", "D 60%", "- 0%"] : ["A 120%", "B 100%", "C 80%", "D 60%", "- 0%"]));
+    assert.deepEqual(selects[0].options.map((option) => option.value), (kind === "pilot" ? ["5", "4", "3", "2", "1", "0"] : ["4", "3", "2", "1", "0"]), "values stay the stored integers");
     assert.deepEqual(selects.map((select) => select.getAttribute("aria-label")), ["공중 지형 적응도", "지상 지형 적응도", "바다 지형 적응도", "우주 지형 적응도"]);
   }
 });

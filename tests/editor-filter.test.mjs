@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { matchesConditions, filterFields, isValidCondition, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit } from "../assets/editor-filter.mjs";
+import { matchesConditions, gradeChoices, gradeText, filterFields, isValidCondition, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit } from "../assets/editor-filter.mjs";
 import { joinWeaponTerrain, splitWeaponTerrain } from "../assets/editor-grades.mjs";
 const condition = (field, value, op = "eq") => ({ field, value, op });
 const unit = (recordIndex, values = {}) => { const row = { recordIndex, editable: true, hp: 1000, space: 3, air: 4, sea: 1, ground: 2, ...values }; return { ...row, original: { ...row } }; };
@@ -89,4 +89,19 @@ test("weapon space changes preserve the other three packed grades and ammo domai
   const ammo = planBulkEdit(view, "weapon", weapons, "ammo", 99);
   assert.equal(ammo.plan.skipReasons["weapon-domain"], 1);
   applyBulkEdit(ammo, view); assert.deepEqual(weapons.map(row => row.ammo), [0, 99]);
+});
+
+ test("pilot alpha filters and bulk edits keep the pilot-only grade domain", () => {
+  assert.equal(gradeText("pilot", 5), "α");
+  assert.equal(gradeChoices("pilot")[0].value, 5);
+  assert.equal(matchesConditions("pilot", {space:5}, [condition("space",5)]), true);
+  assert.equal(matchesConditions("unit", {space:5}, [condition("space",5)]), false);
+  assert.equal(isValidBulkValue("unit", "space", 5), false);
+  assert.equal(isValidBulkValue("weapon", "space", 5), false);
+  const row = unit(85);
+  const view = session([], [], [row]);
+  const tx = applyBulkEdit(planBulkEdit(view,"pilot",[row],"space",5),view);
+  assert.equal(row.space,5);
+  undoBulkEdit(tx,view);
+  assert.equal(row.space,3);
 });

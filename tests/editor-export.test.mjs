@@ -383,7 +383,7 @@ test('an edit that cannot fit is refused with the growth error and numbers, and 
   const { session, rows, slotLength } = await fixture();
   const next = mulberry32(8);
   const high = (kind, field) => {
-    if (kind === 'weapon') return { attack: 65535, energy: 65535, critical: 15 }[field] ?? 255;
+    if (kind === 'weapon') return { attack: 65535, energy: 65535, critical: 15, dialogueKey: 63 }[field] ?? 255;
     if (/^(ground|sea|air|space)$/.test(field)) return 4; // a changed grade stays in the A..E domain
     if (/Growth$/.test(field)) return 15;
     if (/^(move|exp|atk|shot)$|^ability/.test(field)) return 255;
@@ -392,7 +392,7 @@ test('an edit that cannot fit is refused with the growth error and numbers, and 
   const request = echoRequest(session, rows, (kind, row, fields) => {
     for (const field of Object.keys(fields)) {
       // the ammo, morale, skill and flag fields have their own domains (tests/editor-weapon-flags.test.mjs): they stay as stored
-      if (['ammo', 'requiredMorale', 'requiredSkill', 'shield', 'parry'].includes(field)) continue;
+      if (['ammo', 'requiredMorale', 'requiredSkill', 'shield', 'parry', 'ranged', 'postMove', 'parryable'].includes(field)) continue;
       fields[field] = kind === 'weapon' && field === 'hit' ? Math.floor(next() * 256) - 128 : Math.floor(next() * (high(kind, field) + 1));
       // the structural unit abilities cannot be given to a unit (see editor-locks.mjs): draw an ordinary id instead
       if (/^ability[1-4]$/.test(field)) while (isLockedUnitAbility(fields[field])) fields[field] = (fields[field] + 1) & 255;

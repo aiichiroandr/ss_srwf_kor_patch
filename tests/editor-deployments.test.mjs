@@ -49,6 +49,19 @@ test('unknown commands and common-script control transfers stop before embedded 
   const m = readScenarioDeployments(readScenarioArchive(ca01.bytes, 'srwf-final'), ca01.maps, tables);
   assert.equal(m.rows.length, 2); assert.equal(m.rows[0].editable, true);
 });
+for(const gameId of ['srwf-f','srwf-final'])test(`${gameId} proved presentation and shared-flag commands retain the actual map through coordinate export and reopen`,async()=>{
+  const prefix=[0xc4,0,2,0x17,2,3,0x17,3,0x17,4,255,128,0x54,0,0x24,255,0x25,31,0x26,128];
+  const f=fixture(gameId,prefix,[0xea]),archive=readScenarioArchive(f.bytes,gameId);
+  const model=readScenarioDeployments(archive,f.maps,tables),row=model.rows[0];
+  assert.equal(model.rows.length,2);assert.ok(model.rows.every(row=>row.editable&&row.mapIndex===1));
+  const saved=await repackScenarioDeployments(f.bytes,gameId,f.maps,tables,[{recordIndex:row.recordIndex,x:5,y:0}]);
+  const reopened=readScenarioArchive(saved.bytes,gameId),wanted=f.raw.slice();
+  wanted[f.first]=5;wanted[f.first+1]=0;
+  assert.deepEqual(reopened.bodies[0].decoded,wanted);
+  assert.deepEqual(deploymentDecodedMasks(saved.model),deploymentDecodedMasks(model));
+  const reset=await repackScenarioDeployments(saved.bytes,gameId,f.maps,tables,[{recordIndex:row.recordIndex,x:2,y:3}]);
+  assert.deepEqual(readScenarioArchive(reset.bytes,gameId).bodies[0].decoded,f.raw);
+});
 for(const gameId of ['srwf-f','srwf-final'])test(`${gameId} a map proved by the bounded initial-wave reader remains selectable after the legacy prefix stops`,()=>{
   const f=fixture(gameId,[0x16,3,0xc4,0,2,0x80,1]);
   const m=readScenarioDeployments(readScenarioArchive(f.bytes,gameId),f.maps,tables);
