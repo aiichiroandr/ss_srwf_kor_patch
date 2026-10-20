@@ -1171,6 +1171,26 @@ def validate_required_files(files: list[Path]) -> None:
         complain(f"required file is missing: {name}")
 
 
+# User-authorized WEB PORT trial: exact reviewed executable/source artifacts only.
+# This exception does not permit ROMs, arbitrary WASM, archives or patch releases.
+WEB_PORT_ARTIFACTS = {
+    "web-port/runtime/704d9f64b5fa48104414/saturn.wasm": (39227196, "f1eab0d3e4516697efb1274655a699958fdc83e2538bba8d01787d23b0e44d28"),
+    "web-port/runtime/704d9f64b5fa48104414/saturn.js": (115939, "bc21b1ce0631e48f6d9ad619786afa6d238fc62ed042fc8298d00909982bbcbd"),
+    "web-port/runtime/source-704d9f64b5fa48104414.tar.gz": (7133947, "f1095462c9ecf4c0e6943db15de602bdabf315f2b65a3c941c47818a90e2cf39"),
+}
+
+def verified_web_port_artifact(path: Path) -> bool:
+    expected = WEB_PORT_ARTIFACTS.get(relative(path))
+    if expected is None or path.is_symlink():
+        return False
+    import hashlib
+    data = path.read_bytes()
+    if len(data) != expected[0] or hashlib.sha256(data).hexdigest() != expected[1]:
+        complain(f"{relative(path)}: web-port artifact hash/size mismatch")
+        return False
+    return True
+
+
 def validate_forbidden_artifacts(files: list[Path]) -> None:
     for path in files:
         name = relative(path)
@@ -1186,6 +1206,8 @@ def validate_forbidden_artifacts(files: list[Path]) -> None:
             complain(f"forbidden environment/secret file: {name}")
         if any(part.lower() in FORBIDDEN_DIRS for part in pure.parts[:-1]):
             complain(f"forbidden generated/cache directory content: {name}")
+        if verified_web_port_artifact(path):
+            continue
         if lower_name.endswith(".tar.gz") or any(suffix in FORBIDDEN_SUFFIXES for suffix in lower_suffixes):
             complain(f"forbidden ROM/archive/save/patch artifact: {name}")
         if re.search(r"\.(?:state\d+|ss\d+|mc.)$", lower_name):
@@ -2794,6 +2816,10 @@ def validate_static_site(files: list[Path]) -> None:
         r"(?:\bfrom\s*|\bimport\s*(?:\(\s*)?)['\"]([^'\"]+)['\"]"
     )
     for path in site_files:
+        # Emscripten's pinned loader contains generic platform fallback URLs/XHR.
+        # Application modules remain subject to the full no-network-write scan.
+        if verified_web_port_artifact(path):
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as exc:

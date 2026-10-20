@@ -1613,5 +1613,33 @@ class SyntheticV2ReleaseTests(unittest.TestCase):
         self.assertTrue(any("magic is not SRWFKP2" in error for error in v2_on_v1), v2_on_v1)
 
 
+class WebPortArtifactBoundaryTests(unittest.TestCase):
+    def test_only_exact_pinned_content_is_exempt(self):
+        import hashlib
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from scripts import verify_repo as verifier
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            path = root / 'web-port/runtime/test/saturn.wasm'
+            path.parent.mkdir(parents=True)
+            data = b'\x00asm\x01\x00\x00\x00'
+            path.write_bytes(data)
+            pins = {'web-port/runtime/test/saturn.wasm': (len(data), hashlib.sha256(data).hexdigest())}
+            with patch.object(verifier, 'ROOT', root), patch.object(verifier, 'WEB_PORT_ARTIFACTS', pins), patch.object(verifier, 'errors', []):
+                self.assertTrue(verifier.verified_web_port_artifact(path))
+                path.write_bytes(data[:-1] + b'!')
+                self.assertFalse(verifier.verified_web_port_artifact(path))
+                self.assertTrue(verifier.errors)
+                other = root / 'unapproved.wasm'
+                other.write_bytes(data)
+                self.assertFalse(verifier.verified_web_port_artifact(other))
+                link = root / 'web-port/runtime/test/link.wasm'
+                link.symlink_to(path)
+                pins['web-port/runtime/test/link.wasm'] = pins['web-port/runtime/test/saturn.wasm']
+                self.assertFalse(verifier.verified_web_port_artifact(link))
+
+
 if __name__ == "__main__":
     unittest.main()

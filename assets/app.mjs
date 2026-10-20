@@ -1,10 +1,11 @@
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261011-public13';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261011-public13';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261011-public13";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261011-public13";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261011-public13";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261011-public13";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261011-public13";
+import {openWebPort} from "./web-port-launch.mjs";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261021-webport1';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261021-webport1';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261021-webport1";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261021-webport1";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261021-webport1";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261021-webport1";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261021-webport1";
 import {
   canStep,
   filterRecords,
@@ -13,7 +14,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261011-public13";
+} from "./editor-list.mjs?v=20261021-webport1";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -24,7 +25,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261011-public13";
+} from "./editor-grades.mjs?v=20261021-webport1";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -58,27 +59,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261011-public13";
+} from "./editor-skill-list.mjs?v=20261021-webport1";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261011-public13";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261011-public13";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261011-public13";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261011-public13";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261011-public13";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261011-public13";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261011-public13";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261011-public13";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261011-public13";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261011-public13";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261011-public13";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261011-public13";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261011-public13";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261011-public13";
+} from "./editor-facts.mjs?v=20261021-webport1";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261021-webport1";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261021-webport1";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261021-webport1";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261021-webport1";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261021-webport1";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261021-webport1";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261021-webport1";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261021-webport1";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261021-webport1";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261021-webport1";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261021-webport1";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261021-webport1";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261021-webport1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -86,14 +87,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261011-public13";
+} from "./font-revisions.mjs?v=20261021-webport1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261011-public13";
+} from "./release-notes.mjs?v=20261021-webport1";
 
-const STATIC_ASSET_REVISION = "20261011-public13";
+const STATIC_ASSET_REVISION = "20261021-webport1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -365,6 +366,7 @@ const elements = {
   weaponStatsForm: byId("weaponStatsForm"),
   editorExportButton: byId("editorExportButton"),
   workflowOpenEditor: byId("workflowOpenEditor"),
+  workflowWebPort: byId("workflowWebPort"),
   workflowSkipEditor: byId("workflowSkipEditor"),
   workflowSaveRegion: byId("workflowSaveRegion"),
   workflowSaveSummary: byId("workflowSaveSummary"),
@@ -734,6 +736,11 @@ elements.pilotHeroReturnButton.addEventListener("click", handleHeroEditorLink);
 document.addEventListener("keydown", handleEditorNavigationKey);
 elements.editorExportButton.addEventListener("click", () => navigateWorkflow("save"));
 elements.workflowOpenEditor.addEventListener("click", () => prepareWorkflow("editor"));
+elements.workflowWebPort.addEventListener("click",()=>{
+  const blob=state.editorTargetHash==="0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d"
+    ? state.webPortInput : state.workflowStockSelection?.blob || state.webPortInput;
+  if(blob && state.editorGameId==='srwf-final')openWebPort(blob);
+});
 elements.workflowSkipEditor.addEventListener("click", () => prepareWorkflow("save"));
 elements.workflowSaveButton.addEventListener("click", exportEditorImage);
 elements.workflowFolderSave.addEventListener("click", saveWorkflowFolder);
@@ -1922,6 +1929,7 @@ function syncModeUi() {
     : "이 파일의 언어와 기존 변경값을 유지합니다. 한글화 여부를 바꾸려면 정품 원본을 다시 여세요.";
   elements.workflowOpenEditor.textContent = setupGameId === "srwf-final" ? "F완결편 에디터 열기" : "F 에디터 열기";
   elements.workflowOpenEditor.disabled = !loaded || busy || !editable;
+  elements.workflowWebPort.disabled = !loaded || busy || setupGameId!=="srwf-final";
   elements.workflowSkipEditor.disabled = !loaded || busy;
   elements.workflowSaveButton.disabled = !loaded || busy || state.editorDownloadUrls.length > 0;
   elements.workflowSaveButton.hidden = state.editorDownloadUrls.length > 0;
@@ -3316,6 +3324,7 @@ function clearEditorState() {
   editorSearchTools.reset();
   state.workflowStage = "setup";
   state.workflowStockSelection = null;
+  state.webPortInput = null;
   state.workflowDirectOutput = false;
   state.workflowDestination = null;
   state.workflowBaseKind = "korean";
@@ -3962,7 +3971,7 @@ function beginEditorInspection(imageBlob, {
   }
   const canReusePatchVerification = verifiedTargetSha256 === release.target.sha256
     && imageBlob.size === release.target.size;
-  state.editorInspectContext = { origin, release, localImage, cueTracks, plan, inputSize: imageBlob.size };
+  state.editorInspectContext = { origin, release, localImage, cueTracks, plan, inputSize: imageBlob.size, webPortInput: imageBlob };
   state.editorActive = true;
   elements.editorError.hidden = true;
   state.editorSequence += 1;
@@ -4126,6 +4135,7 @@ function handleEditorWorkerMessage(event) {
     clearEditorDownloads();
     state.editorLocalImage = Boolean(context.localImage);
     state.editorInputSize = context.inputSize;
+    state.webPortInput = context.webPortInput;
     state.editorSessionToken = view.sessionToken;
     state.editorGameId = view.gameId;
     state.editorTargetHash = view.targetHash;
