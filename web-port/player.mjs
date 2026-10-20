@@ -5,7 +5,7 @@ const canvas = $("screen"), ctx = canvas.getContext("2d");
 const keys = {ArrowRight:0x8000,ArrowLeft:0x4000,ArrowDown:0x2000,ArrowUp:0x1000,Enter:0x800,
   KeyZ:0x400,KeyX:0x100,KeyC:0x200,KeyA:0x40,KeyS:0x20,KeyD:0x10,KeyQ:8,KeyW:0x80};
 let receivedFiles=[];
-let worker, pad, audio, masterGain, nextAudio = 0;
+let worker, pad, audio, masterGain, audioNode, nextAudio = 0;
 let modernMenu=false;
 try { modernMenu=localStorage.getItem("srwf-im-ui-v1")==="modern"; } catch {}
 $("modern-menu").checked=modernMenu;
@@ -161,7 +161,7 @@ $("fast").onchange=()=>{
   if(pad) Atomics.store(pad,1,Number($("fast").checked));
   if(activeGame!=="final") {
     for(const source of scheduledAudio) source.stop();
-    scheduledAudio.clear(); nextAudio=0;
+    scheduledAudio.clear(); nextAudio=0;audioNode?.port.postMessage({type:"clear"});
     if(masterGain&&audio)masterGain.gain.setValueAtTime($("fast").checked ? 0 : Number($("volume").value)/100,audio.currentTime);
   }
 };
@@ -218,12 +218,23 @@ $("boot").onclick=async()=>{
   Atomics.store(pad,1,Number($("fast").checked));
   canvas.dataset.audioFrames="0";canvas.dataset.audioDrops="0";canvas.dataset.audioGaps="0";
   canvas.dataset.menuTrace="[]";canvas.dataset.runtimeVersion="legacy";
-  audio=new AudioContext({sampleRate:44100});await audio.resume();nextAudio=0;
+  audio=new AudioContext({sampleRate:44100,latencyHint:"playback"});await audio.resume();nextAudio=0;
   recordingAudio=audio.createMediaStreamDestination();
   masterGain=audio.createGain();
   masterGain.gain.value=(game!=="final" && $("fast").checked) ? 0 : Number($("volume").value)/100;
   masterGain.connect(audio.destination);
   masterGain.connect(recordingAudio);
+  await audio.audioWorklet.addModule(new URL('./audio-worklet.mjs',import.meta.url));
+  audioNode=new AudioWorkletNode(audio,'saturn-audio',{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[2]});
+  audioNode.connect(masterGain);
+  audioNode.port.onmessage=({data})=>{
+    canvas.dataset.audioFrames=String(data.frames);canvas.dataset.audioDrops=String(data.drops);
+    canvas.dataset.audioGaps=String(data.gaps);canvas.dataset.audioBufferMs=String(data.bufferMs);
+    canvas.dataset.audioState=audio?.state||'closed';
+  };
+  const audioChannel=new MessageChannel();
+  audioNode.port.postMessage({type:'connect',port:audioChannel.port1},[audioChannel.port1]);
+
   const releaseDir="./runtime/";
   const manifest=await fetch(releaseDir+"current.json",{cache:"no-store"});
   let runtimeVersion="";
@@ -233,7 +244,7 @@ $("boot").onclick=async()=>{
     runtimeVersion=`&runtime=${version}`;
     canvas.dataset.runtimeVersion=version;
   }else if(manifest.status!==404)throw Error("실행 파일 버전 정보를 읽지 못했습니다.");
-  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}`);
+  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1`);
   $("boot").disabled=true;$("stop").disabled=false;
   $("status").textContent="실행 코드 준비 중";
   worker.onerror=async e=>{await stopRun();$("status").textContent=`실행 오류: ${e.message}`;};
@@ -287,7 +298,7 @@ $("boot").onclick=async()=>{
   };
   const routeFile=$("route").files[0];
   const route=routeFile?await routeFile.text():undefined;
-  worker.postMessage({type:"boot",files,cue:cue.name,pad:pad.buffer,route,temporary,backup:liveBackup,cdRate:Number($("cd-rate").value)});
+  worker.postMessage({type:"boot",files,cue:cue.name,pad:pad.buffer,route,temporary,backup:liveBackup,cdRate:Number($("cd-rate").value),audioPort:audioChannel.port2},[audioChannel.port2]);
   } catch(error) {
     worker?.terminate();worker=null;audio?.close();audio=null;
     unlockSave?.();unlockSave=null;saveControls(false);

@@ -6,6 +6,13 @@ importScripts(buildDir + "saturn.js");
 if (self.name !== "em-pthread") onmessage = async ({data}) => {
   if (data.type !== "boot") return;
   try {
+    const hostPostMessage=self.postMessage.bind(self);
+    const audioPad=new Int32Array(data.pad);
+    self.postMessage=(message,transfer)=>{
+      if(message.type==='audio'&&data.audioPort){
+        if(variant==='final'||!Atomics.load(audioPad,1))data.audioPort.postMessage(message,transfer);
+      }else hostPostMessage(message,transfer);
+    };
     const runtime = await createSaturn({
       noInitialRun: true,
       srwPad: new Int32Array(data.pad),
