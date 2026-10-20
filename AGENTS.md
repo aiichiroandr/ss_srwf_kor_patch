@@ -126,3 +126,13 @@ The local editor now uses the already accepted public F v0.5 G103 a/b/c and F Fi
 ## Public editor beta (2026-10-11)
 
 The user explicitly authorized deployment of the existing browser editor and its bounded scenario beta. New event/reinforcement creation, Final region conditions, and history conditions remain disabled. This authorization does not accept new patch releases or widen existing release evidence.
+
+## WEB PORT trial (2026-10-21)
+
+The user explicitly authorized remote trial deployment with a WEB PORT (TEST)
+button below the editor launcher, forwarding the selected ROM in browser memory,
+mobile touch UI, and optional modern intermission (default OFF). This does not
+accept a new patch release. The exact runtime JS/WASM and corresponding source
+archive are hash/size-pinned in scripts/verify_repo.py; arbitrary binaries,
+ROMs, extracted binary game data, and archives remain forbidden. Runtime sources
+and license notices must accompany distribution. See docs/WEB_PORT_TEST.md.
