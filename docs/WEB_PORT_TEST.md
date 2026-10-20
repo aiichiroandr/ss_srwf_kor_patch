@@ -42,3 +42,26 @@ launcher module via a file-input harness; the desktop folder-picker UI itself
 was not automated. Root button wiring is reviewed separately. 390x844 and
 844x390 iframe viewports checked visually; this is not a physical-phone runtime
 performance claim. Runtime stops/restarts and source selection remain explicit.
+
+### Mobile audio transport update — 2026-10-21
+
+Audio now travels directly from the game worker to an AudioWorklet through a
+MessageChannel, bypassing the main-thread frame/UI handler. A 44.1 kHz stereo
+FIFO starts/restarts after 120 ms has accumulated, caps backlog at 300 ms by
+retaining the newest 120 ms, and resamples to the actual output sample rate.
+Gain and recording remain downstream of this node. No WASM or ROM change.
+The added buffering trades roughly 100 ms more startup headroom for scheduling
+stability; it cannot compensate for sustained emulation slower than real time.
+
+Three FIFO regression tests cover starvation/recovery, 48 kHz rate conversion,
+and overflow/reset. A muted browser synthetic-worker test with a 400 ms main
+thread stall completed with zero underruns/drops. Actual Final coldboot at frame
+924 reported 678912 received frames, 116 ms queued, zero underruns/drops. These
+are desktop browser transport checks, not physical-phone listening validation.
+
+The FIFO's persistent sample storage is 22,050 stereo Float32 frames = 176,400
+bytes, plus scalar bookkeeping and browser-managed message/output buffers.
+It belongs to the browser host, not Saturn RAM; this transport is not a candidate
+for copying into a physical Saturn patch. Stop/restart creates a new context,
+worklet and channel. A same-page temporary-save restart at 2x also delivered
+498688 audio frames with zero underruns/drops (frame 1394).
