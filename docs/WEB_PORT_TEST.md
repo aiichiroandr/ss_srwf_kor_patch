@@ -329,3 +329,13 @@ bounded host-clock correction. The 60 ms startup target, PCM preservation,
 remain available. This rolls back the reported regression; it does not claim
 to resolve pre-existing v6 underruns or establish the precise S25 cause.
 The two runtime source archives differ only in BUILD.md and host_web.cpp.
+
+## Mobile v9: function dispatch cache
+
+The user's mobile-paced-v7 report shows near-zero disc read time, normally 1–2 ms audio transport, and sustained non-sleep processing above the 16.7 ms frame budget. A 106-call window spent 1918 ms outside sleep (~18.1 ms/call). This is elapsed time, not isolated CPU execution.
+
+A local native sample with identical dispatch source found `sh2_lookup` at 520/3417 main-thread top-of-stack samples (~15.2%). The mobile-only runtime now caches successful address-to-function lookups in 4096 tagged entries. Every overlay activation and active-slot restoration clears the cache. Full-address checks preserve collisions; cache-through aliases normalize exactly as before; misses retain the original behavior. Desktop runtime artifacts are unchanged.
+
+No PCM, sound-chip clock, sample rate, channel count, buffer target, or packet size changed. The prior v6 timing controller remains in use, with a 60 ms mobile target and 256-frame packets.
+
+Validation: 172 runtime tests pass, including new overlay/restore, alias, collision and slot-precedence cases. The first run hit the pre-existing 4 ms wall-clock CD test under build contention; the repeat passed. A native 18,000-frame first-battle replay produces byte-identical 53,073,808-byte WAV and four PNG checkpoints. A synthetic Node/WebAssembly repeated-lookup benchmark reduced this lookup workload by ~91%; this is not a whole-game or Galaxy performance claim. Physical S25 validation remains user-side.
