@@ -8,5 +8,5 @@ export function openWebPort(blob) {
   };
   // BroadcastChannel survives the player's cross-origin-isolation reload.
   // The ROM is a structured-cloned Blob, never a network request or stored file.
-  window.open(new URL("../web-port/#handoff="+token,import.meta.url),"_blank","noopener");
+  window.open(new URL("../web-port/?ui=reference2#handoff="+token,import.meta.url),"_blank","noopener");
 }

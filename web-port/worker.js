@@ -39,7 +39,7 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
       }
     };
     if(data.mobileOptimized && audioPad.length>=7){
-      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=10');
+      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=11');
       mobileTiming=new MobileTiming(audioPad);
     }
     const runtime = await createSaturn({

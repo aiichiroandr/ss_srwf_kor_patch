@@ -367,3 +367,35 @@ The compact transport row, landscape controller, desktop and audio code remain
 unchanged. The v10 recovery policy can reduce displayed frames to approximately
 30 or 20 fps at 1x under queue pressure; unchanged simulation timing does not
 mean unchanged visual smoothness.
+
+### Mobile full-frame v11 (2026-10-21)
+
+The user rejected reducing visible frame cadence to protect audio. The mobile
+frontend now presents every 1x guest frame and the normal even-frame 60 Hz
+output at 2x, regardless of queue pressure. No pressure/critical display skips
+remain. The mobile host uses a fresh queue-based wait, rather than accumulating
+a correction into a future host deadline. Missing/stale feedback falls back to
+the native deadline. Mobile requests interactive AudioContext latency; desktop
+retains playback latency and its immutable runtime. FIFO target remains 60 ms,
+capacity 500 ms, and packets 256 source frames. PCM is not trimmed or stretched.
+
+Core work: decode palette colors/MSB once per synchronous composition and use
+power-of-two masks/shifts for tile coordinates. Native differential tests compare
+all pixels against the deployed v9 compositor, including CRAM mode and plane
+mutations; 174 runtime tests pass. One 200-frame native cell-screen fixture took
+314.356 ms before / 274.838 ms after. This measures only composition on the Mac,
+not whole-game speed or Galaxy performance. A full-frame FIFO model tolerates
+35 ms transient work spikes in a 12 ms baseline without underruns or audio drops;
+it does not claim sustained workloads above the frame budget can meet 60 Hz.
+
+GitHub Pages returns HTML with max-age=600. The launcher formerly changed only
+the handoff fragment, which cannot invalidate an HTTP cache entry. The launcher
+and UI URLs now carry a revision query, preserved after handoff; the isolation
+worker revalidates navigations. The actual reference portrait pad remains in
+place. Physical S25 display smoothness and audible input latency are unverified.
+
+The packaged runtime is `67d6487c3a80561562ed`, frontend/profile
+`mobile-11` / `mobile-full-frame-v11`. Local Mac browser integration emitted
+600/600 frames at 1x and 300/600 at 2x, with zero additional missing frames and
+zero FIFO gaps in both bounded checks. Output was muted at the gain node, so
+these are routing/cadence checks, not listening or physical-phone latency tests.
