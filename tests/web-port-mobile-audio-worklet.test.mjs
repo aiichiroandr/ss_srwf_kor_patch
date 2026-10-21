@@ -110,3 +110,18 @@ test('clear removes queued sound and pending events while retaining counter sema
   replacement.onmessage({data: {type: 'audio', samples: pcm(10600)}});
   assert.equal(render(processor)[0], 0.25);
 });
+
+
+test('queue feedback reaches producer every render quantum without main-thread messages',()=>{
+ const {processor,push}=setup();
+ const shared=new SharedArrayBuffer(28),pad=new Int32Array(shared),input={onmessage:null};
+ processor.port.onmessage({data:{type:'connect',port:input,feedback:shared}});
+ input.onmessage({data:{type:'audio',samples:pcm(5000)}});
+ render(processor);
+ assert.equal(Atomics.load(pad,5),4872);
+ assert.equal(Atomics.load(pad,6),1);
+ assert.equal(processor.messages.length,0);
+ render(processor);
+ assert.equal(Atomics.load(pad,5),4744);
+ assert.equal(Atomics.load(pad,6),2);
+});

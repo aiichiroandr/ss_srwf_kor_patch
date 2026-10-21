@@ -1,8 +1,8 @@
-import {MobilePause} from './mobile-pause.mjs?mobile=4';
-import {formatPerformance} from "./performance-probe.mjs?mobile=4";
-import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=4";
-import {MobileSpeedGuard} from "./mobile-speed-guard.mjs?mobile=4";
-import {selectRuntime} from "./runtime-selection.mjs?mobile=4";
+import {MobilePause} from './mobile-pause.mjs?mobile=5';
+import {formatPerformance} from "./performance-probe.mjs?mobile=5";
+import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=5";
+import {MobileSpeedGuard} from "./mobile-speed-guard.mjs?mobile=5";
+import {selectRuntime} from "./runtime-selection.mjs?mobile=5";
 import {createIntermission} from "./intermission.mjs";
 import {readSave, writeSave, exportBackup, importBackup, validateBackup, lockSave} from "./saves.mjs";
 const $ = id => document.getElementById(id);
@@ -249,11 +249,11 @@ $("boot").onclick=async()=>{
   speedGuard=activeProfile.optimized&&game==="final" ? new MobileSpeedGuard() : null;
   speedGuardReady=false;speedNotice="";resetSpeedGuard();$("speed-status").hidden=true;
   if(mobileDevice){
-    diagnosticRows=[];diagnosticAudioEvents=[];diagnosticMeta={browser:navigator.userAgent,started:new Date().toISOString(),version:'pending',profile:activeProfile.name,frontend:'mobile-4',audioTargetMs:activeProfile.optimized?240:120,audioQueueCapMs:500};
+    diagnosticRows=[];diagnosticAudioEvents=[];diagnosticMeta={browser:navigator.userAgent,started:new Date().toISOString(),version:'pending',profile:activeProfile.name,frontend:'mobile-5',audioTargetMs:activeProfile.optimized?100:120,audioQueueCapMs:500};
     $("performance-status").textContent="성능 진단: 실행 후 측정합니다.";
     $("diagnostic-text").hidden=true;$("diagnostic-copy-status").textContent="";
   }
-  pad=new Int32Array(new SharedArrayBuffer(mobileDevice?20:16));
+  pad=new Int32Array(new SharedArrayBuffer(mobileDevice?28:16));
   Atomics.store(pad,1,Number($("fast").checked));
   canvas.dataset.audioFrames="0";canvas.dataset.audioDrops="0";canvas.dataset.audioGaps="0";
   canvas.dataset.menuTrace="[]";canvas.dataset.runtimeVersion="legacy";
@@ -265,7 +265,7 @@ $("boot").onclick=async()=>{
   masterGain.gain.value=(game!=="final" && $("fast").checked) ? 0 : Number($("volume").value)/100;
   masterGain.connect(audio.destination);
   if(recordingAudio)masterGain.connect(recordingAudio);
-  const audioWorklet=activeProfile.optimized ? './mobile-audio-worklet.mjs?mobile=4' : './audio-worklet.mjs';
+  const audioWorklet=activeProfile.optimized ? './mobile-audio-worklet.mjs?mobile=5' : './audio-worklet.mjs';
   const audioProcessor=activeProfile.optimized ? 'saturn-mobile-audio' : 'saturn-audio';
   await audio.audioWorklet.addModule(new URL(audioWorklet,import.meta.url));
   audioNode=new AudioWorkletNode(audio,audioProcessor,{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[2]});
@@ -283,7 +283,7 @@ $("boot").onclick=async()=>{
     onState:paused=>{$("resume-mobile").hidden=true;if(paused)$("status").textContent=document.hidden?"백그라운드 · 일시정지":"재개 중";},
     onError:()=>{$("resume-mobile").hidden=false;$("status").textContent="재개 버튼을 눌러 계속하세요.";}});
   const audioChannel=new MessageChannel();
-  audioNode.port.postMessage({type:'connect',port:audioChannel.port1},[audioChannel.port1]);
+  audioNode.port.postMessage({type:'connect',port:audioChannel.port1,feedback:activeProfile.optimized?pad.buffer:undefined},[audioChannel.port1]);
 
   const selectedRuntime=await selectRuntime({optimized:activeProfile.optimized,game},fetch);
   const runtimeVersion=`&runtime=${selectedRuntime.version}`;
@@ -291,7 +291,7 @@ $("boot").onclick=async()=>{
   $("runtime-source").href=`./runtime/source-${selectedRuntime.version}.tar.gz`;
   if(mobileDevice){diagnosticMeta.version=selectedRuntime.version;diagnosticMeta.mobileCore=selectedRuntime.mobile;diagnosticMeta.runtimeFallback=selectedRuntime.fallback;}
   if(selectedRuntime.fallback)$("log").textContent+="\n모바일 실행 코드를 읽지 못해 기본 실행 코드를 사용합니다.";
-  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=4`);
+  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=5`);
   $("boot").disabled=true;$("stop").disabled=false;
   $("status").textContent="실행 코드 준비 중";
   worker.onerror=async e=>{await stopRun();$("status").textContent=`실행 오류: ${e.message}`;};

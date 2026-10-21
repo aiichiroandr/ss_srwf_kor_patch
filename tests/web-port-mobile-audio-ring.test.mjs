@@ -18,14 +18,14 @@ function render(ring, frames) {
   return {left, right};
 }
 
-test('mobile startup and starvation recovery both wait for 240 ms', () => {
+test('mobile startup and starvation recovery both wait for 100 ms', () => {
   const ring = new MobileAudioRing();
-  assert.equal(ring.target, 10584);
+  assert.equal(ring.target, 4410);
   assert.equal(ring.capacity, 22050);
-  ring.push(pcm(10583, 1));
+  ring.push(pcm(4409, 1));
   assert.equal(render(ring, 128).left.every(value => value === 0), true);
   assert.equal(ring.playing, false);
-  ring.push(pcm(1, 10584));
+  ring.push(pcm(1, 4410));
   assert.equal(render(ring, 128).left[0], 1 / 32768);
   assert.equal(ring.playing, true);
   render(ring, 11000);
@@ -35,7 +35,7 @@ test('mobile startup and starvation recovery both wait for 240 ms', () => {
   ring.push(pcm(ring.target - ring.count - 1, 12000));
   assert.equal(render(ring, 128).left.every(value => value === 0), true);
   ring.push(pcm(1, 24000));
-  assert.equal(render(ring, 128).left[0], 10584 / 32768);
+  assert.equal(render(ring, 128).left[0], 4410 / 32768);
   assert.equal(ring.playing, true);
   assert.equal(ring.gaps, 1);
 });
@@ -103,7 +103,7 @@ test('clear prevents old-session playback and desktop policy remains unchanged',
   assert.equal(mobile.count, 0);
   assert.equal(mobile.playing, false);
   assert.equal(render(mobile, 128).left.every(value => value === 0), true);
-  assert.equal(mobile.target, 10584);
+  assert.equal(mobile.target, 4410);
   const desktop = new AudioRing();
   desktop.push(pcm(14112));
   assert.equal(desktop.target, 5292);
