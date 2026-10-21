@@ -2,7 +2,7 @@
 export class MobileTiming {
   constructor(pad, now=()=>performance.now()) {
     this.pad=pad;this.now=now;this.heartbeat=0;this.updated=0;
-    this.pressure=false;this.skipped=0;this.adjustments=0;
+    this.pressure=false;this.critical=false;this.skipped=0;this.adjustments=0;this.criticalSkips=0;this.recoveryAdjustments=0;
   }
   depth() {
     const beat=Atomics.load(this.pad,6), now=this.now();
@@ -13,10 +13,18 @@ export class MobileTiming {
   wantsFrame(frame,fast) {
     if(fast && frame%2)return false;
     const ms=this.depth();
-    if(ms===null)this.pressure=false;
+    if(ms===null){this.pressure=false;this.critical=false;}
     else if(ms<50)this.pressure=true;
     else if(ms>=65)this.pressure=false;
-    if(this.pressure && frame%(fast?4:2)) {this.skipped++;return false;}
+    if(ms!==null){
+      if(ms<30)this.critical=true;
+      else if(ms>=50)this.critical=false;
+    }
+    // Shed only display composition. Guest execution and PCM stay continuous.
+    const stride=this.critical?(fast?6:3):(fast?4:2);
+    if(this.pressure && frame%stride) {
+      this.skipped++;if(this.critical)this.criticalSkips++;return false;
+    }
     return true;
   }
   correction() {
@@ -24,7 +32,11 @@ export class MobileTiming {
     if(ms===null || Math.abs(ms-60)<=5)return 0;
     // Rebase the host deadline gradually: refill low queues, drain excess
     // latency by waiting, without throwing away queued speech.
-    const adjustment=Math.max(-2,Math.min(2,(ms-60)*0.15));
+    // Under 40 ms, a 2 ms phase advance cannot refill promptly after a
+    // costly frame. Advance by up to 8 ms; keep normal/high-depth damping.
+    const recovery=ms<40;
+    const adjustment=recovery?-Math.min(8,(60-ms)*0.25):Math.max(-2,Math.min(2,(ms-60)*0.15));
+    if(recovery)this.recoveryAdjustments++;
     this.adjustments++;return adjustment;
   }
   planWait() {

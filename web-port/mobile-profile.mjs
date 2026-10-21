@@ -9,5 +9,5 @@ export function isMobileDevice(nav = {}) {
 export function executionProfile(nav, enabled = true) {
   const mobile = isMobileDevice(nav);
   return {mobile, optimized: mobile && enabled,
-    name: mobile && enabled ? 'mobile-dispatch-v9' : 'standard'};
+    name: mobile && enabled ? 'mobile-recovery-v10' : 'standard'};
 }
