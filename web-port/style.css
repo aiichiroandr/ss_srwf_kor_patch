@@ -149,3 +149,11 @@
 #volume-jog.adjusting i{height:120px;width:10px;box-shadow:0 0 0 12px #171b24f5,0 0 0 13px #a6b0c055,0 5px 20px 15px #0008}
 #volume-jog.adjusting i:before{width:24px;height:8px}
 #volume-jog:focus-visible{outline:2px solid #dfbe7a;outline-offset:2px}
+
+/* Startup-only feedback: no timers or animation after the first game frame. */
+.empty-state.is-booting .empty-symbol{display:block;flex:none;width:46px;height:46px;margin:8px;border:1px solid #d7e3e8;border-radius:50%;font-size:0;background:conic-gradient(#a8bbc8,#edf4f5 18%,#8096ae 30%,#d1c4e0 45%,#b0cad1 58%,#e8f1ed 72%,#7f95ad 86%,#a8bbc8);position:relative;animation:boot-disc-spin 1.4s linear infinite}
+.empty-state.is-booting .empty-symbol:after{content:"";position:absolute;inset:17px;border:2px solid #a8bbc8;border-radius:50%;background:#14232c;box-shadow:0 0 0 3px #ffffff55}
+.empty-state.is-booting>span:last-child:after{content:".";display:inline-block;width:1.5em;text-align:left;animation:boot-dots 1.5s steps(1,end) infinite}
+@keyframes boot-disc-spin{to{transform:rotate(360deg)}}
+@keyframes boot-dots{0%{content:"."}33.333%{content:".."}66.666%{content:"..."}}
+@media(prefers-reduced-motion:reduce){.empty-state.is-booting .empty-symbol,.empty-state.is-booting>span:last-child:after{animation:none}}
