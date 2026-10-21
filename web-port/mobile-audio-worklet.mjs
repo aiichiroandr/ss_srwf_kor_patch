@@ -1,4 +1,4 @@
-import {MobileAudioRing} from './mobile-audio-ring.mjs?mobile=5';
+import {MobileAudioRing} from './mobile-audio-ring.mjs?mobile=6';
 
 class SaturnMobileAudio extends AudioWorkletProcessor {
   constructor() {
