@@ -229,6 +229,7 @@ $("boot").onclick=async()=>{
       const {patchDisc}=await import("./patch.mjs");
       const patched=await patchDisc(files,game,p=>{$("status").textContent=`한글패치 검증 중 · ${p.phase??p.stage??""}`;});
       files=patched.files;cue=files.find(f=>f.name===patched.cue);
+      $("game").dataset.discLanguage="ko";document.dispatchEvent(new Event("disc-language-change"));
       $("log").textContent=`검증 완료: ${patched.release}\nSHA-256 ${patched.sha256}`;
     }catch(error){$("status").textContent=`패치 실패: ${error.message}`;$("boot").disabled=false;saveControls(false);return;}
   }
@@ -401,6 +402,7 @@ if(handoffToken && /^[a-f0-9]{32}$/.test(handoffToken)){
   channel.onmessage=({data})=>{
     if(data?.type!=='disc'||!(data.blob instanceof Blob)||data.game!=='final')return;
     receivedFiles=[new File([data.blob],data.name||'selected.bin')];
+    delete $('game').dataset.discLanguage;document.dispatchEvent(new Event('disc-language-change'));
     $('disc-label').textContent='패치 페이지에서 선택한 디스크';
     $('disc-hint').textContent='파일 전달 완료 · 다시 선택하지 않고 시작하세요';
     $('status').textContent='디스크 전달 완료';
