@@ -348,6 +348,10 @@ $("boot").onclick=async()=>{
     } else if(d.type==="frame"){
       if(speedGuard&&!speedGuardReady){speedGuardReady=true;resetSpeedGuard();}
       if(canvas.width!==d.w||canvas.height!==d.h){canvas.width=d.w;canvas.height=d.h;}
+      if(mobileDevice && canvas.dataset.displaySize!==`${d.w}x${d.h}`){
+        canvas.dataset.displaySize=`${d.w}x${d.h}`;
+        $("stage").style.setProperty("--game-aspect",`${d.w} / ${d.h}`);
+      }
       ctx.putImageData(new ImageData(d.rgba,d.w,d.h),0,0);
       $("status").textContent=mobileDevice&&document.hidden?"백그라운드 · 일시정지":"플레이 중"+speedNotice;
       canvas.dataset.frame=d.frame;
