@@ -8,6 +8,7 @@ import {readSave, writeSave, exportBackup, importBackup, validateBackup, lockSav
 const $ = id => document.getElementById(id);
 const canvas = $("screen"), ctx = canvas.getContext("2d");
 const mobileDevice = isMobileDevice(navigator);
+document.documentElement.classList.toggle("mobile-device",mobileDevice);
 $("mobile-options").hidden = !mobileDevice;
 $("mobile-optimize").checked = mobileDevice;
 $("mobile-preload").checked=mobileDevice && Number(navigator.deviceMemory)>=8;

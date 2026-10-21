@@ -28,3 +28,56 @@
 .saturn-logo{background:transparent;padding:0;width:72px;height:72px;border-radius:6px;object-fit:contain}
 @media(max-width:600px){.saturn-logo{width:54px;height:54px}}
 @media(orientation:landscape) and (max-height:560px){.saturn-logo{width:34px;height:34px}}
+
+/* The mobile display owns the width; controls no longer reserve side columns. */
+.topbar .brand{width:100%;justify-content:space-between}
+.mobile-device body{padding-left:0;padding-right:0}
+.mobile-device .workspace{width:100%;max-width:none;padding:0}
+.mobile-device .topbar{padding:0 max(10px,env(safe-area-inset-left)) 0 max(10px,env(safe-area-inset-right))}
+.mobile-device .television{width:100%;padding-left:0;padding-right:0;border-left:0;border-right:0;border-radius:0}
+.mobile-device .television:before,.mobile-device .television:after{display:none}
+.mobile-device .stage{width:100%;border-left:0;border-right:0;border-radius:0;box-shadow:none}
+.mobile-device .stage:after{display:none}
+.mobile-device .tv-console,.mobile-device .tv-status{padding-left:8px;padding-right:8px}
+@media(orientation:landscape){
+ .mobile-device .topbar{height:34px;flex-shrink:0}.mobile-device .saturn-logo{width:42px;height:32px}.mobile-device #game-logo{width:126px;height:34px}
+ .mobile-device .tabs{height:28px}.mobile-device .tabs button{min-width:0;min-height:28px;padding:3px 14px;font-size:10px}
+ .mobile-device .play-column{display:block;width:100%;height:100%;padding:0;border:0;border-radius:0;background:#030506;box-shadow:none;position:relative}
+ .mobile-device .play-column:before,.mobile-device .tv-top,.mobile-device .play-note,.mobile-device footer{display:none}
+ .mobile-device .television{width:100%;height:100%;padding:0;border:0;background:none;box-shadow:none;position:static}
+ .mobile-device .stage{flex:1;width:100%;border:0;overflow:hidden;border-radius:0;box-shadow:none}
+ .mobile-device .stage canvas{width:100%;height:100%;object-fit:contain}
+ .mobile-device .tv-console{height:30px;min-height:30px;margin:0;padding:2px max(8px,env(safe-area-inset-right)) 2px max(8px,env(safe-area-inset-left));background:#171a20;gap:6px;border:0;box-shadow:none}
+ .mobile-device .tv-status{height:12px;font-size:8px;background:#171a20}
+ .mobile-device .saturn-pad,.mobile-device .pad-body,.mobile-device .shoulders{display:contents}
+ .mobile-device .saturn-pad:before,.mobile-device .shoulders>span,.mobile-device .pad-center>span{display:none}
+ .mobile-device .dpad{position:absolute;left:max(14px,env(safe-area-inset-left));bottom:62px;width:90px;height:90px;margin:0;grid-template:repeat(3,30px)/repeat(3,30px);z-index:5;opacity:.68}
+ .mobile-device .action-pad{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:69px;margin:0;grid-template-columns:repeat(3,32px);gap:10px 6px;z-index:5;opacity:.68}
+ .mobile-device .action-pad button{width:27px;height:27px}.mobile-device .action-pad button:nth-child(n+4){width:34px;height:34px}
+ .mobile-device .shoulders button{position:absolute;top:8px;left:max(14px,env(safe-area-inset-left));width:64px;height:24px;min-height:24px;z-index:5;opacity:.7}
+ .mobile-device .shoulders button:last-child{left:auto;right:max(14px,env(safe-area-inset-right))}
+ .mobile-device .pad-center{position:absolute;bottom:49px;right:calc(max(14px,env(safe-area-inset-right)) + 36px);z-index:5;opacity:.75}
+ .mobile-device .dpad:active,.mobile-device .action-pad:active{opacity:1}
+ .mobile-device .screen-expand{bottom:auto;top:7px;right:calc(max(14px,env(safe-area-inset-right)) + 75px)}
+ .mobile-device .play-column:fullscreen{padding:0;width:100%;height:100%}
+}
+
+/* Landscape scales to available height while retaining the game's aspect ratio. */
+@media(orientation:landscape){
+ .mobile-device .tv-console{position:absolute;left:0;right:0;bottom:0;z-index:6;background:#171a20d9}
+ .mobile-device .tv-status{position:absolute;left:0;right:0;bottom:30px;z-index:6;background:#171a20b3}
+ .mobile-device .stage{height:100%;flex:1}
+}
+@media(orientation:landscape){
+ .mobile-device .tv-console{display:contents}
+ .mobile-device .transport{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:6px;z-index:6}
+ .mobile-device .speed-control{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:38px;z-index:6;background:#171a2099;border-radius:4px;padding:0 4px}
+ .mobile-device .volume-control{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:6px;z-index:6;background:#171a2099;border-radius:20px;padding:0 4px}
+ .mobile-device .tv-status{left:max(10px,env(safe-area-inset-left));right:auto;bottom:35px;max-width:190px;padding:0 3px;background:#171a2099}
+}
+
+/* Original wordmark: transparent backing, white outline is confined to letters. */
+.saturn-logo{width:180px;height:60px;background:transparent;padding:0;border-radius:0}
+@media(max-width:600px){.saturn-logo{width:130px;height:44px}}
+@media(orientation:landscape) and (max-height:560px){.saturn-logo{width:150px;height:32px}}
+.mobile-device .saturn-logo{width:150px;height:32px}
