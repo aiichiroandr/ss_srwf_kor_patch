@@ -8,7 +8,7 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
   try {
     let probe=null,discCache=null;
     if(data.mobileDiagnostics){
-      const {PerformanceProbe}=await import("./performance-probe.mjs?mobile=1");
+      const {PerformanceProbe}=await import("./performance-probe.mjs?mobile=2");
       probe=new PerformanceProbe();
     }
     const hostPostMessage=self.postMessage.bind(self);

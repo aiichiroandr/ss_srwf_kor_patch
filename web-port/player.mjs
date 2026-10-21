@@ -1,5 +1,7 @@
-import {formatPerformance} from "./performance-probe.mjs?mobile=1";
-import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=1";
+import {formatPerformance} from "./performance-probe.mjs?mobile=2";
+import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=2";
+import {MobileSpeedGuard} from "./mobile-speed-guard.mjs?mobile=2";
+import {selectRuntime} from "./runtime-selection.mjs?mobile=2";
 import {createIntermission} from "./intermission.mjs";
 import {readSave, writeSave, exportBackup, importBackup, validateBackup, lockSave} from "./saves.mjs";
 const $ = id => document.getElementById(id);
@@ -9,6 +11,10 @@ $("mobile-options").hidden = !mobileDevice;
 $("mobile-optimize").checked = mobileDevice;
 $("performance-panel").hidden = !mobileDevice;
 let activeProfile = executionProfile(navigator);
+let speedGuard=null, speedGuardReady=false, speedNotice="";
+function resetSpeedGuard(){
+  speedGuard?.reset(performance.now(),Number(canvas.dataset.audioGaps||0));
+}
 $("diagnostic-copy").onclick=async()=>{
   const text=JSON.stringify({type:'SRWF local performance report',...diagnosticMeta,rows:diagnosticRows},null,2);
   $("diagnostic-text").value=text;$("diagnostic-text").hidden=false;
@@ -166,7 +172,7 @@ for(const button of document.querySelectorAll("[data-pad]")){
 }
 function release() { if(pad) Atomics.store(pad,0,0); }
 window.addEventListener("blur",release);
-document.addEventListener("visibilitychange",()=>{if(document.hidden)release();});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)release();resetSpeedGuard();});
 canvas.addEventListener("blur",release);
 for(const type of ["keydown","keyup"]) window.addEventListener(type,event=>{
   if(!worker || !keys[event.code]) return;
@@ -177,6 +183,7 @@ for(const type of ["keydown","keyup"]) window.addEventListener(type,event=>{
 });
 $("fast").onchange=()=>{
   if(pad) Atomics.store(pad,1,Number($("fast").checked));
+  resetSpeedGuard();speedNotice="";$("speed-status").hidden=true;
   if(activeGame!=="final") {
     for(const source of scheduledAudio) source.stop();
     scheduledAudio.clear(); nextAudio=0;audioNode?.port.postMessage({type:"clear"});
@@ -185,6 +192,7 @@ $("fast").onchange=()=>{
 };
 async function stopRun(){
   intermission.reset();
+  speedGuard=null;speedGuardReady=false;speedNotice="";
   stopRecording();$("record").disabled=true;
   worker?.terminate();worker=null;release();audio?.close();audio=null;scheduledAudio.clear();
   await saveQueue;
@@ -233,8 +241,10 @@ $("boot").onclick=async()=>{
     : liveBackup ? "기존 저장을 불러왔습니다. 맵 중단 저장은 ‘이어하기’, 일반 저장은 ‘로드’를 선택하세요." : "새 저장으로 시작합니다.";
   try {
   activeProfile=executionProfile(navigator,$("mobile-optimize").checked);
+  speedGuard=activeProfile.optimized&&game==="final" ? new MobileSpeedGuard() : null;
+  speedGuardReady=false;speedNotice="";resetSpeedGuard();$("speed-status").hidden=true;
   if(mobileDevice){
-    diagnosticRows=[];diagnosticMeta={browser:navigator.userAgent,started:new Date().toISOString(),version:'pending',profile:activeProfile.name,frontend:'mobile-1'};
+    diagnosticRows=[];diagnosticMeta={browser:navigator.userAgent,started:new Date().toISOString(),version:'pending',profile:activeProfile.name,frontend:'mobile-2'};
     $("performance-status").textContent="성능 진단: 실행 후 측정합니다.";
     $("diagnostic-text").hidden=true;$("diagnostic-copy-status").textContent="";
   }
@@ -261,16 +271,13 @@ $("boot").onclick=async()=>{
   const audioChannel=new MessageChannel();
   audioNode.port.postMessage({type:'connect',port:audioChannel.port1},[audioChannel.port1]);
 
-  const releaseDir="./runtime/";
-  const manifest=await fetch(releaseDir+"current.json",{cache:"no-store"});
-  let runtimeVersion="";
-  if(manifest.ok){
-    const {version}=await manifest.json();
-    if(!/^[a-f0-9]{20}$/.test(version))throw Error("실행 파일 버전 정보가 올바르지 않습니다.");
-    runtimeVersion=`&runtime=${version}`;
-    canvas.dataset.runtimeVersion=version;diagnosticMeta.version=version;
-  }else if(manifest.status!==404)throw Error("실행 파일 버전 정보를 읽지 못했습니다.");
-  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=1`);
+  const selectedRuntime=await selectRuntime({optimized:activeProfile.optimized,game},fetch);
+  const runtimeVersion=`&runtime=${selectedRuntime.version}`;
+  canvas.dataset.runtimeVersion=selectedRuntime.version;
+  $("runtime-source").href=`./runtime/source-${selectedRuntime.version}.tar.gz`;
+  if(mobileDevice){diagnosticMeta.version=selectedRuntime.version;diagnosticMeta.mobileCore=selectedRuntime.mobile;diagnosticMeta.runtimeFallback=selectedRuntime.fallback;}
+  if(selectedRuntime.fallback)$("log").textContent+="\n모바일 실행 코드를 읽지 못해 기본 실행 코드를 사용합니다.";
+  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=2`);
   $("boot").disabled=true;$("stop").disabled=false;
   $("status").textContent="실행 코드 준비 중";
   worker.onerror=async e=>{await stopRun();$("status").textContent=`실행 오류: ${e.message}`;};
@@ -279,6 +286,14 @@ $("boot").onclick=async()=>{
       const row={...d,gaps:Number(canvas.dataset.audioGaps||0),bufferMs:Number(canvas.dataset.audioBufferMs||0),audioState:audio?.state||'closed',visibility:document.visibilityState};
       diagnosticRows.push(row);if(diagnosticRows.length>30)diagnosticRows.shift();
       $("performance-status").textContent=formatPerformance(row,row.gaps,row.bufferMs);
+      if(speedGuard&&speedGuardReady&&speedGuard.observe(row,{now:performance.now(),visible:document.visibilityState==="visible",audioRunning:audio?.state==="running"})){
+        Atomics.store(pad,1,0);$("fast").checked=false;
+        speedNotice=" · 자동 1배속";
+        $("status").textContent="플레이 중"+speedNotice;
+        $("speed-status").textContent="2배속 처리량이 부족해 소리 끊김을 줄이도록 1배속으로 전환했습니다. 원하면 다시 켤 수 있습니다.";
+        $("speed-status").hidden=false;
+        row.speedGuard="fell-back-to-1x";
+      }
       canvas.dataset.performance=JSON.stringify(row);
     } else if(d.type==="intermission"){
       if(activeGame==="final"){
@@ -302,9 +317,10 @@ $("boot").onclick=async()=>{
         $("save-status").textContent=`영구 저장 실패: ${error.message} — 백업 내보내기로 보관하세요.`;
       });
     } else if(d.type==="frame"){
+      if(speedGuard&&!speedGuardReady){speedGuardReady=true;resetSpeedGuard();}
       if(canvas.width!==d.w||canvas.height!==d.h){canvas.width=d.w;canvas.height=d.h;}
       ctx.putImageData(new ImageData(d.rgba,d.w,d.h),0,0);
-      $("status").textContent="플레이 중";
+      $("status").textContent="플레이 중"+speedNotice;
       canvas.dataset.frame=d.frame;
       if(recorder?.state!=="recording")$("record").disabled=false;
     } else if(d.type==="audio"&&audio&&(activeGame==="final" || !$("fast").checked)){
@@ -331,6 +347,7 @@ $("boot").onclick=async()=>{
   const route=routeFile?await routeFile.text():undefined;
   worker.postMessage({type:"boot",files,cue:cue.name,pad:pad.buffer,route,temporary,backup:liveBackup,cdRate:Number($("cd-rate").value),audioPort:audioChannel.port2,mobileOptimized:activeProfile.optimized,mobileDiagnostics:mobileDevice},[audioChannel.port2]);
   } catch(error) {
+    speedGuard=null;speedGuardReady=false;
     worker?.terminate();worker=null;audio?.close();audio=null;
     unlockSave?.();unlockSave=null;saveControls(false);
     $("boot").disabled=false;$("stop").disabled=true;
