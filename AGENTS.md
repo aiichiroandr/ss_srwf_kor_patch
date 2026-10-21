@@ -136,3 +136,11 @@ accept a new patch release. The exact runtime JS/WASM and corresponding source
 archive are hash/size-pinned in scripts/verify_repo.py; arbitrary binaries,
 ROMs, extracted binary game data, and archives remain forbidden. Runtime sources
 and license notices must accompany distribution. See docs/WEB_PORT_TEST.md.
+
+## WEB PORT header artwork (2026-10-21)
+
+The user explicitly requested the actual disc title logos instead of invented
+wordmarks. The four transparent title PNGs in web-port/images are the narrow
+artwork exception for that header, decoded from stock and accepted patched
+images; their provenance is recorded in images/README.md. This does not authorize
+shipping discs, EFFECT payloads, BIOS files, or other extracted game content.

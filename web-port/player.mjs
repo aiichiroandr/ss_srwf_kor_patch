@@ -13,8 +13,16 @@ $("mobile-optimize").checked = mobileDevice;
 $("mobile-preload").checked=mobileDevice && Number(navigator.deviceMemory)>=8;
 $("performance-panel").hidden = !mobileDevice;
 let activeProfile = executionProfile(navigator);
-let mobilePause=null;
-$("resume-mobile").onclick=()=>mobilePause?.update(document.hidden);
+let mobilePause=null, manualPaused=false;
+$("pause-game").hidden=!mobileDevice;
+$("pause-game").onclick=()=>{
+  if(!mobilePause)return;
+  manualPaused=!manualPaused;
+  $("pause-game").setAttribute('aria-pressed',String(manualPaused));
+  $("pause-game").textContent=manualPaused?'▶ 재개':'Ⅱ 일시정지';
+  release();resetSpeedGuard();mobilePause.update(document.hidden||manualPaused);
+};
+$("resume-mobile").onclick=()=>mobilePause?.update(document.hidden||manualPaused);
 let speedGuard=null, speedGuardReady=false, speedNotice="";
 function resetSpeedGuard(){
   speedGuard?.reset(performance.now(),Number(canvas.dataset.audioGaps||0));
@@ -176,7 +184,7 @@ for(const button of document.querySelectorAll("[data-pad]")){
 }
 function release() { if(pad) Atomics.store(pad,0,0); }
 window.addEventListener("blur",release);
-document.addEventListener("visibilitychange",()=>{if(document.hidden)release();resetSpeedGuard();mobilePause?.update(document.hidden);});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)release();resetSpeedGuard();mobilePause?.update(document.hidden||manualPaused);});
 canvas.addEventListener("blur",release);
 for(const type of ["keydown","keyup"]) window.addEventListener(type,event=>{
   if(!worker || !keys[event.code]) return;
@@ -195,7 +203,8 @@ $("fast").onchange=()=>{
   }
 };
 async function stopRun(){
-  mobilePause?.dispose();mobilePause=null;$("resume-mobile").hidden=true;
+  mobilePause?.dispose();mobilePause=null;manualPaused=false;
+  $("pause-game").disabled=true;$("pause-game").textContent='Ⅱ 일시정지';$("pause-game").setAttribute('aria-pressed','false');$("resume-mobile").hidden=true;
   intermission.reset();
   speedGuard=null;speedGuardReady=false;speedNotice="";
   stopRecording();$("record").disabled=true;
@@ -280,7 +289,7 @@ $("boot").onclick=async()=>{
     canvas.dataset.audioState=audio?.state||'closed';
   };
   if(mobileDevice)mobilePause=new MobilePause({pad,audio,
-    onState:paused=>{$("resume-mobile").hidden=true;if(paused)$("status").textContent=document.hidden?"백그라운드 · 일시정지":"재개 중";},
+    onState:paused=>{$("resume-mobile").hidden=true;$("status").textContent=paused?(document.hidden?"백그라운드 · 일시정지":manualPaused?"일시정지":"재개 중"):"플레이 중";},
     onError:()=>{$("resume-mobile").hidden=false;$("status").textContent="재개 버튼을 눌러 계속하세요.";}});
   const audioChannel=new MessageChannel();
   audioNode.port.postMessage({type:'connect',port:audioChannel.port1,feedback:activeProfile.optimized?pad.buffer:undefined},[audioChannel.port1]);
@@ -292,7 +301,7 @@ $("boot").onclick=async()=>{
   if(mobileDevice){diagnosticMeta.version=selectedRuntime.version;diagnosticMeta.mobileCore=selectedRuntime.mobile;diagnosticMeta.runtimeFallback=selectedRuntime.fallback;}
   if(selectedRuntime.fallback)$("log").textContent+="\n모바일 실행 코드를 읽지 못해 기본 실행 코드를 사용합니다.";
   worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=7`);
-  $("boot").disabled=true;$("stop").disabled=false;
+  $("boot").disabled=true;$("stop").disabled=false;$("pause-game").disabled=!mobilePause;
   $("status").textContent="실행 코드 준비 중";
   worker.onerror=async e=>{await stopRun();$("status").textContent=`실행 오류: ${e.message}`;};
   worker.onmessage=async ({data:d})=>{
@@ -371,7 +380,7 @@ $("boot").onclick=async()=>{
     speedGuard=null;speedGuardReady=false;
     worker?.terminate();worker=null;audio?.close();audio=null;
     unlockSave?.();unlockSave=null;saveControls(false);
-    $("boot").disabled=false;$("stop").disabled=true;
+    $("boot").disabled=false;$("stop").disabled=true;$("pause-game").disabled=true;manualPaused=false;
     $("status").textContent=`실행 준비 실패: ${error.message}`;
   }
 };
