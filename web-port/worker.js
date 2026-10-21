@@ -18,6 +18,14 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
         if(probe)probe.audio(performance.now(),message.samples.length/2);
         if(variant==='final'||!Atomics.load(audioPad,1))data.audioPort.postMessage(message,transfer);
       }else {
+        if(data.mobileDiagnostics && message.type==='frame' && audioPad.length>4){
+          if(Atomics.load(audioPad,4)){
+            const pausedAt=performance.now();
+            while(Atomics.load(audioPad,4))Atomics.wait(audioPad,4,1);
+            runtime.srwPauseOffset=(runtime.srwPauseOffset||0)+performance.now()-pausedAt;
+            probe?.reset(performance.now(),message.frame,Atomics.load(audioPad,1)?2:1);
+          }
+        }
         hostPostMessage(message,transfer);
         if(probe&&message.type==='frame'){
           const report=probe.tick(performance.now(),message.frame,Atomics.load(audioPad,1)?2:1);
@@ -37,7 +45,14 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
     runtime.FS.mkdir("/disc");
     runtime.FS.mkdir("/out");
     runtime.FS.mount(runtime.WORKERFS, {files:data.files}, "/disc");
-    if(data.mobileOptimized){
+    let discMemory=null;
+    if(data.mobileOptimized && data.preloadDisc){
+      const {prepareDiscMemory,installDiscMemory}=await import('./mobile-disc-memory.mjs?mobile=4');
+      discMemory=await prepareDiscMemory(data.files,{progress:(done,total)=>hostPostMessage({type:'preload',done,total})});
+      if(discMemory)installDiscMemory(runtime.FS,discMemory);
+      hostPostMessage({type:'disc-mode',mode:discMemory?'memory':'cache',bytes:discMemory?[...discMemory.values()].reduce((sum,b)=>sum+b.length,0):0});
+    }
+    if(data.mobileOptimized && !discMemory){
       const {installDiscCache}=await import('./disc-cache.mjs?mobile=1');
       discCache=installDiscCache(runtime.FS);
     }
