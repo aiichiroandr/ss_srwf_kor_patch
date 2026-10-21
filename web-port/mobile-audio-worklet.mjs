@@ -1,4 +1,4 @@
-import {MobileAudioRing} from './mobile-audio-ring.mjs?mobile=6';
+import {MobileAudioRing} from './mobile-audio-ring.mjs?mobile=7';
 
 class SaturnMobileAudio extends AudioWorkletProcessor {
   constructor() {
@@ -18,6 +18,17 @@ class SaturnMobileAudio extends AudioWorkletProcessor {
           const beforeCount = this.ring.count;
           const beforeDrops = this.ring.drops;
           this.ring.push(packet.samples);
+          if(this.feedback){
+            Atomics.store(this.feedback,5,this.ring.count);
+            if(this.feedback.length>=11){
+              Atomics.add(this.feedback,7,packet.samples.length/2);
+              if(Number.isFinite(packet.sentAt)){
+                const transit=Math.max(0,Math.min(60000,Date.now()-packet.sentAt));
+                Atomics.store(this.feedback,8,Math.max(Atomics.load(this.feedback,8),transit));
+                Atomics.add(this.feedback,9,transit);Atomics.add(this.feedback,10,1);
+              }
+            }
+          }
           if (this.ring.drops > beforeDrops)
             this.queueEvent('overflow', beforeCount, this.ring.drops - beforeDrops);
         };

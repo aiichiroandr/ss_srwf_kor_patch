@@ -6,7 +6,7 @@ importScripts(buildDir + "saturn.js");
 if (self.name !== "em-pthread") onmessage = async ({data}) => {
   if (data.type !== "boot") return;
   try {
-    let probe=null,discCache=null,mobileTiming=null;
+    let probe=null,discCache=null,mobileTiming=null,sentAudioFrames=0;
     if(data.mobileDiagnostics){
       const {PerformanceProbe}=await import("./performance-probe.mjs?mobile=2");
       probe=new PerformanceProbe();
@@ -16,7 +16,10 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
     self.postMessage=(message,transfer)=>{
       if(message.type==='audio'&&data.audioPort){
         if(probe)probe.audio(performance.now(),message.samples.length/2);
-        if(variant==='final'||!Atomics.load(audioPad,1))data.audioPort.postMessage(message,transfer);
+        if(variant==='final'||!Atomics.load(audioPad,1)){
+          if(data.mobileOptimized){sentAudioFrames=(sentAudioFrames+message.samples.length/2)>>>0;message.sentAt=Date.now();}
+          data.audioPort.postMessage(message,transfer);
+        }
       }else {
         if(data.mobileDiagnostics && message.type==='frame' && audioPad.length>4){
           if(Atomics.load(audioPad,4)){
@@ -24,17 +27,19 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
             while(Atomics.load(audioPad,4))Atomics.wait(audioPad,4,1);
             runtime.srwPauseOffset=(runtime.srwPauseOffset||0)+performance.now()-pausedAt;
             probe?.reset(performance.now(),message.frame,Atomics.load(audioPad,1)?2:1);
+            mobileTiming?.takePace();
+            if(audioPad.length>=11)for(const index of [8,9,10])Atomics.exchange(audioPad,index,0);
           }
         }
         hostPostMessage(message,transfer);
         if(probe&&message.type==='frame'){
           const report=probe.tick(performance.now(),message.frame,Atomics.load(audioPad,1)?2:1);
-          if(report)hostPostMessage({type:'performance',...report,discCache:discCache?.stats,mobileTiming:mobileTiming?{compositionReliefRequests:mobileTiming.skipped,paceAdjustments:mobileTiming.adjustments}:undefined});
+          if(report)hostPostMessage({type:'performance',...report,discCache:discCache?.stats,mobileTiming:mobileTiming?{compositionReliefRequests:mobileTiming.skipped,paceAdjustments:mobileTiming.adjustments,lowQueueNoWait:mobileTiming.lowQueueNoWait||0,feedbackFallbacks:mobileTiming.feedbackFallbacks||0,pace:mobileTiming.takePace(),transport:audioPad.length>=11?{inFlightFrames:(sentAudioFrames-(Atomics.load(audioPad,7)>>>0))>>>0,maxTransitMs:Atomics.exchange(audioPad,8,0),transitSumMs:Atomics.exchange(audioPad,9,0),receivedPackets:Atomics.exchange(audioPad,10,0)}:null}:undefined});
         }
       }
     };
     if(data.mobileOptimized && audioPad.length>=7){
-      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=6');
+      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=7');
       mobileTiming=new MobileTiming(audioPad);
     }
     const runtime = await createSaturn({

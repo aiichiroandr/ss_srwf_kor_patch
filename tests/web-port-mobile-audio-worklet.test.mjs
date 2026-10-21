@@ -125,3 +125,14 @@ test('queue feedback reaches producer every render quantum without main-thread m
  assert.equal(Atomics.load(pad,5),4744);
  assert.equal(Atomics.load(pad,6),2);
 });
+
+
+test('receipt acknowledges in-flight PCM and measures delivery before the next render',()=>{
+ const {processor}=setup();const pad=new Int32Array(new SharedArrayBuffer(44)),input={onmessage:null};
+ processor.port.onmessage({data:{type:'connect',port:input,feedback:pad.buffer}});
+ input.onmessage({data:{type:'audio',samples:pcm(256),sentAt:Date.now()-12}});
+ assert.equal(Atomics.load(pad,5),256);assert.equal(Atomics.load(pad,7),256);
+ assert.ok(Atomics.load(pad,8)>=12);assert.equal(Atomics.load(pad,10),1);
+ assert.equal(Atomics.load(pad,6),0); // no render required for receipt
+ render(processor);assert.equal(Atomics.load(pad,6),1);
+});
