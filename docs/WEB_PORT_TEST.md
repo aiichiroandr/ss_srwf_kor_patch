@@ -162,3 +162,42 @@ selection/fallback and the speed guard, including the user's reported low PCM
 production despite zero disc-read time. No physical S25 post-change playback or
 listening result is claimed. The user can disable mobile optimization for an
 immediate return to the desktop runtime on the next launch.
+
+
+### Mobile voice continuity v3 — 2026-10-21
+
+The `MOBILE · 3` frontend / `mobile-audio-v3` profile retains the mobile v2
+WASM, disc cache and speed guard. Desktop still uses the exact existing
+`audio-worklet.mjs`, `audio-ring.mjs` and desktop runtime. Only optimized mobile
+loads the new `mobile-audio-worklet.mjs` and `MobileAudioRing`.
+
+The user's S25 v2 report confirms normal 1x and several steady 2x windows,
+with remaining intermittent starvation. It does not contain dropped-PCM
+counters, so that report cannot establish whether skipped syllables were
+starvation, overflow trimming or both. The existing FIFO trims a queue above
+300 ms down to 120 ms, discarding at least about 180 ms of actual queued PCM.
+This mobile update removes that aggressive trim and preserves every sample
+unless the existing hard 500 ms capacity is exceeded; real overflow discards
+only the minimum required oldest frames. It retains source pitch, stereo order
+and sample-rate conversion.
+
+Mobile startup/recovery buffering is 240 ms instead of 120 ms to tolerate short
+producer stalls. This adds about 120 ms of initial audio delay, and queued
+sound can approach 500 ms behind the picture during bursts. The UI describes
+this tradeoff. It does not fix sustained slow emulation or eliminate synchronous
+disc-read pauses. Disabling mobile optimization restores the original transport
+on the next launch.
+
+Diagnostic rows now include cumulative dropped source frames (`drops`). The
+mobile worklet also captures starvation/overflow events with their audio-frame
+position and queue before/after. Notifications are limited to two per second;
+repeated events of one type are coalesced with an occurrence count and summed
+dropped frames. At most 16 events are retained by the player. Ordinary queue snapshots still arrive about every 371.5 ms at
+44.1 kHz and must not be treated as the queue at the instant of a past underrun.
+No telemetry is uploaded. No ROM, save data or filenames enter these counters.
+
+Focused tests cover source-sample order in a 320 ms burst, the 500 ms hard bound,
+minimum overflow removal, ring wrap, 44.1/48 kHz playback, startup/recovery and
+short producer stalls. This is a transport change, not a claim that the user's
+actual first-voice or battle-scene stutter has been fully eliminated. No physical
+S25 v3 listening result is available at publication.
