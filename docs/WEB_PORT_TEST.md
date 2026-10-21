@@ -319,3 +319,13 @@ execution selection are unchanged. Physical S25 validation remains pending.
 
 Runtime `aa21406c80f5516d83db` passed bounded Mac browser initialization and
 AudioWorklet receipt/feedback checks. This is not physical S25 latency validation.
+
+### Mobile v8 regression containment
+
+The user reported worse stutter with v7 before the CRT UI was deployed.
+Mobile selection is restored to runtime dfc11254e0a8f556f1bc and the v6
+bounded host-clock correction. The 60 ms startup target, PCM preservation,
+256-frame packets and desktop path are unchanged. The v7 transport diagnostics
+remain available. This rolls back the reported regression; it does not claim
+to resolve pre-existing v6 underruns or establish the precise S25 cause.
+The two runtime source archives differ only in BUILD.md and host_web.cpp.

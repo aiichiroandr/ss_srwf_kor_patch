@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" role="img" aria-label="세가새턴 행성과 고리">
+ <defs>
+  <radialGradient id="planet" cx="30%" cy="20%" r="85%">
+   <stop stop-color="#7cf2ff"/><stop offset=".22" stop-color="#24b7e7"/><stop offset=".53" stop-color="#2363cb"/><stop offset=".8" stop-color="#182b91"/><stop offset="1" stop-color="#301354"/>
+  </radialGradient>
+  <linearGradient id="rim" x1="0" y1="0" x2="1" y2=".65">
+   <stop stop-color="#71f8ff"/><stop offset=".43" stop-color="#5e98ed"/><stop offset=".8" stop-color="#c66ae8"/><stop offset="1" stop-color="#ef77ea"/>
+  </linearGradient>
+  <linearGradient id="metal" x1=".15" y1="0" x2=".8" y2="1">
+   <stop stop-color="#f9fbff"/><stop offset=".23" stop-color="#9aaabc"/><stop offset=".46" stop-color="#e4ebf4"/><stop offset=".66" stop-color="#7d8097"/><stop offset=".85" stop-color="#303953"/><stop offset="1" stop-color="#c86cc9"/>
+  </linearGradient>
+  <radialGradient id="shine"><stop stop-color="#d3fbff" stop-opacity=".85"/><stop offset=".42" stop-color="#b4f2ff" stop-opacity=".5"/><stop offset="1" stop-color="#99ebff" stop-opacity="0"/></radialGradient>
+ </defs>
+ <!-- Back half of the elliptical ring sits behind the planet. -->
+ <path d="M49 175 C-6 160 58 87 162 47 C211 28 252 23 279 31" fill="none" stroke="url(#rim)" stroke-width="21" stroke-linecap="round"/>
+ <path d="M49 175 C-6 160 58 87 162 47 C211 28 252 23 279 31" fill="none" stroke="url(#metal)" stroke-width="15" stroke-linecap="round"/>
+ <circle cx="166" cy="127" r="102" fill="url(#planet)" stroke="url(#rim)" stroke-width="3"/>
+ <ellipse cx="133" cy="75" rx="34" ry="37" fill="url(#shine)"/>
+ <!-- Front half sweeps diagonally over the sphere without a background. -->
+ <path d="M59 191 C111 211 273 137 298 96 C327 43 224 74 143 116 C66 156 17 171 20 143" fill="none" stroke="url(#rim)" stroke-width="22" stroke-linecap="round"/>
+ <path d="M59 191 C111 211 273 137 298 96 C327 43 224 74 143 116 C66 156 17 171 20 143" fill="none" stroke="#303953" stroke-width="18" stroke-linecap="round"/>
+ <path d="M59 189 C111 209 273 135 298 94 C327 41 224 72 143 114 C66 154 17 169 20 141" fill="none" stroke="url(#metal)" stroke-width="13" stroke-linecap="round"/>
+ <path d="M28 151 C58 163 134 112 196 89 C239 72 278 64 293 70" fill="none" stroke="#f0fcff" stroke-opacity=".68" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -27,3 +27,7 @@ Commons marks this PD-textlogo; trademarks remain with their owners. This is an
 existing faithful vector reproduction, not a logo invented for this page, and
 not claimed to have been extracted from the game disc. Branding identifies this
 unofficial fan trial only.
+
+Current Saturn header: saturn-orbit.svg is an editable vector recreation of
+only the blue planet and silver ring in the user-provided image, requested
+on 2026-10-21. It has no console, controller or checkerboard background.
