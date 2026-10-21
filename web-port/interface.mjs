@@ -1,11 +1,11 @@
 const $=id=>document.getElementById(id);
 const titles={final:'슈퍼로봇대전 F 완결편',f:'슈퍼로봇대전 F',stock:'슈퍼로봇대전 F'};
 function title(){
- const game=$('game').value, japanese=game==='stock'||$('game').dataset.discLanguage!=='ko';
+ const game=$('game').value, japanese=game==='stock';
  $('game-title').textContent=titles[game]||titles.final;
  $('game-logo').src=`./images/${game==='final'?'final':'f'}-${japanese?'ja':'ko'}.png`;
  $('game-logo').alt=japanese?`スーパーロボット大戦 F${game==='final'?' 完結編':''}`:$('game-title').textContent;
- document.querySelector('.version-tag').textContent=japanese?(game==='stock'?'일본어 원본':'원본 로고 · 패치 확인 전'):'한글판';
+ document.querySelector('.version-tag').textContent=japanese?'일본어 원본':'한글판';
 }
 $('game').addEventListener('change',()=>{delete $('game').dataset.discLanguage;title();});
 document.addEventListener('disc-language-change',title);title();

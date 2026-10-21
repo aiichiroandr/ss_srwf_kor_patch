@@ -1179,6 +1179,9 @@ def validate_required_files(files: list[Path]) -> None:
 # User-authorized WEB PORT trial: exact reviewed executable/source artifacts only.
 # This exception does not permit ROMs, arbitrary WASM, archives or patch releases.
 WEB_PORT_ARTIFACTS = {
+    "web-port/runtime/0a1faba953d641c3358b/saturn.js": (117249, "6f0365566a2f3ae17da67d229e30ed78bc2a15032d7d8fb7371a3bc49361551b"),
+    "web-port/runtime/0a1faba953d641c3358b/saturn.wasm": (39237008, "5e79bf0626e5a77623d5882ea59895082c5019e6e4e2e8d17b40e7539c0d71ee"),
+    "web-port/runtime/source-0a1faba953d641c3358b.tar.gz": (7104604, "1e5ad2ce57f8735191638cf4fb06380ce0a727599c024cbd7f7fcc362b2f899f"),
     "web-port/runtime/67d6487c3a80561562ed/saturn.js": (116275, "807bb6f01e776a58acb162e358ad184fdd95f163df9c49eb4b7a24a0efdd81f4"),
     "web-port/runtime/67d6487c3a80561562ed/saturn.wasm": (39234352, "9e29884f9c425a87bedb88ef0bee4f841f202629509c28498e640eb4a66d0f97"),
     "web-port/runtime/source-67d6487c3a80561562ed.tar.gz": (7102841, "aeec7e503c3b83d39542c19f5ed4dc12e517a663d6f18c8e662b9c59099228db"),

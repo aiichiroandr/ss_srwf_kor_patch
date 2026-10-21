@@ -1,8 +1,9 @@
-import {MobilePause} from './mobile-pause.mjs?mobile=11';
-import {formatPerformance} from "./performance-probe.mjs?mobile=11";
-import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=11";
-import {MobileSpeedGuard} from "./mobile-speed-guard.mjs?mobile=11";
-import {selectRuntime} from "./runtime-selection.mjs?mobile=11";
+let latestCoreProfile=null;
+import {MobilePause} from './mobile-pause.mjs?mobile=12';
+import {formatPerformance} from "./performance-probe.mjs?mobile=12";
+import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=12";
+import {MobileSpeedGuard} from "./mobile-speed-guard.mjs?mobile=12";
+import {selectRuntime} from "./runtime-selection.mjs?mobile=12";
 import {createIntermission} from "./intermission.mjs";
 import {readSave, writeSave, exportBackup, importBackup, validateBackup, lockSave} from "./saves.mjs";
 const $ = id => document.getElementById(id);
@@ -261,7 +262,7 @@ $("boot").onclick=async()=>{
   speedGuard=activeProfile.optimized&&game==="final" ? new MobileSpeedGuard() : null;
   speedGuardReady=false;speedNotice="";resetSpeedGuard();$("speed-status").hidden=true;
   if(mobileDevice){
-    diagnosticRows=[];diagnosticAudioEvents=[];diagnosticMeta={browser:navigator.userAgent,started:new Date().toISOString(),version:'pending',profile:activeProfile.name,frontend:'mobile-11',uiRevision:'reference2',framePolicy:'full',latencyHint:activeProfile.optimized?'interactive':'playback',audioTargetMs:activeProfile.optimized?60:120,audioQueueCapMs:500};
+    diagnosticRows=[];diagnosticAudioEvents=[];latestCoreProfile=null;diagnosticMeta={browser:navigator.userAgent,started:new Date().toISOString(),version:'pending',profile:activeProfile.name,frontend:'mobile-12',uiRevision:'reference2',framePolicy:'full',latencyHint:activeProfile.optimized?'interactive':'playback',audioTargetMs:activeProfile.optimized?60:120,audioQueueCapMs:500};
     $("performance-status").textContent="성능 진단: 실행 후 측정합니다.";
     $("diagnostic-text").hidden=true;$("diagnostic-copy-status").textContent="";
   }
@@ -277,7 +278,7 @@ $("boot").onclick=async()=>{
   masterGain.gain.value=(game!=="final" && $("fast").checked) ? 0 : Number($("volume").value)/100;
   masterGain.connect(audio.destination);
   if(recordingAudio)masterGain.connect(recordingAudio);
-  const audioWorklet=activeProfile.optimized ? './mobile-audio-worklet.mjs?mobile=11' : './audio-worklet.mjs';
+  const audioWorklet=activeProfile.optimized ? './mobile-audio-worklet.mjs?mobile=12' : './audio-worklet.mjs';
   const audioProcessor=activeProfile.optimized ? 'saturn-mobile-audio' : 'saturn-audio';
   await audio.audioWorklet.addModule(new URL(audioWorklet,import.meta.url));
   audioNode=new AudioWorkletNode(audio,audioProcessor,{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[2]});
@@ -303,7 +304,7 @@ $("boot").onclick=async()=>{
   $("runtime-source").href=`./runtime/source-${selectedRuntime.version}.tar.gz`;
   if(mobileDevice){diagnosticMeta.version=selectedRuntime.version;diagnosticMeta.mobileCore=selectedRuntime.mobile;diagnosticMeta.runtimeFallback=selectedRuntime.fallback;}
   if(selectedRuntime.fallback)$("log").textContent+="\n모바일 실행 코드를 읽지 못해 기본 실행 코드를 사용합니다.";
-  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=11`);
+  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=12`);
   $("boot").disabled=true;$("stop").disabled=false;$("pause-game").disabled=!mobilePause;
   $("status").textContent="실행 코드 준비 중";
   worker.onerror=async e=>{await stopRun();$("status").textContent=`실행 오류: ${e.message}`;};
@@ -313,8 +314,10 @@ $("boot").onclick=async()=>{
     }else if(d.type==='disc-mode'){
       diagnosticMeta.discMode=d.mode;diagnosticMeta.discMemoryBytes=d.bytes;
       if(d.mode!=='memory')$("log").textContent+='\n디스크 미리 읽기를 사용할 수 없어 기존 캐시를 사용합니다.';
+    }else if(d.type==='core-profile'&&mobileDevice){
+      latestCoreProfile=d;
     }else if(d.type==="performance"&&mobileDevice){
-      const row={...d,gaps:Number(canvas.dataset.audioGaps||0),drops:Number(canvas.dataset.audioDrops||0),bufferMs:Number(canvas.dataset.audioBufferMs||0),audioState:audio?.state||'closed',visibility:document.visibilityState};
+      const row={...d,coreProfile:latestCoreProfile,gaps:Number(canvas.dataset.audioGaps||0),drops:Number(canvas.dataset.audioDrops||0),bufferMs:Number(canvas.dataset.audioBufferMs||0),audioState:audio?.state||'closed',visibility:document.visibilityState};
       diagnosticRows.push(row);if(diagnosticRows.length>30)diagnosticRows.shift();
       $("performance-status").textContent=formatPerformance(row,row.gaps,row.bufferMs);
       if(speedGuard&&speedGuardReady&&speedGuard.observe(row,{now:performance.now(),visible:document.visibilityState==="visible",audioRunning:audio?.state==="running"})){
