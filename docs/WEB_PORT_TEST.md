@@ -355,3 +355,15 @@ A deterministic FIFO/host-deadline model with sustained 24 ms composition /
 a synthetic scheduling regression test, not a Galaxy measurement. Actual S25
 audio and visual smoothness remain to be confirmed. Diagnostics identify
 `mobile-recovery-v10` and count critical composition skips and recovery corrections.
+
+### Portrait reference controller (2026-10-21)
+
+The user-provided “새턴 패드 CSS 작성” reference is now integrated from its
+actual version-1 source (commit 6a49c18758bff251f57764eb3351b8c8487807b0).
+The gray shell geometry and blue controls are scoped to mobile portrait.
+All 13 buttons use the existing game input bit mappings. Layout fitting runs
+only on ResizeObserver notifications; no animation or per-frame work is added.
+The compact transport row, landscape controller, desktop and audio code remain
+unchanged. The v10 recovery policy can reduce displayed frames to approximately
+30 or 20 fps at 1x under queue pressure; unchanged simulation timing does not
+mean unchanged visual smoothness.
