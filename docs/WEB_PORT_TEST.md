@@ -399,3 +399,46 @@ The packaged runtime is `67d6487c3a80561562ed`, frontend/profile
 600/600 frames at 1x and 300/600 at 2x, with zero additional missing frames and
 zero FIFO gaps in both bounded checks. Output was muted at the gain node, so
 these are routing/cadence checks, not listening or physical-phone latency tests.
+
+### Mobile profiled v12 (2026-10-21)
+
+The v11 Galaxy reports show PCM starvation while disc reads and transport are
+small, including periods below 60 guest frames/s with no composition skips.
+They do not identify a particular C++ function by themselves. A local Chromium
+run of the mobile WASM now measures `sound_tick`, VDP1 `draw`, VDP2
+`vdp2_compose`, interpolation and host sleep separately. The measurements are
+inclusive wall times and are attached to mobile performance rows as
+`coreProfile`; they are not a physical Galaxy profile.
+
+The common VDP1 opaque 16-bit replacement path now resolves framebuffer and
+blend mode once per raster line, with the general path retained for mesh,
+Gouraud, blend and interlaced/8-bit modes. The raster loop still fetches the
+same texels, observes the same clipping/end codes, and charges the same guest
+cycles. 512 differential fixtures compare every output pixel, clipped return,
+raster step count and cycle count against the general path; the complete
+native suite passes 175 tests.
+
+PCM staging is fixed-size (256 stereo frames), removing vector insertion bookkeeping
+and prefix erase while retaining the existing uniform packet cadence.
+An experiment flushing short frame-tail packets produced 1–2 local starvations
+versus zero in the baseline and was excluded. Reaggregating those packets
+restored zero gaps in the isolation run; this is not a proof of phone behavior.
+No audio is deleted or resampled. The 60 ms target, 500 ms cap, sound-chip clocks and full-frame
+presentation policy are unchanged. The desktop runtime manifest and artifacts
+remain byte-identical. Physical S25 Ultra listening/latency validation remains
+unverified; local muted integration only checks PCM delivery and counters.
+
+Header artwork follows the selected playback mode from initial page load:
+Korean F/Final mode uses Korean artwork even before patch verification; only
+stock mode uses Japanese artwork. Selecting a stock source file for automatic
+Korean patching does not change the selected playback language.
+
+Packaged runtime: `0a1faba953d641c3358b`, frontend `mobile-12`, profile
+`mobile-profiled-v12`. Repeated local same-route measurements reduced VDP1
+`draw` time by about 47% with the specialized path; this is a function-level
+measurement, not a whole-game or Galaxy speed claim. Final muted browser runs:
+1x 1800/1800 displayed, missing 0, PCM received, one early starvation;
+2x 900/900 expected presentations over 1800 guest frames, missing 0, PCM
+received, zero starvations. These runs do not establish zero audio gaps or
+input-to-speaker latency on a physical phone. All 1123 JavaScript tests and
+53 verifier tests passed (101 intentionally skipped JavaScript cases).
