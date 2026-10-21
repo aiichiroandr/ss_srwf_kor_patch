@@ -87,3 +87,10 @@
  .mobile-device .saturn-pad.touch-controls{display:none}
  .mobile-device .portrait-pad{display:block;position:relative;width:min(100%,380px);aspect-ratio:800/450;margin:8px auto 0;flex-shrink:0;touch-action:none}
 }
+
+/* Use the same reference controller below the screen on desktop as in portrait. */
+html:not(.mobile-device) .saturn-pad.touch-controls{display:none}
+html:not(.mobile-device) .portrait-pad{display:block;position:relative;width:min(100%,420px,50dvh);aspect-ratio:800/450;margin:8px auto 0;flex-shrink:0;touch-action:none}
+html:not(.mobile-device) .play-column{display:flex;flex-direction:column;align-items:center;gap:8px;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+html:not(.mobile-device) .play-column:before{display:none}
+html:not(.mobile-device) .television{flex:1;min-height:0;width:min(100%,820px);height:auto}

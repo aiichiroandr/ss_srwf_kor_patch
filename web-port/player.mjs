@@ -1,3 +1,4 @@
+import {initRamSaveUI} from './ram-save-ui.mjs?v=ram1';
 let latestCoreProfile=null;
 import {MobilePause} from './mobile-pause.mjs?mobile=13';
 import {formatPerformance} from "./performance-probe.mjs?mobile=13";
@@ -5,7 +6,7 @@ import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=13";
 import {MobileSpeedGuard} from "./mobile-speed-guard.mjs?mobile=13";
 import {selectRuntime} from "./runtime-selection.mjs?mobile=13";
 import {createIntermission} from "./intermission.mjs";
-import {readSave, writeSave, exportBackup, importBackup, validateBackup, lockSave} from "./saves.mjs";
+import {readSave, writeSave, exportBackup, importBackup, validateBackup, lockSave} from "./saves.mjs?v=ram1";
 const $ = id => document.getElementById(id);
 const canvas = $("screen"), ctx = canvas.getContext("2d");
 const mobileDevice = isMobileDevice(navigator);
@@ -58,8 +59,10 @@ const scheduledAudio = new Set();
 let unlockSave, saveQueue = Promise.resolve(), liveBackup, activeGame, temporaryRun;
 let saveFailure = false;
 let saveBusy = false, hasPreviousSave = false;
+let ramUI;
 function saveControls(running) {
   saveBusy = running;
+  ramUI?.setBusy(running);
   for (const id of ["game", "disc", "route", "replay-save", "temporary", "save-load", "cd-rate", "mobile-optimize", "mobile-preload"])
     $(id).disabled = running;
   $("cd-rate").disabled = running || $("game").value !== "final";
@@ -125,6 +128,11 @@ $("save-restore").onclick = () => replaceSave(async game => {
   const record = await readSave(game);
   if (!record?.previous) throw Error("이전 저장본이 없습니다.");
   return record.previous;
+});
+ramUI=initRamSaveUI({
+  busy:()=>!!worker||saveBusy,
+  setBusy:value=>{ $("boot").disabled=value;saveControls(value); },
+  changed:async()=>{liveBackup=undefined;saveFailure=false;await refreshSave();}
 });
 void refreshSave();
 $("volume").oninput=()=>{
