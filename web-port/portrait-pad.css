@@ -93,4 +93,20 @@ html:not(.mobile-device) .saturn-pad.touch-controls{display:none}
 html:not(.mobile-device) .portrait-pad{display:block;position:relative;width:min(100%,420px,50dvh);aspect-ratio:800/450;margin:8px auto 0;flex-shrink:0;touch-action:none}
 html:not(.mobile-device) .play-column{display:flex;flex-direction:column;align-items:center;gap:8px;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
 html:not(.mobile-device) .play-column:before{display:none}
-html:not(.mobile-device) .television{flex:1;min-height:0;width:min(100%,820px);height:auto}
+html:not(.mobile-device) .television{flex:none;min-height:0;width:min(100%,820px);height:auto}
+
+/* Fullscreen is a display-only view on every device. */
+html body #view-play:fullscreen{display:flex!important;align-items:center;justify-content:center;width:100vw;height:100dvh;padding:0!important;border:0;border-radius:0;background:#000;box-shadow:none;gap:0}
+html body #view-play:fullscreen > :not(.television),
+html body #view-play:fullscreen .television > :not(.stage),
+html body #view-play:fullscreen::before,
+html body #view-play:fullscreen .television::before,
+html body #view-play:fullscreen .television::after,
+html body #view-play:fullscreen .stage::after{display:none!important}
+html body #view-play:fullscreen .television{display:flex!important;flex:none!important;width:100%!important;height:100%!important;padding:0!important;border:0!important;border-radius:0;background:#000;box-shadow:none}
+html body #view-play:fullscreen .stage{flex:none!important;width:100%!important;height:100%!important;aspect-ratio:auto;border:0!important;border-radius:0;box-shadow:none;background:#000}
+html body #view-play:fullscreen canvas{position:absolute;inset:0;margin:auto;width:min(100vw,133.333333dvh);height:min(100dvh,75vw);object-fit:fill}
+html body #view-play:fullscreen .screen-expand{opacity:0}
+html body #view-play:fullscreen .screen-expand:hover,
+html body #view-play:fullscreen .screen-expand:focus-visible{opacity:1}
+html:not(.mobile-device) #view-play:not(:fullscreen) .stage canvas{object-fit:fill}

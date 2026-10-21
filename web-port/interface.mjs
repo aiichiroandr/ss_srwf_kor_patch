@@ -1,3 +1,5 @@
+import {isMobileDevice} from './mobile-profile.mjs?mobile=14';
+document.documentElement.classList.toggle('mobile-device',isMobileDevice(navigator));
 const $=id=>document.getElementById(id);
 const titles={final:'슈퍼로봇대전 F 완결편',f:'슈퍼로봇대전 F',stock:'슈퍼로봇대전 F'};
 function title(){
@@ -74,14 +76,6 @@ landscapeMenu.addEventListener('click',()=>{
  else {document.body.classList.toggle('menu-open');syncMenu();}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.documentElement.classList.contains('mobile-device')&&matchMedia('(orientation:landscape)').matches){document.body.classList.remove('menu-open');showTab('play');}});
-// The menu stays available when the play panel owns browser fullscreen.
-document.addEventListener('fullscreenchange',()=>{
- if(!document.documentElement.classList.contains('mobile-device'))return;
- if(document.fullscreenElement&&!matchMedia('(orientation:landscape)').matches)return;
- (document.fullscreenElement||document.body).append(landscapeMenu);
- if(document.fullscreenElement)document.fullscreenElement.append($('game-tabs'));
- else document.body.insertBefore($('game-tabs'),document.querySelector('.workspace'));
-});
 function showTab(name){
  document.body.dataset.view=name;
  document.body.classList.remove('menu-open');
@@ -130,3 +124,30 @@ trialNotice.addEventListener('close',()=>{
  }catch{}
 });
 if(!trialNoticeDismissed)trialNotice.showModal();
+
+// Size the desktop CRT from the space remaining above the pad, not an
+// independent wide-screen width. Runs on layout changes only.
+const playColumn=$('view-play'), television=document.querySelector('.television'), stage=$('stage');
+function fitDesktopTV(){
+ if(document.documentElement.classList.contains('mobile-device')||document.fullscreenElement)return;
+ if(!playColumn.clientHeight)return;
+ const tvStyle=getComputedStyle(television), stageStyle=getComputedStyle(stage);
+ const px=value=>parseFloat(value)||0;
+ const x=px(tvStyle.paddingLeft)+px(tvStyle.paddingRight)+px(tvStyle.borderLeftWidth)+px(tvStyle.borderRightWidth);
+ const y=px(tvStyle.paddingTop)+px(tvStyle.paddingBottom)+px(tvStyle.borderTopWidth)+px(tvStyle.borderBottomWidth);
+ const stageX=px(stageStyle.borderLeftWidth)+px(stageStyle.borderRightWidth);
+ const stageY=px(stageStyle.borderTopWidth)+px(stageStyle.borderBottomWidth);
+ const outerHeight=el=>{const c=getComputedStyle(el);return el.getBoundingClientRect().height+px(c.marginTop)+px(c.marginBottom);};
+ const siblings=[...playColumn.children].filter(el=>el!==television&&getComputedStyle(el).display!=='none'&&getComputedStyle(el).position!=='absolute');
+ const freeHeight=playColumn.clientHeight-siblings.reduce((n,el)=>n+outerHeight(el),0)-siblings.length*px(getComputedStyle(playColumn).rowGap);
+ const chrome=[...television.children].filter(el=>el!==stage&&getComputedStyle(el).display!=='none').reduce((n,el)=>n+outerHeight(el),0)+y;
+ const pictureWidth=Math.max(0,Math.min(playColumn.clientWidth-x-stageX,(freeHeight-chrome-stageY)*4/3,750));
+ television.style.width=`${pictureWidth+x+stageX}px`;
+ television.style.height=`${pictureWidth*3/4+chrome+stageY}px`;
+}
+const tvLayout=new ResizeObserver(fitDesktopTV);
+tvLayout.observe(playColumn);tvLayout.observe(portraitPad);
+window.addEventListener('resize',fitDesktopTV);
+document.addEventListener('fullscreenchange',fitDesktopTV);
+fitDesktopTV();
+document.documentElement.removeAttribute('data-ui-pending');
