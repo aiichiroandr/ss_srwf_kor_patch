@@ -4619,3 +4619,10 @@ body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidd
 
 /* Public web-player entry sits below the existing editor action. */
 #workflowWebPort{display:block;margin-top:12px}
+
+/* Loading feedback on the gray Saturn setup cards needs dark, explicit ink. */
+body[data-view="setup"] :is(.editor-progress,.progress-panel){color:#29323c;background:#e7eae3;border-color:#9ca69e}
+body[data-view="setup"] :is(.editor-progress-topline,.progress-copy) :is(strong,span){color:#29323c}
+body[data-view="setup"] :is(.editor-progress-actions span,.progress-panel p){color:#505e58}
+body[data-view="setup"] :is(#editorProgressPercent,#progressPercent){color:#3156ae}
+body[data-view="setup"] :is(.editor-cancel-button,.progress-panel .cancel-button){color:#29323c;background:#d7ddd4;border-color:#9ca69e}

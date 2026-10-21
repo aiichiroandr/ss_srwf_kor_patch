@@ -19,16 +19,25 @@ $('disc').addEventListener('change',()=>{
 // Startup feedback stays inside the screen; stop observing frames after handoff.
 const bootOverlay=$('empty-state');
 let bootPending=false;
+function finishBootFeedback(){
+ bootPending=false;bootOverlay.classList.remove('is-booting');
+ bootState.disconnect();
+}
+const bootState=new MutationObserver(()=>{
+ if(!$('boot').disabled){finishBootFeedback();firstFrame.disconnect();bootStatus.disconnect();}
+});
 const firstFrame=new MutationObserver(()=>{
- bootPending=false;bootOverlay.hidden=true;firstFrame.disconnect();bootStatus.disconnect();
+ finishBootFeedback();bootOverlay.hidden=true;firstFrame.disconnect();bootStatus.disconnect();
 });
 const watchFirstFrame=()=>firstFrame.observe($('screen'),{attributes:true,attributeFilter:['data-frame']});
 watchFirstFrame();
 $('boot').addEventListener('click',()=>{
- bootPending=true;bootOverlay.hidden=false;
+ if(!$('boot').disabled)return;
+ bootPending=true;bootOverlay.hidden=false;bootOverlay.classList.add('is-booting');
+ bootState.observe($('boot'),{attributes:true,attributeFilter:['disabled']});
  bootOverlay.querySelector('h2').textContent='디스크 부팅';
  bootOverlay.querySelector('p').textContent=$('status').textContent;
- bootOverlay.querySelector('span:last-child').textContent='게임 화면이 나오면 자동으로 전환됩니다.';
+ bootOverlay.querySelector('span:last-child').textContent='게임 화면이 나오면 자동으로 전환됩니다';
  watchFirstFrame();
  bootStatus.observe($('status'),{childList:true,characterData:true,subtree:true});
 });
