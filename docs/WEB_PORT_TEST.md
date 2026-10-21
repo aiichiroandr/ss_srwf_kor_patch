@@ -1,8 +1,8 @@
 # WEB PORT (TEST)
 
 User-authorized trial deployment, 2026-10-21. This does not add or accept a new
-patch release. Supported runtime: Final Korean v0.3 c only, immutable runtime
-3c1c72226a61ee8d7631. Other fonts, editor-modified outputs, and F runtimes are
+patch release. Supported runtime: Final Korean v0.3 c only. Desktop retains immutable runtime
+3c1c72226a61ee8d7631; optimized mobile uses its separate manifest as described below. Other fonts, editor-modified outputs, and F runtimes are
 not claimed compatible. The existing accepted patch manifests remain unchanged.
 
 The button below the editor launcher passes the already selected source Blob
@@ -124,3 +124,41 @@ Validation covers byte-exact sequential/random/block-boundary/EOF reads,
 shared eviction and the memory ceiling, incomplete-read fallback, mobile vs
 PC classification and disabling the optimization. These checks do not establish
 that Galaxy S25 battle playback is smooth; no physical S25 result is claimed.
+
+
+### Mobile speed guard and core v2 — 2026-10-21
+
+The `mobile-core-v2` profile uses immutable runtime `0129dbf47402596f6a53`.
+The `MOBILE · 2` label supersedes mobile v1. Only
+optimized mobile Final sessions load `runtime/current-mobile.json`; desktop
+and mobile with optimization disabled keep `runtime/current.json` and its
+byte-identical JS/WASM. A missing or invalid mobile manifest falls back to the
+existing runtime before boot. The source link follows the runtime actually
+selected. Frontend module and worker URLs use `mobile=2`.
+
+The mobile core removes repeated VDP1 framebuffer address/format decoding via
+a read-only row view and specializes VDP2 composition when zero or one normal
+background layer is active. With two or more active layers it retains the
+original fixed layer traversal. Unsupported row formats retain the original
+per-pixel path. Resolution, presentation cadence, game/audio clocks, sound
+mixing and 44.1 kHz audio output are unchanged. Mobile v1 disc caching and
+lazy recording setup remain enabled.
+
+For requested 2x, after a four-second grace period and two consecutive settled
+measurement windows, low progress plus low PCM production and new starvation
+(or less than 40 ms queued audio) switch to 1x. Hidden pages, suspended audio,
+stale reports and discontinuities do not trigger a decision. The switch and
+status text update visibly and diagnostics record the transition. It does not
+switch back to 2x automatically; a deliberate user toggle rearms the guard.
+This reduces sustained starvation when the requested speed exceeds actual
+throughput; it cannot guarantee every demanding scene reaches 1x.
+
+Validation: 170 native runtime tests passed. All existing VDP2 fixture calls
+compare complete frames to the deployed compositor, with 96 additional
+layer-mask/priority/gradation combinations. Bounded native synthetic composition
+benchmarks found lower CPU time in all five tested layer counts; these are not
+Galaxy or browser performance measurements. Browser module tests cover mobile
+selection/fallback and the speed guard, including the user's reported low PCM
+production despite zero disc-read time. No physical S25 post-change playback or
+listening result is claimed. The user can disable mobile optimization for an
+immediate return to the desktop runtime on the next launch.
