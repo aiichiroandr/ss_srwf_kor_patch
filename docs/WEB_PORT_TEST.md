@@ -442,3 +442,26 @@ measurement, not a whole-game or Galaxy speed claim. Final muted browser runs:
 received, zero starvations. These runs do not establish zero audio gaps or
 input-to-speaker latency on a physical phone. All 1123 JavaScript tests and
 53 verifier tests passed (101 intentionally skipped JavaScript cases).
+
+### Mobile v13: prologue fast-forward clock regression
+
+Runtime `16f9cf9fde74c2d70e6b`, frontend `mobile-13`, profile `mobile-clock-v13`.
+The mobile Final host now keeps `sound_set_game_speed(1)` while host pacing
+still supports 2x: the SH-2, sound CPU, SCSP timers and CD share machine time.
+The previous independently slowed sound domain could leave the prologue black
+with ongoing PCM after entering from the title at 2x; returning to 1x did not
+recover that run. Local same-disc comparisons reproduced this in v12 and its
+v11 baseline; starting at 1x progressed through the prologue text.
+
+Only the new mobile runtime's worker converts output PCM at 2x, averaging
+adjacent stereo frames. This does not change guest clocks, display policy or
+60 ms target / 500 ms queue cap. Fast-forward audio now follows the game's
+speed and pitch, rather than preserving normal-speed music by slowing an
+emulated device. At 1x PCM is unchanged. The version gate leaves desktop,
+older runtimes and desktop fallback output handling unchanged.
+
+Local validation: the final packaged runtime progressed from the title through
+the scrolling prologue to character selection over 18,000 guest frames, with
+2x -> 1x -> 2x switches, no worker error and two audio starvation events.
+This confirms the reproduced black-screen regression is fixed locally, not
+zero audio gaps or measured input-to-speaker latency on a physical phone.
