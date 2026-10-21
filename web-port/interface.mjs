@@ -51,7 +51,31 @@ document.querySelector('.launch-actions').remove();
 $('boot').innerHTML='<span aria-hidden="true">▶</span> 실행';$('stop').textContent='■ 종료';
 const manualPause=$('pause-game');if(manualPause)$('transport').insertBefore(manualPause,$('stop'));
 const tabs=[...document.querySelectorAll('[data-tab]')];
+const landscapeMenu=$('landscape-menu');
+function syncMenu(){
+ const open=document.body.classList.contains('menu-open')||document.body.dataset.view!=='play';
+ landscapeMenu.setAttribute('aria-expanded',String(open));
+ landscapeMenu.setAttribute('aria-label',open?'게임으로 돌아가기':'게임 메뉴 열기');
+ landscapeMenu.textContent=open?'× 돌아가기':'☰ 메뉴';
+}
+landscapeMenu.addEventListener('click',()=>{
+ if(document.body.dataset.view!=='play')showTab('play');
+ else {document.body.classList.toggle('menu-open');syncMenu();}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.documentElement.classList.contains('mobile-device')&&matchMedia('(orientation:landscape)').matches){document.body.classList.remove('menu-open');showTab('play');}});
+// The menu stays available when the play panel owns browser fullscreen.
+document.addEventListener('fullscreenchange',()=>{
+ if(!document.documentElement.classList.contains('mobile-device'))return;
+ if(document.fullscreenElement&&!matchMedia('(orientation:landscape)').matches)return;
+ (document.fullscreenElement||document.body).append(landscapeMenu);
+ if(document.fullscreenElement)document.fullscreenElement.append($('game-tabs'));
+ else document.body.insertBefore($('game-tabs'),document.querySelector('.workspace'));
+});
 function showTab(name){
+ document.body.dataset.view=name;
+ document.body.classList.remove('menu-open');
+ syncMenu();
+ if(name!=='play'&&document.fullscreenElement)document.exitFullscreen().catch(()=>{});
  for(const tab of tabs){const selected=tab.dataset.tab===name;tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;$(`view-${tab.dataset.tab}`).hidden=!selected;}
 }
 for(const tab of tabs){
