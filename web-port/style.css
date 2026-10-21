@@ -81,3 +81,38 @@
 @media(max-width:600px){.saturn-logo{width:130px;height:44px}}
 @media(orientation:landscape) and (max-height:560px){.saturn-logo{width:150px;height:32px}}
 .mobile-device .saturn-logo{width:150px;height:32px}
+/* Portrait reserves the full-width game rectangle before allocating controls. */
+@media(orientation:portrait){
+ .mobile-device .topbar{height:48px;padding:0 10px;flex-shrink:0}
+ .mobile-device #game-logo{width:145px;height:46px}
+ .mobile-device .saturn-logo{width:135px;height:32px}
+ .mobile-device .tabs{height:32px}
+ .mobile-device .tabs button{min-width:0;flex:1;min-height:32px;padding:4px 0;font-size:11px}
+ .mobile-device .play-column{gap:6px;justify-content:flex-start}
+ .mobile-device .television{flex:0 0 auto;height:auto;padding:0;border:0;box-shadow:none;background:#20232a}
+ .mobile-device .tv-top,.mobile-device .play-note,.mobile-device footer{display:none}
+ .mobile-device .stage{flex:none;width:100%;height:auto;aspect-ratio:var(--game-aspect,320 / 224);border:0;min-height:0}
+ .mobile-device .stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+ .mobile-device .tv-console{height:36px;min-height:36px;flex-wrap:nowrap;gap:4px;margin:0;padding:3px 6px;border:0;box-shadow:none}
+ .mobile-device .transport{gap:3px}
+ .mobile-device .transport button{font-size:11px;min-height:28px;padding:3px 5px}
+ .mobile-device .speed-control{font-size:11px;gap:2px}
+ .mobile-device .volume-control{gap:3px}
+ .mobile-device .volume-control input{display:none}
+ .mobile-device .volume-control output{min-width:24px;font-size:9px}
+ .mobile-device #volume-jog{width:26px;height:26px;min-height:26px}
+ .mobile-device .tv-status{height:16px;font-size:9px;padding:0 8px}
+ .mobile-device .saturn-pad{width:min(100%,330px);height:146px;padding:8px 26px 18px;flex-shrink:0}
+ .mobile-device .shoulders button{height:22px;min-height:22px;width:62px}
+ .mobile-device .pad-body{height:90px;gap:8px}
+ .mobile-device .dpad{width:81px;height:81px;grid-template:repeat(3,27px)/repeat(3,27px)}
+ .mobile-device .action-pad{grid-template-columns:repeat(3,30px);gap:8px 4px}
+ .mobile-device .action-pad button{width:24px;height:24px;font-size:10px}
+ .mobile-device .action-pad button:nth-child(n+4){width:30px;height:30px}
+ .mobile-device .pad-center{gap:8px}.mobile-device .pad-center>span{font-size:7px}
+ .mobile-device .pad-center button{width:32px;height:22px;min-height:22px;font-size:7px;padding:1px}
+}
+@media(orientation:portrait){
+ .mobile-device .tv-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ .mobile-device .tv-console{display:flex;flex-wrap:nowrap;justify-content:space-between}
+}
