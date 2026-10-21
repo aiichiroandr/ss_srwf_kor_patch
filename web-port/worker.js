@@ -13,8 +13,14 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
     }
     const hostPostMessage=self.postMessage.bind(self);
     const audioPad=new Int32Array(data.pad);
+    const convertAudio = data.mobileOptimized && version === '16f9cf9fde74c2d70e6b'
+      ? (await import('./mobile-audio-rate.mjs?mobile=13')).outputAudioRate : null;
     self.postMessage=(message,transfer)=>{
       if(message.type==='audio'&&data.audioPort){
+        if(convertAudio){
+          message.samples=convertAudio(message.samples,!!Atomics.load(audioPad,1));
+          transfer=[message.samples.buffer];
+        }
         if(probe)probe.audio(performance.now(),message.samples.length/2);
         if(variant==='final'||!Atomics.load(audioPad,1)){
           if(data.mobileOptimized){sentAudioFrames=(sentAudioFrames+message.samples.length/2)>>>0;message.sentAt=Date.now();}
@@ -39,7 +45,7 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
       }
     };
     if(data.mobileOptimized && audioPad.length>=7){
-      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=12');
+      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=13');
       mobileTiming=new MobileTiming(audioPad);
     }
     const runtime = await createSaturn({
