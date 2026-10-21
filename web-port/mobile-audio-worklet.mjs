@@ -1,4 +1,5 @@
 import {MobileAudioRing} from './mobile-audio-ring.mjs?mobile=12';
+import {publishAudioFeedback} from './mobile-feedback.mjs?mobile=14';
 
 class SaturnMobileAudio extends AudioWorkletProcessor {
   constructor() {
@@ -18,10 +19,9 @@ class SaturnMobileAudio extends AudioWorkletProcessor {
           const beforeCount = this.ring.count;
           const beforeDrops = this.ring.drops;
           this.ring.push(packet.samples);
+          publishAudioFeedback(this.feedback,this.ring,packet.samples.length/2);
           if(this.feedback){
-            Atomics.store(this.feedback,5,this.ring.count);
             if(this.feedback.length>=11){
-              Atomics.add(this.feedback,7,packet.samples.length/2);
               if(Number.isFinite(packet.sentAt)){
                 const transit=Math.max(0,Math.min(60000,Date.now()-packet.sentAt));
                 Atomics.store(this.feedback,8,Math.max(Atomics.load(this.feedback,8),transit));
@@ -34,6 +34,7 @@ class SaturnMobileAudio extends AudioWorkletProcessor {
         };
       } else if (data.type === 'clear') {
         this.ring.clear();
+        publishAudioFeedback(this.feedback,this.ring);
         this.ticks = 0;
         this.pendingEvents.length = 0;
         // Keep cumulative counters and the notification rate limit across clear.
@@ -74,10 +75,7 @@ class SaturnMobileAudio extends AudioWorkletProcessor {
     const beforeCount = this.ring.count;
     const beforeGaps = this.ring.gaps;
     this.ring.render(left, right);
-    if(this.feedback){
-      Atomics.store(this.feedback,5,this.ring.count);
-      Atomics.add(this.feedback,6,1);
-    }
+    publishAudioFeedback(this.feedback,this.ring,0,true);
     if (this.ring.gaps > beforeGaps) this.queueEvent('starvation', beforeCount);
     this.flushEvent();
     if (++this.ticks % 128 === 0)

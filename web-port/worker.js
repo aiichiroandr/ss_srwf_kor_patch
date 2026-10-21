@@ -13,10 +13,16 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
     }
     const hostPostMessage=self.postMessage.bind(self);
     const audioPad=new Int32Array(data.pad);
-    const convertAudio = data.mobileOptimized && version === '16f9cf9fde74c2d70e6b'
-      ? (await import('./mobile-audio-rate.mjs?mobile=13')).outputAudioRate : null;
+    const audioOutput = data.mobileOptimized
+      ? (await import('./mobile-audio-format.mjs?mobile=14')).createAudioOutputControl(true,version) : null;
     self.postMessage=(message,transfer)=>{
+      if(message.type==='audio-format'&&audioOutput){
+        audioOutput.accept(message);
+        hostPostMessage(message,transfer);
+        return;
+      }
       if(message.type==='audio'&&data.audioPort){
+        const convertAudio=audioOutput?.convert;
         if(convertAudio){
           message.samples=convertAudio(message.samples,!!Atomics.load(audioPad,1));
           transfer=[message.samples.buffer];
@@ -40,13 +46,13 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
         hostPostMessage(message,transfer);
         if(probe&&message.type==='frame'){
           const report=probe.tick(performance.now(),message.frame,Atomics.load(audioPad,1)?2:1);
-          if(report)hostPostMessage({type:'performance',...report,discCache:discCache?.stats,mobileTiming:mobileTiming?{compositionReliefRequests:mobileTiming.skipped,paceAdjustments:mobileTiming.adjustments,criticalCompositionSkips:mobileTiming.criticalSkips,recoveryAdjustments:mobileTiming.recoveryAdjustments,lowQueueNoWait:mobileTiming.lowQueueNoWait||0,feedbackFallbacks:mobileTiming.feedbackFallbacks||0,pace:mobileTiming.takePace(),transport:audioPad.length>=11?{inFlightFrames:(sentAudioFrames-(Atomics.load(audioPad,7)>>>0))>>>0,maxTransitMs:Atomics.exchange(audioPad,8,0),transitSumMs:Atomics.exchange(audioPad,9,0),receivedPackets:Atomics.exchange(audioPad,10,0)}:null}:undefined});
+          if(report)hostPostMessage({type:'performance',...report,discCache:discCache?.stats,mobileTiming:mobileTiming?{compositionReliefRequests:mobileTiming.skipped,paceAdjustments:mobileTiming.adjustments,criticalCompositionSkips:mobileTiming.criticalSkips,recoveryAdjustments:mobileTiming.recoveryAdjustments,lowQueueNoWait:mobileTiming.lowQueueNoWait||0,feedbackFallbacks:mobileTiming.feedbackFallbacks||0,pace:mobileTiming.takePace(),feedback:mobileTiming.latestFeedback,transport:audioPad.length>=11?{inFlightFrames:(sentAudioFrames-(Atomics.load(audioPad,7)>>>0))>>>0,maxTransitMs:Atomics.exchange(audioPad,8,0),transitSumMs:Atomics.exchange(audioPad,9,0),receivedPackets:Atomics.exchange(audioPad,10,0)}:null}:undefined});
         }
       }
     };
     if(data.mobileOptimized && audioPad.length>=7){
-      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=13');
-      mobileTiming=new MobileTiming(audioPad);
+      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=14');
+      mobileTiming=new MobileTiming(audioPad,()=>performance.now(),()=>sentAudioFrames);
     }
     const runtime = await createSaturn({
       srwMobileTiming: mobileTiming,

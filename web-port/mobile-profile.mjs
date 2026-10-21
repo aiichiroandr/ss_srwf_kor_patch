@@ -9,5 +9,5 @@ export function isMobileDevice(nav = {}) {
 export function executionProfile(nav, enabled = true) {
   const mobile = isMobileDevice(nav);
   return {mobile, optimized: mobile && enabled,
-    name: mobile && enabled ? 'mobile-clock-v13' : 'standard'};
+    name: mobile && enabled ? 'mobile-low-overhead-v14' : 'standard'};
 }

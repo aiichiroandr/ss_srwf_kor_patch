@@ -465,3 +465,57 @@ the scrolling prologue to character selection over 18,000 guest frames, with
 2x -> 1x -> 2x switches, no worker error and two audio starvation events.
 This confirms the reproduced black-screen regression is fixed locally, not
 zero audio gaps or measured input-to-speaker latency on a physical phone.
+
+### Mobile v14: release hot-path overhead and coherent audio pacing
+
+Runtime `1a0261ada40574cfb43d`, frontend `mobile-14`, profile
+`mobile-low-overhead-v14`. The mobile-v14 frontend selects its own `current-mobile-v14.json` manifest.
+The legacy `current-mobile.json` stays on v13 so cached v13 workers cannot
+load a new machine-clock runtime without the matching output converter.
+Desktop manifest, compiled JS/WASM, AudioRing and desktop worklet are unchanged.
+
+The opt-in Emscripten build omits aggregate `g_regs`/`g_areas` map updates in
+`mmio.cpp` (`SRWF_MOBILE_LOW_OVERHEAD=ON`). MMIO CPU budget decrements and
+explicit watches remain intact. Diagnostic scope timers are now compiled out
+of release builds (`SRWF_MOBILE_PROFILE=OFF`), eliminating the per-sound-tick
+clock reads. Diagnostic builds can opt in separately and report inclusive and
+exclusive timing distributions; release reports therefore have no coreProfile.
+
+The worklet publishes queue depth, receive acknowledgement and heartbeat as a
+coherent single-writer snapshot. Producer pacing includes transmitted but not
+yet acknowledged PCM rather than treating it as absent. The shared control
+record grows from 44 to 52 bytes; PCM target remains 60 ms and capacity 500 ms.
+Packets stay 256 source stereo frames. No display policy, guest device clock,
+sound generation, game translation or save format changes are made. As before,
+1x presents every guest frame; 2x presents the existing 60-Hz cadence.
+
+The host announces its PCM contract before samples. New cores enable output
+conversion through that contract, with an explicit compatibility path for v13.
+This update does not introduce pitch-preserving fast-forward: 2x still follows
+speed/pitch as in v13. It never slows the emulated sound CPU independently.
+
+Native tests cover MMIO budget/watch preservation and diagnostic/release
+profiler behavior. A five-run native microbenchmark of eight million paired
+register/area accesses measured median 298.76 ms before versus 18.67 ms with
+aggregate maps disabled. This isolates logging cost, not whole-game speed on
+Android. The 175 existing native runtime tests pass, including pixel/cycle
+raster comparisons. JavaScript tests cover coherent feedback, in-flight PCM,
+counter wrap, clear, stale feedback, actual worklet receipt/render, mobile-only
+runtime selection and PCM capability validation.
+
+Physical Galaxy input-to-speaker latency, prolonged thermal behavior and zero
+starvation across all scenes remain real-device validation items. Desktop
+browser checks and synthetic tests do not establish those results.
+
+The packaged v14 core was exercised locally through 18,000 guest frames with
+2x -> 1x -> 2x transitions, reaching character selection after the prologue.
+All 10,500 expected presentations arrived; all six selected framebuffer hashes
+matched v13 on the same input route. The PCM capability handshake was received.
+Seven starvation events remained in the later 2x sections, so this is not a
+zero-gap 2x result. The baseline ran while compiling and its starvation count
+is not used as a performance comparison. Playback was muted for local testing;
+these checks validate PCM delivery and game progress, not listening quality.
+A separate 1x route delivered all 6,000/6,000 frames and reached the prologue;
+one starvation event occurred. Its later portion overlapped the full local
+JavaScript test suite, so it is not an idle-host latency benchmark. These
+residual events are disclosed rather than counted as a zero-underrun pass.
