@@ -1,0 +1,89 @@
+/* Adapted from the user’s “새턴 패드 CSS 작성” source, version 1. */
+.portrait-pad{display:none}
+.portrait-pad .pad-art {
+  --outline: path("M 400 48 C 342 48 281 16 214 17 C 131 10 73 63 33 153 C 7 212 -4 304 9 361 C 18 407 54 435 99 438 C 148 440 178 409 224 388 C 281 361 342 346 400 346 C 458 346 519 361 576 388 C 622 409 652 440 701 438 C 746 435 782 407 791 361 C 804 304 793 212 767 153 C 727 63 669 10 586 17 C 519 16 458 48 400 48 Z");
+  --face-outline: path("M 400 80 C 319 79 254 60 190 67 C 119 74 73 126 53 196 C 32 268 31 333 63 367 C 99 407 145 404 196 379 C 265 345 331 331 400 331 C 469 331 535 345 604 379 C 655 404 701 407 737 367 C 769 333 768 268 747 196 C 727 126 681 74 610 67 C 546 60 481 79 400 80 Z");
+  position: absolute; left: 50px; top: 91px; width: 800px; height: 450px; user-select: none; -webkit-user-select: none;
+}
+.portrait-pad .cable { position: absolute; left: 355px; top: -154px; width: 118px; height: 190px; border-left: 16px solid #3e4240; border-radius: 72% 0 0 35%; transform: rotate(14deg); filter: drop-shadow(3px 0 1px #242724) drop-shadow(-2px 0 1px #6c7169); }
+.portrait-pad .cable::after { content: ""; position: absolute; top: 6px; bottom: 7px; left: -12px; width: 106px; border-left: 2px solid #82867d; border-radius: 72% 0 0 35%; opacity: .35; }
+.portrait-pad .strain-relief { position: absolute; left: 385px; top: -9px; width: 30px; height: 66px; border-radius: 8px 8px 6px 6px; background: repeating-linear-gradient(0deg, #3d413c 0 5px, #6a6e64 5px 7px, #30362f 8px 10px); box-shadow: inset 4px 0 4px #83867c, inset -5px 0 5px #22271f; transform: rotate(-5deg); }
+.portrait-pad .shoulder { position: absolute; top: 5px; width: 168px; height: 60px; padding: 0; border: 0; border-radius: 64% 62% 19% 19% / 92% 90% 14% 14%; background: linear-gradient(180deg, #a4b0e0 0%, #6b80cf 14%, #4665ba 53%, #3d5190 78%); box-shadow: inset 0 2px 1px #d5d9ec, inset 0 -6px 8px #293b78, 0 3px 3px #565e62; cursor: pointer; touch-action: none; }
+.portrait-pad .shoulder::after { content: ""; position: absolute; inset: 10px 19px 6px; border-top: 2px solid #bcc5eb; border-radius: 55% 65% 0 0; opacity: .7; }
+.portrait-pad .shoulder-left { left: 88px; transform: rotate(-14deg); }
+.portrait-pad .shoulder-right { right: 88px; transform: rotate(14deg); }
+.portrait-pad .shoulder.pressed { filter: brightness(.82); translate: 0 4px; }
+.portrait-pad .shoulder:focus-visible { outline: 3px solid #204bc7; outline-offset: 3px; }
+.portrait-pad .casing { position: absolute; inset: 0; pointer-events: none; filter: drop-shadow(0 12px 8px #343b3626); }
+.portrait-pad .shell-back, .portrait-pad .shell-seam, .portrait-pad .shell, .portrait-pad .shell-grain, .portrait-pad .face-edge, .portrait-pad .face, .portrait-pad .face-gloss { position: absolute; inset: 0; }
+.portrait-pad .shell-back { clip-path: var(--outline); transform: translateY(9px); background: linear-gradient(90deg, #85867e 0%, #b4b5aa 17%, #83867c 47%, #b8b9af 79%, #767970 100%); }
+.portrait-pad .shell-seam { clip-path: var(--outline); transform: translateY(3px); background: #676c61; }
+.portrait-pad .shell { clip-path: var(--outline); background: radial-gradient(ellipse at 20% 8%, #ced0c0a8 0, transparent 45%), linear-gradient(128deg, #a7aa9e 0%, #b0b2a4 32%, #9fa295 64%, #afb1a3 100%); }
+.portrait-pad .shell::before { content: ""; position: absolute; inset: 0; clip-path: var(--outline); box-shadow: inset 0 8px 9px #fff8; }
+.portrait-pad .shell-grain { clip-path: var(--outline); opacity: .22; background-image: repeating-radial-gradient(circle at 30% 32%, #303b292b 0 .6px, transparent .8px 2.1px), repeating-linear-gradient(117deg, #ffffff3d 0 1px, transparent 1px 3px); background-size: 7px 9px, 5px 5px; }
+.portrait-pad .face-edge { clip-path: var(--face-outline); transform: translateY(1px); background: linear-gradient(170deg, #d6d9cc 0%, #93998e 24%, #727a6c 54%, #cbd0c0 88%); }
+.portrait-pad .face { clip-path: var(--face-outline); transform-origin: 400px 235px; transform: scale(.991, .988); background: radial-gradient(ellipse at 11% 1%, #fff9 0%, transparent 40%), radial-gradient(ellipse at 82% 101%, #d4d8cd99 0%, transparent 48%), linear-gradient(143deg, #acb0a6 0%, #9b9f94 43%, #a7ab9f 75%, #b6bbad 100%); }
+.portrait-pad .face-gloss { clip-path: var(--face-outline); transform-origin: 400px 235px; transform: scale(.986, .981); background: linear-gradient(112deg, transparent 16%, #f7fbf22b 18%, transparent 20%, transparent 30%, #fafff613 36%, transparent 51%), radial-gradient(ellipse at 50% 95%, #fafff62e 0%, transparent 45%); }
+.portrait-pad .sega-logo { position: absolute; left: 332px; top: 102px; width: 136px; height: 61px; text-align: center; font-family: "Arial Black", Arial, sans-serif; font-style: italic; font-weight: 900; font-size: 49px; line-height: 1.15; letter-spacing: -5.5px; color: #46575b; transform: scaleX(1.04); opacity: .88; }
+.portrait-pad .sega-logo::after { content: "SEGA"; position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 1px #a5aca0; transform: scale(.89, .71); letter-spacing: -4.5px; }
+.portrait-pad .mold-label { position: absolute; color: #949c8e; text-shadow: 0 1px 0 #d5d9ca9c, 0 -1px 0 #6c76685e; pointer-events: none; }
+.portrait-pad .shoulder-mark { top: 50px; font-size: 16px; letter-spacing: -3px; opacity: .78; }
+.portrait-pad .mark-left { left: 169px; transform: rotate(-13deg); }
+.portrait-pad .mark-right { right: 169px; transform: rotate(13deg); }
+.portrait-pad .dpad-well { position: absolute; left: 79px; top: 141px; width: 195px; height: 195px; border-radius: 50%; background: radial-gradient(circle at 50% 53%, #646d60 0 55%, #7d8678 57%, #abb2a3 63%, #d3d8ca 70%, #a2aa9c 73%); box-shadow: -3px -5px 7px #f6f9ec65, 3px 5px 5px #76816e70, inset 3px 5px 6px #5d695954; }
+.portrait-pad .dpad-disc { position: absolute; inset: 18px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #515958, #383e3f 65%, #202727 100%); box-shadow: 0 3px 2px #c7cfc061, 0 0 0 3px #303a32, inset 1px 3px 3px #8f978761, inset -2px -5px 4px #161d1d; transition: transform .07s; }
+.portrait-pad .dpad-disc::before { content: ""; position: absolute; inset: 3px; border: 1px solid #7d85804f; border-radius: 50%; }
+.portrait-pad .direction-cross { position: absolute; inset: 8px; clip-path: polygon(34% 0, 66% 0, 66% 25%, 75% 34%, 100% 34%, 100% 66%, 75% 66%, 66% 75%, 66% 100%, 34% 100%, 34% 75%, 25% 66%, 0 66%, 0 34%, 25% 34%, 34% 25%); background: linear-gradient(138deg, #8a918a 0%, #5b6461 15%, #3c4543 28%, #444d4a 72%, #1d2825 100%); }
+.portrait-pad .direction-cross::after { content: ""; position: absolute; inset: 3px; clip-path: polygon(34% 0, 66% 0, 66% 26%, 75% 34%, 100% 34%, 100% 66%, 75% 66%, 66% 75%, 66% 100%, 34% 100%, 34% 75%, 25% 66%, 0 66%, 0 34%, 25% 34%, 34% 26%); background: radial-gradient(ellipse at 48% 52%, #343d3b 15%, #48514e 48%, #505954 75%); }
+.portrait-pad .dpad-hub { position: absolute; left: 67px; top: 67px; width: 25px; height: 25px; border-radius: 50%; background: radial-gradient(circle at 45% 35%, #68716a, #424d45 66%); box-shadow: inset 1px 2px 2px #26332c, 0 1px 1px #8f998650; }
+.portrait-pad .direction { position: absolute; padding: 0; width: 49px; height: 49px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; touch-action: none; z-index: 2; }
+.portrait-pad .direction::before { content: ""; position: absolute; left: 19px; top: 17px; width: 12px; height: 12px; clip-path: polygon(50% 0, 100% 84%, 0 84%); background: #29372e; filter: drop-shadow(0 1px 0 #88957c); }
+.portrait-pad .direction.pressed { background: #142c2b2e; box-shadow: inset 0 2px 5px #142c2b77; }
+.portrait-pad .direction.pressed::before { background: #a4bddd; }
+.portrait-pad .direction:focus-visible { outline: 2px solid #bfd2ed; outline-offset: 1px; }
+.portrait-pad .direction-up { left: 55px; top: 2px; }
+.portrait-pad .direction-right { right: 2px; top: 55px; transform: rotate(90deg); }
+.portrait-pad .direction-down { left: 55px; bottom: 2px; transform: rotate(180deg); }
+.portrait-pad .direction-left { left: 2px; top: 55px; transform: rotate(-90deg); }
+.portrait-pad .dpad-well[data-tilt="up"] .dpad-disc { transform: perspective(300px) rotateX(7deg); }
+.portrait-pad .dpad-well[data-tilt="down"] .dpad-disc { transform: perspective(300px) rotateX(-7deg); }
+.portrait-pad .dpad-well[data-tilt="left"] .dpad-disc { transform: perspective(300px) rotateY(-7deg); }
+.portrait-pad .dpad-well[data-tilt="right"] .dpad-disc { transform: perspective(300px) rotateY(7deg); }
+.portrait-pad .action-button { position: absolute; width: var(--size); height: var(--size); padding: 0; border: 0; border-radius: 50%; background: #475247; box-shadow: 0 2px 2px #edf1dfb0, -2px -2px 2px #e8eede91, 2px 2px 3px #4e5a496b; cursor: pointer; touch-action: none; }
+.portrait-pad .action-button::before { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: #252c2b; box-shadow: inset 1px 2px 3px #161e1c; }
+.portrait-pad .button-cap { position: absolute; inset: 3px 4px 7px; display: grid; place-items: center; border-radius: 50%; transform: translateY(-2px); background: radial-gradient(ellipse at 50% 20%, #59625f 0%, #4b5552 40%, #424d4a 68%, #323f38 100%); box-shadow: inset 0 2px 2px #a0aaa066, inset 1px 0 2px #abb2a24a, inset 0 -3px 2px #29372e, 0 5px 1px #2a3730, 0 6px 3px #1d2a27c2; transition: transform .06s ease-out, box-shadow .06s ease-out, filter .08s; pointer-events: none; }
+.portrait-pad .button-cap span { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 31px; font-weight: 500; line-height: 1; color: #303e34; text-shadow: 0 1px 1px #7c8a76, 0 -1px 1px #25362c; transform: scaleX(1.18) translateY(-1px); }
+.portrait-pad .small { --size: 57px; }
+.portrait-pad .small .button-cap { inset: 3px 3px 6px; background: radial-gradient(ellipse at 48% 18%, #adbfe0 0%, #92a9d2 25%, #7d99c6 58%, #617daf 84%); box-shadow: inset 0 2px 2px #e4eaff, inset 1px 0 2px #c8d8f7, inset 0 -3px 2px #4a6395, 0 4px 1px #4c6697, 0 6px 3px #303f5ac2; }
+.portrait-pad .small .button-cap span { font-size: 24px; color: #607fa9; text-shadow: 0 1px 0 #c2d4ed, 0 -1px 0 #4c6f9d; }
+.portrait-pad .large { --size: 74px; }
+.portrait-pad .button-x { left: 490px; top: 201px; }
+.portrait-pad .button-y { left: 563px; top: 148px; }
+.portrait-pad .button-z { left: 643px; top: 115px; }
+.portrait-pad .button-a { left: 504px; top: 278px; }
+.portrait-pad .button-b { left: 590px; top: 228px; }
+.portrait-pad .button-c { left: 675px; top: 186px; }
+.portrait-pad .action-button.pressed .button-cap { transform: translateY(3px); box-shadow: inset 0 2px 3px #25374662, inset 0 -1px 2px #25374655, 0 1px 1px #253746; filter: brightness(.91); }
+.portrait-pad .action-button:focus-visible { outline: 3px solid #e2ecff; outline-offset: 4px; }
+.portrait-pad .media-mark { width: 22px; height: 16px; position: absolute; opacity: .55; filter: drop-shadow(0 1px 0 #e3e7d6); }
+.portrait-pad .media-repeat { left: 507px; top: 177px; border: 1.5px solid #85917e; border-radius: 50%; width: 17px; height: 14px; transform: rotate(-28deg); }
+.portrait-pad .media-repeat::after { content: ""; position: absolute; right: -3px; top: -4px; width: 6px; height: 6px; background: #85917e; clip-path: polygon(0 0, 100% 50%, 0 100%); transform: rotate(25deg); }
+.portrait-pad .media-stop { left: 585px; top: 124px; width: 12px; height: 12px; border: 1.4px solid #85917e; transform: rotate(-12deg); }
+.portrait-pad .media-play { left: 665px; top: 91px; }
+.portrait-pad .media-play::before { content: ""; position: absolute; inset: 2px 8px 2px 0; background: #85917e; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.portrait-pad .media-play::after { content: ""; position: absolute; right: 2px; top: 2px; width: 4px; height: 12px; border-left: 1.4px solid #85917e; border-right: 1.4px solid #85917e; }
+.portrait-pad .start-label { left: 365px; top: 267px; width: 70px; text-align: center; font-size: 16px; letter-spacing: 2px; }
+.portrait-pad .start-well { position: absolute; left: 354px; top: 290px; width: 92px; height: 40px; border-radius: 50%; background: radial-gradient(ellipse at 49% 53%, #556451 0 47%, #8c9b82 54%, #bec9af 70%); box-shadow: 0 -2px 2px #e7eed888, 0 2px 2px #6d7b655c; }
+.portrait-pad .start-button { position: absolute; inset: 8px 11px 8px; padding: 0; border: 0; border-radius: 50%; background: linear-gradient(170deg, #2d86db 0%, #1c70c6 25%, #1058aa 72%, #09498c 100%); box-shadow: inset 0 1px 2px #a3c1ff9e, 0 3px 1px #143c7d, 0 4px 3px #253e37; cursor: pointer; touch-action: none; transition: transform .06s, filter .06s, box-shadow .06s; }
+.portrait-pad .start-button.pressed { transform: translateY(3px); filter: brightness(.87); box-shadow: inset 0 1px 3px #102f75, 0 1px 1px #314335; }
+.portrait-pad .start-button:focus-visible { outline: 3px solid #dbe9ff; outline-offset: 4px; }
+
+.portrait-pad .pad-art{left:0;top:0;transform-origin:0 0;transform:scale(var(--pad-scale,.45))}
+.portrait-pad button{min-width:0;min-height:0;margin:0;color:#e4ecff;font:italic 20px Arial}
+.portrait-pad .cable{display:none}
+.portrait-pad .direction::after{content:"";position:absolute;inset:-12px}
+.portrait-pad .start-button::before{content:"";position:absolute;inset:-30px -15px}
+@media (orientation:portrait){
+ .mobile-device .saturn-pad.touch-controls{display:none}
+ .mobile-device .portrait-pad{display:block;position:relative;width:min(100%,380px);aspect-ratio:800/450;margin:8px auto 0;flex-shrink:0;touch-action:none}
+}

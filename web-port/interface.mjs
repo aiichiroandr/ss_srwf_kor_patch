@@ -98,3 +98,10 @@ jog.addEventListener('pointermove',e=>{if(drag?.id===e.pointerId)setVolume(drag.
 for(const event of ['pointerup','pointercancel','lostpointercapture'])jog.addEventListener(event,()=>{drag=null;});
 jog.addEventListener('keydown',e=>{const step={ArrowUp:5,ArrowRight:5,ArrowDown:-5,ArrowLeft:-5}[e.key];if(step!==undefined){e.preventDefault();setVolume(Number(volume.value)+step);}else if(e.key==='Home'||e.key==='End'){e.preventDefault();setVolume(e.key==='Home'?0:100);}});
 jog.addEventListener('wheel',e=>{e.preventDefault();setVolume(Number(volume.value)+(e.deltaY<0?2:-2));},{passive:false});
+
+// Fit the reference's fixed CSS geometry only on layout changes, never per frame.
+const portraitPad=document.querySelector('.portrait-pad');
+new ResizeObserver(entries=>{
+ const width=entries[0].contentRect.width;
+ if(width>0)portraitPad.style.setProperty('--pad-scale',String(width/800));
+}).observe(portraitPad);
