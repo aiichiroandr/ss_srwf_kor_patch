@@ -165,3 +165,4 @@
 #trial-notice .trial-notice-choice{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:18px}
 #trial-notice input{width:18px;height:18px;accent-color:#dfc17e}
 #trial-notice button{display:block;width:100%;min-height:44px}
+#ram-tools{margin:14px 0}#ram-tools .ram-entry{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;overflow-wrap:anywhere}#ram-tools .ram-entry input{width:18px;height:18px;flex:none}#ram-tools .ram-entry:has(input:disabled){opacity:.55}#ram-entries{max-height:180px;overflow:auto}#ram-tools select{max-width:100%}

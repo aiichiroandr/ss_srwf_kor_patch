@@ -116,3 +116,33 @@ export function lockSave(game) {
     }).catch(reject);
   });
 }
+
+// Import recovery lives in separate v1-store keys so normal autosaves cannot erase it.
+export async function readRamRecovery(game) {
+  gameKey(game);
+  const db=await openDatabase();
+  try { return await new Promise((resolve,reject)=>{
+    const tx=db.transaction('games','readonly'),req=tx.objectStore('games').get(`ram-recovery:${game}`);
+    tx.oncomplete=()=>resolve(req.result??null);
+    tx.onerror=tx.onabort=()=>reject(tx.error??Error('복원점 읽기 실패'));
+  }); } finally { db.close(); }
+}
+export async function commitRamImport(game,input,expected) {
+  gameKey(game);const bytes=validateBackup(input),db=await openDatabase();
+  try { await new Promise((resolve,reject)=>{
+    const tx=db.transaction('games','readwrite'),store=tx.objectStore('games');let reason;
+    const request=store.get(game);
+    request.onsuccess=()=>{
+      const old=request.result,actual=old?.bytes;
+      if((!!actual)!=(!!expected)||actual&&(actual.length!==expected.length||!actual.every((b,i)=>b===expected[i]))){
+        reason=Error('미리보기 이후 저장이 바뀌었습니다. 파일을 다시 선택해 주세요.');tx.abort();return;
+      }
+      const recovery={bytes:actual??new Uint8Array(),previous:old?.previous??null,updatedAt:new Date().toISOString()};
+      store.put(recovery,`ram-recovery:${game}`);
+      store.put(recovery,`ram-history:${game}:${crypto.randomUUID()}`);
+      store.put({bytes,previous:actual??null,updatedAt:new Date().toISOString()},game);
+    };
+    tx.oncomplete=resolve;
+    tx.onerror=tx.onabort=()=>reject(reason??tx.error??Error('가져오기를 저장하지 못했습니다. 기존 저장은 유지됩니다.'));
+  }); } finally {db.close();}
+}
