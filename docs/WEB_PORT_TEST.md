@@ -288,3 +288,34 @@ The 60 ms value is a queue goal, not measured input-to-ear latency; packet,
 game and output-device delays remain additional. Focused tests cover the lower
 startup threshold, recovery, preserved sample order, pacing convergence and
 composition hysteresis. Physical S25 post-change latency is not yet measured.
+
+### Mobile queue pacing and diagnosis v7 — 2026-10-21
+
+`MOBILE · 7` / `mobile-paced-v7` keeps the 60 ms queue/startup goal, 256-frame
+packets, disc preloading and existing composition relief. It replaces accumulated
+host-clock phase corrections with a current-depth wait: below/equal to 60 ms,
+request no sleep; above that, wait only for the excess, capped at 20 ms per
+frame. No prior future deadline is carried into the next valid-feedback frame.
+A stale/missing heartbeat retains native wall-clock pacing. Legacy cached
+native glue sees a zero phase correction, so it cannot accumulate new windup.
+
+Static analysis found that the previous integrated base-clock correction could
+retain a future deadline after a queue deficit. This is a control flaw, not
+proof that it explains every S25 underrun. Focused tests cover high-to-low queue
+transitions, convergence with explicit emulation/work/sleep durations, and
+absence of inherited waits. The queue is now also published immediately upon
+packet receipt, instead of only after the next AudioWorklet render quantum.
+
+Diagnostics separate requested sleep, actual elapsed sleep, maximum oversleep,
+and time outside the preceding sleep (`nonSleepMs`, not pure CPU time; it also
+includes scheduling). Pace sums cover frames with active queue feedback.
+Transport records include sent-but-not-acknowledged source frames, packet count,
+and sum/max delivery time from worker send to worklet receipt. Delivery time
+uses Date.now with millisecond resolution and clamps clock anomalies; it is not
+physical input/output latency. Shared counter snapshots can straddle a receipt
+and are approximate window diagnostics. They contain no game bytes and are
+never uploaded. PCM is not trimmed or time-stretched. Desktop artifacts and
+execution selection are unchanged. Physical S25 validation remains pending.
+
+Runtime `aa21406c80f5516d83db` passed bounded Mac browser initialization and
+AudioWorklet receipt/feedback checks. This is not physical S25 latency validation.

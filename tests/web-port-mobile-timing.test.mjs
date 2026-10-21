@@ -6,12 +6,14 @@ function setup(){
  const timing=new MobileTiming(pad,()=>now);
  return {timing,pad,queue(ms){Atomics.store(pad,5,Math.round(ms*44.1));Atomics.add(pad,6,1)},advance(ms){now+=ms}};
 }
-test('deadline feedback refills low audio and drains excess latency without deleting PCM',()=>{
+test('audio-depth pacing never inherits an old future deadline when queue is low',()=>{
  const {timing,queue}=setup();
- assert.equal(timing.correction(),0);
- queue(30);assert.equal(timing.correction(),-2);
- queue(350);assert.equal(timing.correction(),2);
- for(const ms of [56,60,64]){queue(ms);assert.equal(timing.correction(),0)}
+ assert.equal(timing.planWait(),-1);
+ queue(350);assert.equal(timing.planWait(),20);
+ queue(30);assert.equal(timing.planWait(),0);
+ queue(60);assert.equal(timing.planWait(),0);
+ queue(70);assert.equal(timing.planWait(),10);
+ assert.equal(timing.correction(),0); // cached legacy native glue cannot wind up
 });
 test('composition shedding has hysteresis, keeps input/game cadence separate and restores full display',()=>{
  const {timing,queue}=setup();
@@ -24,9 +26,9 @@ test('composition shedding has hysteresis, keeps input/game cadence separate and
 });
 test('stale or missing audio heartbeat cannot keep accelerating or shedding frames',()=>{
  const {timing,queue,advance}=setup();
- queue(20);assert.equal(timing.correction(),-2);assert.equal(timing.wantsFrame(1,false),false);
- advance(151);assert.equal(timing.correction(),0);assert.equal(timing.wantsFrame(3,false),true);
- queue(60);assert.equal(timing.correction(),0);
+ queue(20);assert.equal(timing.planWait(),0);assert.equal(timing.wantsFrame(1,false),false);
+ advance(151);assert.equal(timing.planWait(),-1);assert.equal(timing.wantsFrame(3,false),true);
+ queue(60);assert.equal(timing.planWait(),0);
 });
 test('bounded synthetic 20ms full-render workload recovers audio with selective composition',()=>{
  const {timing,queue}=setup();let depth=60,minimum=Infinity,wall=0,frame=0;
@@ -37,11 +39,19 @@ test('bounded synthetic 20ms full-render workload recovers audio with selective 
  }
  assert.ok(timing.skipped>0);assert.ok(minimum>0);assert.ok(depth>45);
 });
-test('deadline controller converges from depleted and delayed queues without oscillating at target',()=>{
+test('queue-controlled waits converge without discarding PCM or accumulated phase',()=>{
  for(const initial of [20,350]){
   const {timing,queue}=setup();let ms=initial;
-  for(let i=0;i<200;i++){queue(ms);ms-=timing.correction();}
-  assert.ok(ms>=55 && ms<=65,`initial=${initial}, final=${ms}`);
-  queue(ms);assert.equal(timing.correction(),0);
+  for(let i=0;i<100;i++){
+   ms+=16.715-4; // one emulated frame, 4 ms non-sleep work
+   queue(ms);const sleep=timing.planWait();
+   assert.ok(sleep>=0&&sleep<=20);ms-=sleep;
+  }
+  assert.ok(Math.abs(ms-60)<0.1,`initial=${initial}, final=${ms}`);
  }
+});
+test('pace measurements separate requested sleep, oversleep and non-sleep time',()=>{
+ const {timing}=setup();timing.recordPace(10,30,7);timing.recordPace(0,0.1,42);
+ assert.deepEqual(timing.takePace(),{calls:2,requestedSleepMs:10,actualSleepMs:30.1,nonSleepMs:49,maxNonSleepMs:42,maxOversleepMs:20});
+ assert.equal(timing.takePace(),null);
 });
