@@ -1,7 +1,8 @@
-import {formatPerformance} from "./performance-probe.mjs?mobile=3";
-import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=3";
-import {MobileSpeedGuard} from "./mobile-speed-guard.mjs?mobile=3";
-import {selectRuntime} from "./runtime-selection.mjs?mobile=3";
+import {MobilePause} from './mobile-pause.mjs?mobile=4';
+import {formatPerformance} from "./performance-probe.mjs?mobile=4";
+import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=4";
+import {MobileSpeedGuard} from "./mobile-speed-guard.mjs?mobile=4";
+import {selectRuntime} from "./runtime-selection.mjs?mobile=4";
 import {createIntermission} from "./intermission.mjs";
 import {readSave, writeSave, exportBackup, importBackup, validateBackup, lockSave} from "./saves.mjs";
 const $ = id => document.getElementById(id);
@@ -9,8 +10,11 @@ const canvas = $("screen"), ctx = canvas.getContext("2d");
 const mobileDevice = isMobileDevice(navigator);
 $("mobile-options").hidden = !mobileDevice;
 $("mobile-optimize").checked = mobileDevice;
+$("mobile-preload").checked=mobileDevice && Number(navigator.deviceMemory)>=8;
 $("performance-panel").hidden = !mobileDevice;
 let activeProfile = executionProfile(navigator);
+let mobilePause=null;
+$("resume-mobile").onclick=()=>mobilePause?.update(document.hidden);
 let speedGuard=null, speedGuardReady=false, speedNotice="";
 function resetSpeedGuard(){
   speedGuard?.reset(performance.now(),Number(canvas.dataset.audioGaps||0));
@@ -45,7 +49,7 @@ let saveFailure = false;
 let saveBusy = false, hasPreviousSave = false;
 function saveControls(running) {
   saveBusy = running;
-  for (const id of ["game", "disc", "route", "replay-save", "temporary", "save-load", "cd-rate", "mobile-optimize"])
+  for (const id of ["game", "disc", "route", "replay-save", "temporary", "save-load", "cd-rate", "mobile-optimize", "mobile-preload"])
     $(id).disabled = running;
   $("cd-rate").disabled = running || $("game").value !== "final";
   $("save-restore").disabled = running || !hasPreviousSave;
@@ -172,7 +176,7 @@ for(const button of document.querySelectorAll("[data-pad]")){
 }
 function release() { if(pad) Atomics.store(pad,0,0); }
 window.addEventListener("blur",release);
-document.addEventListener("visibilitychange",()=>{if(document.hidden)release();resetSpeedGuard();});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)release();resetSpeedGuard();mobilePause?.update(document.hidden);});
 canvas.addEventListener("blur",release);
 for(const type of ["keydown","keyup"]) window.addEventListener(type,event=>{
   if(!worker || !keys[event.code]) return;
@@ -191,6 +195,7 @@ $("fast").onchange=()=>{
   }
 };
 async function stopRun(){
+  mobilePause?.dispose();mobilePause=null;$("resume-mobile").hidden=true;
   intermission.reset();
   speedGuard=null;speedGuardReady=false;speedNotice="";
   stopRecording();$("record").disabled=true;
@@ -244,11 +249,11 @@ $("boot").onclick=async()=>{
   speedGuard=activeProfile.optimized&&game==="final" ? new MobileSpeedGuard() : null;
   speedGuardReady=false;speedNotice="";resetSpeedGuard();$("speed-status").hidden=true;
   if(mobileDevice){
-    diagnosticRows=[];diagnosticAudioEvents=[];diagnosticMeta={browser:navigator.userAgent,started:new Date().toISOString(),version:'pending',profile:activeProfile.name,frontend:'mobile-3',audioTargetMs:activeProfile.optimized?240:120,audioQueueCapMs:500};
+    diagnosticRows=[];diagnosticAudioEvents=[];diagnosticMeta={browser:navigator.userAgent,started:new Date().toISOString(),version:'pending',profile:activeProfile.name,frontend:'mobile-4',audioTargetMs:activeProfile.optimized?240:120,audioQueueCapMs:500};
     $("performance-status").textContent="성능 진단: 실행 후 측정합니다.";
     $("diagnostic-text").hidden=true;$("diagnostic-copy-status").textContent="";
   }
-  pad=new Int32Array(new SharedArrayBuffer(16));
+  pad=new Int32Array(new SharedArrayBuffer(mobileDevice?20:16));
   Atomics.store(pad,1,Number($("fast").checked));
   canvas.dataset.audioFrames="0";canvas.dataset.audioDrops="0";canvas.dataset.audioGaps="0";
   canvas.dataset.menuTrace="[]";canvas.dataset.runtimeVersion="legacy";
@@ -260,7 +265,7 @@ $("boot").onclick=async()=>{
   masterGain.gain.value=(game!=="final" && $("fast").checked) ? 0 : Number($("volume").value)/100;
   masterGain.connect(audio.destination);
   if(recordingAudio)masterGain.connect(recordingAudio);
-  const audioWorklet=activeProfile.optimized ? './mobile-audio-worklet.mjs?mobile=3' : './audio-worklet.mjs';
+  const audioWorklet=activeProfile.optimized ? './mobile-audio-worklet.mjs?mobile=4' : './audio-worklet.mjs';
   const audioProcessor=activeProfile.optimized ? 'saturn-mobile-audio' : 'saturn-audio';
   await audio.audioWorklet.addModule(new URL(audioWorklet,import.meta.url));
   audioNode=new AudioWorkletNode(audio,audioProcessor,{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[2]});
@@ -274,6 +279,9 @@ $("boot").onclick=async()=>{
     canvas.dataset.audioGaps=String(data.gaps);canvas.dataset.audioBufferMs=String(data.bufferMs);
     canvas.dataset.audioState=audio?.state||'closed';
   };
+  if(mobileDevice)mobilePause=new MobilePause({pad,audio,
+    onState:paused=>{$("resume-mobile").hidden=true;if(paused)$("status").textContent=document.hidden?"백그라운드 · 일시정지":"재개 중";},
+    onError:()=>{$("resume-mobile").hidden=false;$("status").textContent="재개 버튼을 눌러 계속하세요.";}});
   const audioChannel=new MessageChannel();
   audioNode.port.postMessage({type:'connect',port:audioChannel.port1},[audioChannel.port1]);
 
@@ -283,19 +291,24 @@ $("boot").onclick=async()=>{
   $("runtime-source").href=`./runtime/source-${selectedRuntime.version}.tar.gz`;
   if(mobileDevice){diagnosticMeta.version=selectedRuntime.version;diagnosticMeta.mobileCore=selectedRuntime.mobile;diagnosticMeta.runtimeFallback=selectedRuntime.fallback;}
   if(selectedRuntime.fallback)$("log").textContent+="\n모바일 실행 코드를 읽지 못해 기본 실행 코드를 사용합니다.";
-  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=3`);
+  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=4`);
   $("boot").disabled=true;$("stop").disabled=false;
   $("status").textContent="실행 코드 준비 중";
   worker.onerror=async e=>{await stopRun();$("status").textContent=`실행 오류: ${e.message}`;};
   worker.onmessage=async ({data:d})=>{
-    if(d.type==="performance"&&mobileDevice){
+    if(d.type==='preload'){
+      $("status").textContent=`디스크 미리 읽기 · ${Math.round(100*d.done/d.total)}%`;
+    }else if(d.type==='disc-mode'){
+      diagnosticMeta.discMode=d.mode;diagnosticMeta.discMemoryBytes=d.bytes;
+      if(d.mode!=='memory')$("log").textContent+='\n디스크 미리 읽기를 사용할 수 없어 기존 캐시를 사용합니다.';
+    }else if(d.type==="performance"&&mobileDevice){
       const row={...d,gaps:Number(canvas.dataset.audioGaps||0),drops:Number(canvas.dataset.audioDrops||0),bufferMs:Number(canvas.dataset.audioBufferMs||0),audioState:audio?.state||'closed',visibility:document.visibilityState};
       diagnosticRows.push(row);if(diagnosticRows.length>30)diagnosticRows.shift();
       $("performance-status").textContent=formatPerformance(row,row.gaps,row.bufferMs);
       if(speedGuard&&speedGuardReady&&speedGuard.observe(row,{now:performance.now(),visible:document.visibilityState==="visible",audioRunning:audio?.state==="running"})){
         Atomics.store(pad,1,0);$("fast").checked=false;
         speedNotice=" · 자동 1배속";
-        $("status").textContent="플레이 중"+speedNotice;
+        $("status").textContent=mobileDevice&&document.hidden?"백그라운드 · 일시정지":"플레이 중"+speedNotice;
         $("speed-status").textContent="2배속 처리량이 부족해 소리 끊김을 줄이도록 1배속으로 전환했습니다. 원하면 다시 켤 수 있습니다.";
         $("speed-status").hidden=false;
         row.speedGuard="fell-back-to-1x";
@@ -326,7 +339,7 @@ $("boot").onclick=async()=>{
       if(speedGuard&&!speedGuardReady){speedGuardReady=true;resetSpeedGuard();}
       if(canvas.width!==d.w||canvas.height!==d.h){canvas.width=d.w;canvas.height=d.h;}
       ctx.putImageData(new ImageData(d.rgba,d.w,d.h),0,0);
-      $("status").textContent="플레이 중"+speedNotice;
+      $("status").textContent=mobileDevice&&document.hidden?"백그라운드 · 일시정지":"플레이 중"+speedNotice;
       canvas.dataset.frame=d.frame;
       if(recorder?.state!=="recording")$("record").disabled=false;
     } else if(d.type==="audio"&&audio&&(activeGame==="final" || !$("fast").checked)){
@@ -351,8 +364,10 @@ $("boot").onclick=async()=>{
   };
   const routeFile=$("route").files[0];
   const route=routeFile?await routeFile.text():undefined;
-  worker.postMessage({type:"boot",files,cue:cue.name,pad:pad.buffer,route,temporary,backup:liveBackup,cdRate:Number($("cd-rate").value),audioPort:audioChannel.port2,mobileOptimized:activeProfile.optimized,mobileDiagnostics:mobileDevice},[audioChannel.port2]);
+  worker.postMessage({type:"boot",files,cue:cue.name,pad:pad.buffer,route,temporary,backup:liveBackup,cdRate:Number($("cd-rate").value),audioPort:audioChannel.port2,preloadDisc:activeProfile.optimized&&$("mobile-preload").checked,mobileOptimized:activeProfile.optimized,mobileDiagnostics:mobileDevice},[audioChannel.port2]);
+  if(mobileDevice&&document.hidden)mobilePause.update(true);
   } catch(error) {
+    mobilePause?.dispose();mobilePause=null;
     speedGuard=null;speedGuardReady=false;
     worker?.terminate();worker=null;audio?.close();audio=null;
     unlockSave?.();unlockSave=null;saveControls(false);

@@ -201,3 +201,33 @@ minimum overflow removal, ring wrap, 44.1/48 kHz playback, startup/recovery and
 short producer stalls. This is a transport change, not a claim that the user's
 actual first-voice or battle-scene stutter has been fully eliminated. No physical
 S25 v3 listening result is available at publication.
+
+### Mobile onset and lifecycle v4 — 2026-10-21
+
+`MOBILE · 4` / `mobile-disc-v4` adds optional session-only disc preparation.
+On mobile devices reporting at least 8 GiB via deviceMemory it defaults on;
+other mobile devices may enable it explicitly. Before emulation, BIN files
+are copied in 8 MiB chunks into memory, bounded to 640 MiB total. Runtime
+random reads then copy directly from those bytes instead of synchronously
+reading cold Blob slices. This removes that specific first-seek stall, not
+all core or browser scheduling costs. Startup takes longer and uses up to
+one additional disc-sized allocation. Catchable preparation failures and
+over-budget discs retain the existing 16 MiB cache. A browser process killed
+by memory pressure cannot be recovered by JavaScript. Nothing is persisted
+or uploaded. The option can be disabled before starting the next session.
+
+Mobile visibility changes freeze the producer at a frame boundary and suspend
+the AudioContext, preserving queued PCM. On return, audio resumes before the
+producer is released. If the browser requires a gesture, a resume button is
+shown and the game stays paused. Stop/dispose clears the gate. The optimized
+mobile runtime `a5db802b820c047ee955` keeps exactly the v2 WASM and adds a
+reproducible JS clock adjustment excluding the gate's waiting time; this avoids
+short-pause catch-up. Non-optimized desktop-runtime fallback retains its original
+native clock behavior. Performance windows reset at a resumed boundary.
+
+Desktop runtime, audio ring and worklet are unchanged; desktop has no pause
+gate or disc preparation. Focused tests cover exact random disc bytes, fallback,
+visibility races, failed resume, and short/long pause clock continuity. These
+checks do not establish physical S25 listening quality or complete elimination
+of foreground onset stutter. A new phone report should show `frontend: mobile-4`
+and `discMode: memory` when preparation is active.
