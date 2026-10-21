@@ -231,3 +231,41 @@ visibility races, failed resume, and short/long pause clock continuity. These
 checks do not establish physical S25 listening quality or complete elimination
 of foreground onset stutter. A new phone report should show `frontend: mobile-4`
 and `discMode: memory` when preparation is active.
+
+### Mobile timing and response v5 — 2026-10-21
+
+`MOBILE · 5` / `mobile-timing-v5` retains disc preloading and lifecycle pause.
+The user's v4 visible-window report showed near-zero disc-read time but remaining
+starvation at roughly 52 simulated FPS, with normal queue depths of 300–370 ms.
+This establishes remaining supply shortfalls and appreciable queued latency,
+not the exact native function causing each stall.
+
+Mobile startup/recovery is reduced from 240 to 100 ms. The mobile worklet writes
+source-frame queue depth and a heartbeat into shared memory every render quantum;
+the native host reads this directly via its mobile timing adapter, without the
+main thread or the 371 ms diagnostic message interval. Host deadlines gradually
+rebase by at most 2 ms per frame toward a 110 ms queue, with a 15 ms deadband.
+Excess queue is drained through pacing, not by deleting speech or resampling.
+A missing/stale heartbeat disables feedback. Device/output latency is additional;
+100 ms is not a guaranteed button-to-sound latency.
+
+When queue depth falls below 65 ms, the host temporarily composes every other
+otherwise-presented frame (about 30 presentations/s at either game speed).
+At 110 ms it restores normal composition. This deliberately trades temporary
+visual smoothness for audio production headroom. CPU/game/input and sound-chip
+execution continue; sound channels, DSP, pitch and simulation clocks are not
+skipped. Screenshot/movie requests still force composition. Mobile PCM packet
+size is reduced from 1024 to 256 source frames (~23.2 to ~5.8 ms), reducing the
+batching delay before the worklet receives sound. The hard queue bound remains
+500 ms; it is not increased.
+
+Desktop runtime and audio modules are unchanged. Mobile optimization OFF retains
+the desktop runtime/transport. Focused tests cover queue feedback, stale-state
+handling, composition hysteresis, intact PCM, source-rate conversion and a
+bounded synthetic workload; that workload is not a physical-phone benchmark.
+No claim of complete S25 stutter elimination or physical-device latency
+measurement is made at publication.
+
+Immutable mobile runtime: `dfc11254e0a8f556f1bc`. A bounded Mac browser check
+confirmed WASM initialization, the timing adapter and live AudioWorklet shared
+queue feedback. This is not Android performance or listening validation.

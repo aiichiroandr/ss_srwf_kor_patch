@@ -1,4 +1,4 @@
-import {MobileAudioRing} from './mobile-audio-ring.mjs?mobile=3';
+import {MobileAudioRing} from './mobile-audio-ring.mjs?mobile=5';
 
 class SaturnMobileAudio extends AudioWorkletProcessor {
   constructor() {
@@ -10,6 +10,7 @@ class SaturnMobileAudio extends AudioWorkletProcessor {
     this.pendingEvents = [];
     this.port.onmessage = ({data}) => {
       if (data.type === 'connect') {
+        this.feedback = data.feedback ? new Int32Array(data.feedback) : null;
         if (this.input) this.input.onmessage = null;
         this.input = data.port;
         this.input.onmessage = ({data: packet}) => {
@@ -62,6 +63,10 @@ class SaturnMobileAudio extends AudioWorkletProcessor {
     const beforeCount = this.ring.count;
     const beforeGaps = this.ring.gaps;
     this.ring.render(left, right);
+    if(this.feedback){
+      Atomics.store(this.feedback,5,this.ring.count);
+      Atomics.add(this.feedback,6,1);
+    }
     if (this.ring.gaps > beforeGaps) this.queueEvent('starvation', beforeCount);
     this.flushEvent();
     if (++this.ticks % 128 === 0)

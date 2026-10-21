@@ -6,7 +6,7 @@ importScripts(buildDir + "saturn.js");
 if (self.name !== "em-pthread") onmessage = async ({data}) => {
   if (data.type !== "boot") return;
   try {
-    let probe=null,discCache=null;
+    let probe=null,discCache=null,mobileTiming=null;
     if(data.mobileDiagnostics){
       const {PerformanceProbe}=await import("./performance-probe.mjs?mobile=2");
       probe=new PerformanceProbe();
@@ -29,11 +29,16 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
         hostPostMessage(message,transfer);
         if(probe&&message.type==='frame'){
           const report=probe.tick(performance.now(),message.frame,Atomics.load(audioPad,1)?2:1);
-          if(report)hostPostMessage({type:'performance',...report,discCache:discCache?.stats});
+          if(report)hostPostMessage({type:'performance',...report,discCache:discCache?.stats,mobileTiming:mobileTiming?{compositionReliefRequests:mobileTiming.skipped,paceAdjustments:mobileTiming.adjustments}:undefined});
         }
       }
     };
+    if(data.mobileOptimized && audioPad.length>=7){
+      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=5');
+      mobileTiming=new MobileTiming(audioPad);
+    }
     const runtime = await createSaturn({
+      srwMobileTiming: mobileTiming,
       noInitialRun: true,
       srwPad: new Int32Array(data.pad),
       print: text => postMessage({type:"log", text}),

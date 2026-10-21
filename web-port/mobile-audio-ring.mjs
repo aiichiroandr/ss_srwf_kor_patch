@@ -1,13 +1,11 @@
 import {AudioRing} from './audio-ring.mjs';
 
-// Mobile-only jitter reserve: 240 ms before starting/restarting, retaining
-// at most the original 500 ms. Do not discard speech merely to return a
-// catch-up burst from 300 ms to 120 ms. The caller selects this explicitly;
-// desktop continues to instantiate AudioRing with its unchanged policy.
+// Mobile startup/recovery: 100 ms. The producer receives live queue feedback.
+// Retain original PCM and the existing hard capacity; desktop is unchanged.
 export class MobileAudioRing extends AudioRing {
   constructor(rate = 44100) {
     super(rate);
-    this.target = 10584;
+    this.target = 4410;
   }
 
   push(samples) {

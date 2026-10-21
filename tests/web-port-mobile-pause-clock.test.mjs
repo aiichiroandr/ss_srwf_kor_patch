@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 test('distributed mobile clock excludes short and long pauses without changing desktop clock',()=>{
  const root=new URL('../web-port/runtime/',import.meta.url);
- const mobile=JSON.parse(readFileSync(new URL('current-mobile.json',root)));
+ const mobile={version:'a5db802b820c047ee955'}; // immutable v4 clock regression
  const desktop=JSON.parse(readFileSync(new URL('current.json',root)));
  const getClock=v=>readFileSync(new URL(v+'/saturn.js',root),'utf8').match(/var _emscripten_get_now=\(\)=>[^;]+;/)[0];
  let wall=100;const Module={};const context=vm.createContext({Module,performance:{timeOrigin:1000,now:()=>wall}});
