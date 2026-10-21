@@ -1,13 +1,13 @@
 :root {
-  --ink: #101f2f;
-  --ink-soft: #405063;
-  --paper: #f5f3ed;
-  --paper-deep: #ebe8df;
-  --white: #fffefb;
-  --line: #d8d9d5;
-  --line-strong: #bfc4c3;
-  --blue: #275de1;
-  --blue-deep: #1647bd;
+  --ink: #29323c;
+  --ink-soft: #59636d;
+  --paper: #d8dad5;
+  --paper-deep: #c5c9c3;
+  --white: #eef0eb;
+  --line: #bdc3bd;
+  --line-strong: #9ca69e;
+  --blue: #446bcb;
+  --blue-deep: #3156ae;
   --mint: #20c4b2;
   --orange: #ff6a3d;
   --yellow: #f5c84c;
@@ -135,10 +135,10 @@ a:focus-visible {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  border-radius: 10px 4px 10px 4px;
-  color: var(--white);
-  background: var(--ink);
-  box-shadow: inset -4px -4px 0 var(--blue);
+  border-radius: 50%;
+  color: #b4c4f1;
+  background: #303845;
+  box-shadow: inset 0 1px 1px #64738a, 0 2px 4px #10141a;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 21px;
   font-weight: 900;
@@ -207,8 +207,8 @@ a:focus-visible {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--mint);
-  box-shadow: 0 0 0 4px rgba(32, 196, 178, 0.15);
+  background: #8cbe84;
+  box-shadow: 0 0 0 3px rgba(140, 190, 132, 0.1);
 }
 
 .hero {
@@ -2211,11 +2211,9 @@ body {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   background:
-    radial-gradient(circle at 82% 12%, rgba(39, 93, 225, 0.08), transparent 27%),
-    linear-gradient(rgba(16, 31, 47, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 31, 47, 0.025) 1px, transparent 1px),
-    var(--paper);
-  background-size: auto, 32px 32px, 32px 32px, auto;
+    radial-gradient(ellipse at 50% 12%, #434a56 0%, transparent 64%),
+    #242931;
+  background-size: auto;
 }
 
 @supports (height: 100dvh) {
@@ -2228,14 +2226,15 @@ body {
   position: relative;
   z-index: 40;
   width: 100%;
-  min-height: 64px;
+  min-height: 86px;
   height: auto;
   margin: 0;
-  padding: 0 max(18px, calc((100% - 1440px) / 2));
+  padding: 12px max(24px, calc((100% - 1240px) / 2));
   gap: 20px;
-  border-bottom: 1px solid rgba(16, 31, 47, 0.13);
-  background: rgba(255, 254, 251, 0.92);
-  backdrop-filter: blur(14px);
+  color: #e9edf3;
+  border-bottom: 1px solid #4b515c;
+  background: #252b34;
+  box-shadow: 0 1px 0 #131921;
 }
 
 .header-status {
@@ -2249,7 +2248,9 @@ body {
 .local-pill {
   min-height: 30px;
   padding: 5px 10px;
-  background: var(--white);
+  color: #bac4d3;
+  border-color: #475260;
+  background: #303944;
 }
 
 main {
@@ -2865,7 +2866,7 @@ main {
   border-radius: inherit;
   pointer-events: none;
   opacity: 0;
-  background: linear-gradient(90deg, var(--blue), var(--mint), #e5a62c, var(--blue)) 0 0 / 260% 100%;
+  background: linear-gradient(90deg, #6f8edd, #b9c9f2, #6f8edd) 0 0 / 260% 100%;
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -2889,7 +2890,7 @@ main {
 .workflow-zone.is-pending {
   color: #667178;
   background: linear-gradient(145deg, #fafaf7, #eff0ec);
-  opacity: 0.74;
+  opacity: 1;
 }
 
 .workflow-zone.is-prepared,

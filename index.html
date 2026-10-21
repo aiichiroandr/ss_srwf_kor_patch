@@ -9,14 +9,14 @@
     >
     <meta name="referrer" content="no-referrer">
     <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#101f2f">
+    <meta name="theme-color" content="#292e35">
     <meta
       name="description"
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 디스크 이미지를 기기 안에서 검증하고, 한글화 또는 게임 데이터 편집 후 BIN/CUE로 저장합니다."
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20261021-webport1">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261021-webport1">
+    <link rel="stylesheet" href="assets/style.css?v=20261021-webport1&amp;theme=saturn1">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261021-webport1&amp;theme=saturn1">
     <script type="module" src="assets/app.mjs?v=20261021-webport1&webui=reference2"></script>
     <script type="module" src="assets/user-guide.mjs?v=20261021-webport1"></script>
   </head>
@@ -29,7 +29,7 @@
         href="#patcher"
         aria-label="세가새턴 슈퍼로봇대전 F 한글패치, 비공식 팬 프로젝트, 게임 원본 미포함, 패치 가능 대상 F는 Rev B 21M, F 완결편은 Rev A 10M과 11M, 권리자 및 플랫폼과 무관"
       >
-        <span class="brand-mark" aria-hidden="true">F+</span>
+        <span class="brand-mark" aria-hidden="true"><span class="saturn-orbit"></span></span>
         <span class="brand-copy">
           <strong>세가새턴 슈퍼로봇대전 F 한글패치</strong>
           <span>비공식 · 원본 미포함</span>
@@ -53,6 +53,11 @@
     <main id="main" tabindex="-1">
       <section class="patch-section" id="patcher" aria-label="패처">
         <div class="patch-console">
+          <div class="saturn-fascia" aria-hidden="true">
+            <div class="saturn-wordmark"><span class="saturn-planet"></span><span>SEGA<span>SATURN</span></span></div>
+            <div class="saturn-fascia-copy"><span>KOREAN PATCH PROJECT</span><strong>슈퍼로봇대전 F · F 완결편</strong></div>
+            <div class="saturn-vents"></div>
+          </div>
           <div class="patch-workspace" id="patchWorkspace">
             <div class="mode-bar" id="modeBar">
               <div class="mode-switch" hidden role="group" aria-label="작업 방식">
@@ -305,6 +310,7 @@
                   <h3 id="editor-source-heading">1. 게임 폴더 열기</h3>
                   <span class="zone-state" id="editorSourceState" role="status" aria-live="polite">선택 대기</span>
                 </div>
+                <div class="saturn-disc" aria-hidden="true"><span class="saturn-disc-label">SEGA SATURN</span><span class="saturn-disc-hub"></span><span class="saturn-disc-caption">COMPACT DISC</span></div>
                 <p class="editor-source-help" id="editorSourceHelp">정품 원본·한글 패치본·기존 편집본의 폴더를 고르세요. 파일은 이 기기 안에서만 검사합니다.</p>
                 <button class="file-button" type="button" id="editorSourceButton" disabled>
                   <span class="button-symbol" aria-hidden="true">＋</span>
@@ -356,6 +362,26 @@
               </dl>
               <button class="workflow-link" type="button" id="workflowSkipEditor" disabled>편집 없이 저장으로 이동</button>
               <p class="editor-entry-note" id="editorEntryNote">폴더 확인 후 에디터를 열거나 편집 없이 저장할 수 있습니다.</p>
+              <div class="saturn-mini-frame" aria-hidden="true">
+                <div class="saturn-mini-art">
+                  <div class="saturn-mini-pad">
+                    <span class="saturn-mini-cord"></span>
+                    <span class="saturn-mini-shoulder saturn-mini-l"></span>
+                    <span class="saturn-mini-shoulder saturn-mini-r"></span>
+                    <span class="saturn-mini-shell"></span>
+                    <span class="saturn-mini-face"></span>
+                    <span class="saturn-mini-logo">SEGA</span>
+                    <span class="saturn-mini-dpad"><span class="saturn-mini-hub"></span></span>
+                    <span class="saturn-mini-button saturn-mini-small saturn-mini-x">X</span>
+                    <span class="saturn-mini-button saturn-mini-small saturn-mini-y">Y</span>
+                    <span class="saturn-mini-button saturn-mini-small saturn-mini-z">Z</span>
+                    <span class="saturn-mini-button saturn-mini-a">A</span>
+                    <span class="saturn-mini-button saturn-mini-b">B</span>
+                    <span class="saturn-mini-button saturn-mini-c">C</span>
+                    <span class="saturn-mini-start"></span>
+                  </div>
+                </div>
+              </div>
             </section>
 
             <section class="workflow-save workflow-zone" id="workflowSaveRegion" hidden aria-labelledby="workflow-save-heading">
