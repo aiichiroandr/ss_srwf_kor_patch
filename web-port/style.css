@@ -116,3 +116,25 @@
  .mobile-device .tv-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
  .mobile-device .tv-console{display:flex;flex-wrap:nowrap;justify-content:space-between}
 }
+
+/* Mobile landscape: the game owns all available height; navigation is a drawer. */
+#landscape-menu{display:none}
+@media(orientation:landscape){
+ .mobile-device .topbar{display:none}
+ .mobile-device .tabs{display:none;position:fixed;top:42px;left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));height:36px;z-index:30;background:#202630;border:1px solid #5c6574;border-radius:8px;box-shadow:0 4px 12px #0008}
+ .mobile-device .tabs button{flex:1;min-height:34px;padding:3px 8px;font-size:12px}
+ .mobile-device body.menu-open .tabs,.mobile-device body:not([data-view="play"]) .tabs{display:flex}
+ .mobile-device #landscape-menu{display:block;position:fixed;top:6px;left:calc(max(14px,env(safe-area-inset-left)) + 72px);z-index:31;min-height:28px;padding:3px 8px;font-size:11px;background:#202630e8}
+ .mobile-device .workspace{flex:1;min-height:0;margin:0}
+ .mobile-device .settings-view{padding:84px 14px 10px}
+ .mobile-device .dpad{bottom:calc(50% - 45px);opacity:.9}
+ .mobile-device .action-pad{bottom:calc(50% - 40px);opacity:.9}
+ .mobile-device .pad-center{bottom:45px;right:calc(max(14px,env(safe-area-inset-right)) + 32px);opacity:1}
+ .mobile-device .speed-control{left:max(10px,env(safe-area-inset-left));right:auto;bottom:40px;font-size:10px}
+ .mobile-device .volume-control input{display:none}
+ .mobile-device .volume-control{bottom:6px;right:max(14px,env(safe-area-inset-right));gap:5px}
+ .mobile-device .tv-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ .mobile-device .transport button{font-size:10px;min-height:28px;padding:3px 5px}
+ .mobile-device .action-pad button:nth-child(-n+3){background:radial-gradient(circle at 35% 20%,#6589c0,#385786 65%,#23354e)}
+ .mobile-device .pad-center button,.mobile-device .shoulders button{background:linear-gradient(#5f7ca9,#304765)}
+}
