@@ -117,3 +117,16 @@ new ResizeObserver(entries=>{
  const width=entries[0].contentRect.width;
  if(width>0)portraitPad.style.setProperty('--pad-scale',String(width/800));
 }).observe(portraitPad);
+
+// Remember dismissal only after closing; unavailable storage leaves the notice usable.
+const trialNotice=$('trial-notice');
+const trialNoticeKey='srwf-webport-trial-dismissed-v1';
+let trialNoticeDismissed=false;
+try{trialNoticeDismissed=localStorage.getItem(trialNoticeKey)==='1';}catch{}
+trialNotice.addEventListener('close',()=>{
+ try{
+  if($('trial-notice-dismiss').checked)localStorage.setItem(trialNoticeKey,'1');
+  else localStorage.removeItem(trialNoticeKey);
+ }catch{}
+});
+if(!trialNoticeDismissed)trialNotice.showModal();
