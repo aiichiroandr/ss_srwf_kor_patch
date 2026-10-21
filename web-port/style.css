@@ -138,3 +138,14 @@
  .mobile-device .action-pad button:nth-child(-n+3){background:radial-gradient(circle at 35% 20%,#6589c0,#385786 65%,#23354e)}
  .mobile-device .pad-center button,.mobile-device .shoulders button{background:linear-gradient(#5f7ca9,#304765)}
 }
+
+/* Compact transport and held vertical volume; expansion never changes layout. */
+.transport #boot,.transport #pause-game,.transport #stop{width:32px;min-width:28px;padding:3px;font-size:15px;line-height:1}
+.volume-control{z-index:20}
+.volume-control input{display:none}
+#volume-jog{position:relative;width:28px;height:28px;min-height:28px;padding:0;border:0;border-radius:5px;background:transparent;box-shadow:none;touch-action:none;overflow:visible;cursor:ns-resize}
+#volume-jog i{position:absolute;inset:auto;bottom:3px;left:50%;width:6px;height:22px;transform:translateX(-50%);border-radius:5px;background:linear-gradient(to top,#dfbe7a var(--volume,0%),#555b65 var(--volume,0%));box-shadow:0 0 0 1px #ffffff40;pointer-events:none}
+#volume-jog i:before{content:"";position:absolute;inset:auto;left:50%;bottom:var(--volume,0%);width:12px;height:4px;border-radius:3px;transform:translate(-50%,50%);background:#f6dfb3;box-shadow:0 1px 3px #000}
+#volume-jog.adjusting i{height:120px;width:10px;box-shadow:0 0 0 12px #171b24f5,0 0 0 13px #a6b0c055,0 5px 20px 15px #0008}
+#volume-jog.adjusting i:before{width:24px;height:8px}
+#volume-jog:focus-visible{outline:2px solid #dfbe7a;outline-offset:2px}

@@ -20,7 +20,8 @@ $("pause-game").onclick=()=>{
   if(!mobilePause)return;
   manualPaused=!manualPaused;
   $("pause-game").setAttribute('aria-pressed',String(manualPaused));
-  $("pause-game").textContent=manualPaused?'▶ 재개':'Ⅱ 일시정지';
+  $("pause-game").setAttribute("aria-label",manualPaused?"재개":"일시정지");$("pause-game").title=manualPaused?"재개":"일시정지";
+  $("pause-game").textContent=manualPaused?'▶':'Ⅱ';
   release();resetSpeedGuard();mobilePause.update(document.hidden||manualPaused);
 };
 $("resume-mobile").onclick=()=>mobilePause?.update(document.hidden||manualPaused);
@@ -205,7 +206,7 @@ $("fast").onchange=()=>{
 };
 async function stopRun(){
   mobilePause?.dispose();mobilePause=null;manualPaused=false;
-  $("pause-game").disabled=true;$("pause-game").textContent='Ⅱ 일시정지';$("pause-game").setAttribute('aria-pressed','false');$("resume-mobile").hidden=true;
+  $("pause-game").setAttribute("aria-label","일시정지");$("pause-game").title="일시정지";$("pause-game").disabled=true;$("pause-game").textContent='Ⅱ';$("pause-game").setAttribute('aria-pressed','false');$("resume-mobile").hidden=true;
   intermission.reset();
   speedGuard=null;speedGuardReady=false;speedNotice="";
   stopRecording();$("record").disabled=true;
