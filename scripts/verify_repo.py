@@ -147,6 +147,11 @@ PNG_DIMENSION_MAX = 32_768
 # Binary UI assets are publication decisions, not extension-based exceptions.
 # Add only a reviewed canonical repository path and its exact lowercase SHA-256.
 PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
+    # User-requested disc title artwork; provenance: web-port/images/README.md.
+    "web-port/images/f-ja.png": "b87c104da1c82c4e07bb8f5efa884b079a31f026d49a2f43308746ac4f633d6c",
+    "web-port/images/f-ko.png": "bb9a374e36bf5c547a0d928565aed6cfe3d1dbff15ca8b021875bc0f27a97338",
+    "web-port/images/final-ja.png": "ab1c732c537a73aa91e676f7769cd545df193f96cc73e74c4120f5ca9f6d6b91",
+    "web-port/images/final-ko.png": "71835844b45711f917874740f905ee5bf29b03405b09f956f9d3480ac621ea20",
     "assets/user-guide/changes-desktop.png": "d18a5fe540270c171283cb0de93d0283efedaad4477abe808825ed8738928a74",
     "assets/user-guide/changes-portrait.png": "f73d06c5dabed0495d519d65897818275e3be869496bd2bed783eafceaf4d87b",
     "assets/user-guide/downloads-desktop.png": "fee850038d2afea638b820acf97853229c757e587ca73bd9fea38f08b552f962",
