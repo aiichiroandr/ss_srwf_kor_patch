@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {MobileAudioRing} from '../web-port/mobile-audio-ring.mjs';
 import {MobileTiming} from '../web-port/mobile-timing.mjs';
 function setup(){
  let now=0;const pad=new Int32Array(new SharedArrayBuffer(28));
@@ -58,5 +59,36 @@ test('pace measurements separate requested sleep, oversleep and non-sleep time',
 
 test("restored v6 host gets bounded corrections without changing audio target",()=>{
  const {timing,queue}=setup();queue(60);assert.equal(timing.correction(),0);
- queue(20);assert.equal(timing.correction(),-2);queue(100);assert.equal(timing.correction(),2);
+ queue(20);assert.equal(timing.correction(),-8);queue(100);assert.equal(timing.correction(),2);
+});
+
+function simulate(Timing,drawCost=24,skipCost=11){
+ let wall=0,nextAudio=0,base=0,frames=0;
+ const pad=new Int32Array(new SharedArrayBuffer(28));const timing=new Timing(pad,()=>wall);const ring=new MobileAudioRing();ring.push(new Int16Array(2646*2));
+ const left=new Float32Array(128),right=new Float32Array(128);
+ function advance(ms){const end=wall+ms;while(nextAudio<=end){wall=nextAudio;ring.render(left,right);Atomics.store(pad,5,ring.count);Atomics.add(pad,6,1);nextAudio+=128/44.1;}wall=end;}
+ while(wall<20000){
+  frames++;const draw=timing.wantsFrame(frames,false);advance(wall<2000||wall>14000?6:(draw?drawCost:skipCost));
+  ring.push(new Int16Array(737*2));Atomics.store(pad,5,ring.count);
+  base+=timing.correction();const delay=base+frames*737/44.1-wall;
+  if(delay>0)advance(delay);else if(delay< -250)base=wall-frames*737/44.1;
+ }
+ return {gaps:ring.gaps,drops:ring.drops,frames,bufferMs:ring.count/44.1,criticalSkips:timing.criticalSkips||0};
+}
+
+test('actual FIFO and host-deadline model survive sustained 24ms draw / 11ms skipped-frame work',()=>{
+ const result=simulate(MobileTiming);
+ assert.equal(result.gaps,0);assert.equal(result.drops,0);
+ assert.ok(result.criticalSkips>0);
+ assert.ok(result.bufferMs<100,'recovery must not accumulate audio latency');
+ assert.ok(result.frames>1190,'guest must keep advancing at approximately 60 Hz');
+});
+test('critical composition relief clears on recovery or stale feedback, including 2x mode',()=>{
+ const {timing,queue,advance}=setup();queue(20);
+ assert.equal(timing.wantsFrame(2,true),false);
+ assert.equal(timing.wantsFrame(4,true),false);
+ assert.equal(timing.wantsFrame(6,true),true);
+ queue(70);assert.equal(timing.wantsFrame(8,true),true);
+ queue(20);timing.wantsFrame(9,false);advance(151);
+ assert.equal(timing.correction(),0);assert.equal(timing.wantsFrame(11,false),true);
 });

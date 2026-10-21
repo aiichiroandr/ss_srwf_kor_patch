@@ -339,3 +339,19 @@ A local native sample with identical dispatch source found `sh2_lookup` at 520/3
 No PCM, sound-chip clock, sample rate, channel count, buffer target, or packet size changed. The prior v6 timing controller remains in use, with a 60 ms mobile target and 256-frame packets.
 
 Validation: 172 runtime tests pass, including new overlay/restore, alias, collision and slot-precedence cases. The first run hit the pre-existing 4 ms wall-clock CD test under build contention; the repeat passed. A native 18,000-frame first-battle replay produces byte-identical 53,073,808-byte WAV and four PNG checkpoints. A synthetic Node/WebAssembly repeated-lookup benchmark reduced this lookup workload by ~91%; this is not a whole-game or Galaxy performance claim. Physical S25 validation remains user-side.
+
+### Mobile recovery v10 (2026-10-21)
+
+The v9 S25 report still records starvation (80 to 98 over the displayed
+roughly one-minute window) despite mostly 59–60 guest fps and negligible disc
+reads. This does not establish that dispatch optimization resolved audio.
+Mobile v10 retains the v9 WASM, original PCM, 60 ms startup/recovery target and
+500 ms hard capacity. Below 30 ms queued audio it temporarily composes one in
+three guest frames (one in six at 2x), returning to the existing display policy
+after recovery. Below 40 ms it advances the host deadline by up to 8 ms instead
+of 2 ms, without changing guest or sound-chip clocks. Desktop paths are unchanged.
+A deterministic FIFO/host-deadline model with sustained 24 ms composition /
+11 ms uncomposed work produced 16 underflows with v9 and zero with v10; this is
+a synthetic scheduling regression test, not a Galaxy measurement. Actual S25
+audio and visual smoothness remain to be confirmed. Diagnostics identify
+`mobile-recovery-v10` and count critical composition skips and recovery corrections.

@@ -34,12 +34,12 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
         hostPostMessage(message,transfer);
         if(probe&&message.type==='frame'){
           const report=probe.tick(performance.now(),message.frame,Atomics.load(audioPad,1)?2:1);
-          if(report)hostPostMessage({type:'performance',...report,discCache:discCache?.stats,mobileTiming:mobileTiming?{compositionReliefRequests:mobileTiming.skipped,paceAdjustments:mobileTiming.adjustments,lowQueueNoWait:mobileTiming.lowQueueNoWait||0,feedbackFallbacks:mobileTiming.feedbackFallbacks||0,pace:mobileTiming.takePace(),transport:audioPad.length>=11?{inFlightFrames:(sentAudioFrames-(Atomics.load(audioPad,7)>>>0))>>>0,maxTransitMs:Atomics.exchange(audioPad,8,0),transitSumMs:Atomics.exchange(audioPad,9,0),receivedPackets:Atomics.exchange(audioPad,10,0)}:null}:undefined});
+          if(report)hostPostMessage({type:'performance',...report,discCache:discCache?.stats,mobileTiming:mobileTiming?{compositionReliefRequests:mobileTiming.skipped,paceAdjustments:mobileTiming.adjustments,criticalCompositionSkips:mobileTiming.criticalSkips,recoveryAdjustments:mobileTiming.recoveryAdjustments,lowQueueNoWait:mobileTiming.lowQueueNoWait||0,feedbackFallbacks:mobileTiming.feedbackFallbacks||0,pace:mobileTiming.takePace(),transport:audioPad.length>=11?{inFlightFrames:(sentAudioFrames-(Atomics.load(audioPad,7)>>>0))>>>0,maxTransitMs:Atomics.exchange(audioPad,8,0),transitSumMs:Atomics.exchange(audioPad,9,0),receivedPackets:Atomics.exchange(audioPad,10,0)}:null}:undefined});
         }
       }
     };
     if(data.mobileOptimized && audioPad.length>=7){
-      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=9');
+      const {MobileTiming}=await import('./mobile-timing.mjs?mobile=10');
       mobileTiming=new MobileTiming(audioPad);
     }
     const runtime = await createSaturn({
