@@ -14,7 +14,26 @@ $('disc').addEventListener('change',()=>{
  $('disc-hint').textContent=files.length?`${(files.reduce((n,f)=>n+f.size,0)/1048576).toFixed(1)} MB · 선택됨`:'원본 BIN 또는 CUE + 모든 BIN';
  if(files.length){$('status').textContent='디스크 선택 완료 · 실행을 누르세요.';$('empty-state').querySelector('h2').textContent='실행 준비';$('empty-state').querySelector('p').textContent='아래 실행 버튼으로 시작하세요.';showTab('play');}
 });
-new MutationObserver(()=>{$('empty-state').hidden=true;}).observe($('screen'),{attributes:true,attributeFilter:['data-frame']});
+// Startup feedback stays inside the screen; stop observing frames after handoff.
+const bootOverlay=$('empty-state');
+let bootPending=false;
+const firstFrame=new MutationObserver(()=>{
+ bootPending=false;bootOverlay.hidden=true;firstFrame.disconnect();bootStatus.disconnect();
+});
+const watchFirstFrame=()=>firstFrame.observe($('screen'),{attributes:true,attributeFilter:['data-frame']});
+watchFirstFrame();
+$('boot').addEventListener('click',()=>{
+ bootPending=true;bootOverlay.hidden=false;
+ bootOverlay.querySelector('h2').textContent='디스크 부팅';
+ bootOverlay.querySelector('p').textContent=$('status').textContent;
+ bootOverlay.querySelector('span:last-child').textContent='게임 화면이 나오면 자동으로 전환됩니다.';
+ watchFirstFrame();
+ bootStatus.observe($('status'),{childList:true,characterData:true,subtree:true});
+});
+const bootStatus=new MutationObserver(()=>{
+ if(!bootPending)return;
+ bootOverlay.querySelector('p').textContent=$('status').textContent;
+});
 $('fullscreen').addEventListener('click',async()=>{
  try{if(document.fullscreenElement)await document.exitFullscreen();else await $('view-play').requestFullscreen();$('screen').focus();}
  catch{$('status').textContent='전체 화면을 지원하지 않는 브라우저입니다.';}
