@@ -28,6 +28,7 @@ existing faithful vector reproduction, not a logo invented for this page, and
 not claimed to have been extracted from the game disc. Branding identifies this
 unofficial fan trial only.
 
-Current Saturn header: saturn-orbit.svg is an editable vector recreation of
-only the blue planet and silver ring in the user-provided image, requested
-on 2026-10-21. It has no console, controller or checkerboard background.
+Current Saturn header: the original saturn.svg above, with a thin white
+non-scaling stroke added only to the two visible wordmark paths at the user's
+request. The background remains transparent; the planet artwork is unchanged.
+The intermediate saturn-orbit.svg is retained as an unused alternative.
