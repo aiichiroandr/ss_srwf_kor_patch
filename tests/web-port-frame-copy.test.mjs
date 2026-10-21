@@ -4,8 +4,9 @@ import {readFileSync} from 'node:fs';
 const root=new URL('../web-port/runtime/',import.meta.url);
 const {version}=JSON.parse(readFileSync(new URL('current.json',root)));
 const {version:mobileVersion}=JSON.parse(readFileSync(new URL('current-mobile.json',root)));
+const {version:mobile14}=JSON.parse(readFileSync(new URL('current-mobile-v14.json',root)));
 const js=readFileSync(new URL(`${version}/saturn.js`,root),'utf8');
-for (const [name,runtime] of [['desktop',version],['mobile',mobileVersion]]) {
+for (const [name,runtime] of [['desktop',version],['mobile-v13',mobileVersion],['mobile-v14',mobile14]]) {
  const code=readFileSync(new URL(`${runtime}/saturn.js`,root),'utf8');
  const start=code.indexOf('function web_frame('),end=code.indexOf('function web_pad()',start);
  assert.ok(start>=0&&end>start);
