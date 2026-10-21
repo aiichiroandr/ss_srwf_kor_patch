@@ -6,12 +6,24 @@ importScripts(buildDir + "saturn.js");
 if (self.name !== "em-pthread") onmessage = async ({data}) => {
   if (data.type !== "boot") return;
   try {
+    let probe=null,discCache=null;
+    if(data.mobileDiagnostics){
+      const {PerformanceProbe}=await import("./performance-probe.mjs?mobile=1");
+      probe=new PerformanceProbe();
+    }
     const hostPostMessage=self.postMessage.bind(self);
     const audioPad=new Int32Array(data.pad);
     self.postMessage=(message,transfer)=>{
       if(message.type==='audio'&&data.audioPort){
+        if(probe)probe.audio(performance.now(),message.samples.length/2);
         if(variant==='final'||!Atomics.load(audioPad,1))data.audioPort.postMessage(message,transfer);
-      }else hostPostMessage(message,transfer);
+      }else {
+        hostPostMessage(message,transfer);
+        if(probe&&message.type==='frame'){
+          const report=probe.tick(performance.now(),message.frame,Atomics.load(audioPad,1)?2:1);
+          if(report)hostPostMessage({type:'performance',...report,discCache:discCache?.stats});
+        }
+      }
     };
     const runtime = await createSaturn({
       noInitialRun: true,
@@ -25,6 +37,18 @@ if (self.name !== "em-pthread") onmessage = async ({data}) => {
     runtime.FS.mkdir("/disc");
     runtime.FS.mkdir("/out");
     runtime.FS.mount(runtime.WORKERFS, {files:data.files}, "/disc");
+    if(data.mobileOptimized){
+      const {installDiscCache}=await import('./disc-cache.mjs?mobile=1');
+      discCache=installDiscCache(runtime.FS);
+    }
+    if(probe)for(const file of data.files){
+      const node=runtime.FS.lookupPath('/disc/'+file.name).node;
+      const read=node.stream_ops.read;
+      node.stream_ops={...node.stream_ops,read(...args){
+        const start=performance.now();
+        try{return read.apply(this,args);}finally{probe.read(performance.now()-start);}
+      }};
+    }
     const savePath = "/out/backup.bin";
     if (data.backup) runtime.FS.writeFile(savePath, data.backup);
     if (!data.temporary) {

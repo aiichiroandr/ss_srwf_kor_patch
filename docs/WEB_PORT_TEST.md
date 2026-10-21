@@ -81,3 +81,46 @@ which differ; this is not proof of an underrun fix. Screen-copy cost was reduced
 substantially in measured common windows. No physical Galaxy S25 test has been
 performed. Frame-rate reduction and the rejected audio-pacing experiment are
 not included.
+
+### On-device diagnostics — 2026-10-21
+
+A collapsed, mobile-only performance panel reports simulation progress relative to selected
+speed, generated PCM supply relative to44100 samples/s, worklet starvation
+count/queue, and synchronous disc-read duration. Worker windows are approximately
+two seconds and reset on speed changes. This measures production, not human
+listening quality or an isolated CPU bottleneck. Slow progress can include
+disc waits; a single window does not establish a root cause.
+
+Copy exports the last30 windows plus browser/runtime/audio-context details.
+It includes no ROM bytes, filenames or saves, performs no upload, and requires
+the user to paste the report manually. Reports reset for each run. Game timing,
+frame cadence, audio sample rate and file-read results remain unchanged.
+
+
+### Mobile-only disc cache — 2026-10-21
+
+Android, iPhone/iPad and iPadOS desktop-identifying devices default to the
+`mobile-disc-cache-v1` host profile. Small desktop windows and touch Windows
+laptops keep the standard path. The mobile settings switch can disable the
+optimization before starting a new run; it cannot change during play.
+
+Only the mobile profile wraps large BIN WORKERFS reads in a shared LRU cache:
+256 KiB per block, at most 64 blocks / 16 MiB across all tracks. CUE and small
+files retain ordinary reads. The complete disc is never copied into the cache,
+and no ROM bytes are persisted or uploaded. This reduces repeated synchronous
+Blob operations during sequential CD reads without changing emulated CD speed,
+read bytes, game timing, frame cadence, or the existing 44.1 kHz audio FIFO.
+The original WORKERFS read can also allocate a transient block-sized buffer;
+16 MiB describes retained cache bytes, not total browser memory.
+
+Mobile creates the recording audio branch on the first recording request,
+rather than at game start. Desktop audio setup and uncached disc reads retain
+their prior behavior. Diagnostic probes/read wrappers run only on mobile;
+the report includes actual backing-read counts and bounded cache occupancy.
+The player and worker URLs carry `mobile=1` to distinguish the frontend release;
+the immutable WASM runtime and its source archive are unchanged.
+
+Validation covers byte-exact sequential/random/block-boundary/EOF reads,
+shared eviction and the memory ceiling, incomplete-read fallback, mobile vs
+PC classification and disabling the optimization. These checks do not establish
+that Galaxy S25 battle playback is smooth; no physical S25 result is claimed.

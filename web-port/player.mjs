@@ -1,10 +1,24 @@
+import {formatPerformance} from "./performance-probe.mjs?mobile=1";
+import {executionProfile, isMobileDevice} from "./mobile-profile.mjs?mobile=1";
 import {createIntermission} from "./intermission.mjs";
 import {readSave, writeSave, exportBackup, importBackup, validateBackup, lockSave} from "./saves.mjs";
 const $ = id => document.getElementById(id);
 const canvas = $("screen"), ctx = canvas.getContext("2d");
+const mobileDevice = isMobileDevice(navigator);
+$("mobile-options").hidden = !mobileDevice;
+$("mobile-optimize").checked = mobileDevice;
+$("performance-panel").hidden = !mobileDevice;
+let activeProfile = executionProfile(navigator);
+$("diagnostic-copy").onclick=async()=>{
+  const text=JSON.stringify({type:'SRWF local performance report',...diagnosticMeta,rows:diagnosticRows},null,2);
+  $("diagnostic-text").value=text;$("diagnostic-text").hidden=false;
+  try{await navigator.clipboard.writeText(text);$("diagnostic-copy-status").textContent="복사했습니다. 대화창에 붙여넣어 주세요.";}
+  catch{$("diagnostic-text").select();$("diagnostic-copy-status").textContent="아래 진단 내용을 선택해 복사해 주세요.";}
+};
 const keys = {ArrowRight:0x8000,ArrowLeft:0x4000,ArrowDown:0x2000,ArrowUp:0x1000,Enter:0x800,
   KeyZ:0x400,KeyX:0x100,KeyC:0x200,KeyA:0x40,KeyS:0x20,KeyD:0x10,KeyQ:8,KeyW:0x80};
 let receivedFiles=[];
+let diagnosticRows=[],diagnosticMeta={};
 let worker, pad, audio, masterGain, audioNode, nextAudio = 0;
 let modernMenu=false;
 try { modernMenu=localStorage.getItem("srwf-im-ui-v1")==="modern"; } catch {}
@@ -25,7 +39,7 @@ let saveFailure = false;
 let saveBusy = false, hasPreviousSave = false;
 function saveControls(running) {
   saveBusy = running;
-  for (const id of ["game", "disc", "route", "replay-save", "temporary", "save-load", "cd-rate"])
+  for (const id of ["game", "disc", "route", "replay-save", "temporary", "save-load", "cd-rate", "mobile-optimize"])
     $(id).disabled = running;
   $("cd-rate").disabled = running || $("game").value !== "final";
   $("save-restore").disabled = running || !hasPreviousSave;
@@ -103,11 +117,15 @@ function stopRecording(){
 }
 $("record-stop").onclick=stopRecording;
 $("record").onclick=async()=>{
-  if(!audio||!recordingAudio||!worker)return;
+  if(!audio||!worker)return;
   if(!canvas.captureStream||!window.MediaRecorder){
     $("record-status").textContent="이 브라우저는 화면 녹화를 지원하지 않습니다.";return;
   }
   await audio.resume();
+  if(!recordingAudio){
+    recordingAudio=audio.createMediaStreamDestination();
+    masterGain.connect(recordingAudio);
+  }
   if(activeGame!=="final") { $("fast").checked=false;Atomics.store(pad,1,0);$("fast").disabled=true; }
   const videoStream=canvas.captureStream(30);
   const stream=new MediaStream([...videoStream.getVideoTracks(),...recordingAudio.stream.getAudioTracks()]);
@@ -214,16 +232,24 @@ $("boot").onclick=async()=>{
   $("save-status").textContent=temporary ? "임시 실행: 영구 저장을 변경하지 않습니다."
     : liveBackup ? "기존 저장을 불러왔습니다. 맵 중단 저장은 ‘이어하기’, 일반 저장은 ‘로드’를 선택하세요." : "새 저장으로 시작합니다.";
   try {
+  activeProfile=executionProfile(navigator,$("mobile-optimize").checked);
+  if(mobileDevice){
+    diagnosticRows=[];diagnosticMeta={browser:navigator.userAgent,started:new Date().toISOString(),version:'pending',profile:activeProfile.name,frontend:'mobile-1'};
+    $("performance-status").textContent="성능 진단: 실행 후 측정합니다.";
+    $("diagnostic-text").hidden=true;$("diagnostic-copy-status").textContent="";
+  }
   pad=new Int32Array(new SharedArrayBuffer(16));
   Atomics.store(pad,1,Number($("fast").checked));
   canvas.dataset.audioFrames="0";canvas.dataset.audioDrops="0";canvas.dataset.audioGaps="0";
   canvas.dataset.menuTrace="[]";canvas.dataset.runtimeVersion="legacy";
+  canvas.dataset.executionProfile=activeProfile.name;
   audio=new AudioContext({sampleRate:44100,latencyHint:"playback"});await audio.resume();nextAudio=0;
-  recordingAudio=audio.createMediaStreamDestination();
+  if(mobileDevice){diagnosticMeta.sampleRate=audio.sampleRate;diagnosticMeta.baseLatency=audio.baseLatency;diagnosticMeta.outputLatency=audio.outputLatency;}
+  recordingAudio=activeProfile.optimized ? null : audio.createMediaStreamDestination();
   masterGain=audio.createGain();
   masterGain.gain.value=(game!=="final" && $("fast").checked) ? 0 : Number($("volume").value)/100;
   masterGain.connect(audio.destination);
-  masterGain.connect(recordingAudio);
+  if(recordingAudio)masterGain.connect(recordingAudio);
   await audio.audioWorklet.addModule(new URL('./audio-worklet.mjs',import.meta.url));
   audioNode=new AudioWorkletNode(audio,'saturn-audio',{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[2]});
   audioNode.connect(masterGain);
@@ -242,14 +268,19 @@ $("boot").onclick=async()=>{
     const {version}=await manifest.json();
     if(!/^[a-f0-9]{20}$/.test(version))throw Error("실행 파일 버전 정보가 올바르지 않습니다.");
     runtimeVersion=`&runtime=${version}`;
-    canvas.dataset.runtimeVersion=version;
+    canvas.dataset.runtimeVersion=version;diagnosticMeta.version=version;
   }else if(manifest.status!==404)throw Error("실행 파일 버전 정보를 읽지 못했습니다.");
-  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1`);
+  worker=new Worker(`./worker.js?game=${game}${runtimeVersion}&audio=worklet1&mobile=1`);
   $("boot").disabled=true;$("stop").disabled=false;
   $("status").textContent="실행 코드 준비 중";
   worker.onerror=async e=>{await stopRun();$("status").textContent=`실행 오류: ${e.message}`;};
   worker.onmessage=async ({data:d})=>{
-    if(d.type==="intermission"){
+    if(d.type==="performance"&&mobileDevice){
+      const row={...d,gaps:Number(canvas.dataset.audioGaps||0),bufferMs:Number(canvas.dataset.audioBufferMs||0),audioState:audio?.state||'closed',visibility:document.visibilityState};
+      diagnosticRows.push(row);if(diagnosticRows.length>30)diagnosticRows.shift();
+      $("performance-status").textContent=formatPerformance(row,row.gaps,row.bufferMs);
+      canvas.dataset.performance=JSON.stringify(row);
+    } else if(d.type==="intermission"){
       if(activeGame==="final"){
         const recent=JSON.parse(canvas.dataset.menuTrace||"[]");
         recent.push({...d,frame:canvas.dataset.frame});
@@ -298,7 +329,7 @@ $("boot").onclick=async()=>{
   };
   const routeFile=$("route").files[0];
   const route=routeFile?await routeFile.text():undefined;
-  worker.postMessage({type:"boot",files,cue:cue.name,pad:pad.buffer,route,temporary,backup:liveBackup,cdRate:Number($("cd-rate").value),audioPort:audioChannel.port2},[audioChannel.port2]);
+  worker.postMessage({type:"boot",files,cue:cue.name,pad:pad.buffer,route,temporary,backup:liveBackup,cdRate:Number($("cd-rate").value),audioPort:audioChannel.port2,mobileOptimized:activeProfile.optimized,mobileDiagnostics:mobileDevice},[audioChannel.port2]);
   } catch(error) {
     worker?.terminate();worker=null;audio?.close();audio=null;
     unlockSave?.();unlockSave=null;saveControls(false);
