@@ -19,8 +19,14 @@ export class MobileTiming {
     if(this.pressure && frame%(fast?4:2)) {this.skipped++;return false;}
     return true;
   }
-  // Compatibility with a cached v5/v6 native host; never accumulate phase.
-  correction() {return 0;}
+  correction() {
+    const ms=this.depth();
+    if(ms===null || Math.abs(ms-60)<=5)return 0;
+    // Rebase the host deadline gradually: refill low queues, drain excess
+    // latency by waiting, without throwing away queued speech.
+    const adjustment=Math.max(-2,Math.min(2,(ms-60)*0.15));
+    this.adjustments++;return adjustment;
+  }
   planWait() {
     const ms=this.depth();
     if(ms===null){this.feedbackFallbacks=(this.feedbackFallbacks||0)+1;return -1;} // native fallback

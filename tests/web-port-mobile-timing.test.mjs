@@ -13,7 +13,7 @@ test('audio-depth pacing never inherits an old future deadline when queue is low
  queue(30);assert.equal(timing.planWait(),0);
  queue(60);assert.equal(timing.planWait(),0);
  queue(70);assert.equal(timing.planWait(),10);
- assert.equal(timing.correction(),0); // cached legacy native glue cannot wind up
+ assert.ok(timing.correction()>0); // restored v6 runtime uses bounded phase correction
 });
 test('composition shedding has hysteresis, keeps input/game cadence separate and restores full display',()=>{
  const {timing,queue}=setup();
@@ -54,4 +54,9 @@ test('pace measurements separate requested sleep, oversleep and non-sleep time',
  const {timing}=setup();timing.recordPace(10,30,7);timing.recordPace(0,0.1,42);
  assert.deepEqual(timing.takePace(),{calls:2,requestedSleepMs:10,actualSleepMs:30.1,nonSleepMs:49,maxNonSleepMs:42,maxOversleepMs:20});
  assert.equal(timing.takePace(),null);
+});
+
+test("restored v6 host gets bounded corrections without changing audio target",()=>{
+ const {timing,queue}=setup();queue(60);assert.equal(timing.correction(),0);
+ queue(20);assert.equal(timing.correction(),-2);queue(100);assert.equal(timing.correction(),2);
 });
