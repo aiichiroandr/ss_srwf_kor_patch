@@ -14,17 +14,17 @@ export class MobileTiming {
     if(fast && frame%2)return false;
     const ms=this.depth();
     if(ms===null)this.pressure=false;
-    else if(ms<65)this.pressure=true;
-    else if(ms>=110)this.pressure=false;
+    else if(ms<50)this.pressure=true;
+    else if(ms>=65)this.pressure=false;
     if(this.pressure && frame%(fast?4:2)) {this.skipped++;return false;}
     return true;
   }
   correction() {
     const ms=this.depth();
-    if(ms===null || Math.abs(ms-110)<=15)return 0;
+    if(ms===null || Math.abs(ms-60)<=5)return 0;
     // Rebase the host deadline gradually: refill low queues, drain excess
     // latency by waiting, without throwing away queued speech.
-    const adjustment=Math.max(-2,Math.min(2,(ms-110)*0.15));
+    const adjustment=Math.max(-2,Math.min(2,(ms-60)*0.15));
     this.adjustments++;return adjustment;
   }
 }

@@ -1,11 +1,11 @@
 import {AudioRing} from './audio-ring.mjs';
 
-// Mobile startup/recovery: 100 ms. The producer receives live queue feedback.
+// Mobile startup/recovery: 60 ms. The producer receives live queue feedback.
 // Retain original PCM and the existing hard capacity; desktop is unchanged.
 export class MobileAudioRing extends AudioRing {
   constructor(rate = 44100) {
     super(rate);
-    this.target = 4410;
+    this.target = 2646;
   }
 
   push(samples) {

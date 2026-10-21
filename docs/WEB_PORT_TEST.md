@@ -269,3 +269,22 @@ measurement is made at publication.
 Immutable mobile runtime: `dfc11254e0a8f556f1bc`. A bounded Mac browser check
 confirmed WASM initialization, the timing adapter and live AudioWorklet shared
 queue feedback. This is not Android performance or listening validation.
+
+### Mobile response v6 — 2026-10-21
+
+`MOBILE · 6` / `mobile-latency-v6` retains the exact v5 runtime and 256-frame
+PCM packets. The user's v5 report showed no new starvation across its displayed
+windows, but typical queues remained 110–160 ms. Mobile startup/recovery now
+requires 60 ms instead of 100 ms; host pacing targets 60 ms instead of 110 ms,
+with a tighter 5 ms deadband. Composition relief starts below 50 ms and ends
+at 65 ms: it intervenes after only a 10 ms deficit from the target, rather
+than the previous 45 ms deficit. This can reduce presentation smoothness more
+often under load. It does not skip game/input/sound-chip execution.
+
+Queued PCM is not trimmed to achieve the new target. Existing pacing drains
+excess naturally, and source rate/pitch are unchanged. The 500 ms hard capacity
+is unchanged. Desktop runtime, audio ring/worklet and defaults are unchanged.
+The 60 ms value is a queue goal, not measured input-to-ear latency; packet,
+game and output-device delays remain additional. Focused tests cover the lower
+startup threshold, recovery, preserved sample order, pacing convergence and
+composition hysteresis. Physical S25 post-change latency is not yet measured.
