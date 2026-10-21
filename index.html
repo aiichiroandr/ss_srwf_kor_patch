@@ -20,7 +20,7 @@
     <script type="module" src="assets/app.mjs?v=20261021-webport1&webui=reference2"></script>
     <script type="module" src="assets/user-guide.mjs?v=20261021-webport1"></script>
   </head>
-  <body>
+  <body data-mode="editor" data-view="setup" data-patch-settings="choose">
     <a class="skip-link" href="#main">패처로 바로가기</a>
 
     <header class="site-header">
@@ -51,6 +51,11 @@
     </header>
 
     <main id="main" tabindex="-1">
+      <noscript>
+        <div class="noscript-message">
+          이 패처를 사용하려면 JavaScript가 필요합니다. 파일은 서버로 전송되지 않습니다.
+        </div>
+      </noscript>
       <section class="patch-section" id="patcher" aria-label="패처">
         <div class="patch-console">
           <div class="saturn-fascia" aria-hidden="true">
@@ -77,6 +82,7 @@
             <section
               class="release-card workflow-zone is-busy"
               id="releaseRegion"
+              data-patch-choices="false"
               data-workflow-zone="release"
               data-state="busy"
               aria-labelledby="release-heading"
@@ -90,8 +96,8 @@
               </div>
               <fieldset class="workflow-language" id="workflowLanguage">
                 <legend>한글화 여부</legend>
-                <label title="한글 패치 적용"><input type="radio" name="workflow-language" id="languageKorean" value="korean" aria-label="한글 패치 적용" checked><span>한글 패치</span></label>
-                <label title="원본 언어 유지"><input type="radio" name="workflow-language" id="languageOriginal" value="original" aria-label="원본 언어 유지"><span>원본 유지</span></label>
+                <label title="한글 패치 적용"><input type="radio" name="workflow-language" id="languageKorean" disabled value="korean" aria-label="한글 패치 적용" checked><span>한글 패치</span></label>
+                <label title="원본 언어 유지"><input type="radio" name="workflow-language" id="languageOriginal" disabled value="original" aria-label="원본 언어 유지"><span>원본 유지</span></label>
                 <p id="workflowLanguageNote">폴더를 고른 뒤 적용 여부를 선택하세요.</p>
               </fieldset>
               <div class="selector-grid">
@@ -288,12 +294,6 @@
                   </div>
                 </section>
               </div>
-
-              <noscript>
-                <div class="noscript-message">
-                  이 패처를 사용하려면 JavaScript가 필요합니다. 파일은 서버로 전송되지 않습니다.
-                </div>
-              </noscript>
             </section>
 
             <section
@@ -303,7 +303,6 @@
               aria-labelledby="editor-source-heading"
               aria-describedby="editorSourceState editorSourceHelp"
               aria-busy="false"
-              hidden
             >
               <div class="source-zone-body">
                 <div class="zone-heading">
@@ -342,7 +341,6 @@
               id="editorEntryRegion"
               aria-labelledby="editor-entry-heading"
               aria-describedby="editorEntryState editorEntryNote"
-              hidden
             >
               <div class="zone-heading">
                 <h3 id="editor-entry-heading">3. 게임 데이터 편집</h3>
