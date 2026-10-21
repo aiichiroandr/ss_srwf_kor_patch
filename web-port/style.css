@@ -157,3 +157,11 @@
 @keyframes boot-disc-spin{to{transform:rotate(360deg)}}
 @keyframes boot-dots{0%{content:"."}33.333%{content:".."}66.666%{content:"..."}}
 @media(prefers-reduced-motion:reduce){.empty-state.is-booting .empty-symbol,.empty-state.is-booting>span:last-child:after{animation:none}}
+
+#trial-notice{width:min(420px,calc(100vw - 32px));box-sizing:border-box;margin:auto;padding:24px;border:1px solid #646973;border-radius:16px;background:#252a34;color:#edf0f4;box-shadow:0 16px 48px #0008}
+#trial-notice::backdrop{background:#000a}
+#trial-notice h2{margin:0 0 12px;font-size:20px}
+#trial-notice p{margin:0 0 20px;line-height:1.7;color:#d7dce4;font-size:14px}
+#trial-notice .trial-notice-choice{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:18px}
+#trial-notice input{width:18px;height:18px;accent-color:#dfc17e}
+#trial-notice button{display:block;width:100%;min-height:44px}
