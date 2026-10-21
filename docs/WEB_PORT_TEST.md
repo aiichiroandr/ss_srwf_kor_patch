@@ -2,7 +2,7 @@
 
 User-authorized trial deployment, 2026-10-21. This does not add or accept a new
 patch release. Supported runtime: Final Korean v0.3 c only, immutable runtime
-704d9f64b5fa48104414. Other fonts, editor-modified outputs, and F runtimes are
+3c1c72226a61ee8d7631. Other fonts, editor-modified outputs, and F runtimes are
 not claimed compatible. The existing accepted patch manifests remain unchanged.
 
 The button below the editor launcher passes the already selected source Blob
@@ -65,3 +65,19 @@ It belongs to the browser host, not Saturn RAM; this transport is not a candidat
 for copying into a physical Saturn patch. Stop/restart creates a new context,
 worklet and channel. A same-page temporary-save restart at 2x also delivered
 498688 audio frames with zero underruns/drops (frame 1394).
+
+### Frame-copy optimization — 2026-10-21
+
+Refresh the shared Wasm memory view once per synchronous screen copy instead of
+once per pixel. The WASM file, game logic, presentation cadence and audio are
+unchanged. The prior runtime is retained for immutable older-client URLs.
+The source archive contains the original build sources and a deterministic
+post-link script reproducing this JS-only optimization.
+
+Sequential Mac-browser 1x trials used identical WASM and fixed input. Baseline
+completed 17000 frames; candidate was stopped at15139 at the user's request to
+ship promptly. Both had one accumulated audio starvation by their endpoints,
+which differ; this is not proof of an underrun fix. Screen-copy cost was reduced
+substantially in measured common windows. No physical Galaxy S25 test has been
+performed. Frame-rate reduction and the rejected audio-pacing experiment are
+not included.
