@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>슈퍼로봇대전 · SEGA SATURN</title><link rel="stylesheet" href="./style.css?ui=ram1"><link rel="stylesheet" href="./portrait-pad.css?ui=desktop1"></head>
+<html lang="ko" data-ui-pending>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>슈퍼로봇대전 · SEGA SATURN</title><style>html{background:#101219}html[data-ui-pending] body{visibility:hidden}html[data-ui-pending]::after{content:"플레이 화면 준비 중…";position:fixed;inset:0;display:grid;place-items:center;color:#cbd2df;font:15px system-ui;background:#101219}</style><noscript><style>html[data-ui-pending] body{visibility:visible}html[data-ui-pending]::after{display:none}</style></noscript><link rel="stylesheet" href="./style.css?ui=ram1"><link rel="stylesheet" href="./portrait-pad.css?ui=aspect2"></head>
 <body data-view="play">
 <dialog id="trial-notice" aria-labelledby="trial-notice-title" aria-describedby="trial-notice-copy">
 <form method="dialog"><h2 id="trial-notice-title">웹포트 테스트 안내</h2><p id="trial-notice-copy">게임 포팅 테스트를 위한 화면입니다.<br>성능이 아직 불완전하며, 소리 끊김이나 지연이 발생할 수 있습니다.</p><label class="trial-notice-choice"><input id="trial-notice-dismiss" type="checkbox" checked> 다시 보지 않기</label><button autofocus type="submit">닫기</button></form>
@@ -68,5 +68,5 @@
 <button id="diagnostic-copy" type="button">성능 진단 복사</button><p id="diagnostic-copy-status"></p>
 <textarea id="diagnostic-text" aria-label="복사할 성능 진단" readonly hidden style="width:100%;min-height:140px"></textarea></details>
 <footer><span>비공식 팬 프로젝트 · 시험판 · <a id="runtime-source" href="./runtime/source-3c1c72226a61ee8d7631.tar.gz">실행 코드 소스·라이선스</a> · <a href="../docs/WEB_PORT_TEST.md">시험판 안내</a></span><details class="diagnostics"><summary>고급 설정 및 실행 로그</summary><div class="advanced-content"><label class="toggle-row"><span>임시 실행 · 영구 저장 보호</span><input id="temporary" type="checkbox"></label><p class="help">기존 저장을 읽거나 변경하지 않습니다. 재생 시작용 백업을 지정하면 그 복사본으로 실행합니다.</p><label class="field-label" for="route">입력 기록 재생</label><input id="route" type="file" accept=".txt"><label class="field-label" for="replay-save">재생 시작용 저장 백업</label><input id="replay-save" type="file" accept=".json"><p class="help">기존 저장이 있는 상태에서 입력을 재생하려면 임시 실행을 선택하세요.</p><pre id="log" aria-label="실행 로그"></pre></div></details></footer>
-<script type="module" src="./isolation.mjs"></script><script type="module" src="./player.mjs?audio=worklet1&mobile=14&ui=ram1"></script><script type="module" src="./interface.mjs?ui=ram1"></script>
+<script type="module" src="./isolation.mjs"></script><script type="module" src="./player.mjs?audio=worklet1&mobile=14&ui=ram1"></script><script type="module" src="./interface.mjs?ui=aspect2"></script>
 </body></html>
