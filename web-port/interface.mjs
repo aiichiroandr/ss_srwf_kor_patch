@@ -48,7 +48,7 @@ for(const [name,children] of Object.entries(groups)){
 bank.remove();
 $('transport').append(...document.querySelector('.launch-actions').children);
 document.querySelector('.launch-actions').remove();
-$('boot').innerHTML='<span aria-hidden="true">▶</span> 실행';$('stop').textContent='■ 종료';
+$('boot').textContent='▶';$('stop').textContent='■';
 const manualPause=$('pause-game');if(manualPause)$('transport').insertBefore(manualPause,$('stop'));
 const tabs=[...document.querySelectorAll('[data-tab]')];
 const landscapeMenu=$('landscape-menu');
@@ -89,13 +89,14 @@ for(const button of document.querySelectorAll('[data-pad]')){
 }
 
 const jog=$('volume-jog'),volume=$('volume');
-function syncJog(){jog.setAttribute('aria-valuenow',volume.value);jog.style.setProperty('--angle',`${-135+Number(volume.value)*2.7}deg`);}
+function syncJog(){jog.setAttribute('aria-valuenow',volume.value);jog.setAttribute('aria-valuetext',`${volume.value}%`);jog.style.setProperty('--volume',`${volume.value}%`);}
 function setVolume(value){volume.value=String(Math.max(0,Math.min(100,Math.round(value))));volume.dispatchEvent(new Event('input',{bubbles:true}));}
 volume.addEventListener('input',syncJog);syncJog();
 let drag=null;
-jog.addEventListener('pointerdown',e=>{e.preventDefault();jog.focus();jog.setPointerCapture(e.pointerId);drag={id:e.pointerId,y:e.clientY,value:Number(volume.value)};});
-jog.addEventListener('pointermove',e=>{if(drag?.id===e.pointerId)setVolume(drag.value+(drag.y-e.clientY));});
-for(const event of ['pointerup','pointercancel','lostpointercapture'])jog.addEventListener(event,()=>{drag=null;});
+jog.addEventListener('pointerdown',e=>{e.preventDefault();jog.focus();jog.setPointerCapture(e.pointerId);drag={id:e.pointerId,y:e.clientY,value:Number(volume.value)};jog.classList.add('adjusting');});
+jog.addEventListener('pointermove',e=>{if(drag?.id===e.pointerId)setVolume(drag.value+(drag.y-e.clientY)/1.2);});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])jog.addEventListener(event,()=>{drag=null;jog.classList.remove('adjusting');});
+window.addEventListener('blur',()=>{drag=null;jog.classList.remove('adjusting');});
 jog.addEventListener('keydown',e=>{const step={ArrowUp:5,ArrowRight:5,ArrowDown:-5,ArrowLeft:-5}[e.key];if(step!==undefined){e.preventDefault();setVolume(Number(volume.value)+step);}else if(e.key==='Home'||e.key==='End'){e.preventDefault();setVolume(e.key==='Home'?0:100);}});
 jog.addEventListener('wheel',e=>{e.preventDefault();setVolume(Number(volume.value)+(e.deltaY<0?2:-2));},{passive:false});
 
