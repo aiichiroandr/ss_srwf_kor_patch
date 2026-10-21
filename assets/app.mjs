@@ -1,4 +1,4 @@
-import {openWebPort} from "./web-port-launch.mjs";
+import {openWebPort} from "./web-port-launch.mjs?ui=reference2";
 import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261021-webport1';
 import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261021-webport1';
 import { directoryForGame } from "./mixed-game-folder.mjs?v=20261021-webport1";
