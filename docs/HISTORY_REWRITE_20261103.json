@@ -1,0 +1,837 @@
+{
+  "schema": "srwf-kor.history-rewrite.v1",
+  "rewrittenAt": "2026-11-03",
+  "tool": "git-filter-repo a40bce548d2c (--invert-paths)",
+  "removedPaths": [
+    "web-port/runtime/",
+    "web-port/images/f-ja.png",
+    "web-port/images/f-ko.png",
+    "web-port/images/final-ja.png",
+    "web-port/images/final-ko.png",
+    "patches/srwf-f-20260821-v0-2.srwfp"
+  ],
+  "removedBlobCount": 46,
+  "unchangedCommitCount": 18,
+  "commits": [
+    {
+      "old": "7dd457b7e183b190600e74b178a7660cd8ea71b0",
+      "new": null,
+      "note": "PR #22 head before its rebase merge; not on any branch after the rewrite"
+    },
+    {
+      "old": "b6e3a53b16331bd02bcc0b98c6b2702454212ad0",
+      "new": null,
+      "note": "PR #22 head before its rebase merge; not on any branch after the rewrite"
+    },
+    {
+      "old": "23b4a967b5be89135ae8745f8c4a3cb138468979",
+      "new": "23b4a967b5be89135ae8745f8c4a3cb138468979",
+      "date": "2026-08-12",
+      "subject": "Fix mobile patch access and publish v1.1 labels"
+    },
+    {
+      "old": "243cd23e71dba66273512915ebef8f73a5d92d1c",
+      "new": "243cd23e71dba66273512915ebef8f73a5d92d1c",
+      "date": "2026-08-12",
+      "subject": "fix: correct patch note comparisons and workflow states"
+    },
+    {
+      "old": "3d0278bd64992cbd281ef01b5b3a5030c6a7dd81",
+      "new": "3d0278bd64992cbd281ef01b5b3a5030c6a7dd81",
+      "date": "2026-08-12",
+      "subject": "Merge output selection into patch step"
+    },
+    {
+      "old": "4f75e086755159e46e99d74aa1e692268b839798",
+      "new": "4f75e086755159e46e99d74aa1e692268b839798",
+      "date": "2026-08-12",
+      "subject": "fix: remove duplicate release note cards"
+    },
+    {
+      "old": "7250ec31b0cafcda4f68c55c74c751fd1d24115b",
+      "new": "7250ec31b0cafcda4f68c55c74c751fd1d24115b",
+      "date": "2026-08-12",
+      "subject": "Compact the patch workflow for mobile"
+    },
+    {
+      "old": "76bd939fdc2040e82f9207868cf6382f097bfde1",
+      "new": "76bd939fdc2040e82f9207868cf6382f097bfde1",
+      "date": "2026-08-12",
+      "subject": "Add dual-game catalog and public version names"
+    },
+    {
+      "old": "7f858c519a7f5ed36f69ffe8b5c1afb4dede29c9",
+      "new": "7f858c519a7f5ed36f69ffe8b5c1afb4dede29c9",
+      "date": "2026-08-12",
+      "subject": "fix: bust stale patch note asset caches"
+    },
+    {
+      "old": "87482f7c93472697cdef937ff2cb80385847c1b6",
+      "new": "87482f7c93472697cdef937ff2cb80385847c1b6",
+      "date": "2026-08-12",
+      "subject": "feat: add visual patch notes"
+    },
+    {
+      "old": "d99178fc4da998e4991369d6857b44ac895c221a",
+      "new": "d99178fc4da998e4991369d6857b44ac895c221a",
+      "date": "2026-08-12",
+      "subject": "fix: document translated names in patch notes"
+    },
+    {
+      "old": "db96d2dd3cce151ff24ef91f44ec722afc8604a0",
+      "new": "db96d2dd3cce151ff24ef91f44ec722afc8604a0",
+      "date": "2026-08-12",
+      "subject": "Publish SRWF Korean web patcher"
+    },
+    {
+      "old": "3e9cb452e42491c40cc99e294646e5ca38f7f5cc",
+      "new": "3e9cb452e42491c40cc99e294646e5ca38f7f5cc",
+      "date": "2026-08-13",
+      "subject": "fix: replace Android ZIP fallback with verified downloads"
+    },
+    {
+      "old": "437d44ea77fa8e8073061f4575a4696fd73fcbec",
+      "new": "437d44ea77fa8e8073061f4575a4696fd73fcbec",
+      "date": "2026-08-13",
+      "subject": "fix: keep patched image CUE on flat data geometry"
+    },
+    {
+      "old": "4397d143ba6eb576da17e700df88f5af0d188284",
+      "new": "4397d143ba6eb576da17e700df88f5af0d188284",
+      "date": "2026-08-13",
+      "subject": "feat: patch Redump CUE and BIN sets directly"
+    },
+    {
+      "old": "8c30e5eedf6c3c4dad93222f69b6fc96319eda68",
+      "new": "8c30e5eedf6c3c4dad93222f69b6fc96319eda68",
+      "date": "2026-08-13",
+      "subject": "fix: auto-save accurate three-track CUE"
+    },
+    {
+      "old": "ded3893289b177e83a97eb9531e2e69c7de3a1b7",
+      "new": "ded3893289b177e83a97eb9531e2e69c7de3a1b7",
+      "date": "2026-08-13",
+      "subject": "fix: fall back to verified patch ZIP on Android"
+    },
+    {
+      "old": "e0fb650b8229135d89cecd35d91fcee42275c05c",
+      "new": "e0fb650b8229135d89cecd35d91fcee42275c05c",
+      "date": "2026-08-13",
+      "subject": "fix: select the source folder only once"
+    },
+    {
+      "old": "0d87697489a4ef227e8a099809853bf001ca9e4f",
+      "new": "0d87697489a4ef227e8a099809853bf001ca9e4f",
+      "date": "2026-08-14",
+      "subject": "release: publish SRWF F v0.1.1 prologue hotfix"
+    },
+    {
+      "old": "20f993a06b94e3dedfb352be27fbb28372b0ea7e",
+      "new": "20f993a06b94e3dedfb352be27fbb28372b0ea7e",
+      "date": "2026-08-14",
+      "subject": "release: publish 2026.08.14 v0.1"
+    },
+    {
+      "old": "91848e7be9240c6289c2b117482a38fbb443beaf",
+      "new": "f2675c807e41a38b558d9deb02ce9868744fa29e",
+      "date": "2026-08-14",
+      "subject": "fix: use stable BIN and CUE output names (#6)"
+    },
+    {
+      "old": "b5c49b493fba3472a5ee9a010040a05d738cfc70",
+      "new": "d23da462e2d3146256b268f0f3805f41a40a433d",
+      "date": "2026-08-14",
+      "subject": "Merge pull request #5 from aiichiroandr/codex/f-v0-1-1-only"
+    },
+    {
+      "old": "24f4c166e1b62d54a2ccb864f40e6e0cbade1495",
+      "new": "7b6d24da9608328aee12484cb2d2f6035e3ab077",
+      "date": "2026-08-15",
+      "subject": "docs: show supported F and Final source formats"
+    },
+    {
+      "old": "2838bcfb920127735a3282be578f8d0bebe7df25",
+      "new": "1fe7e55a7a416a726e1f7b47f5926b4ec180a1e6",
+      "date": "2026-08-15",
+      "subject": "release: publish corrected 2026.08.15 v0.1.2"
+    },
+    {
+      "old": "2e0dbbd637d7e486f92c404bbfad0d09ac63ada5",
+      "new": "60ec49c7b7e4d4177f0e38ed9e422e9d54a87fe5",
+      "date": "2026-08-15",
+      "subject": "Merge pull request #11 from aiichiroandr/agent/three-line-source-label"
+    },
+    {
+      "old": "3f0672d8559b20c183845c2fa13092b8c01dca48",
+      "new": "2133586d341b4fdbe3cf6f81f4488c05b7b8381d",
+      "date": "2026-08-15",
+      "subject": "release: publish F Final v0.1 trial"
+    },
+    {
+      "old": "421f10120e8c9000c6179e5e72505ce4ca385576",
+      "new": "eda95aae5e90730885139eb08dbe73229ea13428",
+      "date": "2026-08-15",
+      "subject": "Merge pull request #8 from aiichiroandr/codex/publish-final-v0-1"
+    },
+    {
+      "old": "647c6319d765b7509f5a8604d9c8e63c858d1a0b",
+      "new": "8eccda9156bda1015256a85211ca64b40ed91358",
+      "date": "2026-08-15",
+      "subject": "ui: align supported source labels"
+    },
+    {
+      "old": "96a3a8d26580f1e04c47764d72e6308a9549239f",
+      "new": "23fb4c82ecc771bbb8d0749f89ee9aa48c82d565",
+      "date": "2026-08-15",
+      "subject": "docs: format supported sources as three lines"
+    },
+    {
+      "old": "d93de83e4fb55331fb82612bc11e9348df06c22e",
+      "new": "580776846c2f29ab61bb81058a897cdd47869c87",
+      "date": "2026-08-15",
+      "subject": "Merge pull request #10 from aiichiroandr/agent/clarify-source-formats"
+    },
+    {
+      "old": "ee2a80532acdb9bdd111bb46d7722dec6d8b34e8",
+      "new": "bfb1e13619851af7b0d6bfe4c7cc8bf3eab97f18",
+      "date": "2026-08-15",
+      "subject": "Merge pull request #12 from aiichiroandr/codex/align-supported-source-labels"
+    },
+    {
+      "old": "f3d34c938a37e3e9df9d8d16678eebc912520588",
+      "new": "da66f782ec8abfe3deb217dbd0da1d3b4d064ceb",
+      "date": "2026-08-15",
+      "subject": "Merge pull request #9 from aiichiroandr/agent/fix-final-cue-alias"
+    },
+    {
+      "old": "f42ed3bf6ae83800f1246854b8cd1267fd252e0b",
+      "new": "9aa446101d6b8c92279ffe3786319d3fc6bdcda9",
+      "date": "2026-08-15",
+      "subject": "fix: accept Final Rev A 10M CUE sets"
+    },
+    {
+      "old": "0b12a2bcc3a29efd59ae830ff9d1691aca38784e",
+      "new": "53c86f4500c9e38a9ad819661e035def6a527086",
+      "date": "2026-08-21",
+      "subject": "release: publish 2026.08.21 v0.2 (scenario linewrap sweep + boundary fixes + credits)"
+    },
+    {
+      "old": "0c0f260856bc0a9e7422b4c1bf4a79870ea194f5",
+      "new": "9c4b2295162f74564b561c7e74d0bca43d14b8b8",
+      "date": "2026-08-21",
+      "subject": "Merge pull request #13 from aiichiroandr/release/srwf-f-v0.2-20260821"
+    },
+    {
+      "old": "070ab918cba6a2e23e81184ed1a9110d919462e3",
+      "new": "8cfccebe31579a70fa412c9acfaaabeba13856f2",
+      "date": "2026-08-23",
+      "subject": "release: withdraw 2026.08.21 v0.2 (정규형 위반)"
+    },
+    {
+      "old": "103c6c39d36408dcaa9b7073c0bd00c74041a6a8",
+      "new": "722a38f1a66e88d801f0feabc250238fce384566",
+      "date": "2026-08-23",
+      "subject": "fix: v0.3 릴리스를 스키마에 맞추고 목록을 최신순으로 세운다"
+    },
+    {
+      "old": "2af85b5cecd0f3056d600a64e1f060794ab4de9b",
+      "new": "657697b1111b86d87a8410347776e4136d898920",
+      "date": "2026-08-23",
+      "subject": "fix: v0.3 패치를 규격에 맞게 다시 만든다 (엔딩 영상 제외)"
+    },
+    {
+      "old": "440e02d5fb6e1d8939589c46196a9f31b8dd5652",
+      "new": "ac9a3ec4762937d31510695e76586d95974ee362",
+      "date": "2026-08-23",
+      "subject": "release: publish 2026.08.23 v0.3 (ACCEPTED)"
+    },
+    {
+      "old": "495e605ab87eee8435477635593ae35ebdb550af",
+      "new": "349097f11a1690d7d9f88793b69d6cb19ce890f7",
+      "date": "2026-08-23",
+      "subject": "release: 2026.08.23 v0.3 payload — Dr.헬 화자명 통일 포함"
+    },
+    {
+      "old": "a78ea19301a289a0f646aa006156341ef4186191",
+      "new": "19e7370403f2fe4168c537a1a1789642fbdce37c",
+      "date": "2026-08-23",
+      "subject": "release: stage 2026.08.23 v0.3 payload (pending acceptance)"
+    },
+    {
+      "old": "be69b7479117c3cea849894fcf5e7eda0b6e174a",
+      "new": "793858251c16b516ad8b85ac5559e230b54fa06b",
+      "date": "2026-08-23",
+      "subject": "Merge pull request #14 from aiichiroandr/release/srwf-f-v0-3-20260823"
+    },
+    {
+      "old": "0774b1750768b5d65c9a2dab63f025f68c0bda82",
+      "new": "5e42df0c8e24cdd3639afc55496e963d580d1228",
+      "date": "2026-08-24",
+      "subject": "feat: F 완결편을 패처 목록에서 내리고 README 공개 상태를 v0.3 으로 맞춘다"
+    },
+    {
+      "old": "587991f56ad8e616d2678b78a715562aeaad15b8",
+      "new": "d58a606447ccb4f3fa454283deac749e0b19a087",
+      "date": "2026-08-24",
+      "subject": "Merge pull request #15 from aiichiroandr/fix/apply-write-coalescing"
+    },
+    {
+      "old": "6c6008416ea777378412dcb273a0eea24e871616",
+      "new": "e8b3fd916914b9b841dbf43ccd5ea45f3fd3ec29",
+      "date": "2026-08-24",
+      "subject": "docs: v0.3 패치 노트에서 Dr.헬 항목을 걷어낸다"
+    },
+    {
+      "old": "a8f3d9476d7245dceef55325337859e521643f7a",
+      "new": "8b1333acdf4c2709ba4733f81aeb998a2469ff03",
+      "date": "2026-08-24",
+      "subject": "fix: 출력 쓰기를 모아 578MB 패치의 저장 시간을 되돌린다"
+    },
+    {
+      "old": "185e2d53679b0c72c4c1c2c6f5a78ded5cf6c1ef",
+      "new": "bae79714a480c1c28afbc2bb395564abc9b17c60",
+      "date": "2026-08-25",
+      "subject": "feat: v0.3 임시 실기용 CUE 다운로드를 추가한다 (#16)"
+    },
+    {
+      "old": "e1745f0f11c0bec35837a097b0d7af628d9326db",
+      "new": "3911af0e36b5d353ae65484e48634f4485089d86",
+      "date": "2026-08-25",
+      "subject": "docs: 공개 문서에서 내부 작업명 제거 (#17)"
+    },
+    {
+      "old": "4a446eedc0e1c1bba039eecdd34b3ba6e9d724f1",
+      "new": "0700346b5d89c1ad63f52620e9ea74134d5b144a",
+      "date": "2026-09-11",
+      "subject": "feat: 실기에서 구동된 트랙 구성 CUE를 정본으로 만들고 \"임시\" 표기를 뗀다"
+    },
+    {
+      "old": "869dce2745000f31b0f8199dd160de12aea4711b",
+      "new": "bfd0c0ffb2daf7db9c164afe2c5d30266aa5c688",
+      "date": "2026-09-11",
+      "subject": "feat: 폰트 리비전(a/b/c) 선택기를 main 위로 옮긴다"
+    },
+    {
+      "old": "aed8725bac1817396bc0f976ca42a62ba89f66f7",
+      "new": "93271780fce3eaf9e34866104e25035942c2da5a",
+      "date": "2026-09-12",
+      "subject": "Merge pull request #19 from aiichiroandr/feat/canonical-hardware-cue"
+    },
+    {
+      "old": "e688d724b7d670f9506ee7bf7dd85f1d5fa22a10",
+      "new": "ce3a9a231ba8b698cc122d9d2baa36423ea1bc20",
+      "date": "2026-09-12",
+      "subject": "Merge pull request #18 from aiichiroandr/feat/font-revision-selector"
+    },
+    {
+      "old": "1dc1cfe17f8ad9150be130cc3ecb8766fc5f136c",
+      "new": "f6c5707de74399c7f21c655172f13e25132f3d2b",
+      "date": "2026-09-15",
+      "subject": "Clarify v0.4 patch notes and format numbered headings"
+    },
+    {
+      "old": "ca77374388a1b65a614eb4aedc009d62d0a6c553",
+      "new": "292118d286b769a99ab63f3bdef3419e2dd8c492",
+      "date": "2026-09-15",
+      "subject": "Publish F v0.4 with G93 font variants and responsive patch notes"
+    },
+    {
+      "old": "7107783963ba5140c9e900e0ba6a5c5338d3e84b",
+      "new": "fc466c956f21a61c70747d22edb860efa0b192d3",
+      "date": "2026-09-16",
+      "subject": "Show clickable in-game font samples in a tighter picker."
+    },
+    {
+      "old": "881c7e87b4c17c57dde40c8284a173372ded905b",
+      "new": "26bce668aa5e33497192d3d551613cbcb860a35a",
+      "date": "2026-09-16",
+      "subject": "Show a/b/c font samples next to the selector."
+    },
+    {
+      "old": "0781ed99537c6d72762a7efc426653eb6ff3d4ee",
+      "new": "67cd896ab6c1f558b28d2cfef153256333450a14",
+      "date": "2026-09-21",
+      "subject": "Add the srwf.sparse-byte-delta.v2 growth patch format."
+    },
+    {
+      "old": "19987edb50efd005569df0693fc2eb631019fa8a",
+      "new": "a9bd8bb261907e77186c2bd2b88b89915647819b",
+      "date": "2026-09-21",
+      "subject": "Bust static cache for active Final selector"
+    },
+    {
+      "old": "389dbc97b8149773670d35dea58340fe2ab3c06a",
+      "new": "49482e6754b48891ce01130f4065d9024b386615",
+      "date": "2026-09-21",
+      "subject": "Remove superseded Final trial from public list"
+    },
+    {
+      "old": "8aa683a1f3e07962fe9bb49efddf29b0261f59b9",
+      "new": "929cf339d0dbe2d368b35340a42adbad31897ebf",
+      "date": "2026-09-21",
+      "subject": "Publish F Final v0.1 r110 font variants"
+    },
+    {
+      "old": "9ca33d8254aa6bfb503867ecf84d3929298aa700",
+      "new": "5652f1e3439c8b0aa4e8665f760fd2650b16a4bd",
+      "date": "2026-09-21",
+      "subject": "Keep single Final release selector active"
+    },
+    {
+      "old": "1f415fa2ecf95445c08fe403040370202273b507",
+      "new": "a152aa9cceb42a1a3d643336a723f804044ffbf6",
+      "date": "2026-09-26",
+      "subject": "Keep game and version names whole in the selector"
+    },
+    {
+      "old": "18f3cef59018dc1b6a4a4db65d05aea38f5a9ae8",
+      "new": "6280a535f167f92283ab6acd4e6fdcf03031b2c5",
+      "date": "2026-09-27",
+      "subject": "Drop the unused runtime screen frame."
+    },
+    {
+      "old": "272d0ebcba444fc642118da81eda1c505d03b48e",
+      "new": "2d558237344a3f6c61b8da6542ab7b2821a901a0",
+      "date": "2026-09-27",
+      "subject": "Add the local browser editor for accepted patch images."
+    },
+    {
+      "old": "64b08cb8bf3f6be523381cb9aefd45b5d3706672",
+      "new": "6d4e8cc283c825d85d1a2ddef43858dc79da54aa",
+      "date": "2026-09-27",
+      "subject": "Merge pull request #21 from aiichiroandr/claude/cool-hypatia-2x1mxa"
+    },
+    {
+      "old": "b99eed50936056d1a37a8aa8b50ce5d2f69b542c",
+      "new": "0501adae21d80e2f209d1e5dfd7146484588dc63",
+      "date": "2026-09-27",
+      "subject": "Drop the stale screenshot note from the asset allowlist."
+    },
+    {
+      "old": "0ce786e29d9b778134e75361c79faa678ff2303f",
+      "new": "df811277a47b87c82ff163321dd306740c2e29c8",
+      "date": "2026-09-28",
+      "subject": "Merge main into the local editor branch"
+    },
+    {
+      "old": "3e66f01060b810bea2d2f8cee211da730ca9c537",
+      "new": "1da96d3465433b40ddbc4d94529ac40a582aee16",
+      "date": "2026-09-28",
+      "subject": "Make the local editor reachable and fix its broken flows"
+    },
+    {
+      "old": "05fada9cebab3e8c0bb9d9ebd5e5ca5057f317fc",
+      "new": "5cf4fea5fe97bc3e77d41429761403ce9d102b11",
+      "date": "2026-09-29",
+      "subject": "Publish Final v0.2 a/b/c and raise the shared 80 MiB patch cap"
+    },
+    {
+      "old": "24b1d5733dd89a95d2a6c7d8a724224b8ad732f3",
+      "new": "85cb047824309218ecf910653a368b1b28aa0fb5",
+      "date": "2026-09-29",
+      "subject": "WIP: v3 runtime engine, converter, policy and verify_repo support"
+    },
+    {
+      "old": "3cb5e690e7a8a629962719d80f909e7cc1dd6722",
+      "new": "bbeda612437a08ea6a3294a0e9e5c4cef19500fd",
+      "date": "2026-09-29",
+      "subject": "Publish the F v0.5-c font variant to complete the split release"
+    },
+    {
+      "old": "4e4d1ae0e53057774678ca6730512606afcedfb1",
+      "new": "edd6314a1f2a138763183150d77feea5575715f2",
+      "date": "2026-09-29",
+      "subject": "Add layered base + font delivery for font-variant releases"
+    },
+    {
+      "old": "975ddcde2eb09ce5dff401b2fc93494dcf8622b4",
+      "new": "4c907f64cf569c4efbb376faee92237c568f676e",
+      "date": "2026-09-29",
+      "subject": "Publish the F v0.5-b font variant"
+    },
+    {
+      "old": "d642234ffd57fed689b26d6b914f90239f184720",
+      "new": "f934c6f66da5430466e1a8aaebcbf900081c124a",
+      "date": "2026-09-29",
+      "subject": "Draft the SRWFKP3 (v3) compact multi-variant patch format"
+    },
+    {
+      "old": "dac7b60e4bdfa570e007800f1ced08f8c85b7a23",
+      "new": "591fecf4a8764a04cec517a87052eff6f5b7610d",
+      "date": "2026-09-29",
+      "subject": "Publish F v0.5-a and make it the default F release"
+    },
+    {
+      "old": "087e821dea44db69d20b845292de7abe0e7c7f5d",
+      "new": "3179521cd47b7b3d74e810294a735109fd751807",
+      "date": "2026-10-05",
+      "subject": "Restore verified DOS thin and Galmuri11 fonts for FIN v0.3"
+    },
+    {
+      "old": "8d3e73886697ad3d38e234b8cafa66ed99a2c6f5",
+      "new": "cd5499bbd323718df8e0469ca6ef7ea949ff27b0",
+      "date": "2026-10-05",
+      "subject": "Restore horizontal patch-note swipes without shrinking mobile images"
+    },
+    {
+      "old": "ae60f4d0d2066d853b2e532f429dfc015337ccee",
+      "new": "32f0682c8e4c7e2bc97cc8ff96803525cf65d206",
+      "date": "2026-10-05",
+      "subject": "Publish FIN v0.3-c dynamic spacing fixes with verified screenshots"
+    },
+    {
+      "old": "c957a507db285b6335eee490867c8c7fd0920a17",
+      "new": "ff677380b128b2597192b63e53921d9874675d04",
+      "date": "2026-10-05",
+      "subject": "Make patch note images expandable on mobile and clarify effect captions"
+    },
+    {
+      "old": "d498db93f458b040786fcc3e3109a961534400ea",
+      "new": "f5ec34fc7664091e909f7184f1fbf727a61a8ae9",
+      "date": "2026-10-05",
+      "subject": "Fix responsive FIN v0.3 patch note gallery and clarify scenario events"
+    },
+    {
+      "old": "e5a6ab537b327206b2a324d79d08f8cd45876baf",
+      "new": "cf5ccc003d32e7da541c17b2b232aa43904de379",
+      "date": "2026-10-05",
+      "subject": "Let mobile patch notes scroll with full-width images and pannable zoom"
+    },
+    {
+      "old": "fc7989db2e79844dae84b3ff2031bb6d8866305c",
+      "new": "3a465d7a61ce413f06d0823ca98d8eeedd19163f",
+      "date": "2026-10-05",
+      "subject": "Correct Decision Tokyo continuation chapter to episode 62"
+    },
+    {
+      "old": "0ee977756e1b06002f1d825c57bf3ca764754bd0",
+      "new": "d8895def9356cbf99f119acf2d9fdb958489b473",
+      "date": "2026-10-11",
+      "subject": "Clarify sortie target markers and scope map settings to tile editing"
+    },
+    {
+      "old": "25b8605a89a87fb632d857922bff62a315c630da",
+      "new": "1c695544d3a5086d203b945b2f1e2e6bef175b47",
+      "date": "2026-10-11",
+      "subject": "Group pilot ability growth and clarify learning levels"
+    },
+    {
+      "old": "46d57e5c1139b402b95712476c39e8472cdca03e",
+      "new": "eda84d11af3ae06d228d529c3e4dcba58d55cd84",
+      "date": "2026-10-11",
+      "subject": "Archive superseded patch families and retain two versions per game"
+    },
+    {
+      "old": "4cf767466cab799feca187748915ac6374d973e1",
+      "new": "175237c2ded6b8af3806dc9e6ceb2c88fea56ffb",
+      "date": "2026-10-11",
+      "subject": "Suppress placeholder portraits in runtime hero slots"
+    },
+    {
+      "old": "510d14e4c64e07e68f1888d560e364bc2aec9087",
+      "new": "fb9b6a4dfa54738f5eefb4ef2e9e81c06962b0b3",
+      "date": "2026-10-11",
+      "subject": "Show patch settings while original image inspection is pending"
+    },
+    {
+      "old": "677a5b340d7e1da967809843c80fb1638dffb9e6",
+      "new": "9c56bd8c611277dbfa746ba8e64628a62c158f82",
+      "date": "2026-10-11",
+      "subject": "Show scenario titles in chronological map order"
+    },
+    {
+      "old": "7338c9030f752c6f1e031b362946a625d0677f2e",
+      "new": "58672420950b9a68c1f835fe55b0d5a21d0171a4",
+      "date": "2026-10-11",
+      "subject": "Speed up stock F patch preparation and clarify editor stages"
+    },
+    {
+      "old": "7f2a88d820f1587ac7dd62b046626640b121d391",
+      "new": "9434c765648594e66b2dd892a33e80bb610e5c92",
+      "date": "2026-10-11",
+      "subject": "Preserve six spirit slots when adding new pilot abilities"
+    },
+    {
+      "old": "8346a78c417f019ece70bfa3fd502d676ba26999",
+      "new": "721eedd87dba20f94cbd6fa7d7892da14cd21e43",
+      "date": "2026-10-11",
+      "subject": "Clarify reward editing and expose scenario deployments"
+    },
+    {
+      "old": "beaab6f8bac357882570e63ad23bbfb803307028",
+      "new": "8fc9860bc61ea6be8974e032426b8832a9c2d8cd",
+      "date": "2026-10-11",
+      "subject": "Publish browser editor and supported scenario editing"
+    },
+    {
+      "old": "c50bb34f7e1201c5f934abb15419185f98e1a39e",
+      "new": "9ff84d1849602a13aac05cc13998281c2409f397",
+      "date": "2026-10-11",
+      "subject": "Keep special ability additions accessible and make room atomically"
+    },
+    {
+      "old": "f4c4d786d744524a93dd92c193dcd1d90c894614",
+      "new": "1431cf22bbdf9562eefdf46a27b30cf94e5e5169",
+      "date": "2026-10-11",
+      "subject": "Navigate hero slots to editable source records"
+    },
+    {
+      "old": "ff3209dc563d57c7b0344b162538b12ef0584ffc",
+      "new": "236f4bdaa5f947287924935cc6675019bc821cbb",
+      "date": "2026-10-11",
+      "subject": "Clarify scenario tasks and select map tiles visually"
+    },
+    {
+      "old": "11f9b90fd50ccf9ef3ab4e665bd74a9b2dc716fa",
+      "new": "fb6c6c1524ab4573fa3ec947840997ce67a7c4e6",
+      "date": "2026-10-12",
+      "subject": "Fix scenario default placement display and loop referenced weapon frames"
+    },
+    {
+      "old": "a45e2fff34790f56fe65d5aef6284d7d089ce6a3",
+      "new": "528b7df55ac9f73fc13366ea705f5933eb5205e5",
+      "date": "2026-10-12",
+      "subject": "Add local weapon motion and creation controls with preset roundtrips"
+    },
+    {
+      "old": "ac9c37f22b6007104aa4cd83cd2190f69f155ddc",
+      "new": "e21f87476fa5084c1bacf9b9e48114581f3eafa6",
+      "date": "2026-10-12",
+      "subject": "feat(editor): add local weapon authoring and allocation primitives"
+    },
+    {
+      "old": "c79b23df5c3e0a8dbda87d544b6aa5a018d26800",
+      "new": "1818a7b55319e0649fe8646bd908c88090e7cbcc",
+      "date": "2026-10-12",
+      "subject": "feat(editor): persist and reopen bounded weapon authoring projects"
+    },
+    {
+      "old": "fb2d458288b9ebbe296fbc164f5598ac493cea35",
+      "new": "329f3c54029355bde29733a995935ab053ad45c4",
+      "date": "2026-10-12",
+      "subject": "feat(editor): preview battle sprites from verified local discs"
+    },
+    {
+      "old": "31b2d47651169ba62c7dce449aa535968fa43d47",
+      "new": "76e5a807879fc9c3a7a96b0d8782ee0e7e42a88b",
+      "date": "2026-10-15",
+      "subject": "Add local editor and PixiJS battle authoring preview"
+    },
+    {
+      "old": "0079f3ee78a0b73c51045d7b955213d59d28955c",
+      "new": "6474dcadabc49149138457dd5d365fa79e0d483a",
+      "date": "2026-10-21",
+      "subject": "Preserve mobile voice PCM through short stalls and catch-up bursts"
+    },
+    {
+      "old": "05b28982682f6282a0f27d9ec8648eaa1866c9ae",
+      "new": "afa5529722817899122f42bddcd974a1128d2711",
+      "date": "2026-10-21",
+      "subject": "Fix mobile fast-forward prologue clock synchronization"
+    },
+    {
+      "old": "089ee62528659d6fad94d9d69ea5072291346f64",
+      "new": "9ab1e8b00efd40b7cae48146010b571763ba21f2",
+      "date": "2026-10-21",
+      "subject": "Show startup status inside CRT and make Saturn ring white"
+    },
+    {
+      "old": "0a55ae8145e3d444a2fbe0c54d86fec7e1f443a1",
+      "new": "50d22a60c18270ed9f0f5dbc6172031989b9e25d",
+      "date": "2026-10-21",
+      "subject": "Use orbit vector artwork and roll back regressed mobile v7 pacing"
+    },
+    {
+      "old": "105b9860b929e939697ee7eace48a46c81476360",
+      "new": "e68a82475dc78d1f0335faa0b97af2cf3a220a05",
+      "date": "2026-10-21",
+      "subject": "Replace mobile phase accumulation with queue-driven waits and trace audio transit"
+    },
+    {
+      "old": "1807ab1a19aa3b80d7bd921a86a5b01ddea00cdf",
+      "new": "09d4f5d85d2c3b3da5bcbf01cb2d084e59629d49",
+      "date": "2026-10-21",
+      "subject": "Show dismissible first-visit web port trial notice"
+    },
+    {
+      "old": "23cac27a1ee43f25e895d612d5292d15e7a11920",
+      "new": "8e458eeb029fcd9778b97f05aa92d1b542188fc0",
+      "date": "2026-10-21",
+      "subject": "Show animated disc during boot and improve editor loading contrast"
+    },
+    {
+      "old": "267c26b91f051577b0bf90a13182fd770de6c249",
+      "new": "6725c9f9b2ea8e7b9a82b7ce38bba28062c9dbfa",
+      "date": "2026-10-21",
+      "subject": "Keep desktop CRT at 4:3 and hide setup layout before UI initialization"
+    },
+    {
+      "old": "27602cd3b53540018a25b7ba9c7391ebc15b5f5b",
+      "new": "f60e18e285aabfa63ae514cc883d8b05e2cc2140",
+      "date": "2026-10-21",
+      "subject": "Add Final web port trial with in-browser ROM handoff and mobile controls"
+    },
+    {
+      "old": "30275fe969b1df6ddaebb141dc42e2a3fededb08",
+      "new": "7f249805a9daba7cb63a35e025c876f90f89857d",
+      "date": "2026-10-21",
+      "subject": "Apply reference Saturn controller to mobile portrait"
+    },
+    {
+      "old": "3ce689e7a953c302dddc2b8d6307595199ac740c",
+      "new": "fa655428a52e33d5f41b2bdbb4e165490c93edef",
+      "date": "2026-10-21",
+      "subject": "Add recoverable RAM save import/export and desktop reference pad"
+    },
+    {
+      "old": "42dce5142e0dc20ccfcd2d1c434792d016439551",
+      "new": "27489e43770637c06c8d384ae0ab7ad6b63e2526",
+      "date": "2026-10-21",
+      "subject": "Improve mobile audio headroom with speed guard and compositor runtime"
+    },
+    {
+      "old": "4b137025e9c6ba971f2ab1affe5e1811cda0e02e",
+      "new": "962de57c31cb94928204ab780c6a23a6417bdbf0",
+      "date": "2026-10-21",
+      "subject": "Route web audio through a buffered AudioWorklet for mobile stability"
+    },
+    {
+      "old": "5704aaca3f6cfa6c04d4ea0b1f9da8dbc3963125",
+      "new": "c5f2c677a28be02b368f10bb0218f4629a1e219f",
+      "date": "2026-10-21",
+      "subject": "Apply gray Saturn theme to patcher and editor entry"
+    },
+    {
+      "old": "5a86203b4920d2f77f8c9ee5379b32cf422294c7",
+      "new": "8bd1e5a4154c33d63892514b3966b3299815fbe9",
+      "date": "2026-10-21",
+      "subject": "Collapse mobile landscape navigation and separate handheld controls"
+    },
+    {
+      "old": "62aa38fa70602c50dea4710ac05fb5aac2226f90",
+      "new": "5fbca842dd9d573366cf356951f954fb28544987",
+      "date": "2026-10-21",
+      "subject": "Keep mobile console controls on one row and reserve full-width play"
+    },
+    {
+      "old": "70059eafa7e27becee3c46f4e39e42076bfc53b7",
+      "new": "46e74046f70716f027a42f56d9f7216653a11e25",
+      "date": "2026-10-21",
+      "subject": "Reduce mobile core hot-path overhead and synchronize audio queue feedback"
+    },
+    {
+      "old": "72bc17b40646e2b601f8c68170778c553a855ed2",
+      "new": "54b36da167890e6d7a91c926a2da6e87f6432c89",
+      "date": "2026-10-21",
+      "subject": "Prioritize mobile audio recovery before the PCM queue empties"
+    },
+    {
+      "old": "82d67dea19a247023f9033e1d5a8873adc31b124",
+      "new": "6b7dc220c41ccf233df27479e345ffd6145e8591",
+      "date": "2026-10-21",
+      "subject": "Align game title artwork to the header right edge"
+    },
+    {
+      "old": "8e6a21adbf28569b94913dea4b0c7df491260e08",
+      "new": "23ac144ab8fd730690cf6decc18ffd8ba75781f5",
+      "date": "2026-10-21",
+      "subject": "Reduce web frame-copy overhead without changing game or audio timing"
+    },
+    {
+      "old": "90f6c80accf15173f508ec87dcf6125cce255d5e",
+      "new": "9f43796d9f5b2e1bbd6ece43dd03c4355282e79a",
+      "date": "2026-10-21",
+      "subject": "Lower mobile audio queue target and intervene earlier under pressure"
+    },
+    {
+      "old": "a64c177fefd1ecbf3a24685483ffeae583d03684",
+      "new": "b16ad5fd57e0a9b489e82faa676dfa4794dc2bca",
+      "date": "2026-10-21",
+      "subject": "Reduce mobile disc onset stalls and pause playback in background"
+    },
+    {
+      "old": "afb911e8dd8e0bde68597266411e674c32ec8960",
+      "new": "6a8c93fe143758adb1b3462fc9c266d9f9138e60",
+      "date": "2026-10-21",
+      "subject": "Render Saturn setup theme directly in initial HTML"
+    },
+    {
+      "old": "be0b52324ccfd0bd19ee11e1235384a30b617e74",
+      "new": "41d23f1cf3f53cc88f18fa1b90429bab060702fc",
+      "date": "2026-10-21",
+      "subject": "Reduce mobile disc read stalls with a bounded cache"
+    },
+    {
+      "old": "c07da6445d87f3780345edc28dd0f526854f1c40",
+      "new": "c7004ecdb79744b47ebcabddf127c23dead4f4f9",
+      "date": "2026-10-21",
+      "subject": "Correct mobile settings version label to 13"
+    },
+    {
+      "old": "c0f4fefe1a48d2da4b90e2ca626b89080a977d70",
+      "new": "c0025bc161be6e7edd1b1d62aefc7f5a418e6e66",
+      "date": "2026-10-21",
+      "subject": "Fit mobile play to landscape height and outline Saturn wordmark"
+    },
+    {
+      "old": "cfd509d1ee188353f6dbb1fd1dc29e7fd65eb121",
+      "new": "53f7a7a434c835d6077f80e3a5c6edbd264fb02a",
+      "date": "2026-10-21",
+      "subject": "Optimize profiled mobile VDP1 raster and correct Korean title artwork"
+    },
+    {
+      "old": "d799ea6ab384b910b9dfcb574d4b1e63fc1d8661",
+      "new": "c94ed7f0a9e8a4d3d0fd02c26b84ec3cc35bc4f5",
+      "date": "2026-10-21",
+      "subject": "Redesign web port with CRT cabinet and landscape handheld controls"
+    },
+    {
+      "old": "d961ad24c952235d9b9c1f920628d1f96293cd1c",
+      "new": "99e67d8c4424e63d29c725bd7c6ea17f2f883344",
+      "date": "2026-10-21",
+      "subject": "Compact transport icons and expand volume vertically while held"
+    },
+    {
+      "old": "df1668f4012c2821231890bc2da648671da06c6d",
+      "new": "bbe4b757762057f0eef2394a693c5fcd1d92927c",
+      "date": "2026-10-21",
+      "subject": "Keep full mobile frame cadence and pace audio from queue depth"
+    },
+    {
+      "old": "e256eca25532c9de61b6dc1132747ba04bfd01bb",
+      "new": "b039acc922c786f9bed9783bfe72f19d2277f2b2",
+      "date": "2026-10-21",
+      "subject": "Cache mobile core function dispatch without changing audio buffering"
+    },
+    {
+      "old": "e27cff786818ab29e566fa96aa15f87aa8edc5c4",
+      "new": "c53cda0bcbc7949a22bc1363a901e0942e1150b1",
+      "date": "2026-10-21",
+      "subject": "Pace mobile core from live audio depth and reduce sound latency"
+    },
+    {
+      "old": "f35d03affde62ca2a2d0a871a13ec4bae576004f",
+      "new": "7826701994ba165475caba6c357c9857c660d961",
+      "date": "2026-10-21",
+      "subject": "Switch disc title artwork after Korean patch verification"
+    },
+    {
+      "old": "02c249235bb963e102b4088c6b9343d2d10b134e",
+      "new": "e19f0ed3ab2545e15f6a0cf1f718c6a5db90cd58",
+      "date": "2026-11-03",
+      "subject": "Withdraw the WEB PORT trial runtime from the public site"
+    },
+    {
+      "old": "cf55e4edfa6963376a07222934cf2d582b5607ea",
+      "new": "1118fe94491a5597ed6f7c6074b11f1af73a58ab",
+      "date": "2026-11-03",
+      "subject": "Add deterministic fuzz/property tests for the patch engine"
+    },
+    {
+      "old": "f886784e83756bb9729d974779aae09e0d3663d7",
+      "new": "f0052bde9939514131cdbf132a35923571e1afab",
+      "date": "2026-11-03",
+      "subject": "Add client-side recompilation design and SH-2 to wasm prototype"
+    }
+  ]
+}
