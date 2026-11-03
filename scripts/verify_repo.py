@@ -284,6 +284,8 @@ WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST: dict[str, str] = {
 # hashes or the ACCEPTED publication/canonical patch gates. The archive is local
 # verification metadata; the verifier never contacts Drive.
 RELEASE_ARCHIVE_PATH = "docs/RELEASE_ARCHIVE_20261011.json"
+# Pre-rewrite hash, kept because the ledger is hash-pinned; after the 2026-11-03
+# history rewrite it is 721eedd (docs/HISTORY_REWRITE_20261103.json).
 RELEASE_ARCHIVE_SOURCE_COMMIT = "8346a78c417f019ece70bfa3fd502d676ba26999"
 RELEASE_ARCHIVE_SHA256: str | None = "90034ed2b166b02a568d99123daf8e3657db4d8297858bd31f68e925f7b25770"
 RETAINED_RELEASE_FAMILIES = frozenset({

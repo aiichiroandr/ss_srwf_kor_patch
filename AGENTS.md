@@ -149,5 +149,11 @@ and the header-artwork exception are revoked.
   design in which the server ships only game-agnostic code and all game-specific
   code is generated from the user's own disc inside the user's browser. See
   `docs/WEB_PORT_CLIENT_RECOMP.md`.
-- Removing files from `main` does not remove them from git history. Rewriting
-  public history is a separate external action that needs explicit approval.
+- On 2026-11-03, with the user's explicit approval, the history of every branch
+  was rewritten to purge `web-port/runtime/`, the four extracted title logos and
+  the withdrawn `patches/srwf-f-20260821-v0-2.srwfp` (46 blobs), then
+  force-pushed. Commits after 2026-08-21 have new hashes. Historical records and
+  the verifier keep pre-rewrite hashes; resolve them with
+  `docs/HISTORY_REWRITE_20261103.json`. Never push a clone made before the
+  rewrite, and never reintroduce the purged paths. Any further history rewrite
+  is a separate external action that needs explicit approval.
