@@ -18,7 +18,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     $(prefix+'Prev').disabled=busy||page===0;$(prefix+'Next').disabled=busy||page>=count-1;
     $(prefix+'PageLabel').textContent=`${page+1} / ${count}`;
   }
-  const labels={...Object.fromEntries(SAVE_NAME_FIELDS.map(s=>[s.field,s.label])),money:'자금',level:'레벨',experience:'다음 레벨까지 EXP',hpUpgrade:'HP 개조',enUpgrade:'EN 개조',armorUpgrade:'장갑 개조',limitUpgrade:'한계 개조',mobilityUpgrade:'운동성 개조',weaponUpgrades:'무기 개조',parts:'장착 파츠',upgradeLimit:'게임 개조 상한',unitAdded:'기체 추가',pilotSlot:'탑승 파일럿 칸',linkedSlot:'연결 기체 칸'};
+  const labels={...Object.fromEntries(SAVE_NAME_FIELDS.map(s=>[s.field,s.label])),money:'자금',level:'레벨',experience:'다음 레벨까지 EXP',hpUpgrade:'HP 개조',enUpgrade:'EN 개조',armorUpgrade:'장갑 개조',limitUpgrade:'한계 개조',mobilityUpgrade:'운동성 개조',weaponUpgrades:'무기 개조',parts:'장착 파츠',upgradeLimit:'게임 개조 상한',unitAdded:'기체 추가',unitRemoved:'깨진 기체 칸 비움',pilotRemoved:'깨진 파일럿 칸 비움',pilotSlot:'탑승 파일럿 칸',linkedSlot:'연결 기체 칸'};
   const records=()=>session?.list().filter(r=>r.gameId===context().gameId)??[];
   const active=()=>records().find(r=>r.key===key);
   const changeSignature=()=>JSON.stringify(session?.diff()??[]);
@@ -112,8 +112,28 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     $('saveListCount').textContent=`${filtered.length}명 / ${rows.length}명`.replaceAll('명',kind==='unit'?'기':'명');
     $('saveListHeading').textContent=kind==='unit'?'보유 기체':'파일럿 목록';
   }
+  // Structural check of the selected slot; the summary also counts every other slot with errors.
+  function checkPanel(r){
+    const panel=$('saveCheckPanel');panel.hidden=!r||!session;if(panel.hidden)return;
+    const issues=session.check(r.key),errors=issues.filter(i=>i.level==='error'),warns=issues.length-errors.length;
+    const others=records().filter(x=>x.key!==r.key&&session.check(x.key).some(i=>i.level==='error')).length;
+    panel.classList.toggle('is-error',errors.length>0);panel.classList.toggle('is-warn',!errors.length&&warns>0);
+    $('saveCheckSummary').textContent=`세이브 검사 · ${issues.length?`오류 ${errors.length} · 주의 ${warns}`:'이 슬롯 정상'}${others?` · 다른 슬롯 ${others}개에 오류`:''}`;
+    const list=$('saveCheckList');list.replaceChildren();
+    for(const issue of issues){const li=document.createElement('li');li.className=issue.level==='error'?'is-error':'is-warn';
+      li.textContent=`${issue.level==='error'?'오류':'주의'} · ${issue.type==='unit'?'기체':'파일럿'} 칸 ${issue.slot+1} · ${name({id:issue.id},issue.type,r)} · ${issue.message}`;list.append(li);}
+    $('saveCheckRepair').disabled=busy||!r.editable||!errors.length;
+    $('saveCheckRepairAll').disabled=busy||!(errors.length||others);
+  }
+  function repairSlots(keys){
+    if(busy||!session)return;let fixed=0,slots=0;
+    try{for(const k of keys){const r=records().find(x=>x.key===k);if(!r?.editable)continue;const n=session.repair(k);if(n){fixed+=n;slots++;}}
+      message(fixed?`${slots}개 슬롯에서 문제 ${fixed}건을 정리했습니다. 변경 내역을 확인한 뒤 수정본을 저장하세요.`:'고칠 오류가 없습니다.');}
+    catch(e){message(e.message,true);}
+    render();
+  }
   function render(){
-    slotCards();const r=active();$('saveEditorBody').hidden=!r||$('saveSlotBrowser').open;$('saveEditorEmpty').hidden=!!r;
+    slotCards();const r=active();checkPanel(r);$('saveEditorBody').hidden=!r||$('saveSlotBrowser').open;$('saveEditorEmpty').hidden=!!r;
     if(commonTab==='unitNames'&&r?.gameId!=='srwf-final')commonTab='names';
     $('savePilotTab').setAttribute('aria-pressed',String(kind==='pilot'));
     $('saveUnitTab').setAttribute('aria-pressed',String(kind==='unit'));
@@ -294,7 +314,9 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
       key=rows.find(r=>r.editable)?.key??rows[0]?.key??null;select.value=String(key);slot=null;
       $('saveFileName').textContent=fileName;$('saveFileName').title=fileName;
       const f=session.format;$('saveFileFormat').textContent=`${f.bytes/1024} KiB · ${f.gzipLayers?'gzip · ':''}${f.interleaved?'인터리브 · ':''}${rows.length}개 저장 슬롯`;
-      message(rows.some(r=>r.editable)?'저장을 고르고 수치를 수정하세요.': '편집 가능한 F/F완결편 일반 저장이 없습니다.');
+      const broken=rows.filter(r=>session.check(r.key).some(i=>i.level==='error')).length;
+      if(broken)message(`세이브 검사: ${broken}개 슬롯에 게임이 멈출 수 있는 깨진 칸이 있습니다. 「세이브 검사」에서 내용을 보고 고치세요.`,true);
+      else message(rows.some(r=>r.editable)?'저장을 고르고 수치를 수정하세요.': '편집 가능한 F/F완결편 일반 저장이 없습니다.');
     }catch(e){message(e.message,true);}
     finally{if(token===generation){busy=false;render();}}
   }
@@ -329,6 +351,8 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     open();
   });
   $('saveEditorClose').addEventListener('click',()=>dialog.close());
+  $('saveCheckRepair').addEventListener('click',()=>{const r=active();if(r)repairSlots([r.key]);});
+  $('saveCheckRepairAll').addEventListener('click',()=>repairSlots(records().map(r=>r.key)));
   dialog.addEventListener('close',()=>{
     if(catalogOpening){catalogOpening.abort(new DOMException('세이브 연결 준비를 취소했습니다.','AbortError'));catalogOpening=null;busy=false;}
     $('saveEditorOpen').focus();

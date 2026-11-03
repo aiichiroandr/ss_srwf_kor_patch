@@ -5077,3 +5077,11 @@ body[data-view="save"] .patch-workspace {display: grid; grid-template-columns: m
   .save-name-panel .save-help {grid-column:1/-1;}
 }
 .save-name-panel input {background:#00161e; border:1px solid #147c91; color:#e7e8da;}
+.save-check { margin: 6px 0; border: 1px solid var(--line, #2a6f86); padding: 6px 10px; }
+.save-check > summary { cursor: pointer; font-weight: 600; }
+.save-check.is-error > summary { color: #ff8080; }
+.save-check.is-warn > summary { color: #ffe04e; }
+.save-check-body ul { margin: 6px 0; padding-left: 18px; max-height: 220px; overflow: auto; }
+.save-check-body li.is-error { color: #ff9a9a; }
+.save-check-body li.is-warn { color: #ffe9a0; }
+.save-check-actions { display: flex; gap: 8px; flex-wrap: wrap; }

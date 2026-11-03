@@ -2,6 +2,7 @@ import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mj
 import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261103-portoff1';
 import { requireSaveScalar } from './save-field-rules.mjs?v=20261103-portoff1';
 import { saveUnitGroup } from './save-unit-groups.mjs?v=20261103-portoff1';
+import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261103-portoff1';
 // Saturn backup RAM containers; original bytes and unrelated saves stay private.
 // Contracts and source references: docs/SAVE_EDITOR.md.
 const MAGIC = new TextEncoder().encode('BackUpRam Format');
@@ -240,7 +241,10 @@ export async function openSave(input, catalog={}) {
       out.push({key:r.key,name:r.name,field,before:decodeSaveName(a,field,{glyphMap:catalog.glyphMap})??'해독 불가',after:decodeSaveName(z,field,{glyphMap:catalog.glyphMap})??'해독 불가'});
     }
     if(a.money!==z.money)out.push({key:r.key,name:r.name,field:'money',before:a.money,after:z.money});
-    for(let i=0;i<a.pilots.length;i++)for(const field of ['level','experience'])if(a.pilots[i][field]!==z.pilots[i][field])out.push({key:r.key,name:r.name,slot:a.pilots[i].slot,id:a.pilots[i].id,field,before:a.pilots[i][field],after:z.pilots[i][field]});
+    for(const before of a.pilots){const after=z.pilots.find(p=>p.slot===before.slot);
+      if(!after){out.push({key:r.key,name:r.name,slot:before.slot,id:before.id,field:'pilotRemoved',before:before.id,after:0});continue;}
+      for(const field of ['level','experience'])if(before[field]!==after[field])out.push({key:r.key,name:r.name,slot:before.slot,id:before.id,field,before:before[field],after:after[field]});}
+    for(const old of a.units)if(!z.units.some(u=>u.slot===old.slot))out.push({key:r.key,name:r.name,type:'unit',slot:old.slot,id:old.id,field:'unitRemoved',before:old.id,after:0});
     for(const next of z.units){
       let old=a.units.find(u=>u.slot===next.slot);
       if(!old){out.push({key:r.key,name:r.name,type:'unit',slot:next.slot,id:next.id,field:'unitAdded',before:0,after:next.id});old={...next,...unitFields(new Uint8Array(30),0)};}
@@ -248,6 +252,16 @@ export async function openSave(input, catalog={}) {
       for(const field of ['weaponUpgrades','parts'])for(let index=0;index<old[field].length;index++)if(old[field][index]!==next[field][index])out.push({key:r.key,name:r.name,type:'unit',slot:old.slot,id:old.id,field,index,before:old[field][index],after:next[field][index]});
     }
   }return out;}
+  // Structural check against the verified ROM; repair only makes broken references safe.
+  function check(key){const r=get(key),b=current(r);return checkSaveBytes(b,{gameId:r.gameId,upgradeLimit:model(r,b).upgradeLimit},catalog);}
+  function repair(key){
+    const r=get(key);need(r.editable,r.reason);
+    const b=current(r).slice(),fixed=repairSaveBytes(b,{gameId:r.gameId,upgradeLimit:model(r,b).upgradeLimit},catalog);
+    if(!fixed)return 0;
+    put(b,0,saveChecksum(b),4);
+    if(b.every((v,i)=>v===r.payload[i]))changes.delete(key);else changes.set(key,b);
+    return fixed;
+  }
   async function exportFile(){
     validateAddedUnits();
     if(!changes.size)return original.slice();
@@ -268,7 +282,7 @@ export async function openSave(input, catalog={}) {
     need(delivered.length===wrapped.length&&delivered.every((v,i)=>v===wrapped[i]),'출력 파일의 압축·배치 재검사에 실패했습니다.');
     return result;
   }
-  return Object.freeze({format:Object.freeze({bytes:raw.length,blockSize:SIZES.get(raw.length),gzipLayers:layers,interleaved}),list,edit,editName,editNames,editUnit,addUnit,setUpgradeMode,diff,
+  return Object.freeze({format:Object.freeze({bytes:raw.length,blockSize:SIZES.get(raw.length),gzipLayers:layers,interleaved}),list,edit,editName,editNames,editUnit,addUnit,setUpgradeMode,diff,check,repair,
     canEditNames:key=>{const r=records.find(r=>r.key===key);return !!r&&r.editable&&canEditSaveNames(catalog,r.gameId);},
     updateCatalog:next=>{const units=new Map((next.units??[]).map(u=>[u.recordIndex,structuredClone(u)]));catalog={...next};unitCatalog=units;},
     reset:key=>{if(key===undefined){changes.clear();addedBindings.clear();}else{get(key);changes.delete(key);addedBindings.delete(key);}},exportFile});
