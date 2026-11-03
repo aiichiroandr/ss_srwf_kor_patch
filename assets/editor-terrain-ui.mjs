@@ -1,5 +1,5 @@
-import { TERRAIN_FIELDS, TERRAIN_LABELS, terrainValueAllowed } from "./editor-terrain.mjs?v=20261103-portoff1";
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261103-portoff1';
+import { TERRAIN_FIELDS, TERRAIN_LABELS, terrainValueAllowed } from "./editor-terrain.mjs?v=20261104-save1";
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261104-save1';
 
 export function createTerrainEditor(host) {
   const panel = document.getElementById("terrainEditorPanel");

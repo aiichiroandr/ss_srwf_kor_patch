@@ -1,8 +1,8 @@
-import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261103-portoff1';
-import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261103-portoff1';
-import { requireSaveScalar } from './save-field-rules.mjs?v=20261103-portoff1';
-import { saveUnitGroup } from './save-unit-groups.mjs?v=20261103-portoff1';
-import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261103-portoff1';
+import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261104-save1';
+import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261104-save1';
+import { requireSaveScalar } from './save-field-rules.mjs?v=20261104-save1';
+import { saveUnitGroup } from './save-unit-groups.mjs?v=20261104-save1';
+import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261104-save1';
 // Saturn backup RAM containers; original bytes and unrelated saves stay private.
 // Contracts and source references: docs/SAVE_EDITOR.md.
 const MAGIC = new TextEncoder().encode('BackUpRam Format');

@@ -1,6 +1,6 @@
-import { SCENARIO_EDITOR_PROFILES } from './editor-scenario-profiles.mjs?v=20261103-portoff1';
-import { SCENARIO_CHAPTER_BINDINGS } from './editor-scenario-chapter-data.mjs?v=20261103-portoff1';
-import { ownData, readDenseList } from './editor-own.mjs?v=20261103-portoff1';
+import { SCENARIO_EDITOR_PROFILES } from './editor-scenario-profiles.mjs?v=20261104-save1';
+import { SCENARIO_CHAPTER_BINDINGS } from './editor-scenario-chapter-data.mjs?v=20261104-save1';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261104-save1';
 
 const freeze = Object.freeze;
 const SOURCE = 'user-bin-scenario-chapter';

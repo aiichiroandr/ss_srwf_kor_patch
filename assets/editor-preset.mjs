@@ -20,14 +20,14 @@
 // still has the `from` value, is a conflict when it has another value, is already done when it has the `to` value, and is
 // skipped (with a reason) when the session could not take it: a record that does not exist or is read-only, a structural
 // unit ability (editor-locks.mjs), a terrain grade the writer refuses, a skill list the record cannot hold.
-import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261103-portoff1';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261103-portoff1';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261103-portoff1';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261103-portoff1';
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261103-portoff1";
-import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261103-portoff1";
-import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261103-portoff1";
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261103-portoff1";
+import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261104-save1';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261104-save1';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261104-save1';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-save1';
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261104-save1";
+import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261104-save1";
+import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261104-save1";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261104-save1";
 import {
   DEFAULT_CONSUMER_LIMIT,
   countConsumers,
@@ -39,10 +39,10 @@ import {
   skillRequest,
   spiritRequest, spiritCatalog, isSpiritLocked,
   pilotPairRequirement, syncPilotExpansionBudget,
-} from "./editor-skill-list.mjs?v=20261103-portoff1";
+} from "./editor-skill-list.mjs?v=20261104-save1";
 
-import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261103-portoff1";
-import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261103-portoff1";
+import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261104-save1";
+import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261104-save1";
 
 export const PRESET_FORMAT = "srwf.editor-preset";
 export const PRESET_VERSION = 1;

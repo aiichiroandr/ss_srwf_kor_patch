@@ -1376,7 +1376,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261103-portoff1');
+  --frame: url('./runtime-panel-frame.svg?v=20261104-save1');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -4628,7 +4628,7 @@ body[data-view="setup"] :is(.editor-cancel-button,.progress-panel .cancel-button
 /* Save editor (ported unchanged from the local editor) */
 .save-editor-dialog {width: min(1180px,calc(100vw - 32px)); height: min(1120px,calc(100dvh - 24px)); max-width: none; max-height: none; padding: 0; border: 2px solid #16808b; background: #000810; color: #e8e8da; box-sizing: border-box; overflow: hidden;}
 .save-editor-dialog::backdrop {background: #000b; backdrop-filter: blur(3px);}
-.save-editor-shell {--edge: 5px; --frame: url('./runtime-panel-frame.svg?v=20261103-portoff1'); --ed-text: #e8e8da; --ed-muted: #a9bcaa; --ed-cyan: #9fd7e6; --ed-rail: #16808b; --ed-gold: #e9d870; --ed-modified: #fff19b; --ed-primary: 16px; --ed-label: 14px; --ed-name: 20px; --ed-field: 16px; --ed-control: 40px; --ed-pad: 8px; display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0; font-family: var(--font-editor,inherit);}
+.save-editor-shell {--edge: 5px; --frame: url('./runtime-panel-frame.svg?v=20261104-save1'); --ed-text: #e8e8da; --ed-muted: #a9bcaa; --ed-cyan: #9fd7e6; --ed-rail: #16808b; --ed-gold: #e9d870; --ed-modified: #fff19b; --ed-primary: 16px; --ed-label: 14px; --ed-name: 20px; --ed-field: 16px; --ed-control: 40px; --ed-pad: 8px; display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0; font-family: var(--font-editor,inherit);}
 .save-editor-shell p {margin: 4px 0; line-height: 1.5; overflow-wrap: anywhere;}
 .save-editor-header {display: flex; justify-content: space-between; align-items: center; flex: 0 0 auto; padding: 9px 18px; border-bottom: 1px solid var(--ed-rail); background: #02101a;}
 .save-editor-header h2 {margin: 2px 0 0; font-size: 21px; color: var(--ed-gold);}

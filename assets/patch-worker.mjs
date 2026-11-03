@@ -5,15 +5,15 @@ import {
   buildVerifiedPatchedBlob,
   parsePatch,
   verifySourceBlob,
-} from "./patch-core.mjs?v=20261103-portoff1";
+} from "./patch-core.mjs?v=20261104-save1";
 import {
   PATCH_FORMAT_V2,
   PATCH_V2_LIMITS,
   applyPatchV2ToWritable,
   buildVerifiedPatchedBlobV2,
   parsePatchV2,
-} from "./patch-core-v2.mjs?v=20261103-portoff1";
-import { sha256Hex } from "./sha256.mjs?v=20261103-portoff1";
+} from "./patch-core-v2.mjs?v=20261104-save1";
+import { sha256Hex } from "./sha256.mjs?v=20261104-save1";
 
 let activeJob = null;
 let preparedSource = null;
