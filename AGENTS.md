@@ -127,20 +127,27 @@ The local editor now uses the already accepted public F v0.5 G103 a/b/c and F Fi
 
 The user explicitly authorized deployment of the existing browser editor and its bounded scenario beta. New event/reinforcement creation, Final region conditions, and history conditions remain disabled. This authorization does not accept new patch releases or widen existing release evidence.
 
-## WEB PORT trial (2026-10-21)
+## WEB PORT trial ended (2026-11-03)
 
-The user explicitly authorized remote trial deployment with a WEB PORT (TEST)
-button below the editor launcher, forwarding the selected ROM in browser memory,
-mobile touch UI, and optional modern intermission (default OFF). This does not
-accept a new patch release. The exact runtime JS/WASM and corresponding source
-archive are hash/size-pinned in scripts/verify_repo.py; arbitrary binaries,
-ROMs, extracted binary game data, and archives remain forbidden. Runtime sources
-and license notices must accompany distribution. See docs/WEB_PORT_TEST.md.
+The 2026-10-21 WEB PORT trial was withdrawn from the public site at the user's
+request on 2026-11-03. Its WebAssembly builds and source archives were compiled
+from static recompilations of the game's own executables (translated game code),
+which conflicts with this repository's promise that no game content is
+distributed. The runtime folder, the disc title logos decoded from `EFFECT.BIN`,
+the player code and the WEB PORT button were removed; the earlier authorization
+and the header-artwork exception are revoked.
 
-## WEB PORT header artwork (2026-10-21)
-
-The user explicitly requested the actual disc title logos instead of invented
-wordmarks. The four transparent title PNGs in web-port/images are the narrow
-artwork exception for that header, decoded from stock and accepted patched
-images; their provenance is recorded in images/README.md. This does not authorize
-shipping discs, EFFECT payloads, BIOS files, or other extracted game content.
+- Never publish WebAssembly, native binaries, source archives or source files
+  that contain code translated, recompiled or decompiled from a game
+  executable, whatever their hash. `scripts/verify_repo.py` forbids `*.wasm`,
+  `web-port/runtime/` and static-recompilation translation units, with no pin
+  exemption.
+- `web-port/` now only holds a notice and a read-only save rescue page that
+  exports the trial's browser-local saves (backup JSON or emulator RAM files).
+  It must not grow a game runtime.
+- A future browser player requires a new, separate user authorization and a
+  design in which the server ships only game-agnostic code and all game-specific
+  code is generated from the user's own disc inside the user's browser. See
+  `docs/WEB_PORT_CLIENT_RECOMP.md`.
+- Removing files from `main` does not remove them from git history. Rewriting
+  public history is a separate external action that needs explicit approval.

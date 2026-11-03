@@ -132,7 +132,7 @@ FORBIDDEN_SUFFIXES = {
     ".wbfs", ".wad", ".xci", ".nsp", ".cia", ".zip", ".7z", ".rar",
     ".tar", ".tgz", ".sav", ".srm", ".bup", ".bcr", ".bkr", ".mcr",
     ".dsv", ".yss", ".state", ".ips", ".bps", ".xdelta", ".xdelta1",
-    ".xdelta2", ".xdelta3", ".vcdiff", ".ppf", ".pem", ".key",
+    ".xdelta2", ".xdelta3", ".vcdiff", ".ppf", ".pem", ".key", ".wasm",
 }
 FORBIDDEN_DIRS = {
     "build", "dist", "out", "staging", "coverage", "node_modules", ".cache",
@@ -147,11 +147,6 @@ PNG_DIMENSION_MAX = 32_768
 # Binary UI assets are publication decisions, not extension-based exceptions.
 # Add only a reviewed canonical repository path and its exact lowercase SHA-256.
 PUBLIC_ASSET_ALLOWLIST: dict[str, str] = {
-    # User-requested disc title artwork; provenance: web-port/images/README.md.
-    "web-port/images/f-ja.png": "b87c104da1c82c4e07bb8f5efa884b079a31f026d49a2f43308746ac4f633d6c",
-    "web-port/images/f-ko.png": "bb9a374e36bf5c547a0d928565aed6cfe3d1dbff15ca8b021875bc0f27a97338",
-    "web-port/images/final-ja.png": "ab1c732c537a73aa91e676f7769cd545df193f96cc73e74c4120f5ca9f6d6b91",
-    "web-port/images/final-ko.png": "71835844b45711f917874740f905ee5bf29b03405b09f956f9d3480ac621ea20",
     "assets/user-guide/changes-desktop.png": "d18a5fe540270c171283cb0de93d0283efedaad4477abe808825ed8738928a74",
     "assets/user-guide/changes-portrait.png": "f73d06c5dabed0495d519d65897818275e3be869496bd2bed783eafceaf4d87b",
     "assets/user-guide/downloads-desktop.png": "fee850038d2afea638b820acf97853229c757e587ca73bd9fea38f08b552f962",
@@ -344,7 +339,7 @@ REQUIRED_CSP_DIRECTIVES = {
 REQUIRED_IGNORE_LINES = {
     "*.bin", "*.img", "*.iso", "*.cue", "*.sav", "*.state", "*.ips",
     "*.bps", "*.xdelta", "*.vcdiff", "*.ppf", "*.pem", "*.key", ".env*",
-    "/staging/", "build/", "node_modules/",
+    "/staging/", "build/", "node_modules/", "*.wasm", "/web-port/runtime/",
 }
 EXPECTED_PACKAGE_SCRIPTS = {
     "build": "npm test",
@@ -1176,54 +1171,18 @@ def validate_required_files(files: list[Path]) -> None:
         complain(f"required file is missing: {name}")
 
 
-# User-authorized WEB PORT trial: exact reviewed executable/source artifacts only.
-# This exception does not permit ROMs, arbitrary WASM, archives or patch releases.
-WEB_PORT_ARTIFACTS = {
-    "web-port/runtime/1a0261ada40574cfb43d/saturn.js": (116490, "d5bd1af01f4d0952466004f6948b89f17e313883385fbcd14dc1c702be1dd8a8"),
-    "web-port/runtime/1a0261ada40574cfb43d/saturn.wasm": (39233602, "41c1cbb6becd7887cfe9e756919be86d23fcbea30177f5544a76ce02257d9e65"),
-    "web-port/runtime/source-1a0261ada40574cfb43d.tar.gz": (7106448, "1f99e113e791403cf8872634b33a9d12709b79c75dd8080b944d523fe0427a16"),
-    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.js": (117249, "6f0365566a2f3ae17da67d229e30ed78bc2a15032d7d8fb7371a3bc49361551b"),
-    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.wasm": (39237002, "a7228c8f1de632ca0ac2a0e5193fec2d9effd3236d21182e869c31f5ce19e6df"),
-    "web-port/runtime/source-16f9cf9fde74c2d70e6b.tar.gz": (7104735, "5b0fe5a41ad8b017a0e5b64eb6fa0e693b5189fb013f678ae43dd06bd074e578"),
-    "web-port/runtime/0a1faba953d641c3358b/saturn.js": (117249, "6f0365566a2f3ae17da67d229e30ed78bc2a15032d7d8fb7371a3bc49361551b"),
-    "web-port/runtime/0a1faba953d641c3358b/saturn.wasm": (39237008, "5e79bf0626e5a77623d5882ea59895082c5019e6e4e2e8d17b40e7539c0d71ee"),
-    "web-port/runtime/source-0a1faba953d641c3358b.tar.gz": (7104604, "1e5ad2ce57f8735191638cf4fb06380ce0a727599c024cbd7f7fcc362b2f899f"),
-    "web-port/runtime/67d6487c3a80561562ed/saturn.js": (116275, "807bb6f01e776a58acb162e358ad184fdd95f163df9c49eb4b7a24a0efdd81f4"),
-    "web-port/runtime/67d6487c3a80561562ed/saturn.wasm": (39234352, "9e29884f9c425a87bedb88ef0bee4f841f202629509c28498e640eb4a66d0f97"),
-    "web-port/runtime/source-67d6487c3a80561562ed.tar.gz": (7102841, "aeec7e503c3b83d39542c19f5ed4dc12e517a663d6f18c8e662b9c59099228db"),
-    "web-port/runtime/8bf49caffd9781a96040/saturn.js": (116261, "14bf75784d8b81063a96b14ff76a1fbd6b9e4054cd7e4f4d4176d87224a5aae9"),
-    "web-port/runtime/8bf49caffd9781a96040/saturn.wasm": (39233603, "3eb548282c4d1c7ef73c8166a04d047eec0b776efe10d80303f5c05dabc8233f"),
-    "web-port/runtime/source-8bf49caffd9781a96040.tar.gz": (7101685, "e53952f4bb6fd575bfef115ad663080f912c1d6ccc7fbdd126076c3dbb26873a"),
-    "web-port/runtime/aa21406c80f5516d83db/saturn.js": (116502, "95a59d833dd99f9459660eb1fb224121bd6cc8e236ae6c74f89dd8b0282d04b6"),
-    "web-port/runtime/aa21406c80f5516d83db/saturn.wasm": (39233766, "5e9e7593e6c871fe6cfc1224251ca15ea96dababc06cc7ffddd1b65717193bff"),
-    "web-port/runtime/source-aa21406c80f5516d83db.tar.gz": (7100847, "c4aabac8b0b7bc5f998e2e8c5244297941ca1bf5421bdb9538a722d25205f4dc"),
-    "web-port/runtime/dfc11254e0a8f556f1bc/saturn.js": (116261, "14bf75784d8b81063a96b14ff76a1fbd6b9e4054cd7e4f4d4176d87224a5aae9"),
-    "web-port/runtime/dfc11254e0a8f556f1bc/saturn.wasm": (39233511, "d1dfdcb205a42ed10a5b2dd1304a6297afb1a0a21c74400da7e7cb48c4d710a7"),
-    "web-port/runtime/source-dfc11254e0a8f556f1bc.tar.gz": (7100490, "cf234f10b52bb0e0813e1bff34a17563124874b6236cd73dfefe102090dfdd69"),
-    "web-port/runtime/a5db802b820c047ee955/saturn.js": (115992, "a7d1ecaf928671e5bf208113a086d05a7ecb6fdd3b316634abffaa7275acb463"),
-    "web-port/runtime/a5db802b820c047ee955/saturn.wasm": (39233455, "951f58a5f4e7c9e9c9605654bb1966f76d2297e630e56e7fd8580aa68f68e582"),
-    "web-port/runtime/source-a5db802b820c047ee955.tar.gz": (7100326, "c54a59174471e74225b8dca88c8cf0adb8bcc07a27db6cb912d36f1248a8f47b"),
-    "web-port/runtime/0129dbf47402596f6a53/saturn.js": (115965, "32563defd91a13b5be9ebb57db53f4fb5c7cdf55955f329461b36c5b0b2ba89f"),
-    "web-port/runtime/0129dbf47402596f6a53/saturn.wasm": (39233455, "951f58a5f4e7c9e9c9605654bb1966f76d2297e630e56e7fd8580aa68f68e582"),
-    "web-port/runtime/source-0129dbf47402596f6a53.tar.gz": (7100159, "6a79ce260f8b6fb38793e0037b5551235332527b0636610111d31b34dc381a1f"),
-    "web-port/runtime/3c1c72226a61ee8d7631/saturn.wasm": (39227196, "f1eab0d3e4516697efb1274655a699958fdc83e2538bba8d01787d23b0e44d28"),
-    "web-port/runtime/3c1c72226a61ee8d7631/saturn.js": (115965, "32563defd91a13b5be9ebb57db53f4fb5c7cdf55955f329461b36c5b0b2ba89f"),
-    "web-port/runtime/source-3c1c72226a61ee8d7631.tar.gz": (7134335, "f0c609b309253812f60131c64866b5e2ad2ec70c6f535e41cda0e693d709b600"),
-    "web-port/runtime/704d9f64b5fa48104414/saturn.wasm": (39227196, "f1eab0d3e4516697efb1274655a699958fdc83e2538bba8d01787d23b0e44d28"),
-    "web-port/runtime/704d9f64b5fa48104414/saturn.js": (115939, "bc21b1ce0631e48f6d9ad619786afa6d238fc62ed042fc8298d00909982bbcbd"),
-    "web-port/runtime/source-704d9f64b5fa48104414.tar.gz": (7133947, "f1095462c9ecf4c0e6943db15de602bdabf315f2b65a3c941c47818a90e2cf39"),
-}
-
-def verified_web_port_artifact(path: Path) -> bool:
-    expected = WEB_PORT_ARTIFACTS.get(relative(path))
-    if expected is None or path.is_symlink():
-        return False
-    import hashlib
-    data = path.read_bytes()
-    if len(data) != expected[0] or hashlib.sha256(data).hexdigest() != expected[1]:
-        complain(f"{relative(path)}: web-port artifact hash/size mismatch")
-        return False
-    return True
+# The 2026-10-21 WEB PORT trial published WebAssembly builds and source archives
+# made by statically recompiling the game's own executables. The trial ended on
+# 2026-11-03 at the user's request. There is no hash-pin exemption any more: the
+# retired runtime folder, every WebAssembly binary and every static-recompilation
+# translation unit are forbidden, whatever their hash.
+RETIRED_WEB_PORT_RUNTIME = "web-port/runtime/"
+# Interfaces that every saturn-recomp generated translation unit and module table
+# uses. Game-agnostic site code never needs them.
+STATIC_RECOMPILATION_MARKER = re.compile(
+    r"\bSH2(?:Context\s*&|Module\b|FuncEntry\b)|\bg_sh2_(?:modules|nmodules)\b"
+)
+STATIC_RECOMPILATION_SCAN_EXEMPT = {"scripts/verify_repo.py"}
 
 
 def validate_forbidden_artifacts(files: list[Path]) -> None:
@@ -1241,19 +1200,24 @@ def validate_forbidden_artifacts(files: list[Path]) -> None:
             complain(f"forbidden environment/secret file: {name}")
         if any(part.lower() in FORBIDDEN_DIRS for part in pure.parts[:-1]):
             complain(f"forbidden generated/cache directory content: {name}")
-        if verified_web_port_artifact(path):
-            continue
+        if name.startswith(RETIRED_WEB_PORT_RUNTIME):
+            complain(f"retired web-port runtime content is forbidden: {name}")
         if lower_name.endswith(".tar.gz") or any(suffix in FORBIDDEN_SUFFIXES for suffix in lower_suffixes):
             complain(f"forbidden ROM/archive/save/patch artifact: {name}")
         if re.search(r"\.(?:state\d+|ss\d+|mc.)$", lower_name):
             complain(f"forbidden emulator save state: {name}")
         if path.suffix.lower() not in ALLOWED_BINARY_SUFFIXES:
             try:
-                with path.open("rb") as handle:
-                    if b"\0" in handle.read(8192):
-                        complain(f"unexpected binary/proprietary-looking file: {name}")
+                data = path.read_bytes()
             except OSError as exc:
                 complain(f"cannot inspect repository file {name}: {exc}")
+                continue
+            if b"\0" in data[:8192]:
+                complain(f"unexpected binary/proprietary-looking file: {name}")
+            elif name not in STATIC_RECOMPILATION_SCAN_EXEMPT and STATIC_RECOMPILATION_MARKER.search(
+                data.decode("utf-8", errors="replace")
+            ):
+                complain(f"static recompilation of game code is forbidden: {name}")
 
     ignore_path = ROOT / ".gitignore"
     if ignore_path.is_file():
@@ -2851,10 +2815,6 @@ def validate_static_site(files: list[Path]) -> None:
         r"(?:\bfrom\s*|\bimport\s*(?:\(\s*)?)['\"]([^'\"]+)['\"]"
     )
     for path in site_files:
-        # Emscripten's pinned loader contains generic platform fallback URLs/XHR.
-        # Application modules remain subject to the full no-network-write scan.
-        if verified_web_port_artifact(path):
-            continue
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as exc:

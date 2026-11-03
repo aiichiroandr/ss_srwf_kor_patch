@@ -66,6 +66,10 @@ temp/
 *.tar.gz
 *.tgz
 
+# Retired WEB PORT runtime: WebAssembly and recompiled game code are never published
+*.wasm
+/web-port/runtime/
+
 # Save data, save states, and emulator caches
 *.sav
 *.srm

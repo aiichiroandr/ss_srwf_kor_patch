@@ -1613,32 +1613,53 @@ class SyntheticV2ReleaseTests(unittest.TestCase):
         self.assertTrue(any("magic is not SRWFKP2" in error for error in v2_on_v1), v2_on_v1)
 
 
-class WebPortArtifactBoundaryTests(unittest.TestCase):
-    def test_only_exact_pinned_content_is_exempt(self):
-        import hashlib
+class RetiredWebPortBoundaryTests(unittest.TestCase):
+    def check(self, files):
         import tempfile
         from pathlib import Path
         from unittest.mock import patch
         from scripts import verify_repo as verifier
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            path = root / 'web-port/runtime/test/saturn.wasm'
-            path.parent.mkdir(parents=True)
-            data = b'\x00asm\x01\x00\x00\x00'
-            path.write_bytes(data)
-            pins = {'web-port/runtime/test/saturn.wasm': (len(data), hashlib.sha256(data).hexdigest())}
-            with patch.object(verifier, 'ROOT', root), patch.object(verifier, 'WEB_PORT_ARTIFACTS', pins), patch.object(verifier, 'errors', []):
-                self.assertTrue(verifier.verified_web_port_artifact(path))
-                path.write_bytes(data[:-1] + b'!')
-                self.assertFalse(verifier.verified_web_port_artifact(path))
-                self.assertTrue(verifier.errors)
-                other = root / 'unapproved.wasm'
-                other.write_bytes(data)
-                self.assertFalse(verifier.verified_web_port_artifact(other))
-                link = root / 'web-port/runtime/test/link.wasm'
-                link.symlink_to(path)
-                pins['web-port/runtime/test/link.wasm'] = pins['web-port/runtime/test/saturn.wasm']
-                self.assertFalse(verifier.verified_web_port_artifact(link))
+            paths = []
+            for name, data in files.items():
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+                paths.append(path)
+            with patch.object(verifier, 'ROOT', root), patch.object(verifier, 'errors', []):
+                verifier.validate_forbidden_artifacts(paths)
+                return list(verifier.errors)
+
+    def test_hash_pin_exemption_is_gone(self):
+        from scripts import verify_repo as verifier
+        self.assertFalse(hasattr(verifier, 'WEB_PORT_ARTIFACTS'))
+        self.assertFalse(hasattr(verifier, 'verified_web_port_artifact'))
+
+    def test_any_webassembly_or_runtime_folder_is_rejected(self):
+        errors = self.check({
+            'web-port/runtime/3c1c72226a61ee8d7631/saturn.wasm': b'\x00asm\x01\x00\x00\x00',
+            'web-port/runtime/3c1c72226a61ee8d7631/saturn.js': b'var Module = {};\n',
+            'web-port/runtime/current.json': b'{}\n',
+            'elsewhere/engine.wasm': b'\x00asm\x01\x00\x00\x00',
+            'web-port/runtime/source-3c1c72226a61ee8d7631.tar.gz': b'\x1f\x8b',
+        })
+        for name in ('saturn.wasm', 'saturn.js', 'current.json', 'source-3c1c72226a61ee8d7631.tar.gz'):
+            self.assertTrue(any('retired web-port runtime' in e and name in e for e in errors), (name, errors))
+        self.assertTrue(any('elsewhere/engine.wasm' in e and 'forbidden' in e for e in errors), errors)
+
+    def test_static_recompilation_output_is_rejected_anywhere(self):
+        unit = ('#include "funcs.h"\nvoid f_06004000(SH2' + 'Context& c) {\n'
+                '    c.r[15] -= 4;  // 06004000 sts.l pr,@-r15\n}\n').encode()
+        table = ('extern const SH2' + 'Module* const g_sh2_' + 'modules[] = {};\n').encode()
+        errors = self.check({
+            'generated/p_game_000.cpp': unit,
+            'docs/notes.txt': table,
+            'assets/ordinary.mjs': b'export const ok = 1;\n',
+        })
+        self.assertTrue(any('static recompilation' in e and 'p_game_000.cpp' in e for e in errors), errors)
+        self.assertTrue(any('static recompilation' in e and 'notes.txt' in e for e in errors), errors)
+        self.assertFalse(any('ordinary.mjs' in e for e in errors), errors)
 
 
 if __name__ == "__main__":
