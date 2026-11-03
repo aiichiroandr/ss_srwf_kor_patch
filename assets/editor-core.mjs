@@ -1650,6 +1650,20 @@ export function unitRows(segments, decoded, unitAbilityNames, nameMap, gameId = 
     const mapIcon = ((data[start] & 1) << 8) | data[start + 1];
     const terrain = readU16BE(data, start + 26);
     const nameFields = editorNameFields(decoded, nameSegment, recordIndex, nameMap, ownEntry(NAME_CELL_COUNTS, gameId)?.unit);
+    // The stock Final name-restorer copies ten bytes to each #DD..#E0
+    // name cell and relies on its separate +10 FF. Publish a bounded copy
+    // of the user's own default body only when that exact cell is intact.
+    let saveNameDefaultBytes=null;
+    if(gameId==='srwf-final'&&recordIndex>=0xdd&&recordIndex<=0xe0&&nameFields.nameStatus==='decoded'){
+      const cell=nameSegment.start+recordIndex*4;
+      if(cell>=nameSegment.start&&cell+4<=nameSegment.end&&cell+4<=decoded.length){
+        const target=cell+readI32BE(decoded,cell);let cursor=target;
+        if(target>=0&&target+11<=decoded.length){
+          while(cursor<target+10&&decoded[cursor]!==255)cursor+=decoded[cursor]>=0xeb&&decoded[cursor]<=0xf5?2:1;
+          if(cursor===target+10&&decoded[cursor]===255)saveNameDefaultBytes=Object.freeze(Array.from(decoded.subarray(target,target+10)));
+        }
+      }
+    }
     const abilities = readUnitAbilities(data, start);
     const template = readU16BE(data, start + 2) === UNIT_TEMPLATE.graphic
       && readU16BE(data, start + 36) === UNIT_TEMPLATE.hp
@@ -1676,6 +1690,11 @@ export function unitRows(segments, decoded, unitAbilityNames, nameMap, gameId = 
       parry: (data[start + UNIT_FLAG_OFFSET] & UNIT_FLAG_BITS.parry) !== 0,
       // The abilities that this unit must keep as they are (see editor-locks.mjs); the writer refuses to touch them.
       abilityLocks: unitAbilityLocks(unitAbilityPairs(abilities), recordIndex, lockLayout),
+      ...(gameId==='srwf-final'&&recordIndex>=0xdd&&recordIndex<=0xe0?{saveNameDefaultBytes}:{}),
+      // Read-only facts the save editor needs: equipped-part slots (+25 bits 5:4) and the save family (+7).
+      partSlots: ((data[start + 25] >>> 4) & 3) + 1,
+      saveUnitKind: (data[start + 7] >>> 3) & 15,
+      saveUnitForm: data[start + 7] & 7,
       // The variable-length weapon list behind the fixed head (read-only; see editor-weapon-links.mjs).
       weaponList: weaponTableLength === null
         ? unavailableWeaponList(end - start)

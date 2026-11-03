@@ -1,3 +1,7 @@
+import { createSaveNameAuthority } from './save-name-support.mjs?v=20261103-portoff1';
+import { createSaveEditor } from './save-ui.mjs?v=20261103-portoff1';
+// The save editor reads the verified editor session; it is created once the page's elements exist.
+let saveEditor = null, saveNameAuthority = null;
 import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261103-portoff1';
 import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261103-portoff1';
 import { directoryForGame } from "./mixed-game-folder.mjs?v=20261103-portoff1";
@@ -733,6 +737,18 @@ elements.pilotHeroTargets.addEventListener("click", handleHeroEditorLink);
 elements.pilotHeroReturnButton.addEventListener("click", handleHeroEditorLink);
 document.addEventListener("keydown", handleEditorNavigationKey);
 elements.editorExportButton.addEventListener("click", () => navigateWorkflow("save"));
+// Save edits use only the ROM the editor has verified. Name bytes stay locked unless the editor worker proved a Korean ROM.
+saveEditor = createSaveEditor(() => ({
+  verified: Boolean(state.editorSessionToken) && !anyJobBusy(),
+  gameId: state.editorGameId,
+  pilots: state.editorPilots,
+  units: state.editorUnits,
+  weapons: state.editorWeapons,
+  partNames: state.editorPartNames,
+  saveTitles: [],
+  sessionToken: state.editorSessionToken,
+  saveNameSupport: state.editorSaveNameSupport,
+}));
 elements.workflowOpenEditor.addEventListener("click", () => prepareWorkflow("editor"));
 elements.workflowSkipEditor.addEventListener("click", () => prepareWorkflow("save"));
 elements.workflowSaveButton.addEventListener("click", exportEditorImage);
@@ -2212,6 +2228,7 @@ function discardNeedsConfirmation({ hasSession, changeCount, editRevision, expor
 }
 
 function sessionHasUnsavedEdits() {
+  if (saveEditor?.hasUnsavedEdits()) return true;
   return discardNeedsConfirmation({
     hasSession: Boolean(state.editorSessionToken),
     changeCount: countEditorChanges(),
@@ -3345,6 +3362,8 @@ function clearEditorState() {
   state.editorOperation = null;
   state.editorSequence += 1;
   state.editorSessionToken = null;
+  state.editorSaveNameSupport = null;
+  saveNameAuthority?.clear();
   state.editorPreviewRequests = { unit: null, pilot: null };
   state.editorGameId = null;
   state.editorTargetHash = null;
@@ -3922,6 +3941,10 @@ function getEditorWorker() {
     new URL(`./editor-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url),
     { type: "module", name: "srwf-local-data-editor" },
   );
+  // The name authority must observe each message before the app handles it.
+  // Only a native worker can grant name edits; any other message source leaves save names locked.
+  try { saveNameAuthority?.dispose(); } catch {}
+  try { saveNameAuthority = createSaveNameAuthority(worker); } catch { saveNameAuthority = null; }
   worker.addEventListener("message", handleEditorWorkerMessage);
   worker.addEventListener("error", handleEditorWorkerCrash);
   worker.addEventListener("messageerror", handleEditorWorkerCrash);
@@ -3994,6 +4017,8 @@ function beginEditorInspection(imageBlob, {
 // 편집 세션이 사라졌을 때(오류·작업 스레드 종료) 화면에 남은 편집 데이터를 모두 치운다.
 function dropEditorSession() {
   state.editorSessionToken = null;
+  state.editorSaveNameSupport = null;
+  saveNameAuthority?.clear();
   state.editorPreviewRequests = { unit: null, pilot: null };
   state.editorGameId = null;
   state.editorTargetHash = null;
@@ -4127,6 +4152,7 @@ function handleEditorWorkerMessage(event) {
     state.editorLocalImage = Boolean(context.localImage);
     state.editorInputSize = context.inputSize;
     state.editorSessionToken = view.sessionToken;
+    state.editorSaveNameSupport = saveNameAuthority?.accept(event) ?? null;
     state.editorGameId = view.gameId;
     state.editorTargetHash = view.targetHash;
     state.editorBaseTargetHash = view.baseTargetSha256;
@@ -8375,6 +8401,7 @@ function updateControls() {
       : "패치 실행";
   updateFolderSafeDownloadOffer(interactionBusy);
   elements.editorExportButton.disabled = !state.editorSessionToken || controlsLocked;
+  byId("saveEditorOpen").disabled = !state.editorSessionToken || controlsLocked;
   // 받을 수 있는 결과가 있는 동안에는 그 결과가 현재 편집 내용이다. 값을 고치면 결과를 치우고 버튼이 돌아온다.
   elements.editorExportButton.hidden = false;
   elements.editorExportButton.textContent = state.editorDownloadUrls.length > 0 ? "BIN/CUE 결과" : "BIN/CUE 저장";
@@ -8979,7 +9006,7 @@ function handlePageHide(event) {
 }
 
 function warnWhileBusy(event) {
-  if (!state.busy && !state.cueSaving && !editorSideBusy()) {
+  if (!state.busy && !state.cueSaving && !editorSideBusy() && !saveEditor?.isBusy() && !saveEditor?.hasUnsavedEdits()) {
     return;
   }
   event.preventDefault();
@@ -8996,6 +9023,9 @@ class PatcherError extends Error {
 
 export const __testHooks = Object.freeze({
   state,
+  saveEditor,
+  sessionHasUnsavedEdits,
+  warnWhileBusy,
   EDITOR_UI,
   editorChanges,
   editorSearchTools,

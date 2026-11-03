@@ -791,6 +791,7 @@
                 <div class="editor-footer">
                   <button class="editor-status editor-changes-button" type="button" id="editorChangesButton" aria-haspopup="dialog" aria-controls="editorChangesDialog" title="바뀐 값 목록 보기"><span id="editorState">변경 없음</span></button>
                   <span class="sr-only" id="editorStateLive" role="status" aria-live="polite"></span>
+                  <button class="editor-status editor-changes-button" type="button" id="saveEditorOpen" aria-haspopup="dialog" aria-controls="saveEditorDialog" title="카트리지 세이브 파일 편집" disabled>세이브 편집</button>
                   <div class="editor-preset-file-actions" role="group" aria-label="편집값 파일">
                     <button class="editor-preset-file-button" type="button" id="editorPresetSaveButton" title="이번에 바꾼 값을 JSON 파일로 저장" aria-label="편집값 저장" disabled><span class="preset-long">편집값 저장</span><span class="preset-short" aria-hidden="true">값 저장</span></button>
                     <button class="editor-preset-file-button" type="button" id="editorPresetLoadButton" title="저장한 편집값 JSON 파일 불러오기" aria-label="편집값 불러오기" aria-haspopup="dialog" aria-controls="editorChangesDialog" disabled><span class="preset-long">편집값 불러오기</span><span class="preset-short" aria-hidden="true">값 불러오기</span></button>
@@ -1009,5 +1010,54 @@
     </dialog>
 
     <div class="sr-only" id="liveRegion" role="status" aria-live="polite" aria-atomic="true"></div>
+    <dialog id="saveEditorDialog" class="save-editor-dialog" aria-labelledby="saveEditorHeading">
+      <div class="save-editor-shell">
+        <header class="save-editor-header"><div><span class="save-eyebrow">CARTRIDGE SAVE</span><h2 id="saveEditorHeading">세이브 에디터</h2></div><button type="button" id="saveEditorClose" class="record-tool">닫기</button></header>
+        <div class="save-editor-content">
+          <div class="save-file-toolbar">
+            <label class="record-tool save-file-picker">세이브 파일 열기<input id="saveFileInput" type="file" accept=".bcr,.bkr,.bin,.sav,.srm,.gz" aria-label="카트리지 세이브 파일 선택"></label>
+            <div class="save-file-info"><strong id="saveFileName">카트리지 파일을 선택하세요</strong><span id="saveFileFormat">Ymir · RetroArch · Mednafen</span></div>
+            <label class="save-slot-select-label">편집할 저장<select id="saveRecordSelect" disabled aria-label="편집할 게임 저장"></select></label>
+          </div>
+          <section id="saveSlotSummary" class="save-slot-summary" aria-label="선택한 저장 정보" hidden>
+            <div class="save-slot-heading"><span id="saveSlotIdentity" class="save-eyebrow"></span><div><strong id="saveSlotProgress"></strong><span id="saveSlotTitle"></span></div></div>
+            <dl><div><dt>주인공</dt><dd id="saveSlotHero"></dd></div><div><dt>저장 시점 · 게임기 시계</dt><dd id="saveSlotDate"></dd></div></dl>
+          </section>
+          <details id="saveSlotBrowser" class="save-slot-browser" hidden><summary id="saveSlotCount">다른 저장 고르기</summary><div class="save-slot-filters"><input id="saveSlotSearch" class="editor-search" type="search" placeholder="화수 · 시나리오 · 주인공 · 슬롯 번호" aria-label="저장 슬롯 검색"><label>정렬<select id="saveSlotSort" aria-label="저장 슬롯 정렬"><option value="slot">슬롯순</option><option value="recent">최근 저장순</option><option value="progress">진행순</option></select></label></div><div id="saveSlotCards" class="save-slot-cards"></div><nav id="saveSlotsPager" class="save-pager" aria-label="저장 슬롯"><button id="saveSlotsPrev" type="button" aria-label="저장 슬롯 이전 페이지">◀ 이전</button><span id="saveSlotsPageLabel" aria-live="polite">1 / 1</span><button id="saveSlotsNext" type="button" aria-label="저장 슬롯 다음 페이지">다음 ▶</button></nav></details>
+          <p id="saveEditorStatus" role="status" aria-live="polite">파일은 이 기기에서만 읽습니다. 일반 카트리지 저장을 선택하세요.</p>
+          <div id="saveEditorEmpty" class="game-panel save-empty"><h3>이어서 하던 게임을 편집하세요</h3><p>카트리지 파일을 열고, 화수와 주인공 이름으로 편집할 저장을 고르세요.</p><p>레벨·EXP, 기체·무기 개조, 장착 파츠, 기체 추가를 지원합니다.</p><small>에뮬레이터의 일시 저장(스테이트)은 사용할 수 없습니다.</small></div>
+          <div id="saveEditorBody" class="save-editor-body" hidden>
+            <div class="save-game-toolbar"><div class="editor-tab-row" role="group" aria-label="세이브 데이터 종류"><button type="button" id="savePilotTab" class="editor-tab" aria-pressed="true">파일럿</button><button type="button" id="saveUnitTab" class="editor-tab" aria-pressed="false">보유 기체</button><button type="button" id="saveCommonTab" class="editor-tab" aria-pressed="false">이름·자금·개조</button></div><span id="saveRecordNote"></span></div>
+            <details id="saveAddUnitRow" class="save-add-unit" hidden><summary>＋ 기체 추가</summary><div class="save-add-unit-fields"><label>기체 찾기<input id="saveAddUnitSearch" class="editor-search" type="search" placeholder="모든 기체 · 이름 또는 ID" aria-label="추가할 기체 검색"></label><label>표시 범위<select id="saveAddUnitFilter"><option value="all">전체 · 미사용 포함</option><option value="unused">빈·미완성 레코드만</option></select></label><label>추가할 기체<select id="saveAddUnitSelect" aria-label="추가할 기체"></select></label><button id="saveAddUnitButton" type="button" class="record-tool">추가하기</button></div><small id="saveAddUnitNote">필요한 합체·분리 구성 기체도 함께 추가합니다. 그림만 남은 더미는 기체 데이터와 구분합니다.</small></details>
+            <p id="saveNameNote" hidden>검증한 ROM에서 이름을 찾지 못한 데이터는 ID로 표시합니다.</p>
+            <div id="saveRecordLayout" class="save-record-layout" data-mobile-view="list">
+              <aside class="save-record-sidebar"><div class="save-list-heading"><strong id="saveListHeading">파일럿 목록</strong><span id="saveListCount"></span></div><label for="saveSearch" class="sr-only">이름·ID·저장 칸 검색</label><input id="saveSearch" class="editor-search" type="search" placeholder="이름으로 찾기" autocomplete="off"><div id="saveRecordList" class="record-list" aria-label="저장된 파일럿 또는 기체"></div><nav id="saveListPager" class="save-pager" aria-label="파일럿·기체 목록"><button id="saveListPrev" type="button" aria-label="파일럿·기체 목록 이전 페이지">◀ 이전</button><span id="saveListPageLabel" aria-live="polite">1 / 1</span><button id="saveListNext" type="button" aria-label="파일럿·기체 목록 다음 페이지">다음 ▶</button></nav></aside>
+              <div class="save-detail"><button type="button" id="saveBackToList" class="record-tool save-back-list">← 목록으로</button><section class="game-panel save-selected-panel"><div class="save-record-art"><figure class="save-unit-art"><canvas id="saveUnitImage" hidden></canvas><figcaption id="saveUnitImageNote"></figcaption></figure><figure class="save-pilot-art"><canvas id="savePilotImage" hidden></canvas><figcaption id="savePilotImageNote"></figcaption></figure></div><div class="save-selected-heading"><h3 id="saveRecordTitle">파일럿</h3><p id="saveSelectedSlot"></p></div><div id="savePilotFields" class="save-number-grid"><label>레벨<input id="saveLevel" type="number" min="1" max="99" step="1" inputmode="numeric"></label><label>다음 레벨까지 EXP<input id="saveExperience" type="number" min="0" max="65535" step="1" inputmode="numeric"></label><p class="save-help">레벨과 EXP는 개별 값입니다. 입력한 항목만 바뀝니다.</p></div><div id="saveUnitTabs" class="save-detail-tabs" role="group" aria-label="기체 상세 종류" hidden><button id="saveUnitStatsTab" type="button" aria-pressed="true">기체 개조</button><button id="saveUnitWeaponsTab" type="button" aria-pressed="false">무기 개조</button><button id="saveUnitPartsTab" type="button" aria-pressed="false">강화 파츠</button></div><div id="saveUnitFields" class="save-number-grid" hidden></div><nav id="saveUnitPager" class="save-pager" aria-label="개조·파츠 항목"><button id="saveUnitPrev" type="button" aria-label="개조·파츠 항목 이전 페이지">◀ 이전</button><span id="saveUnitPageLabel" aria-live="polite">1 / 1</span><button id="saveUnitNext" type="button" aria-label="개조·파츠 항목 다음 페이지">다음 ▶</button></nav><p id="saveUnitNote" class="save-help" hidden>장착 파츠를 바꿔도 미장착 재고는 유지됩니다. 추가 기체의 파일럿은 게임에서 탑승시키세요.</p></section></div>
+            </div>
+            <section id="saveCommonFields" class="save-common-fields" hidden>
+              <div class="save-detail-tabs save-common-tabs" role="group" aria-label="이름·자금·개조 종류">
+                <button id="saveCommonNamesTab" type="button" aria-pressed="false">이름·애칭</button><button id="saveCommonUnitNamesTab" type="button" aria-pressed="false" hidden>기체 이름</button><button id="saveCommonMoneyTab" type="button" aria-pressed="true">보유 자금</button><button id="saveCommonUpgradeTab" type="button" aria-pressed="false">개조 해금</button>
+              </div>
+              <div id="saveNamesPanel" class="game-panel save-name-panel" hidden>
+                <label><span>주인공 풀네임</span><input id="saveHeroName" type="text" autocomplete="off" spellcheck="false" aria-describedby="saveNamesHelp"><small id="saveHeroNameCount"></small></label>
+                <label><span>주인공 애칭</span><input id="saveHeroAlias" type="text" autocomplete="off" spellcheck="false" aria-describedby="saveNamesHelp"><small id="saveHeroAliasCount"></small></label>
+                <label><span>애인 풀네임</span><input id="savePartnerName" type="text" autocomplete="off" spellcheck="false" aria-describedby="saveNamesHelp"><small id="savePartnerNameCount"></small></label>
+                <label><span>애인 애칭</span><input id="savePartnerAlias" type="text" autocomplete="off" spellcheck="false" aria-describedby="saveNamesHelp"><small id="savePartnerAliasCount"></small></label>
+                <p class="save-help" id="saveNamesHelp">풀네임과 애칭은 각각 따로 적용합니다. 종료 문자 포함 풀네임 14·애칭 6바이트입니다.</p>
+              </div>
+              <div id="saveUnitNamesPanel" class="game-panel save-name-panel" hidden>
+                <label><span id="saveHeroUnitLabel1">형태 1</span><input id="saveHeroUnitName1" type="text" autocomplete="off" spellcheck="false" aria-describedby="saveUnitNamesHelp"><small id="saveHeroUnitName1Count"></small></label>
+                <label><span id="saveHeroUnitLabel2">형태 2</span><input id="saveHeroUnitName2" type="text" autocomplete="off" spellcheck="false" aria-describedby="saveUnitNamesHelp"><small id="saveHeroUnitName2Count"></small></label>
+                <label><span id="saveHeroUnitLabel3">형태 3</span><input id="saveHeroUnitName3" type="text" autocomplete="off" spellcheck="false" aria-describedby="saveUnitNamesHelp"><small id="saveHeroUnitName3Count"></small></label>
+                <p class="save-help" id="saveUnitNamesHelp">완결편 주인공 기체명은 형태별로 편집합니다. 본문 10바이트이며 빈칸은 ROM 기본 이름을 사용합니다.</p>
+              </div>
+              <div id="saveMoneyPanel" class="game-panel"><h3>보유 자금</h3><label>자금<input id="saveMoney" type="number" min="0" max="16777215" step="1" inputmode="numeric"></label><p class="save-help">선택한 저장 슬롯의 보유 자금입니다.</p></div>
+              <div id="saveUpgradePanel" class="game-panel" hidden><h3>개조 한도</h3><label id="saveUpgradeModeRow" hidden>완결편 개조 해금<select id="saveUpgradeMode"><option value="original">불러온 해금 상태 유지</option><option value="early10">69화 이전에도 10단 개조 해금</option></select></label><p id="saveUpgradeStatus"></p><p class="save-help">조기 해금은 게임의 개조 한도를 10단으로 바꿉니다. 각 기체의 개조 단수는 보유 기체 탭에서 수정하세요.</p></div>
+            </section>
+          </div>
+        </div>
+        <footer class="save-editor-footer"><details class="save-diff"><summary id="saveChangeCount">변경 없음</summary><div class="save-change-panel"><ul id="saveChanges"></ul><nav id="saveChangesPager" class="save-pager" aria-label="변경 내역"><button id="saveChangesPrev" type="button" aria-label="변경 내역 이전 페이지">◀ 이전</button><span id="saveChangesPageLabel" aria-live="polite">1 / 1</span><button id="saveChangesNext" type="button" aria-label="변경 내역 다음 페이지">다음 ▶</button></nav></div></details><div class="save-editor-actions"><span class="save-footer-note">원본은 보존하고 수정본을 따로 저장합니다.</span><button type="button" id="saveReset" class="record-tool" aria-label="모든 저장 슬롯의 변경 취소" title="모든 저장 슬롯의 변경과 입력 오류를 불러온 값으로 되돌립니다." disabled>전체 취소</button><button type="button" id="saveDownload" class="record-tool" disabled>수정본 저장</button></div></footer>
+      </div>
+    </dialog>
   </body>
 </html>
