@@ -1,5 +1,13 @@
 # Web port RAM save interoperability
 
+> **Status (2026-11-03).** The WEB PORT trial has ended. The in-player RAM import,
+> merge and recovery UI was removed with the player. `web-port/` keeps a read-only
+> rescue page (`save-rescue.mjs`) that exports the trial's browser-local saves as
+> the original backup JSON or as packed 32 KiB `.bkr`/`.srm`, interleaved 64 KiB
+> `.bin` or packed 512 KiB `.bcr`. `saves.mjs`, `ram-save.mjs` and
+> `ram-save-worker.mjs` are unchanged. The rest of this document is the record of
+> the trial-era behaviour.
+
 The RAM menu imports selected SRW records from standard Saturn backup filesystems
 into the existing web-port internal save store. This is not emulator save-state
 conversion, and it does not add an emulated cartridge device.

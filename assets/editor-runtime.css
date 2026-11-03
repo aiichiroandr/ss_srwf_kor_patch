@@ -323,8 +323,6 @@ body[data-view="setup"] #editorEntryRegion .primary-button:disabled { color: #b4
 body[data-view="setup"] #editorEntryRegion .workflow-link { min-height: 36px; padding: 10px 0 3px; color: #d4dee6; font-size: 11px; text-underline-offset: 3px; }
 body[data-view="setup"] #editorEntryRegion .workflow-link:disabled { opacity: .68; }
 body[data-view="setup"] #workflowOpenEditor { margin-top: 20px; }
-body[data-view="setup"] #workflowWebPort { display: flex; align-items: center; justify-content: center; gap: 6px; }
-body[data-view="setup"] #workflowWebPort small { font-weight: 400; font-size: 10px; opacity: .85; }
 body[data-view="setup"] #editorEntryRegion .workflow-detected-summary,
 body[data-view="setup"] #editorEntryRegion .workflow-editor-facts { color: #d1dce4; }
 body[data-view="setup"] #patchWorkspace .zone-state:is(.is-working, .is-ready, .is-prepared) { color: #304d78; background: #cfdbeb; }
@@ -377,6 +375,8 @@ body[data-mode="editor"] .release-card .selector-grid > div:first-child,
 body[data-mode="editor"] .release-card .release-facts { display: none; }
 .workflow-link { border: 0; background: transparent; color: inherit; text-decoration: underline; text-underline-offset: 4px; padding: 12px 4px; cursor: pointer; min-height: 44px; }
 .workflow-link:disabled { opacity: .5; cursor: default; }
+/* Retired WEB PORT notice: a plain link styled like the workflow text button. */
+a.workflow-link { display: block; text-align: center; }
 #workflowOpenEditor { margin-top: 8px; }
 #workflowOpenEditor, .source-zone .file-button { min-height: 44px; margin-top: 8px; padding-block: 8px; border-radius: 8px; line-height: 1.25; }
 body[data-view="save"] .patch-workspace { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); }
@@ -1376,7 +1376,7 @@ body[data-view="editor"] .editor-region {
 
 .editor-data-panel {
   --edge: 5px;
-  --frame: url('./runtime-panel-frame.svg?v=20261021-webport1');
+  --frame: url('./runtime-panel-frame.svg?v=20261103-portoff1');
   --ed-text: #e8e8da;
   --ed-muted: #a9bcaa;
   --ed-cyan: #9fd7e6;
@@ -4617,8 +4617,6 @@ body[data-view="editor"]:has(.editor-effect-panel[data-compact="true"]:not([hidd
 .scenario-objective-note{margin:0;font-size:11px;line-height:1.4;white-space:nowrap}
 #scenarioDeadlineRule{min-width:0;font-size:12px;white-space:nowrap}
 
-/* Public web-player entry sits below the existing editor action. */
-#workflowWebPort{display:block;margin-top:12px}
 
 /* Loading feedback on the gray Saturn setup cards needs dark, explicit ink. */
 body[data-view="setup"] :is(.editor-progress,.progress-panel){color:#29323c;background:#e7eae3;border-color:#9ca69e}

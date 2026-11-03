@@ -1,16 +1,8 @@
-// Header-only service worker. Never cache ROMs, saves, or responses.
-self.addEventListener("install",()=>self.skipWaiting());
-self.addEventListener("activate",event=>event.waitUntil(self.clients.claim()));
-self.addEventListener("fetch",event=>{
-  const request=event.request;
-  if(request.method!=="GET" || new URL(request.url).origin!==self.location.origin)return;
-  event.respondWith((async()=>{
-    const response=await fetch(request, request.mode === "navigate" ? {cache:"no-cache"} : undefined);
-    if(response.status===0)return response;
-    const headers=new Headers(response.headers);
-    headers.set("Cross-Origin-Opener-Policy","same-origin");
-    headers.set("Cross-Origin-Embedder-Policy","require-corp");
-    headers.set("Cross-Origin-Resource-Policy","same-origin");
-    return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
-  })());
+// Retirement worker for the ended WEB PORT trial (2026-11-03).
+// Browsers that registered the old header-only isolation worker fetch this
+// script on their next visit. It replaces the old worker, intercepts nothing,
+// and removes its own registration so web-port/ is served normally again.
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.registration.unregister());
 });

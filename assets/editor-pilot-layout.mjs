@@ -1,5 +1,5 @@
-import { PILOT_LAYOUT_PROFILES } from './editor-pilot-layout-profiles.mjs?v=20261021-webport1';
-import { ownEntry } from './editor-own.mjs?v=20261021-webport1';
+import { PILOT_LAYOUT_PROFILES } from './editor-pilot-layout-profiles.mjs?v=20261103-portoff1';
+import { ownEntry } from './editor-own.mjs?v=20261103-portoff1';
 
 const HEAD = 23;
 const MAX_RECORD = 256;

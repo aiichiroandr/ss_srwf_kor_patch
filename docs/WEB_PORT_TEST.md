@@ -1,5 +1,30 @@
 # WEB PORT (TEST)
 
+> **종료 (2026-11-03).** 이 시험판은 공개 사이트에서 내렸습니다. 아래 내용은
+> 기록으로만 남깁니다.
+>
+> - 이유: 공개했던 `saturn.wasm` 11개와 소스 아카이브 11개는 F 완결편 실행
+>   파일을 SH-2 명령어 단위로 정적 재컴파일한 코드(모듈 `SRWFIN_KOR` 등)를
+>   담고 있었습니다. 데이터 파일은 없었지만 게임 프로그램 자체의 번역본이라
+>   "게임 원본을 배포하지 않는다"는 원칙과 맞지 않았습니다. VDP1 GPL 옵션
+>   때문에 소스를 빼고 wasm만 남길 수도 없었습니다.
+> - 제거: `web-port/runtime/` 전체, `EFFECT.BIN`에서 디코드한 타이틀 로고,
+>   플레이어 코드, 패치 페이지의 WEB PORT 버튼.
+> - 남긴 것: `web-port/`는 종료 안내와 저장 내보내기 페이지입니다. 브라우저에
+>   남은 웹 포트 저장을 백업 JSON 또는 에뮬레이터 RAM 파일로 받을 수 있습니다.
+>   이전 시험판이 등록한 서비스 워커는 같은 이름의 해제용 워커로 교체되어
+>   스스로 등록을 지웁니다.
+> - 재개 조건: 서버에는 게임과 무관한 코드만 두고, 게임 코드는 사용자의
+>   디스크에서 사용자 브라우저 안에서만 만드는 구조여야 하며 별도 승인이
+>   필요합니다. 설계는 [WEB_PORT_CLIENT_RECOMP.md](WEB_PORT_CLIENT_RECOMP.md)에
+>   있습니다.
+> - 플레이어 프런트엔드(터치 패드, 오디오, 저장 UI)는 커밋 `267c26b`에서 복원할
+>   수 있습니다. 런타임 파일은 복원하지 않습니다.
+> - `main`에서 지워도 git 히스토리에는 남아 있습니다. 히스토리 정리는 별도
+>   승인이 필요한 외부 작업입니다.
+
+## 기록: 시험판 당시 내용
+
 User-authorized trial deployment, 2026-10-21. This does not add or accept a new
 patch release. Supported runtime: Final Korean v0.3 c only. Desktop retains immutable runtime
 3c1c72226a61ee8d7631; optimized mobile uses its separate manifest as described below. Other fonts, editor-modified outputs, and F runtimes are

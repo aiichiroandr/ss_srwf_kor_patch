@@ -1,4 +1,4 @@
-import { Sha256, sha256Hex } from './sha256.mjs?v=20261021-webport1';
+import { Sha256, sha256Hex } from './sha256.mjs?v=20261103-portoff1';
 
 export { Sha256, sha256Hex };
 
