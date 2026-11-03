@@ -1,65 +1,55 @@
-// Manual benchmark for the client-side recompilation prototype. Synthetic
-// SH-2 code only. Run with: node lab/sh2-wasm/bench.mjs
-// Prints interpreter vs translated-WebAssembly time for two loops, and the
-// translation + compile cost of a large straight-line function.
-import { GUEST_SIZE, createState, discover, interpret } from "./sh2.mjs";
-import { translate, swizzleInto, MEMORY_PAGES, REG_BASE } from "./emit.mjs";
+// Manual benchmark for the client-side recompilation prototype, through the JS
+// stand-in runtime (harness.mjs). Synthetic SH-2 code only.
+// Run with: node lab/sh2-wasm/bench.mjs
+import { createMachine, run, WRAM_SIZE } from "./sh2.mjs";
+import { createHarness } from "./harness.mjs";
+import { translate } from "./emit.mjs";
+import { discover } from "./sh2.mjs";
 
 const BASE = 0x06004000;
-const put16 = (mem, a, v) => { a &= GUEST_SIZE - 1; mem[a] = v >> 8; mem[a + 1] = v; };
+const STACK = 0x060ff000;
+const put = (mem, words) => words.forEach((w, i) => { mem[(BASE & 0xfffff) + 2 * i] = w >> 8; mem[(BASE & 0xfffff) + 2 * i + 1] = w & 0xff; });
 
-function measure(label, words, init, repeat) {
-  const mem = new Uint8Array(GUEST_SIZE);
-  words.forEach((w, i) => put16(mem, BASE + 2 * i, w));
-  for (let i = 0; i < 0x40000; i++) mem[0x40000 + i] = (i * 2654435761) >>> 24;
-  const code = discover(mem, BASE);
-
-  let t0 = performance.now();
-  let reference;
-  for (let k = 0; k < repeat; k++) {
-    const s = createState();
-    s.r.set(init); s.pr = 0x06008000;
-    interpret(s, mem, code, BASE, () => {});
-    reference = s;
-  }
+function measure(label, words, r, repeat) {
+  const m = createMachine();
+  put(m.wramH, words);
+  let t0 = performance.now(), reference;
+  for (let k = 0; k < repeat; k++) { m.r.fill(0); m.r.set(r); run(m, BASE); reference = [...m.r]; }
   const interp = (performance.now() - t0) / repeat;
 
-  const memory = new WebAssembly.Memory({ initial: MEMORY_PAGES });
-  swizzleInto(new Uint8Array(memory.buffer), mem);
-  const bytes = translate(code, BASE);
-  const instance = new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { mem: memory, call: () => {} } });
-  const regs = new Int32Array(memory.buffer, REG_BASE, 20);
-  const run = () => { regs.fill(0); regs.set(init); regs[17] = 0x06008000; instance.exports.run(); };
-  for (let k = 0; k < 3; k++) run(); // let the engine tier up
+  const h = createHarness({ budget: 10000 });
+  put(h.view.wramH, words);
+  h.run(BASE, { r: Uint32Array.from(r) });                   // translate and warm up
+  for (let k = 0; k < 2; k++) h.run(BASE, { r: Uint32Array.from(r) });
   t0 = performance.now();
-  for (let k = 0; k < repeat; k++) run();
+  let state;
+  for (let k = 0; k < repeat; k++) state = h.run(BASE, { r: Uint32Array.from(r) });
   const wasm = (performance.now() - t0) / repeat;
-  for (let i = 0; i < 16; i++) {
-    if (regs[i] !== reference.r[i]) throw Error(`${label}: r${i} differs (${regs[i]} vs ${reference.r[i]})`);
-  }
-  console.log(`${label}: interpreter ${interp.toFixed(2)} ms, wasm ${wasm.toFixed(2)} ms, ${(interp / wasm).toFixed(1)}x`);
+  if (state.r.some((v, i) => v !== reference[i])) throw Error(`${label}: results differ`);
+  console.log(`${label}: interpreter ${interp.toFixed(2)} ms, translated ${wasm.toFixed(2)} ms (${(interp / wasm).toFixed(1)}x), `
+    + `${h.stats.functions} functions in ${h.stats.modules} modules, ${h.stats.polls} polls`);
 }
 
-// 1) Checksum over 64 Ki words: mov.l @r4+,r1 / add r1,r0 / dt r5 / bf/s / slot.
-measure("checksum 64Ki words", [0xe000, 0x6146, 0x301c, 0x4510, 0x8ffb, 0x7601, 0x000b, 0x0009],
-  [0, 0, 0, 0, 0x06040000, 0x10000, 0], 20);
+// 1) Recursive fib(22): calls, stack frames, delay slots.
+const fib = [
+  0x4f22, 0xe102, 0x3413, 0x8903, 0x6043, 0x4f26, 0x000b, 0x0009,
+  0x2f46, 0xbff5, 0x74ff, 0x64f2, 0x2f06, 0xbff1, 0x74fe, 0x61f6, 0x301c, 0x7f04, 0x4f26, 0x000b, 0x0009,
+];
+measure("fib(22) recursive", fib, [0, 0, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, STACK], 3);
 
-// 2) ALU mix 1M iterations: shifts, xor, extu, tst/movt, add, dt loop.
-measure("ALU mix 1M iterations", [
-  0x6013, /* mov r1,r0 */ 0x4001, /* shlr r0 */ 0x201a, /* xor r1,r0 */ 0x600c, /* extu.b r0,r0 */
-  0x2208, /* tst r0,r2 */ 0x0329, /* movt r3 */ 0x343c, /* add r3,r4 */ 0x4510, /* dt r5 */
-  0x8bf7, /* bf -> start */ 0x000b, 0x0009,
-], [0, 0x1234567, 0x55, 0, 0, 1_000_000], 5);
+// 2) ALU loop, 1M iterations: shifts, xor, extu, tst/movt, add, dt.
+measure("ALU loop 1M", [0x6013, 0x4001, 0x201a, 0x600c, 0x2208, 0x0329, 0x343c, 0x4510, 0x8bf7, 0x000b, 0x0009],
+  [0, 0x1234567, 0x55, 0, 0, 1_000_000], 2);
 
 // 3) Translation and compile cost of one large straight-line function.
 const big = [];
-for (let i = 0; i < 20000; i++) big.push([0x301c, 0x4001, 0x201a, 0x7101][i % 4]);
+for (let i = 0; i < 20000; i++) big.push([0x301c, 0x4001, 0x201a, 0x7101, 0x2e12, 0x63e2][i % 6]);
 big.push(0x000b, 0x0009);
-const mem = new Uint8Array(GUEST_SIZE);
-big.forEach((w, i) => put16(mem, BASE + 2 * i, w));
+const view = { wramH: new Uint8Array(WRAM_SIZE), wramL: new Uint8Array(WRAM_SIZE) };
+put(view.wramH, big);
 let t0 = performance.now();
-const code = discover(mem, BASE, 30000);
-const bytes = translate(code, BASE);
+const code = discover(view, BASE, 30000);
+const bytes = translate([{ entry: BASE, code }], { h: 0x110000, l: 0x10000 });
 const tTranslate = performance.now() - t0;
 t0 = performance.now();
 new WebAssembly.Module(bytes);
