@@ -383,7 +383,8 @@ test('an edit that cannot fit is refused with the growth error and numbers, and 
   const { session, rows, slotLength } = await fixture();
   const next = mulberry32(8);
   const high = (kind, field) => {
-    if (kind === 'weapon') return { attack: 65535, energy: 65535, critical: 15 }[field] ?? 255;
+    if (kind === 'weapon') return { attack: 9999, energy: 999, critical: 15 }[field] ?? 255;
+    if (kind === 'unit' && /^(en|speed|limit)$/.test(field)) return 999; // a changed number fits its screen field
     if (/^(ground|sea|air|space)$/.test(field)) return 4; // a changed grade stays in the A..E domain
     if (/Growth$/.test(field)) return 15;
     if (/^(move|exp|atk|shot)$|^ability/.test(field)) return 255;
@@ -393,7 +394,7 @@ test('an edit that cannot fit is refused with the growth error and numbers, and 
     for (const field of Object.keys(fields)) {
       // the ammo, morale, skill and flag fields have their own domains (tests/editor-weapon-flags.test.mjs): they stay as stored
       if (['ammo', 'requiredMorale', 'requiredSkill', 'shield', 'parry'].includes(field)) continue;
-      fields[field] = kind === 'weapon' && field === 'hit' ? Math.floor(next() * 256) - 128 : Math.floor(next() * (high(kind, field) + 1));
+      fields[field] = kind === 'weapon' && field === 'hit' ? Math.floor(next() * 199) - 99 : Math.floor(next() * (high(kind, field) + 1));
       // the structural unit abilities cannot be given to a unit (see editor-locks.mjs): draw an ordinary id instead
       if (/^ability[1-4]$/.test(field)) while (isLockedUnitAbility(fields[field])) fields[field] = (fields[field] + 1) & 255;
     }
@@ -455,7 +456,7 @@ test('a result larger than the allocated sectors is refused even over zero paddi
   const { session, rows, disc } = await snugDisc();
   const next = mulberry32(3);
   const request = echoRequest(session, rows, (kind, row, fields) => {
-    for (const field of Object.keys(fields)) if (/^(hp|en|armor|speed|limit|attack|energy|agi|hit|tech|cnt|mp)$/.test(field) && !(kind === 'weapon' && field === 'hit')) fields[field] = Math.floor(next() * 65536);
+    for (const field of Object.keys(fields)) if (/^(hp|en|armor|speed|limit|attack|energy|agi|hit|tech|cnt|mp)$/.test(field) && !(kind === 'weapon' && field === 'hit')) fields[field] = Math.floor(next() * (kind === 'weapon' ? (field === 'attack' ? 10000 : 1000) : kind === 'unit' && /^(en|speed|limit)$/.test(field) ? 1000 : 65536));
   });
   await assert.rejects(exportEditedImage(session, request), (error) => {
     assert.equal(error.code, 'EDITOR_TSR_GROWTH_UNSUPPORTED');

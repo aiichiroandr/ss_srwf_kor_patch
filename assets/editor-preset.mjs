@@ -20,14 +20,14 @@
 // still has the `from` value, is a conflict when it has another value, is already done when it has the `to` value, and is
 // skipped (with a reason) when the session could not take it: a record that does not exist or is read-only, a structural
 // unit ability (editor-locks.mjs), a terrain grade the writer refuses, a skill list the record cannot hold.
-import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261104-save1';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261104-save1';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261104-save1';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-save1';
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds } from "./editor-fields.mjs?v=20261104-save1";
-import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261104-save1";
-import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261104-save1";
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261104-save1";
+import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261104-save2';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261104-save2';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261104-save2';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-save2';
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isObjectiveRuleValueInBounds, isScreenFieldEditAllowed } from "./editor-fields.mjs?v=20261104-save2";
+import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261104-save2";
+import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261104-save2";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261104-save2";
 import {
   DEFAULT_CONSUMER_LIMIT,
   countConsumers,
@@ -39,10 +39,10 @@ import {
   skillRequest,
   spiritRequest, spiritCatalog, isSpiritLocked,
   pilotPairRequirement, syncPilotExpansionBudget,
-} from "./editor-skill-list.mjs?v=20261104-save1";
+} from "./editor-skill-list.mjs?v=20261104-save2";
 
-import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261104-save1";
-import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261104-save1";
+import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261104-save2";
+import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261104-save2";
 
 export const PRESET_FORMAT = "srwf.editor-preset";
 export const PRESET_VERSION = 1;
@@ -60,7 +60,7 @@ export const PRESET_STATUSES = Object.freeze(["apply", "conflict", "same", "skip
 export const PRESET_SKIP_REASONS = Object.freeze([
   "identity-missing", "identity-ambiguous", "missing", "alias", "read-only", "locked", "grade", "reward-total",
   "scenario-domain", "map-capacity",
-  "weapon-domain", "spirits-locked", "spirit-value", "spirit-capacity", "spirit-flag", "skills-locked", "skill-unknown", "skill-level", "skill-capacity", "skill-consumers", "skill-flag",
+  "weapon-domain", "screen-width", "spirits-locked", "spirit-value", "spirit-capacity", "spirit-flag", "skills-locked", "skill-unknown", "skill-level", "skill-capacity", "skill-consumers", "skill-flag",
 ]);
 export const PRESET_ERROR_CODES = Object.freeze([
   "PRESET_TOO_LARGE", "PRESET_NOT_JSON", "PRESET_WRONG_FORMAT", "PRESET_NEWER_VERSION", "PRESET_WRONG_VERSION",
@@ -459,6 +459,8 @@ function planField(kind, item, row, gameId, unitCount, objectiveContext) {
     ||item.field==='rewardSelector'&&!(item.to<48||item.to===255)))return skipItem(item,'scenario-domain');
   // a changed unit or pilot grade stays 0..4; a stored odd value may only be kept (the writer's rule)
   if (kind !== "weapon" && TERRAIN_DATA_ORDER.includes(item.field) && !isGradeEditAllowed(item.to, stored)) return skipItem(item, "grade");
+  // a changed number must fit the field the game prints it in (the writer's rule, editor-fields.mjs)
+  if (!isScreenFieldEditAllowed(kind, item.field, item.to, stored)) return skipItem(item, "screen-width");
   if (kind === "weapon" && item.to !== stored) {
     if (item.field === "ammo" && (stored === 0 || item.to < 1)) return skipItem(item, "weapon-domain");
     if (item.field === "requiredMorale" && item.to > 150) return skipItem(item, "weapon-domain");

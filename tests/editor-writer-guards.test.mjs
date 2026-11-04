@@ -58,7 +58,8 @@ const unitEdits = (rows, change = () => {}) => rows.map((row) => {
 
 test('unit writer: each field accepts exactly its range, and a value one past it is refused', () => {
   const { rows, bytes } = unitFixture();
-  const limits = [['hp', 65535], ['en', 65535], ['armor', 65535], ['speed', 65535], ['limit', 65535], ['move', 255],
+  // en, speed and limit are printed in three-digit screen fields (docs/EDITOR_FACTS.md "screen field widths")
+  const limits = [['hp', 65535], ['en', 999], ['armor', 65535], ['speed', 999], ['limit', 999], ['move', 255],
     ['ability1', 255], ['ability2', 255], ['ability3', 255], ['ability4', 255],
     ['abilityValue1', 255], ['abilityValue2', 255], ['abilityValue3', 255], ['abilityValue4', 255]];
   for (const [field, maximum] of limits) {
@@ -138,19 +139,19 @@ const weaponEdits = (rows, change = () => {}) => rows.map((row) => {
   return { recordIndex: row.recordIndex, fields };
 });
 
-test('weapon writer: the hit modifier is a signed byte -128..127, everything else keeps its own range', () => {
+test('weapon writer: the hit modifier is a signed byte, a changed one stays -99..99 (its screen field), everything else keeps its own range', () => {
   const { rows, bytes } = weaponFixture();
   const start = rows.find((row) => row.recordIndex === 1).byteOffset;
-  for (const [value, stored] of [[127, 0x7f], [-128, 0x80], [0, 0], [-1, 0xff]]) {
+  for (const [value, stored] of [[99, 0x63], [-99, 0x9d], [0, 0], [-1, 0xff]]) {
     const segment = bytes();
     updateWeaponRecords(segment, weaponEdits(rows, (id, fields) => { if (id === 1) fields.hit = value; }));
     assert.equal(segment[start + 7], stored, `hit ${value}`);
   }
-  for (const value of [128, 200, 255, -129, 1000]) {
+  for (const value of [100, 127, 128, 200, 255, -100, -128, -129, 1000]) {
     assert.throws(() => updateWeaponRecords(bytes(), weaponEdits(rows, (id, fields) => { if (id === 1) fields.hit = value; })),
       code('EDITOR_VALUE_OUT_OF_RANGE'), `hit ${value}`);
   }
-  for (const [field, maximum] of [['attack', 65535], ['critical', 15], ['minRange', 255], ['maxRange', 255], ['terrain', 255], ['energy', 65535]]) {
+  for (const [field, maximum] of [['attack', 9999], ['critical', 15], ['minRange', 255], ['maxRange', 255], ['terrain', 255], ['energy', 999]]) {
     updateWeaponRecords(bytes(), weaponEdits(rows, (id, fields) => { if (id === 1) fields[field] = maximum; }));
     assert.throws(() => updateWeaponRecords(bytes(), weaponEdits(rows, (id, fields) => { if (id === 1) fields[field] = maximum + 1; })),
       code('EDITOR_VALUE_OUT_OF_RANGE'), field);

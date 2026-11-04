@@ -1,14 +1,14 @@
-import { createSaveNameAuthority } from './save-name-support.mjs?v=20261104-save1';
-import { createSaveEditor } from './save-ui.mjs?v=20261104-save1';
+import { createSaveNameAuthority } from './save-name-support.mjs?v=20261104-save2';
+import { createSaveEditor } from './save-ui.mjs?v=20261104-save2';
 // The save editor reads the verified editor session; it is created once the page's elements exist.
 let saveEditor = null, saveNameAuthority = null;
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261104-save1';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261104-save1';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261104-save1";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261104-save1";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261104-save1";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261104-save1";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261104-save1";
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261104-save2';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261104-save2';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261104-save2";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261104-save2";
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261104-save2";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261104-save2";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261104-save2";
 import {
   canStep,
   filterRecords,
@@ -17,7 +17,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261104-save1";
+} from "./editor-list.mjs?v=20261104-save2";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -28,7 +28,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261104-save1";
+} from "./editor-grades.mjs?v=20261104-save2";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -62,27 +62,27 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261104-save1";
+} from "./editor-skill-list.mjs?v=20261104-save2";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261104-save1";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261104-save1";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261104-save1";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261104-save1";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261104-save1";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261104-save1";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261104-save1";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261104-save1";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261104-save1";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261104-save1";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261104-save1";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261104-save1";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261104-save1";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261104-save1";
+} from "./editor-facts.mjs?v=20261104-save2";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261104-save2";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261104-save2";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261104-save2";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261104-save2";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261104-save2";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261104-save2";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261104-save2";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261104-save2";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261104-save2";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261104-save2";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261104-save2";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261104-save2";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261104-save2";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -90,14 +90,14 @@ import {
   groupFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261104-save1";
+} from "./font-revisions.mjs?v=20261104-save2";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261104-save1";
+} from "./release-notes.mjs?v=20261104-save2";
 
-const STATIC_ASSET_REVISION = "20261104-save1";
+const STATIC_ASSET_REVISION = "20261104-save2";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -748,7 +748,8 @@ saveEditor = createSaveEditor(() => ({
   saveTitles: [],
   sessionToken: state.editorSessionToken,
   saveNameSupport: state.editorSaveNameSupport,
-}));
+  preview: requestSaveEditorPreview,
+}), { prepare: () => prepareWorkflow("save-editor") });
 elements.workflowOpenEditor.addEventListener("click", () => prepareWorkflow("editor"));
 elements.workflowSkipEditor.addEventListener("click", () => prepareWorkflow("save"));
 elements.workflowSaveButton.addEventListener("click", exportEditorImage);
@@ -1832,6 +1833,7 @@ function renderReleaseDetected(detected) {
 function navigateWorkflow(stage) {
   if (anyJobBusy()) return;
   if (stage !== "setup" && !state.editorSessionToken) return;
+  if (stage === "save-editor") { saveEditor.open(); return; }
   state.workflowStage = stage;
   state.editorSetupOpen = stage !== "editor";
   updateControls();
@@ -1851,7 +1853,7 @@ function prepareWorkflow(destination) {
     const rebuild = korean && (state.workflowBaseKind === "stock" || state.editorBaseReleaseId !== state.release.id);
     const restore = !korean && state.workflowBaseKind !== "stock";
     if (rebuild || restore) {
-      if (rebuild && destination === "editor" && !selectedReleaseEditable()) return;
+      if (rebuild && ["editor", "save-editor"].includes(destination) && !selectedReleaseEditable()) return;
       if (!confirmReplaceEditorSession()) return;
       state.workflowDestination = destination;
       startEditorJob("prepare");
@@ -1936,8 +1938,12 @@ function syncModeUi() {
     : !loaded ? "폴더를 고른 뒤 적용 여부를 선택하세요."
     : stock ? (korean ? editable ? "선택한 한글 패치를 적용한 뒤 편집하거나 바로 저장합니다." : "이전 승인 버전은 편집 없이 패치만 저장할 수 있습니다." : "한글 패치 없이 게임 데이터만 편집합니다.")
     : "이 파일의 언어와 기존 변경값을 유지합니다. 한글화 여부를 바꾸려면 정품 원본을 다시 여세요.";
-  elements.workflowOpenEditor.textContent = setupGameId === "srwf-final" ? "F완결편 에디터 열기" : "F 에디터 열기";
+  elements.workflowOpenEditor.textContent = setupGameId === "srwf-final" ? "F완결편 롬 에디터 열기" : "F 롬 에디터 열기";
   elements.workflowOpenEditor.disabled = !loaded || busy || !editable;
+  const saveEntry = byId("saveEditorOpen");
+  saveEntry.textContent = setupGameId === "srwf-final" ? "F완결편 세이브 데이터 열기" : "F 세이브 데이터 열기";
+  saveEntry.hidden = !loaded || pendingStock;
+  saveEntry.disabled = !loaded || busy;
   elements.workflowSkipEditor.disabled = !loaded || busy;
   elements.workflowSaveButton.disabled = !loaded || busy || state.editorDownloadUrls.length > 0;
   elements.workflowSaveButton.hidden = state.editorDownloadUrls.length > 0;
@@ -4180,9 +4186,11 @@ function handleEditorWorkerMessage(event) {
       typeLabel: state.editorSource.typeLabel,
       note,
     });
-    state.workflowStage = state.workflowDestination ?? "setup";
+    const openSaveEditor = state.workflowDestination === "save-editor";
+    state.workflowStage = openSaveEditor ? "setup" : state.workflowDestination ?? "setup";
     state.editorSetupOpen = state.workflowStage !== "editor";
     state.workflowDestination = null;
+    if (openSaveEditor) queueMicrotask(() => saveEditor.open());
     elements.editorWorkspace.hidden = false;
     elements.editorWorkspace.dataset.provenance = view.provenanceMode;
     elements.editorWorkspace.dataset.baseReleaseId = view.baseReleaseId;
@@ -4393,7 +4401,7 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_ECC_INTERNAL: ["섹터 검사값을 만들지 못했습니다", "수정본의 디스크 섹터 검사값을 계산하는 중 문제가 생겨 결과를 만들지 않았습니다."],
   EDITOR_DATA_MALFORMED: ["데이터 위치가 올바르지 않습니다", "디스크 안에서 데이터 위치를 확인할 수 없어 수정본을 만들지 않았습니다."],
   EDITOR_EDIT_INVALID: ["수정 요청을 받아들일 수 없습니다", "고친 내용이 현재 열린 데이터와 맞지 않거나 읽기 전용 레코드를 바꾸려 해서 수정본을 만들지 않았습니다. 읽기 전용 레코드는 목록에서 이유가 안내됩니다. 디스크를 다시 열어 처음부터 시도해 주세요."],
-  EDITOR_VALUE_OUT_OF_RANGE: ["허용 범위를 벗어난 값이 있습니다", "저장할 수 없는 크기의 값이 있어 수정본을 만들지 않았습니다. 지형 적응도는 A~E에 해당하는 0~4만 저장할 수 있고, 다른 칸도 칸마다 정해진 범위 안이어야 합니다. 값을 확인한 뒤 다시 시도해 주세요."],
+  EDITOR_VALUE_OUT_OF_RANGE: ["허용 범위를 벗어난 값이 있습니다", "저장할 수 없는 크기의 값이 있어 수정본을 만들지 않았습니다. 지형 적응도는 A~E에 해당하는 0~4만 저장할 수 있고, 게임 화면에 숫자로 나오는 칸은 그 칸 폭을 넘을 수 없습니다(EN·운동성·한계반응·소비 EN 999, 공격력 9999, 명중 보정 −99~99). 넘으면 게임이 멈추고 세이브가 지워질 수 있습니다. 다른 칸도 칸마다 정해진 범위 안이어야 합니다. 값을 확인한 뒤 다시 시도해 주세요."],
   EDITOR_PREVIEW_INVALID: ["그림을 불러오지 못했습니다", "선택한 항목의 그림 정보를 확인할 수 없습니다. 다른 항목을 골랐다가 다시 선택해 주세요."],
   EDITOR_OUTPUT_INTERNAL: ["만든 이미지 확인에 실패했습니다", "수정본을 다시 읽어 확인하는 단계에서 문제가 생겨 결과를 제공하지 않았습니다. 디스크를 다시 열어 처음부터 시도해 주세요."],
   EDITOR_SESSION_MISSING: ["에디터 세션이 만료되었습니다", "디스크를 다시 열어 주세요."],
@@ -7094,6 +7102,25 @@ function isCurrentEditorPreview(requests, message) {
   return (message.kind === "unit" || message.kind === "pilot")
     && typeof message.previewId === "string"
     && requests[message.kind] === message.previewId;
+}
+
+let savePreviewToken=null;
+const savePreviewCache=new Map();
+function requestSaveEditorPreview(kind,recordIndex,{heroFaceId}={}){
+  const token=state.editorSessionToken,worker=state.editorWorker;
+  if(!token||!worker)return Promise.reject(new Error('ROM 세션이 없습니다.'));
+  if(savePreviewToken!==token){savePreviewToken=token;savePreviewCache.clear();}
+  const key=`${kind}:${recordIndex}:${heroFaceId??''}`;if(savePreviewCache.has(key))return savePreviewCache.get(key);
+  const previewId=`save-preview-${++state.editorPreviewSequence}`;
+  const promise=new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{worker.removeEventListener('message',receive);savePreviewCache.delete(key);reject(new Error('그림을 읽지 못했습니다.'));},15000);
+    function receive(event){const m=event.data;if(m?.previewId!==previewId)return;
+      worker.removeEventListener('message',receive);clearTimeout(timer);
+      if(token!==state.editorSessionToken||m.type==='PREVIEW_ERROR'){savePreviewCache.delete(key);reject(new Error('그림을 읽지 못했습니다.'));return;}
+      resolve({...m,bounds:m.image?editorVisibleImageBounds(m.image):null});
+    }
+    worker.addEventListener('message',receive);worker.postMessage({type:'PREVIEW',previewId,sessionToken:token,kind,recordIndex,...heroFaceId===undefined?{}:{heroFaceId}});
+  });savePreviewCache.set(key,promise);if(savePreviewCache.size>80)savePreviewCache.delete(savePreviewCache.keys().next().value);return promise;
 }
 
 function requestEditorPreview(type, record) {

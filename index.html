@@ -15,10 +15,10 @@
       content="보유한 세가새턴판 슈퍼로봇대전 F·F 완결편 디스크 이미지를 기기 안에서 검증하고, 한글화 또는 게임 데이터 편집 후 BIN/CUE로 저장합니다."
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
-    <link rel="stylesheet" href="assets/style.css?v=20261104-save1&amp;theme=saturn1">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261104-save1&amp;theme=saturn-loading2">
-    <script type="module" src="assets/app.mjs?v=20261104-save1&webui=reference2"></script>
-    <script type="module" src="assets/user-guide.mjs?v=20261104-save1"></script>
+    <link rel="stylesheet" href="assets/style.css?v=20261104-save2&amp;theme=saturn1">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261104-save2&amp;theme=saturn-loading2">
+    <script type="module" src="assets/app.mjs?v=20261104-save2&webui=reference2"></script>
+    <script type="module" src="assets/user-guide.mjs?v=20261104-save2"></script>
   </head>
   <body data-mode="editor" data-view="setup" data-patch-settings="choose">
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -349,7 +349,8 @@
               <p class="editor-intro">
                 기체·파일럿·무기를 수정합니다.
               </p>
-              <button class="primary-button" type="button" id="workflowOpenEditor" disabled>F 에디터 열기</button>
+              <button class="primary-button" type="button" id="workflowOpenEditor" disabled>F 롬 에디터 열기</button>
+              <button class="primary-button" type="button" id="saveEditorOpen" aria-haspopup="dialog" aria-controls="saveEditorDialog" disabled hidden>F 세이브 데이터 열기</button>
               <p class="workflow-detected-summary" id="workflowDetectedSummary" hidden></p>
               <dl class="workflow-editor-facts" id="workflowEditorFacts" hidden aria-label="편집 가능한 데이터">
                 <div><dt>기체</dt><dd id="workflowUnitCount"></dd></div>
@@ -623,7 +624,7 @@
                       <h4>HP / EN</h4>
                       <div class="unit-vitals-grid">
                         <label class="unit-vital-row"><span class="editor-field-name">HP</span><input type="number" data-editor-field="hp" min="0" max="65535" step="1" inputmode="numeric"><span class="unit-runtime-gauge" aria-hidden="true"><span></span></span></label>
-                        <label class="unit-vital-row"><span class="editor-field-name">EN</span><input type="number" data-editor-field="en" min="0" max="65535" step="1" inputmode="numeric"><span class="unit-runtime-gauge" aria-hidden="true"><span></span></span></label>
+                        <label class="unit-vital-row"><span class="editor-field-name">EN</span><input type="number" data-editor-field="en" min="0" max="999" step="1" inputmode="numeric"><span class="unit-runtime-gauge" aria-hidden="true"><span></span></span></label>
                       </div>
                       <div class="unit-flag-grid is-stacked">
                         <label>실드<select data-editor-field="shield"></select></label>
@@ -634,9 +635,9 @@
                       <h4>기체능력</h4>
                       <div class="unit-core-grid">
                         <label>이동력<input type="number" data-editor-field="move" min="0" max="255" step="1" inputmode="numeric"></label>
-                        <label>운동성<input type="number" data-editor-field="speed" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>운동성<input type="number" data-editor-field="speed" min="0" max="999" step="1" inputmode="numeric"></label>
                         <label>장갑<input type="number" data-editor-field="armor" min="0" max="65535" step="1" inputmode="numeric"></label>
-                        <label>한계반응<input type="number" data-editor-field="limit" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>한계반응<input type="number" data-editor-field="limit" min="0" max="999" step="1" inputmode="numeric"></label>
                       </div>
                     </section>
                     <section class="game-panel unit-terrain-panel" data-editor-section="main" aria-label="기체 지형 적응도">
@@ -763,12 +764,12 @@
                     <section class="game-panel weapon-detail-panel" data-editor-section="main" aria-label="선택한 무기 수치">
                       <h4>무기 수치</h4>
                       <div class="weapon-detail-grid is-stacked">
-                        <label>공격력<input type="number" data-editor-field="attack" min="0" max="65535" step="1" inputmode="numeric"></label>
-                        <label>명중 보정<input type="number" data-editor-field="hit" min="-128" max="127" step="1" inputmode="numeric"></label>
+                        <label>공격력<input type="number" data-editor-field="attack" min="0" max="9999" step="1" inputmode="numeric"></label>
+                        <label>명중 보정<input type="number" data-editor-field="hit" min="-99" max="99" step="1" inputmode="numeric"></label>
                         <label>크리티컬<input type="number" data-editor-field="critical" min="0" max="15" step="1" inputmode="numeric"></label>
                         <label>최소 사거리<input type="number" data-editor-field="minRange" min="0" max="255" step="1" inputmode="numeric"></label>
                         <label>최대 사거리<input type="number" data-editor-field="maxRange" min="0" max="255" step="1" inputmode="numeric"></label>
-                        <label>소비 EN<input type="number" data-editor-field="energy" min="0" max="65535" step="1" inputmode="numeric"></label>
+                        <label>소비 EN<input type="number" data-editor-field="energy" min="0" max="999" step="1" inputmode="numeric"></label>
                         <label>탄수<input type="number" data-editor-field="ammo" min="1" max="255" step="1" inputmode="numeric"><output class="editor-field-info" hidden></output></label>
                         <label>필요 기력<input type="number" data-editor-field="requiredMorale" min="0" max="150" step="1" inputmode="numeric"></label>
                         <label>필요 기능<select data-editor-field="requiredSkill"></select></label>
@@ -791,7 +792,6 @@
                 <div class="editor-footer">
                   <button class="editor-status editor-changes-button" type="button" id="editorChangesButton" aria-haspopup="dialog" aria-controls="editorChangesDialog" title="바뀐 값 목록 보기"><span id="editorState">변경 없음</span></button>
                   <span class="sr-only" id="editorStateLive" role="status" aria-live="polite"></span>
-                  <button class="editor-status editor-changes-button" type="button" id="saveEditorOpen" aria-haspopup="dialog" aria-controls="saveEditorDialog" title="카트리지 세이브 파일 편집" disabled>세이브 편집</button>
                   <div class="editor-preset-file-actions" role="group" aria-label="편집값 파일">
                     <button class="editor-preset-file-button" type="button" id="editorPresetSaveButton" title="이번에 바꾼 값을 JSON 파일로 저장" aria-label="편집값 저장" disabled><span class="preset-long">편집값 저장</span><span class="preset-short" aria-hidden="true">값 저장</span></button>
                     <button class="editor-preset-file-button" type="button" id="editorPresetLoadButton" title="저장한 편집값 JSON 파일 불러오기" aria-label="편집값 불러오기" aria-haspopup="dialog" aria-controls="editorChangesDialog" disabled><span class="preset-long">편집값 불러오기</span><span class="preset-short" aria-hidden="true">값 불러오기</span></button>

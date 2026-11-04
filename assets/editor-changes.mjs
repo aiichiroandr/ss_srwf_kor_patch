@@ -1,5 +1,5 @@
-import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261104-save1';
-import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-save1';
+import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261104-save2';
+import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-save2';
 // The change list of the editor and its preset file: the button at the bottom of the editor (the change count) opens a
 // dialog that lists every changed record grouped by unit, pilot and weapon; an entry jumps to that record and field. The
 // footer saves the changes as a preset file (.json) and loads one: a loaded file is checked, judged against the open
@@ -12,8 +12,8 @@ import {
   gradeLabel,
   splitWeaponTerrain,
   weaponGradeLabel,
-} from "./editor-grades.mjs?v=20261104-save1";
-import { skillDiff } from "./editor-skill-list.mjs?v=20261104-save1";
+} from "./editor-grades.mjs?v=20261104-save2";
+import { skillDiff } from "./editor-skill-list.mjs?v=20261104-save2";
 import {
   PresetError,
   applyPreset,
@@ -25,7 +25,7 @@ import {
   presetChangeCount,
   presetFileName,
   serializePreset,
-} from "./editor-preset.mjs?v=20261104-save1";
+} from "./editor-preset.mjs?v=20261104-save2";
 
 export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"]);
 const KIND_HEADINGS = Object.freeze({ unit: "기체", pilot: "파일럿", weapon: "무기", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 증원", map: "맵 타일" });
@@ -63,6 +63,7 @@ export const SKIP_REASON_COPY = Object.freeze({
   locked: "게임 구조와 묶인 능력",
   grade: "지형 값이 범위를 벗어남",
   "weapon-domain": "무기의 사용 조건 범위를 벗어남",
+  "screen-width": "게임 화면 숫자 칸보다 큰 값",
   "spirits-locked": "정신커맨드를 바꿀 수 없는 파일럿",
   "spirit-value": "정신커맨드 번호·레벨·최소 개수 불일치",
   "spirit-capacity": "정신커맨드와 특수능력을 담을 자리 부족",

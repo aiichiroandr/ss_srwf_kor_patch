@@ -4,7 +4,7 @@
 //
 // Unit and pilot terrain grades are nibbles here (0..15, what the record can hold); the narrower rule for a CHANGED
 // grade (0..4) is isGradeEditAllowed in editor-grades.mjs, which the writers and the preset check share as well.
-import {isRegionRuleWireValue,decodeRegionRule} from './editor-scenario-region-context.mjs?v=20261104-save1';
+import {isRegionRuleWireValue,decodeRegionRule} from './editor-scenario-region-context.mjs?v=20261104-save2';
 const range = (minimum, maximum) => Object.freeze([minimum, maximum]);
 const BYTE = range(0, 0xff);
 const WORD = range(0, 0xffff);
@@ -80,6 +80,27 @@ export const EDITOR_FIELD_BOUNDS = Object.freeze({
   reinforcement: Object.freeze({enabled:range(0,1),templateOffset:range(56,262143),turn:range(2,99),x:range(0,63),y:range(0,63),rewardSelector:BYTE}),
   map: Object.freeze({ tileId: range(0, 1023) }),
 });
+
+// What the game's screens can print. The game writes these numbers right-aligned into fixed-width fields (text control
+// F8, 0x060157E8). The routine pads with (field width - digits) zeros and checks only for zero, so a number wider than
+// its field makes the count negative and the routine zero-fills memory: the screen goes black, the game stops and the
+// backup memory is overwritten (measured 2026-11-04 on the stock Final and on v0.3 c, docs/EDITOR_FACTS.md "screen field
+// widths"). The record can hold more than this; a CHANGED value must fit its field, a stored value may be kept as it is.
+export const EDITOR_SCREEN_FIELD_LIMITS = Object.freeze({
+  unit: Object.freeze({ en: range(0, 999), speed: range(0, 999), limit: range(0, 999) }),
+  weapon: Object.freeze({ attack: range(0, 9999), hit: range(-99, 99), energy: range(0, 999) }),
+});
+
+export function screenFieldLimit(kind, field) {
+  const table = Object.hasOwn(EDITOR_SCREEN_FIELD_LIMITS, kind) ? EDITOR_SCREEN_FIELD_LIMITS[kind] : null;
+  return table && typeof field === "string" && Object.hasOwn(table, field) ? table[field] : null;
+}
+
+export function isScreenFieldEditAllowed(kind, field, next, stored) {
+  const limit = screenFieldLimit(kind, field);
+  if (!limit || next === stored) return true;
+  return Number.isSafeInteger(next) && next >= limit[0] && next <= limit[1];
+}
 
 // Whether `value` may stand in `field` of a record of `kind` at all (an own entry of the table, an integer in range).
 export function isFieldValueInBounds(kind, field, value) {

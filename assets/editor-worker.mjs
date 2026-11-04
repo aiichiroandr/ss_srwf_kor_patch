@@ -2,7 +2,7 @@ import {
   exportEditedImage,
   inspectPatchedImage,
   previewEditorRecord,
-} from "./editor-core.mjs?v=20261104-save1";
+} from "./editor-core.mjs?v=20261104-save2";
 
 // The worker body takes its scope and the three core operations so that a test can drive it with a fake scope and fake
 // operations. The page's worker starts it below with the real ones.
@@ -51,7 +51,8 @@ export function createEditorWorker(scope, api) {
       if (!session || message.sessionToken !== session.sessionToken) {
         throw makeError("EDITOR_SESSION_MISSING", "The authenticated editor session is no longer available.");
       }
-      const result = await api.previewEditorRecord(session, message.kind, message.recordIndex);
+      const result = await api.previewEditorRecord(session, message.kind, message.recordIndex,
+        message.heroFaceId===undefined?{}:{heroFaceId:message.heroFaceId});
       if (editorSession !== session) {
         throw makeError("EDITOR_SESSION_MISSING", "The authenticated editor session is no longer available.");
       }

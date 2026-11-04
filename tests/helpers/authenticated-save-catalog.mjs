@@ -1,7 +1,7 @@
 import {makeBase,trustFor,descriptorFor} from './synthetic-game.mjs';
 import {createEditorInspector} from '../../assets/editor-core.mjs';
 // Keep exactly the shipped query URL: permissions are intentionally per module.
-import {createSaveNameAuthority} from '../../assets/save-name-support.mjs?v=20261104-save1';
+import {createSaveNameAuthority} from '../../assets/save-name-support.mjs?v=20261104-save2';
 const bases=new Map();
 async function inspected(gameId,stock){
  if(!bases.has(gameId))bases.set(gameId,makeBase({gameId}));

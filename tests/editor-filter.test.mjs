@@ -53,8 +53,8 @@ test("malformed filters fail closed and bulk choices expose scalar fields only",
   assert.equal(filterFields("pilot", { editableOnly: true }).some(field => ["ability", "spirit"].includes(field.key)), false);
   assert.equal(isValidBulkValue("weapon", "ammo", 0), false);
   assert.equal(isValidBulkValue("weapon", "requiredMorale", 151), false);
-  assert.equal(isValidBulkValue("weapon", "hit", -128), true);
-  assert.equal(isValidBulkValue("weapon", "hit", -129), false);
+  assert.equal(isValidBulkValue("weapon", "hit", -99), true);
+  assert.equal(isValidBulkValue("weapon", "hit", -100), false);
 });
 test("a batch snapshots all targets, skips read-only and equal values, and undo returns to pre-edited values", () => {
   const rows = [unit(1), unit(2, { space: 2 }), unit(3, { editable: false }), unit(4, { space: 4 })];

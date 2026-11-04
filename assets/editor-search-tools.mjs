@@ -1,10 +1,10 @@
-import { filterFields, filterField, gradeChoices, gradeText, filterValue, isValidCondition, matchesConditions, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit, MAX_EDITOR_CONDITIONS } from "./editor-filter.mjs?v=20261104-save1";
-import { packMeasuredGroups } from "./editor-layout.mjs?v=20261104-save1";
+import { filterFields, filterField, gradeChoices, gradeText, filterValue, isValidCondition, matchesConditions, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit, MAX_EDITOR_CONDITIONS } from "./editor-filter.mjs?v=20261104-save2";
+import { packMeasuredGroups } from "./editor-layout.mjs?v=20261104-save2";
 
 const KINDS = ["unit", "pilot", "weapon"];
 const NOUNS = { unit: "기체", pilot: "파일럿", weapon: "무기" };
 const OPERATORS = { eq: "=", gte: "≥", lte: "≤", has: "보유", lacks: "없음" };
-const REASONS = { "read-only": "읽기 전용", alias: "공유 레코드", missing: "값 확인 불가", grade: "지형 범위", "weapon-domain": "탄수·기력 제한" };
+const REASONS = { "read-only": "읽기 전용", alias: "공유 레코드", missing: "값 확인 불가", grade: "지형 범위", "weapon-domain": "탄수·기력 제한", "screen-width": "화면 칸 폭 제한" };
 const node = (tag, cls, text) => { const el = document.createElement(tag); if (cls) el.className = cls; if (text !== undefined) el.textContent = text; return el; };
 const button = (text, action, cls = "") => { const el = node("button", cls, text); el.type = "button"; el.addEventListener("click", action); return el; };
 const option = (select, value, label) => { const el = node("option", null, label); el.value = String(value); select.append(el); };

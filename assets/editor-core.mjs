@@ -1,30 +1,30 @@
-import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261104-save1';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261104-save1';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261104-save1';
-import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261104-save1";
-import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261104-save1";
-import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261104-save1";
-import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261104-save1";
-import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261104-save1";
-import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261104-save1";
-import { Sha256 } from "./sha256.mjs?v=20261104-save1";
-import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261104-save1";
-import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261104-save1";
-import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261104-save1";
-import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261104-save1";
-import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261104-save1";
-import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261104-save1";
-import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261104-save1";
-import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261104-save1";
-import { EDITOR_FIELD_BOUNDS } from "./editor-fields.mjs?v=20261104-save1";
-import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261104-save1";
-import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261104-save1";
-import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261104-save1";
-import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261104-save1";
-import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261104-save1";
-import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261104-save1";
-import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261104-save1";
-import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261104-save1";
+import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261104-save2';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261104-save2';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261104-save2';
+import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261104-save2";
+import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261104-save2";
+import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261104-save2";
+import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261104-save2";
+import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261104-save2";
+import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261104-save2";
+import { Sha256 } from "./sha256.mjs?v=20261104-save2";
+import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261104-save2";
+import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261104-save2";
+import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261104-save2";
+import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261104-save2";
+import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261104-save2";
+import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261104-save2";
+import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261104-save2";
+import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261104-save2";
+import { EDITOR_FIELD_BOUNDS, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261104-save2";
+import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261104-save2";
+import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261104-save2";
+import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261104-save2";
+import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261104-save2";
+import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261104-save2";
+import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261104-save2";
+import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261104-save2";
+import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261104-save2";
 
 const SECTOR_SIZE = 2352;
 const SECTOR_USER_OFFSET = 16;
@@ -2130,7 +2130,7 @@ export function applyImageReferences(rows, root, kind, gameId) {
   }
 }
 
-export async function previewEditorRecord(session, kind, recordIndex, { signal } = {}) {
+export async function previewEditorRecord(session, kind, recordIndex, { signal, heroFaceId } = {}) {
   if (!session || typeof session.sessionToken !== "string") {
     fail("EDITOR_SESSION_MISSING", "The authenticated editor session is no longer available.");
   }
@@ -2139,13 +2139,22 @@ export async function previewEditorRecord(session, kind, recordIndex, { signal }
   }
   const file = kind === "unit" ? session.mediaFiles.robot : session.mediaFiles.face;
   const table = imageRecordTable(session.root, kind);
-  const sourceIndex = imageIndexOf(table, kind, recordIndex, session.descriptor.gameId);
+  let sourceIndex = imageIndexOf(table, kind, recordIndex, session.descriptor.gameId);
+  // A save names the hero's face itself (save editor); the disc's own number for the hero slot is not that face.
+  if(heroFaceId!==undefined){
+    const count=ownEntry(ownEntry(EDITOR_IMAGE_COUNTS,session.descriptor.gameId),'pilot');
+    if(kind!=='pilot'||![302,303].includes(recordIndex)||!Number.isSafeInteger(count)
+      ||!Number.isSafeInteger(heroFaceId)||heroFaceId<0||heroFaceId>=count)
+      fail('EDITOR_PREVIEW_INVALID','The saved hero portrait is outside the authenticated FACE table.');
+    if(heroFaceId===0)return Object.freeze({kind,recordIndex,image:null,imageSource:'save'});
+    sourceIndex=heroFaceId;
+  }
   const referenceIndex = sourceIndex === null ? referencePortraitOf(table, kind, recordIndex, session.descriptor.gameId) : null;
   const imageIndex = sourceIndex ?? referenceIndex;
   if (imageIndex === null) return Object.freeze({ kind, recordIndex, image: null });
   const bytes = await readMode1UserExtent(session.sourceBlob, file.extentLba, file.byteLength, { signal });
   const image = decodeImageRecord(bytes, imageIndex);
-  return Object.freeze({ kind, recordIndex, image, imageSource: referenceIndex === null ? "record" : "reference" });
+  return Object.freeze({ kind, recordIndex, image, imageSource: heroFaceId!==undefined?'save':referenceIndex === null ? "record" : "reference" });
 }
 
 // The request lists of the three writers are read the same way: an array with exactly one entry per authenticated
@@ -2223,6 +2232,17 @@ function requireGradeDomain(values, storedWord, label, recordIndex) {
   }
 }
 
+// A changed number must fit the field the game prints it in (editor-fields.mjs EDITOR_SCREEN_FIELD_LIMITS); a wider
+// number stops the game on a black screen and overwrites the backup memory. A stored value may be echoed unchanged.
+function requireScreenFieldWidth(kind, label, recordIndex, values, stored) {
+  for (const [field, value] of Object.entries(stored)) {
+    if (isScreenFieldEditAllowed(kind, field, values[field], value)) continue;
+    const [minimum, maximum] = screenFieldLimit(kind, field);
+    fail("EDITOR_VALUE_OUT_OF_RANGE", `${label} #${recordIndex} ${field} must be an integer from ${minimum} to ${maximum} (the width of its field on the game screen).`,
+      { details: { kind, recordIndex, field, reason: "screen-field-width", minimum, maximum } });
+  }
+}
+
 // The structural abilities of a unit stay as they are (editor-locks.mjs): an edit that adds one, removes one, changes the
 // id or the condition flag number of one, moves one to another slot or hides one behind an empty slot is refused. The
 // check reads the unit as it is stored, before anything of this edit is written.
@@ -2261,6 +2281,8 @@ function writeUnitEdits(segment, edits, readOnly, offsets, records) {
     const lockedReason = readOnly.get(recordIndex) ?? null;
     const before = lockedReason ? segment.slice(start, start + 48) : null;
     requireGradeDomain(values, readU16BE(segment, start + 26), "Unit", recordIndex);
+    requireScreenFieldWidth("unit", "Unit", recordIndex, values,
+      { en: readU16BE(segment, start + 34), speed: readU16BE(segment, start + 30), limit: readU16BE(segment, start + 32) });
     requireUnitAbilityLock(segment, start, values, recordIndex);
     writeU16BE(segment, start + 36, values.hp);
     writeU16BE(segment, start + 34, values.en);
@@ -2290,6 +2312,11 @@ function writeUnitEdits(segment, edits, readOnly, offsets, records) {
 // changes only to 0..150; a required skill only to an id of WEAPON_REQUIRED_SKILL_EDIT_IDS of this game (without a known game
 // it cannot change). (A read-only record refuses every change anyway, with its own reason.)
 function requireWeaponDomain(segment, start, values, recordIndex, gameId) {
+  requireScreenFieldWidth("weapon", "Weapon", recordIndex, values, {
+    attack: readU16BE(segment, start + 5),
+    hit: segment[start + 7] << 24 >> 24,
+    energy: readU16BE(segment, start + 13),
+  });
   const storedAmmo = segment[start + WEAPON_AMMO_OFFSET];
   if (values.ammo !== storedAmmo) {
     if (storedAmmo === 0) {
@@ -2853,7 +2880,7 @@ async function createProfile(trust, session, options = {}) {
   rawMasks.push([file.recordLba * SECTOR_SIZE + MODE1_EDC_OFFSET, SECTOR_SIZE - MODE1_EDC_OFFSET, 255]);
   rawMasks.sort((a, b) => a[0] - b[0]);
   const scenario = session.scenario;
-  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261104-save1') : null;
+  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261104-save2') : null;
   const completeRawMasks = scenario ? scenarioModule.mergeFullByteMasks([...rawMasks,
     ...scenarioModule.scenarioRawMasks(scenario.files, scenario.inspected)]) : rawMasks;
   const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId);
@@ -3258,7 +3285,7 @@ function scenarioFileIdentity(files) {
 }
 
 async function inspectDiscScenario(trust, blob, actualHash, gameId, files, units, pilots, signal) {
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261104-save1');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261104-save2');
   const identity = scenarioFileIdentity(files), target = ownEntry(trust.targets, actualHash);
   let scenarioLayout;
   if (target) scenarioLayout = target.kind === 'stock' ? 'stock' : 'latest';
@@ -3747,7 +3774,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
   if (session.scenario && (deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || mapEdits.length)) {
     const current = session.scenario, gameId = session.descriptor.gameId;
     const [{ repackScenarioDeployments }, { repackMapTiles }] = await Promise.all([
-      import('./editor-deployments.mjs?v=20261104-save1'), import('./editor-map-archive.mjs?v=20261104-save1'),
+      import('./editor-deployments.mjs?v=20261104-save2'), import('./editor-map-archive.mjs?v=20261104-save2'),
     ]);
     [scenarioChange, mapChange] = await Promise.all([
       deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length ? repackScenarioDeployments(current.scenarioBytes, gameId, current.inspected.maps, current.tables,
@@ -3792,7 +3819,7 @@ export async function exportEditedImage(session, request, { signal, onProgress, 
     outputBlob = result.outputBlob; changedSectors.push(...result.changedSectors);
   }
   bytesChanged += new Set(changedSectors).size * SECTOR_SIZE;
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261104-save1');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261104-save2');
   const checked = inspectScenarioScopes({ gameId: session.descriptor.gameId,
     scenarioBytes: scenarioChange?.bytes ?? current.scenarioBytes, mapBytes: mapChange?.bytes ?? current.mapBytes,
     bankBytes: current.bankBytes, tables: current.tables, sectorMode: current.inspected.scope.scenario.sectorMode,

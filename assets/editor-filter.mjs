@@ -1,8 +1,8 @@
 // Conditions inspect the current editor rows. Bulk edits use the preset planner's writer-domain checks;
 // no second binary writer and no game data. Unit/pilot and weapon grade encodings remain distinct.
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds } from "./editor-fields.mjs?v=20261104-save1";
-import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261104-save1";
-import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261104-save1";
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261104-save2";
+import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261104-save2";
+import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261104-save2";
 
 const TYPES = ["unit", "pilot", "weapon"];
 const TABLES = { unit: "units", pilot: "pilots", weapon: "weapons" };
@@ -79,6 +79,7 @@ export function isValidBulkValue(kind, key, value) {
   if (!field?.editable) return false;
   if (field.type === "grade") return gradeChoices(kind).some(choice => choice.value === value);
   if (!isFieldValueInBounds(kind, key, value)) return false;
+  if (screenFieldLimit(kind, key) && !isScreenFieldEditAllowed(kind, key, value)) return false;
   // The same changed-value limits as the writer and the preset planner, before making a plan.
   if (kind === "weapon" && key === "requiredMorale") return value <= 150;
   if (kind === "weapon" && key === "ammo") return value >= 1;
