@@ -56,7 +56,7 @@ python3 scripts/build_site.py build --root . \
 python3 scripts/build_site.py verify --root . \
   --lock build/site-review/reviewed-01.json \
   --out build/pages-reviewed-01
-node --test tests/pages-site.test.mjs
+node scripts/run-node-tests.cjs tests/pages-site.test.mjs
 ```
 
 `--copy auto` uses APFS clone on macOS, otherwise independent streaming copies.

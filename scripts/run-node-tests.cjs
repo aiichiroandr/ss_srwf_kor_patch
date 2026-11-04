@@ -5,8 +5,9 @@ const {readdirSync}=require('node:fs');
 const {spawn}=require('node:child_process');
 const {resolve}=require('node:path');
 const root=resolve(__dirname,'..');
-const files=readdirSync(resolve(root,'tests')).filter(name=>/\.test\.(?:mjs|cjs|js)$/.test(name))
-  .sort().map(name=>`tests/${name}`);
+// Optional arguments name single test files; without them every public test runs.
+const files=process.argv.length>2?process.argv.slice(2):readdirSync(resolve(root,'tests'))
+  .filter(name=>/\.test\.(?:mjs|cjs|js)$/.test(name)).sort().map(name=>`tests/${name}`);
 if(!files.length)throw Error('No public Node tests found.');
 const jitFlags=Number(process.versions.node.split('.')[0])===23?['--no-maglev']:[];
 const child=spawn(process.execPath,[...jitFlags,'--test','--test-concurrency=4',...files],{cwd:root,stdio:'inherit'});

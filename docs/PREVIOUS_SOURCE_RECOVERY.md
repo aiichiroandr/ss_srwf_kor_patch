@@ -61,7 +61,7 @@ config와 도구의 고정 fingerprint를 함께 수동 검토해야 합니다. 
 
 ```sh
 python3 -B tests/test_recovery_site.py -v
-node --test tests/pages-recovery.test.mjs
+node scripts/run-node-tests.cjs tests/pages-recovery.test.mjs
 ```
 
 테스트는 작은 합성 파일로 새 파일·변조·누락·심볼릭 링크·payload 하드링크·
