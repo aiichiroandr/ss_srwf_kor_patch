@@ -3744,4 +3744,4 @@ html.is-patch-notes-open, html.is-patch-image-open { overflow: hidden; }
 }
 
 /* Shared F / Final editor launcher. */
-#workflowOpenEditor{display:flex;align-items:center;justify-content:center;text-align:center}
+#workflowOpenEditor,#saveEditorOpen{display:flex;align-items:center;justify-content:center;text-align:center}
