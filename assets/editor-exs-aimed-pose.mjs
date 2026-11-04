@@ -1,9 +1,9 @@
 // Losslessly fit two Ex-S poses in the original 0x3000-byte combatant slot.
 // Cropping changes the pivot by the identical amount, so every visible source
 // pixel keeps its world position. Only the unused part 4 receives the new pose.
-import {Sha256} from './sha256.mjs?v=20261104-part1';
-import {applyBattleArtPatch} from './editor-art-patch.mjs?v=20261104-part1';
-import {EXS_AIMED_ART_V16} from './editor-exs-aimed-art.mjs?v=20261104-part1';
+import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {applyBattleArtPatch} from './editor-art-patch.mjs?v=20261105-part2';
+import {EXS_AIMED_ART_V16} from './editor-exs-aimed-art.mjs?v=20261105-part2';
 const hash=b=>new Sha256().update(b).hex();
 function invalid(message){const e=new Error(message);e.code='EDITOR_BATTLE_COMPONENT_INVALID';throw e;}
 const nibble=(pixels,at)=>(pixels[at>>1]>>(at&1?0:4))&15;

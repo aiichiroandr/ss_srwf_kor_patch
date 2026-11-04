@@ -96,7 +96,9 @@ a.e(0x2f66);a.e(0x2f26);a.mov(6,4);a.call('fillSP');a.e(0x62f6);a.e(0x66f6)
 a.mov(12,1);a.addi(1,9);a.load(1,0,1);a.mov(2,1);a.addi(1,9);a.store(0,1,1)
 a.mark('attach');a.mov(2,1);a.addi(1,8);a.imm(0,-1);a.store(0,1,1);a.mov(14,1);a.add(6,1);a.load(1,0,1);a.e(0xcb04);a.store(0,1,1);a.mov(10,1);a.addi(1,8);a.store(6,1,1)
 a.mark('primarynext');a.addi(8,12);a.addi(9,1);a.imm(3,127);a.e(0x3936);a.cond('bf','primary')
-a.mark('done');a.addi(15,127);a.addi(15,1);a.mov(13,0);a.test(0,0);a.cond('bt','actorreturn');a.lit(0,'replayPilot');a.bra('restore');a.mark('actorreturn');a.lit(0,'replayActor')
+# Release the 128-byte frame in two aligned halves: an odd R15 between the
+# adds lets an interrupt stack onto an odd address (SH-2 address error hang).
+a.mark('done');a.addi(15,64);a.addi(15,64);a.mov(13,0);a.test(0,0);a.cond('bt','actorreturn');a.lit(0,'replayPilot');a.bra('restore');a.mark('actorreturn');a.lit(0,'replayActor')
 a.mark('restore');a.e(0x61f6);a.e(0x410e);a.e(0x4f16);a.e(0x4f06);a.e(0x4f26)
 for r in range(14,0,-1):a.e(0x60f6|r<<8)
 a.e(0x402b);a.e(9)

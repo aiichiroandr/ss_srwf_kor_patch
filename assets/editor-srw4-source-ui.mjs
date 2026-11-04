@@ -1,5 +1,5 @@
-import {alicePortrait} from './editor-alice.mjs?v=20261104-part1';
-import {decodeMapIcon} from './editor-map-icons.mjs?v=20261104-part1';
+import {alicePortrait} from './editor-alice.mjs?v=20261105-part2';
+import {decodeMapIcon} from './editor-map-icons.mjs?v=20261105-part2';
 const LABELS = {'s-gundam':'S건담','exs-gundam':'Ex-S건담',sirbine:'서바인',zwauss:'즈와우스','blood-temple':'블러드 템플','s-gcruiser':'S G크루저','exs-gcruiser':'Ex-S G크루저'};
 const node = (tag, text, className) => { const n=document.createElement(tag); if(text!==undefined)n.textContent=text; if(className)n.className=className; return n; };
 

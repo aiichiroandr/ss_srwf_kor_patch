@@ -3,12 +3,12 @@
 // only after checking the copied immutable header against its real donor.
 // The empty-record bytes are never carried here: they are recognized by hash
 // and copied back from another untouched empty record of the user's own table.
-import {ownData,readDenseList} from './editor-own.mjs?v=20261104-part1';
-import {isWeaponRequiredSkillEditable} from './editor-facts.mjs?v=20261104-part1';
-import {requireTsrInspectionSize,requireTsrRuntimeSize} from './editor-storage-safety.mjs?v=20261104-part1';
-import {editorTextMetrics} from './editor-text-codec.mjs?v=20261104-part1';
-import {sha256Hex} from './sha256.mjs?v=20261104-part1';
-import {screenFieldLimit} from './editor-fields.mjs?v=20261104-part1';
+import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
+import {isWeaponRequiredSkillEditable} from './editor-facts.mjs?v=20261105-part2';
+import {requireTsrInspectionSize,requireTsrRuntimeSize} from './editor-storage-safety.mjs?v=20261105-part2';
+import {editorTextMetrics} from './editor-text-codec.mjs?v=20261105-part2';
+import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {screenFieldLimit} from './editor-fields.mjs?v=20261105-part2';
 const MAGIC='SRWCPY01',FOOTER=16;
 const PROFILES=Object.freeze({
  'srwf-f':Object.freeze({count:1280,first:1248,last:1278,preimageSha256:'2d9a86b0e10e3fef37668ed02a62145a65b4769af32d8d6f7e961c23141ec85e'}),

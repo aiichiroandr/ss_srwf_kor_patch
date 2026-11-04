@@ -1,9 +1,9 @@
 // Session-supplied map icons only. No original or extracted sprite is shipped.
 // This planner operates on the decoded KOM bank. The caller must independently
 // preserve the original compression stream and enforce its fixed packed span.
-import {sha256Hex} from './sha256.mjs?v=20261104-part1';
-import {ownData,ownEntry,readDenseList} from './editor-own.mjs?v=20261104-part1';
-import {SRW4_ASSET_KEYS} from './editor-srw4-rom.mjs?v=20261104-part1';
+import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {ownData,ownEntry,readDenseList} from './editor-own.mjs?v=20261105-part2';
+import {SRW4_ASSET_KEYS} from './editor-srw4-rom.mjs?v=20261105-part2';
 
 export const MAP_ICON_PATCH_BYTES=128+512*128;
 export const MAP_ICON_PATCH_TRANSFORM_REVISION='srw4-native-map-icons-v1';

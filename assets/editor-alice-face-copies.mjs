@@ -1,6 +1,6 @@
 // Exact legacy FACE mirrors used by dictionary/save/detail portrait paths.
 // The ordinary root-2 table is not their source after FACE.BIN is repacked.
-import {ALICE_ART} from './editor-alice-art.mjs?v=20261104-part1';
+import {ALICE_ART} from './editor-alice-art.mjs?v=20261105-part2';
 export const ALICE_FACE_COPIES=Object.freeze([{id:101,at:0x6bbf8},{id:317,at:0x6bce4},{id:318,at:0x6bcec}].map(Object.freeze));
 const END=0x6bcf4,BIT=8,header=Uint8Array.from(atob(ALICE_ART.faceHeader),c=>c.charCodeAt(0));
 const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength),same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);

@@ -1,6 +1,6 @@
 // Authored pixel replacements carry only source fingerprints. Original pixels
 // are read from the authenticated user's archive, never bundled in this module.
-import {Sha256} from './sha256.mjs?v=20261104-part1';
+import {Sha256} from './sha256.mjs?v=20261105-part2';
 const hash=bytes=>new Sha256().update(bytes).hex();
 const sha=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);
 function invalid(message){const error=new Error(message);error.code='EDITOR_BATTLE_COMPONENT_INVALID';throw error;}

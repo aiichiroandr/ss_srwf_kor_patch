@@ -5,7 +5,7 @@
 // Original values cannot be recovered, so a repair never invents them.
 // Money is also an error: 10,000,000 or more is wider than its field in the load
 // list and stops the game (save-field-rules.mjs); the repair lowers it to 9,999,999.
-import { SAVE_MONEY_SCREEN_MAX } from './save-field-rules.mjs?v=20261104-part1';
+import { SAVE_MONEY_SCREEN_MAX } from './save-field-rules.mjs?v=20261105-part2';
 const UNIT_BASE = 0x100, UNIT_SIZE = 30, PILOT_BASE = 0x1000, PILOT_SIZE = 12, SLOTS = 128, NONE = 255, PART_MAX = 22;
 const UPGRADES = Object.freeze({hpUpgrade:[3,7,'HP'],enUpgrade:[4,11,'EN'],armorUpgrade:[4,7,'장갑'],limitUpgrade:[5,11,'한계'],mobilityUpgrade:[5,7,'운동성']});
 const u16 = (b,p) => b[p]*256+b[p+1];

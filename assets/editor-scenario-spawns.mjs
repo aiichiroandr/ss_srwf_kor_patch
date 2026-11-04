@@ -1,13 +1,13 @@
 // SP04 production writes require the exact source profile and local candidate
 // exclusions; the standalone byte codec never grants those permissions.
-import { ownData } from './editor-own.mjs?v=20261104-part1';
-import { readDenseList } from './editor-own.mjs?v=20261104-part1';
-import { compilePendingAllyReinforcementProgram } from './editor-scenario-reinforcement-program.mjs?v=20261104-part1';
-import { readReinforcementPairOptions } from './editor-scenario-reinforcement-pairs.mjs?v=20261104-part1';
-import { regionContextFor, regionContextOf, regionContextDigest } from './editor-scenario-region-context.mjs?v=20261104-part1';
-import { sha256Hex } from './sha256.mjs?v=20261104-part1';
-import {inspectReinforcementSourceProfile,readScenarioReinforcementCandidates,reinforcementSourceCapacity} from './editor-scenario-reinforcement-profile.mjs?v=20261104-part1';
-import { EDITOR_SPAWN_CAPACITY_INFO } from './editor-spawn-capacity.mjs?v=20261104-part1';
+import { ownData } from './editor-own.mjs?v=20261105-part2';
+import { readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { compilePendingAllyReinforcementProgram } from './editor-scenario-reinforcement-program.mjs?v=20261105-part2';
+import { readReinforcementPairOptions } from './editor-scenario-reinforcement-pairs.mjs?v=20261105-part2';
+import { regionContextFor, regionContextOf, regionContextDigest } from './editor-scenario-region-context.mjs?v=20261105-part2';
+import { sha256Hex } from './sha256.mjs?v=20261105-part2';
+import {inspectReinforcementSourceProfile,readScenarioReinforcementCandidates,reinforcementSourceCapacity} from './editor-scenario-reinforcement-profile.mjs?v=20261105-part2';
+import { EDITOR_SPAWN_CAPACITY_INFO } from './editor-spawn-capacity.mjs?v=20261105-part2';
 const MAGIC=Uint8Array.of(83,82,87,70,83,80,48,49),TRAILER=32;
 const OLD_CODEC_MAGIC=Uint8Array.of(83,82,87,70,83,80,48,50),OLD_CODEC_TRAILER=160;
 const PREVIOUS_CODEC_MAGIC=Uint8Array.of(83,82,87,70,83,80,48,51);

@@ -1,14 +1,14 @@
-import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261104-part1';
+import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261105-part2';
 // Remaining artwork is real. Numeric headers are explicit clones; new weapon
 // configurations use reviewed existing records, never recovered original specs.
-import {F_NAME_MAP,FINAL_NAME_MAP} from './editor-name-map.mjs?v=20261104-part1';
-import {F_NAME_SUPPLEMENT} from './editor-pilot-name-map.mjs?v=20261104-part1';
-import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261104-part1';
-import {ownData,readDenseList} from './editor-own.mjs?v=20261104-part1';
-import {sha256Hex} from './sha256.mjs?v=20261104-part1';
-import {requireTsrInspectionSize,writeRelative32,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261104-part1';
+import {F_NAME_MAP,FINAL_NAME_MAP} from './editor-name-map.mjs?v=20261105-part2';
+import {F_NAME_SUPPLEMENT} from './editor-pilot-name-map.mjs?v=20261105-part2';
+import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261105-part2';
+import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
+import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {requireTsrInspectionSize,writeRelative32,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261105-part2';
 
-import {UNUSED_UNIT_PRESETS,unitConstructionWeapons,unitConstructionLoadout,writeUnitConcept,writeSSeparatedStructure,cruiserRole,requireAircraftGraphicCompatibility,writeExSCruiserStructure} from './editor-unit-construction.mjs?v=20261104-part1';
+import {UNUSED_UNIT_PRESETS,unitConstructionWeapons,unitConstructionLoadout,writeUnitConcept,writeSSeparatedStructure,cruiserRole,requireAircraftGraphicCompatibility,writeExSCruiserStructure} from './editor-unit-construction.mjs?v=20261105-part2';
 export {UNUSED_UNIT_PRESETS};
 const MAGIC=0x53525531,COMPACT_MAGIC=0x5332,align=n=>Math.ceil(n/4)*4;
 const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);

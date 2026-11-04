@@ -1,4 +1,4 @@
-import {canonicalAfterDialogueJson,readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261104-part1';
+import {canonicalAfterDialogueJson,readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261105-part2';
 const originalText=row=>row.original?.text??row.originalText??'';
 const originalSpeaker=row=>row.original?.speakerId??row.originalSpeakerId??row.speakerId;
 const textUnchanged=row=>row.text===originalText(row)&&(row.pagesJson??'')===(row.original?.pagesJson??'');

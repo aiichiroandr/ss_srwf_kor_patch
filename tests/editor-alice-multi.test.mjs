@@ -17,6 +17,18 @@ test('legacy multi BIN remains readable and the next save upgrades every crew ca
  assert.deepEqual(slot.slice(32),live);
  assert.ok(ALICE_CREW_NATIVE.callSites.every(s=>new DataView(next.exec.buffer).getUint32(s.offset)>=0x06003320));
 });
+test('crew frame release keeps R15 aligned and pre-fix odd-SP installs are read then rewritten',()=>{
+ const code=aliceCrewCode(crew.unitIds),c=new DataView(code.buffer),words=[];
+ for(let at=ALICE_CREW_NATIVE.runtimePrefixBytes;at<ALICE_CREW_NATIVE.codeBytes;at+=2)words.push(c.getUint16(at));
+ assert.deepEqual(words.filter(w=>(w&0xff00)===0x7f00&&(w&3)),[]);
+ const ip=new Uint8Array(0x1800),exe=new Uint8Array(ALICE_CREW_NATIVE.execBytes),v=new DataView(exe.buffer);
+ for(const site of ALICE_CREW_NATIVE.callSites)v.setUint32(site.offset,site.next);
+ const old=code.slice();old.set([0x7f,0x7f,0x7f,0x01],ALICE_CREW_NATIVE.runtimePrefixBytes+357*2);ip.set(old,ALICE_CREW_NATIVE.ipOffset);
+ const read=normalizeAliceCrewNative(ip,exe);assert.equal(read.version,4);assert.equal(read.oddSp,true);assert.deepEqual(read.unitIds,crew.unitIds);
+ const next=applyAliceCrewNative(ip,exe,{gameId:'srwf-final',baseSha256:ALICE_ART.baseSha256,enabled:true,unitIds:crew.unitIds});
+ assert.deepEqual(next.ip.slice(ALICE_CREW_NATIVE.ipOffset,ALICE_CREW_NATIVE.ipOffset+1024),code);
+ assert.equal(normalizeAliceCrewNative(next.ip,next.exec).oddSp,false);
+});
 test('safe overlay matches the authored assembler with no executable instructions in startup scratch',async()=>{
  const {mkdtemp,readFile,rm}=await import('node:fs/promises'),{tmpdir}=await import('node:os'),{join}=await import('node:path'),{execFileSync}=await import('node:child_process');
  const out=await mkdtemp(join(tmpdir(),'alice-safe-code-'));

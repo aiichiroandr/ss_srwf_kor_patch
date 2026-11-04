@@ -1,8 +1,8 @@
 // The artwork remains on the user's disc. Specifications start from a known
 // unit in that same session; these are not recovered original unused specs.
-import {UNIT_WEAPON_FIELDS,unitWeaponFields,planUnitWeaponAdditions} from './editor-loadout.mjs?v=20261104-part1';
-import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261104-part1';
-import {unitAbilityLocks} from './editor-locks.mjs?v=20261104-part1';
+import {UNIT_WEAPON_FIELDS,unitWeaponFields,planUnitWeaponAdditions} from './editor-loadout.mjs?v=20261105-part2';
+import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261105-part2';
+import {unitAbilityLocks} from './editor-locks.mjs?v=20261105-part2';
 // Record ids were checked independently in accepted F v0.5 / Final v0.3.
 // These are configurations using existing shared weapons, not recovered F specs.
 const researched=(ids,note)=>Object.freeze({version:1,weapons:Object.freeze(ids),note});

@@ -1,7 +1,7 @@
 // Dictionary-only metadata for the eight hidden protagonist pairs. Temporary
 // name pointers are restored before the portrait draw; saved pilot data stays intact.
-import {DICTIONARY_PORTRAIT_DATA} from './editor-dictionary-portrait-data.mjs?v=20261104-part1';
-import {sha256Hex} from './sha256.mjs?v=20261104-part1';
+import {DICTIONARY_PORTRAIT_DATA} from './editor-dictionary-portrait-data.mjs?v=20261105-part2';
+import {sha256Hex} from './sha256.mjs?v=20261105-part2';
 export const DICTIONARY_PORTRAIT_HOOK=Object.freeze({execBytes:758232,offset:534572,original:0x06014860,fixed:0x2029f500,helperBytes:92,
  hooks:Object.freeze([
   Object.freeze({offset:0x8278c,original:0x06004cc8,fixed:0x2029f200}),

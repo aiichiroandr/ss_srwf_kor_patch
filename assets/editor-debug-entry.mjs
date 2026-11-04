@@ -1,6 +1,6 @@
 // Final's existing START + map settings branch. Only the relative branch byte
 // changes; no code, pointer table, save flag or additional storage is inserted.
-import {matchesByteWindow} from './editor-byte-window.mjs?v=20261104-part1';
+import {matchesByteWindow} from './editor-byte-window.mjs?v=20261105-part2';
 
 export const DEBUG_ENTRY=Object.freeze({
   "gameId": "srwf-final",

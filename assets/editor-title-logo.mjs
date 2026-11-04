@@ -1,7 +1,7 @@
 // Fixed, reversible title edits. This changes only the user's authenticated
 // graphic slots; it adds no resource, pointer, record or archive allocation.
-import {FINAL_TITLE_LOGO_DATA as DATA} from './editor-title-logo-data.mjs?v=20261104-part1';
-import {sha256Hex} from './sha256.mjs?v=20261104-part1';
+import {FINAL_TITLE_LOGO_DATA as DATA} from './editor-title-logo-data.mjs?v=20261105-part2';
+import {sha256Hex} from './sha256.mjs?v=20261105-part2';
 
 function invalid(){const e=Error('완결편 타이틀의 원본 또는 보정 데이터가 일치하지 않습니다.');e.code='EDITOR_TITLE_LOGO_INVALID';throw e;}
 const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);

@@ -1,5 +1,5 @@
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261104-part1';
-import {dictionaryAdditionsExecState,setDictionaryAdditionsExec} from './editor-dictionary-additions.mjs?v=20261104-part1';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261105-part2';
+import {dictionaryAdditionsExecState,setDictionaryAdditionsExec} from './editor-dictionary-additions.mjs?v=20261105-part2';
 export async function changeDictionaryAdditionImage(blob,{gameId,alice=false,units=false,signal}={}){
  if(gameId!=='srwf-final'||blob.size<8*1024*1024)return {outputBlob:blob,changedSectors:[]};
  const files=await locateIsoFiles(blob,signal,['0']),file=files['0'];

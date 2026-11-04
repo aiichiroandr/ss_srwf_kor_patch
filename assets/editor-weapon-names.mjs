@@ -1,8 +1,8 @@
 // Canonical append-only names. Original strings are retained, pointers restored
 // before the existing immutable TSR hash is checked. No editable hash mask grows.
-import {encodeEditorText,decodeEditorText} from './editor-text-codec.mjs?v=20261104-part1';
-import {ownData,readDenseList} from './editor-own.mjs?v=20261104-part1';
-import {requireTsrRuntimeSize,requireTsrInspectionSize,tsrRuntimeLimit,tsrHistoricalStorageLimit,writeRelative32} from './editor-storage-safety.mjs?v=20261104-part1';
+import {encodeEditorText,decodeEditorText} from './editor-text-codec.mjs?v=20261105-part2';
+import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
+import {requireTsrRuntimeSize,requireTsrInspectionSize,tsrRuntimeLimit,tsrHistoricalStorageLimit,writeRelative32} from './editor-storage-safety.mjs?v=20261105-part2';
 const MAGIC=new TextEncoder().encode('SRWNAM01'),SHARED=new TextEncoder().encode('SRWNAM02'),FOOTER=16,MAX_COUNT=1408,MAX_BYTES=32;
 const fail=()=>{const e=Error('무기 이름 확장 데이터가 올바르지 않습니다.');e.code='EDITOR_WEAPON_NAME_INVALID';throw e;};
 const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);

@@ -1,4 +1,4 @@
-import {unitConstructionPreset} from './editor-unit-construction.mjs?v=20261104-part1';
+import {unitConstructionPreset} from './editor-unit-construction.mjs?v=20261105-part2';
 
 // A per-launch channel transfers browser-owned Blobs; no ROM URL or persistence.
 export function validateAnimationRuntime(descriptor) {
@@ -206,7 +206,7 @@ export function createInlineAnimationPreview({button, panel, getSource, getChoic
     const localPage=getPreviewPage();
     const page=localPage?new URL(localPage,location.href):new URL('../weapon-preview/',import.meta.url);
     if(localPage&&page.origin!==location.origin){fail('미리보기 페이지의 출처가 다릅니다.');return;}
-    page.search=`embedded=1&v=20261104-part1${onTimeline?'&timeline=1':''}`;page.hash=`handoff=${token}`;
+    page.search=`embedded=1&v=20261105-part2${onTimeline?'&timeline=1':''}`;page.hash=`handoff=${token}`;
     frame.src=page.href;
     panel.replaceChildren(frame);
   };

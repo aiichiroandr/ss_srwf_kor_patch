@@ -2,8 +2,8 @@
 // only in the zero gap recovered by SRUCMP06/07 inside the original unit region.
 // Names/glyph/construction codecs keep their canonical logical representation;
 // only root11/root14 string pointers into that tail move for the game.
-import {tsrRuntimeLimit,requireTsrInspectionSize,writeRelative32} from './editor-storage-safety.mjs?v=20261104-part1';
-import {repackFUnitOffsetLedger,fUnitOffsetLedgerDiagnostics} from './editor-unit-compact.mjs?v=20261104-part1';
+import {tsrRuntimeLimit,requireTsrInspectionSize,writeRelative32} from './editor-storage-safety.mjs?v=20261105-part2';
+import {repackFUnitOffsetLedger,fUnitOffsetLedgerDiagnostics} from './editor-unit-compact.mjs?v=20261105-part2';
 const UNIT='SRUCMP06',UNIT7='SRUCMP07',MAGIC='SRFAUX01',HEADER=16;
 const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 const marker=(b,at,s)=>at>=0&&at+s.length<=b.length&&[...s].every((c,i)=>b[at+i]===c.charCodeAt(0));

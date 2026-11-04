@@ -1,8 +1,8 @@
 // Bounded, opt-in ALICE subpilot configuration. Native code and rendering
 // remain separate; this module owns only the reversible TSR representation.
-import {ALICE_ART} from './editor-alice-art.mjs?v=20261104-part1';
-import {ownData,readDenseList} from './editor-own.mjs?v=20261104-part1';
-import {Sha256} from './sha256.mjs?v=20261104-part1';
+import {ALICE_ART} from './editor-alice-art.mjs?v=20261105-part2';
+import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
+import {Sha256} from './sha256.mjs?v=20261105-part2';
 
 const MAGIC=new TextEncoder().encode('SRWALC02'),FOOTER=16,FACE_BYTES=2744;
 // Pilot #399's reserved 27-byte record is recognized by SHA-256; its bytes are

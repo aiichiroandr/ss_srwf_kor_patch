@@ -1,11 +1,11 @@
-import {fixAliceFaceCopies,normalizeAliceFaceCopies,aliceFaceCopiesNeedFix} from './editor-alice-face-copies.mjs?v=20261104-part1';
+import {fixAliceFaceCopies,normalizeAliceFaceCopies,aliceFaceCopiesNeedFix} from './editor-alice-face-copies.mjs?v=20261105-part2';
 // ALICE identity/portrait registration only. Crew assignment and SP behavior
 // are intentionally separate from this bounded, opt-in graphic/name change.
-import {readAliceCrewV4,writeAliceCrewV4} from './editor-alice-crew-v4.mjs?v=20261104-part1';
-import {ALICE_ART,ALICE_V03_DISC_MASKS,ALICE_BASE_SHA256} from './editor-alice-art.mjs?v=20261104-part1';
-import {Sha256} from './sha256.mjs?v=20261104-part1';
-import {readPackedGraphicRecord} from './editor-face-record.mjs?v=20261104-part1';
-import {readAliceCrewData,writeAliceCrewData,isAliceReservedPilot,ALICE_CREW_DEFAULTS} from './editor-alice-crew-data.mjs?v=20261104-part1';
+import {readAliceCrewV4,writeAliceCrewV4} from './editor-alice-crew-v4.mjs?v=20261105-part2';
+import {ALICE_ART,ALICE_V03_DISC_MASKS,ALICE_BASE_SHA256} from './editor-alice-art.mjs?v=20261105-part2';
+import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {readPackedGraphicRecord} from './editor-face-record.mjs?v=20261105-part2';
+import {readAliceCrewData,writeAliceCrewData,isAliceReservedPilot,ALICE_CREW_DEFAULTS} from './editor-alice-crew-data.mjs?v=20261105-part2';
 const MAGIC=new TextEncoder().encode('SRWALC01'),FOOTER=16,FACE_HEADER_BYTES=2744;
 const headerOffset=length=>Math.ceil((length+20)/4)*4;
 const payloadBytes=length=>headerOffset(length)-length+FACE_HEADER_BYTES;

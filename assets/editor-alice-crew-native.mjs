@@ -4,8 +4,8 @@
 // It tail-calls the untouched original pilot/crew-list functions and uses the
 // game's allocator and SP initializer. All three input files are authenticated
 // by the existing whole-disc provenance after exact overlay normalization.
-import {ALICE_MULTI_WORDS,ALICE_MULTI_LITERALS,ALICE_MULTI_ENTRIES} from './editor-alice-multi-code.mjs?v=20261104-part1';
-import {ALICE_BASE_SHA256} from './editor-alice-art.mjs?v=20261104-part1';
+import {ALICE_MULTI_WORDS,ALICE_MULTI_LITERALS,ALICE_MULTI_ENTRIES} from './editor-alice-multi-code.mjs?v=20261105-part2';
+import {ALICE_BASE_SHA256} from './editor-alice-art.mjs?v=20261105-part2';
 const BASE=0x06003300,IP_AT=0x1300,SLOT=1024,EXE_BYTES=758232;
 // Reproduced Saturn states have zeros at 0x06003300..0x06003317.
 // Keep the authenticated IP slot but place every live instruction beyond it.
@@ -45,6 +45,11 @@ const PILOT_CALLS=Object.freeze([0x1c5b0,0x22b00,0x25a68,0x25b84,0x26cf8,0x27854
 const ACTOR_CALLS=Object.freeze([0x4f480]);
 const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 const dv=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
+// Installs before 2026-11-05 released the crew frame with add #127,r15; add #1,r15.
+// An interrupt between them stacks onto an odd R15 (SH-2 address error, BIOS
+// hang). They stay readable, and every export rewrites them with the aligned pair.
+const ODD_SP_AT=357,ODD_SP_WORDS=Object.freeze([0x7f7f,0x7f01]);
+const ODD_SP_MULTI_WORDS=Object.freeze(ALICE_MULTI_WORDS.map((w,i)=>ODD_SP_WORDS[i-ODD_SP_AT]??w));
 function invalid(message='인공지능 동승 코드가 지원하는 원본 또는 완전한 설치 상태와 다릅니다.'){
  const error=Error(message);error.code='EDITOR_ALICE_INVALID';throw error;
 }
@@ -53,18 +58,21 @@ export function legacyAliceCrewCode(unitIds){
  const out=new Uint8Array(SLOT),v=dv(out);WORDS.forEach((w,i)=>v.setUint16(i*2,w));
  v.setUint32(EXS_LITERAL,unitIds[0]);v.setUint32(CRUISER_LITERAL,unitIds[1]);out.set(new TextEncoder().encode('ALCCREW2'),SLOT-8);return out;
 }
-export function legacyMultiAliceCrewCode(unitIds){
+function multiCode(unitIds,words){
  if(!Array.isArray(unitIds)||unitIds.length<1||unitIds.length>4||unitIds.some(id=>!Number.isInteger(id)||id<1||id>511)||new Set(unitIds).size!==unitIds.length)invalid();
- const out=new Uint8Array(SLOT),v=dv(out);ALICE_MULTI_WORDS.forEach((w,i)=>v.setUint16(i*2,w));ALICE_MULTI_LITERALS.forEach((at,i)=>v.setUint32(at,unitIds[i]??0));out.set(new TextEncoder().encode('ALCCREW3'),SLOT-8);return out;
+ const out=new Uint8Array(SLOT),v=dv(out);words.forEach((w,i)=>v.setUint16(i*2,w));ALICE_MULTI_LITERALS.forEach((at,i)=>v.setUint32(at,unitIds[i]??0));out.set(new TextEncoder().encode('ALCCREW3'),SLOT-8);return out;
 }
-export function aliceCrewCode(unitIds){
- const old=legacyMultiAliceCrewCode(unitIds),out=new Uint8Array(SLOT),v=dv(out),bytes=ALICE_MULTI_WORDS.length*2;
+function safeCode(unitIds,words){
+ const old=multiCode(unitIds,words),out=new Uint8Array(SLOT),v=dv(out),bytes=words.length*2;
  if(bytes+RUNTIME_PREFIX>SLOT-8)invalid();
  out.set(old.subarray(0,bytes),RUNTIME_PREFIX);
  // The assembler's only internal absolute addresses are the two replay stubs.
  for(const at of [bytes-16,bytes-12])v.setUint32(at+RUNTIME_PREFIX,dv(old).getUint32(at)+RUNTIME_PREFIX);
  out.set(new TextEncoder().encode('ALCCREW4'),SLOT-8);return out;
 }
+// Every ALCCREW3 install predates the aligned epilogue.
+export function legacyMultiAliceCrewCode(unitIds){return multiCode(unitIds,ODD_SP_MULTI_WORDS);}
+export function aliceCrewCode(unitIds){return safeCode(unitIds,ALICE_MULTI_WORDS);}
 function callSites(prefix=RUNTIME_PREFIX){return [...ACTOR_CALLS.map(offset=>({offset,old:0x06053560,next:BASE+prefix})),...PILOT_CALLS.map(offset=>({offset,old:0x0602cbd0,next:BASE+prefix+6}))];}
 export function normalizeAliceCrewNative(ip,exec,{gameId='srwf-final'}={}){
  if(gameId!=='srwf-final'||!(ip instanceof Uint8Array)||ip.length!==0x1800||!(exec instanceof Uint8Array)||exec.length!==EXE_BYTES)invalid();
@@ -73,9 +81,10 @@ export function normalizeAliceCrewNative(ip,exec,{gameId='srwf-final'}={}){
  const legacy=same(slot.subarray(SLOT-8),new TextEncoder().encode('ALCCREW2'));
  const rawIds=legacy?[dv(slot).getUint32(EXS_LITERAL),dv(slot).getUint32(CRUISER_LITERAL)]:ALICE_MULTI_LITERALS.map(at=>dv(slot).getUint32(at+(safe?RUNTIME_PREFIX:0)));
  const firstZero=rawIds.indexOf(0),unitIds=firstZero<0?rawIds:rawIds.slice(0,firstZero);if(firstZero>=0&&rawIds.slice(firstZero).some(Boolean))invalid();
- if(!same(slot,legacy?legacyAliceCrewCode(unitIds):safe?aliceCrewCode(unitIds):legacyMultiAliceCrewCode(unitIds))||sites.some(s=>v.getUint32(s.offset)!==s.next))invalid();
+ const known=legacy?[legacyAliceCrewCode(unitIds)]:safe?[aliceCrewCode(unitIds),safeCode(unitIds,ODD_SP_MULTI_WORDS)]:[legacyMultiAliceCrewCode(unitIds)],form=known.findIndex(code=>same(slot,code));
+ if(form<0||sites.some(s=>v.getUint32(s.offset)!==s.next))invalid();
  const canonicalIp=ip.slice(),canonicalExec=exec.slice(),c=dv(canonicalExec);canonicalIp.fill(0,IP_AT,IP_AT+SLOT);for(const s of sites)c.setUint32(s.offset,s.old);
- return {ip:canonicalIp,exec:canonicalExec,enabled:true,version:legacy?2:safe?4:3,unitIds,patches:[{file:'ip',offset:IP_AT,length:SLOT},...sites.map(s=>({file:'exec',offset:s.offset,length:4}))]};
+ return {ip:canonicalIp,exec:canonicalExec,enabled:true,version:legacy?2:safe?4:3,oddSp:!legacy&&!(safe&&form===0),unitIds,patches:[{file:'ip',offset:IP_AT,length:SLOT},...sites.map(s=>({file:'exec',offset:s.offset,length:4}))]};
 }
 export function applyAliceCrewNative(ip,exec,{enabled,unitIds,gameId,baseSha256}={}){
  if(typeof enabled!=='boolean'||gameId!=='srwf-final'||!ALICE_BASE_SHA256.includes(baseSha256))invalid();

@@ -1,4 +1,4 @@
-import { scrollTopToReveal } from './editor-list.mjs?v=20261104-part1';
+import { scrollTopToReveal } from './editor-list.mjs?v=20261105-part2';
 
 // Keep every slot available in one bounded, scrollable grid.
 export function createUnitWeaponScroller({ list }) {

@@ -1,6 +1,6 @@
 import {localEditorReview} from './editor-local-config.mjs';
-import * as publicGlyphs from './editor-glyphs.mjs?v=20261104-part1';
-import {createPreviewResources} from './editor-preview-resources.mjs?v=20261104-part1';
+import * as publicGlyphs from './editor-glyphs.mjs?v=20261105-part2';
+import {createPreviewResources} from './editor-preview-resources.mjs?v=20261105-part2';
 
 // Accepted releases remain usable when the optional local review workspace is
 // absent. Its path is fixed here, never supplied by a URL or user input.

@@ -1,8 +1,8 @@
 // Reuse original D_ANIME records and the existing FA45 attachment command.
 // All source records survive; the length ledger reconstructs the exact disc
 // archive before ordinary provenance checks. No new executable is required.
-import {Sha256}from './sha256.mjs?v=20261104-part1';
-import {makeExSAlignedBeamMotion}from './editor-exs-beam-motion.mjs?v=20261104-part1';
+import {Sha256}from './sha256.mjs?v=20261105-part2';
+import {makeExSAlignedBeamMotion}from './editor-exs-beam-motion.mjs?v=20261105-part2';
 const PROFILES=Object.freeze({
  'srwf-f':{size:1586091,sha256:'a52c98c278b25de72662c09a2d656bc62bb95ad651f7bba7b00935144617659a'},
  'srwf-final':{size:1599308,sha256:'c633efb954473482be3560ba5f2a0b1b2609514e51e1afada08969308b054774'},
