@@ -74,6 +74,14 @@ publish a new release row without another complete acceptance chain.
   transform are pinned in the browser source normalizer, every discarded byte
   is verified, and the transform yields a manifest-pinned canonical stock
   profile whose whole-image SHA-256 is verified before patching.
+- Auxiliary local-only input (user decision 2026-11-04): the user's own 4th
+  Super Robot Wars (SFC, Japan) Rev 1 ROM may be selected in the editor only to
+  import unused-unit battle art and map icons. It is not a stock profile, base
+  or release. Only Rev 1 is accepted: size, SHA-1, CRC32 and the pinned SHA-256
+  `efd72094b2727c4903924cf9296b3946b95a354f639b600e1d76d9ec6b9ca18b`
+  (`assets/editor-srw4-rom.mjs`) must all match, otherwise it fails closed.
+  Never commit or ship SFC bytes, pixels, palettes, color values or extracted
+  sprites; SRW4 modules carry only hashes, offsets and decoding code.
 - Patch payloads must contain changed bytes plus bounded verification metadata
   (and, in v2 only, references to ranges of the user's own source), not a
   complete game image.
@@ -81,7 +89,8 @@ publish a new release row without another complete acceptance chain.
   track) must be referenced from the user's own source with COPY records and
   must never be carried as literal bytes.
 - Keep notices and user-facing copy clear that this is an unofficial fan
-  project and that no game content is distributed.
+  project and that no game content is distributed (including SFC data: imported
+  art is produced in the browser from the user's own ROM).
 
 ## Static-site boundary
 
@@ -89,8 +98,9 @@ publish a new release row without another complete acceptance chain.
   same-origin repository assets only.
 - Do not add CDNs, analytics, trackers, remote fonts, telemetry, accounts,
   servers, upload endpoints, or network writes.
-- The selected stock image is processed locally in the browser. Never upload
-  it or retain it outside the user's browser session.
+- The selected stock image, and the optional SRW4 Rev 1 ROM, are processed
+  locally in the browser. Never upload them or retain them outside the user's
+  browser session.
 - Fail closed on an empty release index, an unknown stock hash, a manifest
   mismatch, a malformed patch, a record preimage mismatch, a COPY source
   mismatch, an extension-coverage error, or a target hash mismatch.
@@ -121,7 +131,7 @@ change the release/publication restrictions above.
 
 ## Local editor release synchronization (2026-10-06)
 
-The local editor now uses the already accepted public F v0.5 G103 a/b/c and F Final v0.3 a/b/c artifact sets from the published site checkout, including their pinned manifests and acceptance receipts. The current local index defaults are F `srwf-f-20260928-v0-5-a` and Final `srwf-final-20261005-v0-3-c`. This synchronization is not a new release acceptance or authorization to publish editor code. All binary and publication boundaries above continue to apply. The editor permits exact stock input (prepared locally with the current default accepted release family) or images derived from that latest family only, including a/b/c fonts. Older accepted releases and their personal edits must be rejected. Personal editor images require game identity, full hash, bounded provenance and data-structure checks, and must be explicitly distinguished from an ACCEPTED release.
+The local editor now uses the already accepted public F v0.5 G103 a/b/c and F Final v0.3 a/b/c artifact sets from the published site checkout, including their pinned manifests and acceptance receipts. The current local index defaults are F `srwf-f-20260928-v0-5-a` and Final `srwf-final-20261005-v0-3-c`. This synchronization is not a new release acceptance or authorization to publish editor code. All binary and publication boundaries above continue to apply. The editor permits exact stock input (prepared locally with the current default accepted release family) or images derived from that latest family only, including a/b/c fonts. Older accepted releases and their personal edits must be rejected. Personal editor images require game identity, full hash, bounded provenance and data-structure checks, and must be explicitly distinguished from an ACCEPTED release. The optional SRW4 Rev 1 ROM (see Binary and legal boundary) is auxiliary input only and never a base.
 
 ## Public editor beta (2026-10-11)
 

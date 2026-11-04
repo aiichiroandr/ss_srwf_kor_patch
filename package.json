@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm test",
     "verify": "python3 scripts/verify_repo.py",
-    "test": "node --test && PYTHONDONTWRITEBYTECODE=1 python3 -m scripts.verify_repo --test"
+    "test": "node scripts/run-node-tests.cjs && PYTHONDONTWRITEBYTECODE=1 python3 -m scripts.verify_repo --test"
   },
   "engines": {
     "node": ">=20"

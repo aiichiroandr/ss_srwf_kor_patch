@@ -1,5 +1,6 @@
-import { PILOT_LAYOUT_PROFILES } from './editor-pilot-layout-profiles.mjs?v=20261104-save3';
-import { ownEntry } from './editor-own.mjs?v=20261104-save3';
+import { PILOT_LAYOUT_PROFILES } from './editor-pilot-layout-profiles.mjs?v=20261104-part1';
+import { ownEntry } from './editor-own.mjs?v=20261104-part1';
+import {writeRelative32} from './editor-storage-safety.mjs?v=20261104-part1';
 
 const HEAD = 23;
 const MAX_RECORD = 256;
@@ -111,7 +112,7 @@ export function repackPilotLayout(segment, gameId, minimumPairs, profile = ownEn
     for (const record of span.records) {
       const length = lengths.get(record.recordIndex);
       next.set(original.subarray(record.start, Math.min(record.end, record.start + length)), cursor);
-      write32(next, record.recordIndex * 4, cursor - record.recordIndex * 4);
+      writeRelative32(next, record.recordIndex * 4, cursor);
       cursor += length;
     }
     if (cursor !== span.end) return false;

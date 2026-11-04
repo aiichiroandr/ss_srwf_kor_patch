@@ -1,8 +1,9 @@
 // SCEDATA carrier only. No VM command, objective or deployment write is enabled
 // by this module. Callers must separately authenticate allowed decoded changes.
-import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261104-save3';
-import { ownData, readDenseList } from './editor-own.mjs?v=20261104-save3';
-import { normalizeScenarioDeadlineBody } from './editor-scenario-deadlines.mjs?v=20261104-save3';
+import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261104-part1';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261104-part1';
+import { normalizeScenarioDeadlineBody } from './editor-scenario-deadlines.mjs?v=20261104-part1';
+import { readScenarioDialogue } from './editor-scenario-dialogue.mjs?v=20261104-part1';
 
 export const SCENARIO_ARCHIVE_FORMATS = Object.freeze({
   'srwf-f': Object.freeze({ slots: 74, endCellBias: 4 }),
@@ -17,6 +18,31 @@ function fail(message, code = 'EDITOR_SCENARIO_INVALID', details) {
   throw error;
 }
 function same(a, b) { return a.length === b.length && a.every((x, i) => x === b[i]); }
+const stable = value => JSON.stringify(value, function (key, item) {
+  return item && typeof item === 'object' && !Array.isArray(item)
+    ? Object.fromEntries(Object.keys(item).sort().map(k => [k, item[k]])) : item;
+});
+
+// Only validates carrier geometry and pinned, independently computed scopes.
+// The caller must authenticate the full reference image before calling this.
+export function validateScenarioRebase(before, after, beforeScope, afterScope, gameId, scenarioLayout = 'latest') {
+  if (gameId !== 'srwf-f' || !(before instanceof Uint8Array) || !(after instanceof Uint8Array) || before.length !== after.length) fail('Unsupported scenario rebase.');
+  const left = readScenarioArchive(before, gameId, { scenarioLayout }), right = readScenarioArchive(after, gameId, { scenarioLayout });
+  if (stable(left.slots) !== stable(right.slots) || left.bodies.length !== right.bodies.length) fail('Scenario identities changed.');
+  const a = structuredClone(beforeScope), b = structuredClone(afterScope);
+  if (!a?.scenario?.immutableCarrierSha256 || !b?.scenario?.immutableCarrierSha256) fail('Missing scenario scope.');
+  b.scenario.immutableCarrierSha256 = a.scenario.immutableCarrierSha256;
+  if (stable(a) !== stable(b)) fail('Scenario decoded scope changed.');
+  const changed = left.bodies.flatMap((body, i) => body.start === right.bodies[i].start && body.end === right.bodies[i].end ? [] : [i]);
+  if (changed.length !== 2 || changed[1] !== changed[0] + 1) fail('Unsupported scenario layout change.');
+  const [i, j] = changed, l = left.bodies[i], r = left.bodies[j], nl = right.bodies[i], nr = right.bodies[j];
+  if (nl.start !== l.start || nr.end !== r.end || nl.end !== nr.start || nr.start <= r.start) fail('Invalid scenario rebase geometry.');
+  const allowed = new Set();
+  for (const slot of l.slots) for (let n = 0; n < 4; n++) allowed.add(slot * 8 + 4 + n);
+  for (const slot of r.slots) for (let n = 0; n < 4; n++) allowed.add(slot * 8 + n);
+  for (let n = 0; n < left.directoryLength; n++) if (!allowed.has(n) && before[n] !== after[n]) fail('Unrelated scenario directory bytes changed.');
+  return Object.freeze({ bodies: Object.freeze(changed), growth: nr.start - r.start });
+}
 function abort(signal) { if (signal?.aborted) throw new DOMException('Operation aborted.', 'AbortError'); }
 function rootsOf(bytes) {
   if (!(bytes instanceof Uint8Array) || bytes.length < 57 || bytes.length > MAX_BODY_BYTES) fail('Invalid scenario body length.');
@@ -68,7 +94,7 @@ export function readScenarioArchive(bytes, gameId, { scenarioLayout = 'latest' }
 // stay fixed except for an exactly regenerated, bounded deadline extension. A shorter
 // stream gets a zero tail; a larger stream must fit the same physical span.
 // The input and every requested decoded buffer are copied before async packing.
-export async function repackScenarioBodies(sourceBytes, gameId, submitted, { signal, onProgress, scenarioLayout = 'latest', unitCount, pilotContext, regionContexts } = {}) {
+export async function repackScenarioBodies(sourceBytes, gameId, submitted, { signal, onProgress, scenarioLayout = 'latest', unitCount, pilotContext, regionContexts, reinforcementRoot, glyphMap, speakerOptions, sourceGlyphMap = glyphMap, allowScenarioRebase = true } = {}) {
   abort(signal);
   if (!(sourceBytes instanceof Uint8Array)) fail('Missing scenario source.');
   const source = sourceBytes.slice(), archive = readScenarioArchive(source, gameId, { scenarioLayout });
@@ -82,12 +108,15 @@ export async function repackScenarioBodies(sourceBytes, gameId, submitted, { sig
     if (!body || seen.has(physicalIndex) || !(decoded instanceof Uint8Array)) fail('Unknown or duplicate scenario body.');
     seen.add(physicalIndex);
     const wanted = decoded.slice(), roots=rootsOf(wanted);
-    const original=normalizeScenarioDeadlineBody(body,gameId,{scenarioLayout,unitCount,pilotContext,regionContexts}).body.decoded;
-    const normalized=normalizeScenarioDeadlineBody({...body,decoded:wanted,roots},gameId,{scenarioLayout,unitCount,pilotContext,regionContexts}).body.decoded;
+    const options={scenarioLayout,unitCount,pilotContext,regionContexts,reinforcementRoot,glyphMap,speakerOptions};
+    const sourceDialogue=readScenarioDialogue(body,gameId,{...options,glyphMap:sourceGlyphMap}),wantedDialogue=readScenarioDialogue({...body,decoded:wanted,roots},gameId,options);
+    const original=normalizeScenarioDeadlineBody(sourceDialogue.body,gameId,options).body.decoded;
+    const normalized=normalizeScenarioDeadlineBody(wantedDialogue.body,gameId,options).body.decoded;
     if (normalized.length !== original.length || !same(normalized.subarray(0, 56), original.subarray(0, 56))) fail('Scenario edits must preserve decoded size and root pointers outside a verified deadline template.');
     return { body, decoded: wanted };
   });
   const output = source.slice(), changedBodies = [];
+  let borrowed = false;
   for (const { body, decoded } of planned) {
     abort(signal);
     if (same(decoded, body.decoded)) continue;
@@ -98,10 +127,27 @@ export async function repackScenarioBodies(sourceBytes, gameId, submitted, { sig
       const scratch = await compressTsr(decoded, { signal, completeNearMatches: true });
       if (!packed || scratch.length < packed.length) packed = scratch;
     }
-    if (packed.length > body.end - body.start) fail('The edited scenario does not fit its original compressed body span.',
+    let end = body.end;
+    if (packed.length > body.end - body.start && gameId === 'srwf-f' && allowScenarioRebase === true && !borrowed) {
+      const neighbor = archive.bodies[body.physicalIndex + 1];
+      if (neighbor && !planned.some(row => row.body.physicalIndex === neighbor.physicalIndex)) {
+        // Move the next start as well, even if the overflow only consumes the
+        // original alignment gap. This keeps one unambiguous rebase shape.
+        const start = Math.max(neighbor.start + 4, (body.start + packed.length + 3) & ~3);
+        const compact = await compressTsr(neighbor.decoded, { signal, completeNearMatches: true, maxMatchCandidates: 1024 });
+        if (start + compact.length <= neighbor.end && same(decompressTsr(compact), neighbor.decoded)) {
+          output.fill(0, body.start, neighbor.end); output.set(compact, start);
+          const directory = new DataView(output.buffer, output.byteOffset, output.byteLength);
+          for (const slot of body.slots) directory.setUint32(slot * 8 + 4, start - slot * 8 - 4);
+          for (const slot of neighbor.slots) directory.setUint32(slot * 8, start - slot * 8);
+          end = start; borrowed = true;
+        }
+      }
+    }
+    if (packed.length > end - body.start) fail('The edited scenario does not fit its original compressed body span.',
       'EDITOR_SCENARIO_GROWTH_UNSUPPORTED', { physicalIndex: body.physicalIndex, packedBytes: packed.length, slotBytes: body.end - body.start });
     if (!same(decompressTsr(packed), decoded)) fail('Scenario compression failed its decoded read-back check.');
-    output.fill(0, body.start, body.end); output.set(packed, body.start);
+    output.fill(0, body.start, end); output.set(packed, body.start);
     changedBodies.push(body.physicalIndex);
   }
   abort(signal);

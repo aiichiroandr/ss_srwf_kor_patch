@@ -1,5 +1,6 @@
-import { REWARD_FIELDS, REWARD_PART_MAX, rewardTotal, rewardValueAllowed, rewardOutcomeLabel, rewardReferences } from "./editor-rewards.mjs?v=20261104-save3";
-import { scenarioSelectionLabel } from "./editor-scenario-labels.mjs?v=20261104-save3";
+import { createEffectList, fitEffectPanel } from './editor-effect-list.mjs?v=20261104-part1';
+import { REWARD_FIELDS, REWARD_PART_MAX, rewardTotal, rewardValueAllowed, rewardOutcomeLabel, rewardReferences } from "./editor-rewards.mjs?v=20261104-part1";
+import { scenarioSelectionLabel } from "./editor-scenario-labels.mjs?v=20261104-part1";
 
 const node = (tag, text, className = "") => {
   const element = document.createElement(tag);
@@ -12,7 +13,7 @@ const node = (tag, text, className = "") => {
 // input updates summaries in place so a mobile keyboard and the current focus are preserved.
 export function createRewardEditor(host) {
   const panel = document.getElementById("rewardEditorPanel");
-  const selector = document.getElementById("rewardSelector");
+  const list = document.getElementById("rewardRecordList");
   const form = document.getElementById("rewardFields");
   const summary = document.getElementById("rewardSummary");
   const scope = document.getElementById("rewardScope");
@@ -22,17 +23,19 @@ export function createRewardEditor(host) {
   const next = document.getElementById("rewardNext");
   const position = document.getElementById("rewardPageNumber");
   const search = document.getElementById("rewardSearch");
-  const usageSelector = document.getElementById("rewardUsageSelector");
-  const usageOpen = document.getElementById("rewardUsageOpen");
+  const usageList = document.getElementById('rewardUsageList');
+  const usagePager = document.getElementById('rewardUsagePager');
+  const usagePrevious = document.getElementById('rewardUsagePrev'), usageNext = document.getElementById('rewardUsageNext');
+  let usagePage=0;
   let selected = null;
+  const picker = createEffectList({ list, label: item => `#${item.recordIndex} · ${optionLabel(item)}`, onSelect: id => { if (!host.canEdit()) return; selected = id; render(); } });
   let references = [];
   let page = 0;
   let paged = false;
   const controls = new Map();
+  const drafts = new Map();
   const row = () => host.rows().find(item => item.recordIndex === selected);
   const model = () => host.model?.() ?? {};
-  const usageKey = reference => `${reference.kind}:${reference.recordIndex}`;
-  const selectedUse = () => references.find(reference => usageKey(reference) === usageSelector?.value);
   const sceneLabel = reference => scenarioSelectionLabel(model().scenarios?.find(scene => scene.physicalIndex === reference.physicalIndex));
   const composition = item => rewardOutcomeLabel(item, host.partName);
   const optionLabel = item => rewardOutcomeLabel(item, host.partName, { compact: true });
@@ -53,26 +56,19 @@ export function createRewardEditor(host) {
     pager.hidden = !paged;
   }
   function measure() {
-    if (panel.hidden || !panel.getClientRects?.().length) return;
-    const focused = [...form.children].findIndex(group => group.contains(document.activeElement));
-    for (const group of form.children) group.hidden = false;
-    pager.hidden = true;
-    panel.dataset.compact = "false";
-    const footer = document.querySelector(".editor-footer");
-    const fits = () => panel.getBoundingClientRect().bottom + (footer?.getBoundingClientRect().height ?? 80) + 12 <= window.innerHeight;
-    if (!fits()) panel.dataset.compact = "true";
-    paged = !fits() && form.children.length > 1;
-    if (focused >= 0) page = focused;
-    showPage();
+    fitEffectPanel(panel);
+    if (panel.hidden) return;
+    panel.dataset.compact = String(window.innerWidth<1100&&window.innerHeight < 740);
+    paged = false; showPage();
+    renderUsagePage();
   }
 
   function sync() {
     const current = row();
     const writable = host.canEdit() && Boolean(current?.editable);
-    selector.disabled = !host.canEdit() || !Array.from(selector.options).some(option => option.value !== "");
+    picker.sync(selected, !host.canEdit());
     if (search) search.disabled = !host.canEdit() || !host.rows().length;
-    if (usageSelector) usageSelector.disabled = !host.canEdit() || !references.length;
-    if (usageOpen) usageOpen.disabled = !host.canEdit() || !selectedUse() || !host.openUse;
+    for(const button of usageList?.querySelectorAll('button')??[])button.disabled=!host.canEdit()||!host.openUse;
     for (const control of controls.values()) control.disabled = !writable;
     reset.disabled = !writable || !(REWARD_FIELDS.some(field => current[field] !== current.original[field])
       || [...controls].some(([field, control]) => control.value !== String(current.original[field]) || !control.validity.valid));
@@ -86,9 +82,7 @@ export function createRewardEditor(host) {
       ? references.length ? `확인된 등장 ${references.length}곳에 공통 적용` : "확인된 등장 연결 없음"
       : current ? "이 구성은 강화파츠를 지급하지 않습니다" : "기체명 또는 파츠명으로 다시 검색해주세요";
     scope.title = current?.capacity ? "이 보상 구성을 사용하는 모든 등장 기체의 파츠와 확률이 함께 바뀝니다. 목록에는 에디터에서 확인한 연결을 표시합니다." : "";
-    const selectedOption = Array.from(selector.options).find(option => Number(option.value) === selected);
-    if (current && selectedOption) { selectedOption.textContent = optionLabel(current); selectedOption.title = composition(current); }
-    selector.title = current ? optionLabel(current) : "";
+    if (current) picker.update(current);
     for (const [field, control] of controls) control.classList.toggle("is-modified", current[field] !== current.original[field]);
     for (const group of form.children) {
       const select = group.querySelector("select"), input = group.querySelector("input");
@@ -99,20 +93,25 @@ export function createRewardEditor(host) {
   }
 
   function renderUses() {
-    const previousUse = usageSelector?.value;
     references = row() ? rewardReferences(row(), model()) : [];
-    if (!usageSelector) return;
-    usageSelector.replaceChildren(...references.map(reference => {
-      const option = node("option", `${reference.name} · ${shortSceneLabel(reference)}`);
-      option.value = usageKey(reference);
-      option.title = `${reference.name} · ${sceneLabel(reference)}${reference.kind === "reinforcement" ? ` · ${reference.turn}턴 증원` : ""} · (${reference.x}, ${reference.y})`;
-      return option;
-    }));
-    if (!references.length) {
-      const option = node("option", "확인된 등장 연결 없음"); option.value = ""; usageSelector.append(option);
+    usagePage=0;renderUsagePage();
+  }
+  function renderUsagePage(){
+    if(!usageList)return;
+    const available=usageList.parentElement?.clientHeight||252;
+    const size=window.innerWidth>=1100?Math.max(1,references.length):Math.max(1,Math.min(7,Math.floor((available-28)/32))),pages=Math.max(1,Math.ceil(references.length/size));
+    usagePage=Math.max(0,Math.min(usagePage,pages-1));usageList.replaceChildren();
+    for(const reference of references.slice(usagePage*size,(usagePage+1)*size)){
+      const button=node('button');button.type='button';
+      host.appendArtwork?.(button,reference);
+      button.append(node('span',`${reference.name} · ${shortSceneLabel(reference)}`,'entity-art-text'));
+      button.title=`${reference.name} · ${sceneLabel(reference)}${reference.kind==='reinforcement'?` · ${reference.turn}턴 증원`:''} · (${reference.x}, ${reference.y})`;
+      button.disabled=!host.canEdit()||!host.openUse;
+      button.addEventListener('click',()=>{if(host.canEdit())host.openUse?.(reference.kind,reference.recordIndex);});usageList.append(button);
     }
-    usageSelector.value = references.some(reference => usageKey(reference) === previousUse) ? previousUse : references.length ? usageKey(references[0]) : "";
-    usageSelector.title = Array.from(usageSelector.options).find(option => option.value === usageSelector.value)?.title ?? "";
+    if(!references.length)usageList.append(node('p','확인된 등장 연결 없음'));
+    usagePager.hidden=pages<=1;usagePrevious.disabled=usagePage===0;usageNext.disabled=usagePage===pages-1;
+    document.getElementById('rewardUsagePosition').textContent=`${usagePage+1} / ${pages}`;
   }
 
   function readPending() {
@@ -130,6 +129,7 @@ export function createRewardEditor(host) {
     const message = invalid ? "범위 안의 정수를 입력해주세요." : !rewardValueAllowed(current, pending) ? "확률 합계는 100% 이하여야 합니다." : "";
     const target = invalid?.[1] ?? controls.get("chance1");
     if (message) {
+      drafts.set(current.recordIndex, Object.fromEntries([...controls].map(([field, control]) => [field, control.value])));
       target.setCustomValidity(message);
       target.setAttribute("aria-invalid", "true");
       summary.textContent = message;
@@ -142,6 +142,7 @@ export function createRewardEditor(host) {
       }
       return false;
     }
+    drafts.delete(current.recordIndex);
     const fields = REWARD_FIELDS.slice(0, current.capacity * 2);
     const changed = fields.some(field => current[field] !== pending[field]);
     for (const field of fields) current[field] = pending[field];
@@ -168,17 +169,17 @@ export function createRewardEditor(host) {
         option.value = String(id);
         select.append(option);
       }
-      select.value = String(current[`part${i}`]);
+      select.value = drafts.get(current.recordIndex)?.[`part${i}`] ?? String(current[`part${i}`]);
       const chanceLabel = node("label", "획득 확률 (%)");
       const input = node("input");
       input.type = "number"; input.inputMode = "numeric"; input.min = "0"; input.max = "100"; input.step = "1";
-      input.value = String(current[`chance${i}`]); input.dataset.rewardField = `chance${i}`;
+      input.value = drafts.get(current.recordIndex)?.[`chance${i}`] ?? String(current[`chance${i}`]); input.dataset.rewardField = `chance${i}`;
       input.setAttribute("aria-label", current.capacity === 1 ? "강화파츠 획득 확률 (%)" : `획득 후보 ${i} 확률 (%)`);
       controls.set(`part${i}`, select); controls.set(`chance${i}`, input);
       partLabel.append(select); chanceLabel.append(input); group.append(partLabel, chanceLabel); form.append(group);
     }
-    describe();
-    measure();
+    if (drafts.has(current.recordIndex)) accept();
+    else { describe(); measure(); }
   }
 
   function refresh() {
@@ -187,28 +188,14 @@ export function createRewardEditor(host) {
     const rows = host.rows().filter(item => !query || [composition(item), ...rewardReferences(item, model()).flatMap(reference => [reference.name, sceneLabel(reference)])]
       .join(" ").replace(/\s/gu, "").toLocaleLowerCase().includes(query));
     if (!rows.some(item => item.recordIndex === selected)) selected = rows.find(item => item.editable)?.recordIndex ?? rows[0]?.recordIndex ?? null;
-    selector.replaceChildren(...rows.map(item => {
-      const option = node("option", optionLabel(item));
-      option.title = composition(item);
-      option.value = String(item.recordIndex);
-      return option;
-    }));
-    if (!rows.length) { const option = node("option", "검색과 일치하는 보상 없음"); option.value = ""; selector.append(option); }
-    selector.value = selected === null ? "" : String(selected);
+    picker.render(rows, selected);
     page = 0;
     render();
   }
 
-  selector.addEventListener("change", () => { selected = Number(selector.value); render(); });
   search?.addEventListener("input", refresh);
-  usageSelector?.addEventListener("change", () => {
-    usageSelector.title = Array.from(usageSelector.options).find(option => option.value === usageSelector.value)?.title ?? "";
-    sync();
-  });
-  usageOpen?.addEventListener("click", () => {
-    const reference = selectedUse();
-    if (host.canEdit() && reference) host.openUse?.(reference.kind, reference.recordIndex);
-  });
+  usagePrevious?.addEventListener('click',()=>{usagePage--;renderUsagePage();});
+  usageNext?.addEventListener('click',()=>{usagePage++;renderUsagePage();});
   previous.addEventListener("click", () => { page -= 1; showPage(); });
   next.addEventListener("click", () => { page += 1; showPage(); });
   form.addEventListener("input", () => accept());
@@ -216,6 +203,7 @@ export function createRewardEditor(host) {
   reset.addEventListener("click", () => {
     const current = row();
     if (!current?.editable || !host.canEdit()) return;
+    drafts.delete(current.recordIndex);
     for (const field of REWARD_FIELDS.slice(0, current.capacity * 2)) current[field] = current.original[field];
     render(); host.onChange(current);
   });
@@ -223,14 +211,22 @@ export function createRewardEditor(host) {
   document.fonts?.ready.then(measure);
   return Object.freeze({
     refresh, sync, selectedRow: row,
-    reset: () => { selected = null; if (search) search.value = ""; refresh(); },
-    validate: () => accept({ report: true }),
+    reset: () => { drafts.clear(); selected = null; if (search) search.value = ""; refresh(); },
+    hasInvalidDraft: () => drafts.size > 0,
+    validate: ({report=true}={}) => {
+      const id = drafts.keys().next().value;
+      if (id !== undefined && id !== selected) {
+        if (!report) return false;
+        selected = id; if (search) search.value = ""; refresh();
+      }
+      return accept({ report });
+    },
     focus: (recordIndex, fields = []) => {
       if (!host.rows().some(item => item.recordIndex === recordIndex)) return false;
       selected = recordIndex; if (search) search.value = ""; refresh();
-      const target = controls.get(fields[0]) ?? selector;
+      const target = controls.get(fields[0]);
       if (paged && fields[0]) { page = fields[0].endsWith("2") ? 1 : 0; showPage(); }
-      target.focus();
+      if (target) target.focus(); else picker.focus(selected);
       return true;
     },
   });

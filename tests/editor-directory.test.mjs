@@ -61,3 +61,11 @@ test("source-sized BINs are candidates for original-language editing and get the
  assert.equal(await findPatchedEditorImage(directory(file),release),file);
  await assert.rejects(findPatchedEditorImage(directory(saturn("wrong-game.bin",release.source.size,"T-20612G")),release),/새턴 BIN이 아닙니다/);
 });
+
+test('expanded Final personal BINs reach the authenticated inspector without admitting expanded F or malformed sector sizes',async()=>{
+ const header=saturn('header.bin',2352,'T-20612G'),file={name:'campaign.bin',size:530430096,slice:(a,b)=>header.slice(a,b)};
+ const final={...release,gameId:'srwf-final'};
+ assert.equal(await findPatchedEditorImage(directory(file),final),file);
+ assert.equal(await findPatchedEditorImage(directory(file),release),null);
+ assert.equal(await findPatchedEditorImage(directory({...file,size:file.size+1}),final),null);
+});

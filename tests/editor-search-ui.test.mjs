@@ -85,6 +85,36 @@ test("multiple bulk edits undo as transactions, preserve earlier pending edits a
   $("unitBulkButton").click(); $("editorSearchSubmit").click(); rows[0].space = 2; hooks.refreshEditorAfterPreset();
   assert.equal($("unitBulkNote").querySelectorAll("button")[1].disabled, true);
 });
+
+function scenarioFixture(){
+ const d={recordIndex:'0:64',physicalIndex:0,mapIndex:0,scenarioSlots:[0],width:6,height:4,name:'기체',unitId:1,pilotId:1,x:2,y:1,rewardSelector:1,editable:true,identity:`deployment:1:${'a'.repeat(64)}`};
+ return {deployments:[d],scenarios:[{physicalIndex:0,scenarioSlots:[0],mapIndex:0,placements:[d]}],maps:[{mapIndex:0,mapSlots:[0],bankIndex:0,planes:[{width:6,height:4,tiles:Array(24).fill(0),identity:`map:1:${'b'.repeat(64)}`}]}],mapBanks:[{bankSlots:[0],terrainIds:Array(1024).fill(4)}]};
+}
+
+test('bulk apply preserves an invalid draft in the map editor',()=>{
+ const rows=setup(scenarioFixture());$('scenarioTabButton').click();set($('scenarioX'),6);
+ assert.equal($('scenarioX').getAttribute('aria-invalid'),'true');hooks.selectEditorTab('unit');
+ const before=rows.map(row=>row.space);$('unitBulkButton').click();$('editorSearchSubmit').click();
+ assert.deepEqual(rows.map(row=>row.space),before);assert.equal($('scenarioX').value,'6');
+ assert.equal($('editorSearchDialog').open,true);assert.match($('editorSearchError').textContent,/입력/);
+ $('editorSearchCancel').click();hooks.selectEditorTab('scenario');set($('scenarioX'),2);
+});
+
+test('bulk undo preserves an invalid draft in another editor',()=>{
+ const rows=setup(scenarioFixture());$('unitBulkButton').click();$('editorSearchSubmit').click();
+ const after=rows.map(row=>row.space);$('scenarioTabButton').click();set($('scenarioX'),6);hooks.selectEditorTab('unit');
+ $('unitBulkNote').querySelectorAll('button')[1].click();
+ assert.deepEqual(rows.map(row=>row.space),after);assert.equal($('scenarioX').value,'6');assert.equal(state.editorTab,'scenario');
+ set($('scenarioX'),2);
+});
+
+test('bulk preview is rejected if validation commits a newer pending value',()=>{
+ const rows=setup(scenarioFixture());$('scenarioTabButton').click();$('scenarioX').value='3';hooks.selectEditorTab('unit');
+ const before=rows.map(row=>row.space);$('unitBulkButton').click();$('editorSearchSubmit').click();
+ assert.equal(state.editorScenario.deployments[0].x,3);assert.deepEqual(rows.map(row=>row.space),before);
+ assert.equal($('editorSearchDialog').open,true);assert.match($('editorSearchError').textContent,/바뀌/);
+ $('editorSearchCancel').click();
+});
 test("ability membership uses the current row and navigation clears a filter that hides the requested change", () => {
   setup(); $("unitFilterButton").click(); set(draft(0).querySelector("[data-condition-field]"), "ability");
   set(draft(0).querySelector("[data-condition-op]"), "lacks"); set(draft(0).querySelector("[data-condition-value]"), 1); $("editorSearchSubmit").click(); assert.deepEqual(ids(), []);

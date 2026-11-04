@@ -1,13 +1,14 @@
 // Bounded decoded changes accompany the compressed carrier masks. A carrier
 // mask alone never authorizes scenario code, map headers or graphic-bank edits.
-import { readScenarioArchive } from './editor-scenario-archive.mjs?v=20261104-save3';
-import { readMapArchive, readMapBankArchive } from './editor-map-archive.mjs?v=20261104-save3';
-import { readScenarioDeployments, deploymentDecodedMasks, validateScenarioReinforcements } from './editor-deployments.mjs?v=20261104-save3';
-import { immutableBytesHash } from './editor-provenance.mjs?v=20261104-save3';
-import { Sha256 } from './sha256.mjs?v=20261104-save3';
-import { normalizeScenarioDeadlines } from './editor-scenario-deadlines.mjs?v=20261104-save3';
+import { readScenarioArchive } from './editor-scenario-archive.mjs?v=20261104-part1';
+import { readMapArchive, readMapBankArchive } from './editor-map-archive.mjs?v=20261104-part1';
+import { readScenarioDeployments, deploymentDecodedMasks, validateScenarioReinforcements } from './editor-deployments.mjs?v=20261104-part1';
+import { immutableBytesHash } from './editor-provenance.mjs?v=20261104-part1';
+import { Sha256 } from './sha256.mjs?v=20261104-part1';
+import { normalizeScenarioDeadlines } from './editor-scenario-deadlines.mjs?v=20261104-part1';
+import { normalizeScenarioDialogues } from './editor-scenario-dialogue.mjs?v=20261104-part1';
 
-import {buildRegionContexts} from './editor-scenario-region-context.mjs?v=20261104-save3';
+import {buildRegionContexts} from './editor-scenario-region-context.mjs?v=20261104-part1';
 const digestJson = value => new Sha256().update(new TextEncoder().encode(JSON.stringify(value))).hex();
 export function mergeFullByteMasks(ranges) {
   const output = [];
@@ -45,12 +46,18 @@ export function mapPlaneDecodedMasks(plane) {
   return ranges;
 }
 
-export function inspectScenarioScopes({ gameId, scenarioBytes, mapBytes, bankBytes, sectorMode, tables, scenarioLayout = 'latest' }) {
+export function inspectScenarioScopes({ gameId, scenarioBytes, mapBytes, bankBytes, sectorMode, tables, scenarioLayout = 'latest', glyphMap }) {
   if (![1, 2].includes(sectorMode)) throw new Error('Scenario sector mode must come from the inspected disc extent.');
   const rawArchive = readScenarioArchive(scenarioBytes, gameId, { scenarioLayout }), maps = readMapArchive(mapBytes, gameId);
-  const rawDeployments=readScenarioDeployments(rawArchive,maps,tables);
-  const regionContexts=buildRegionContexts(rawArchive,maps,rawDeployments.scenarios,tables);
-  const {archive,deadlines,reinforcements:rawReinforcements,eventCriteria,eventPhases}=normalizeScenarioDeadlines(rawArchive,{unitCount:tables?.unitCount,pilotContext:tables?.pilotContext,regionContexts});
+  // RG01 binds only map identity/geometry, never dialogue bytes. This
+  // preliminary binding supplies the context needed to validate an existing
+  // region wrapper while the outer dialogue trailer is restored.
+  const bindings=buildRegionContexts(rawArchive,maps,readScenarioDeployments(rawArchive,maps,tables).scenarios,tables);
+  const dialogue=normalizeScenarioDialogues(rawArchive,{glyphMap,speakerOptions:tables?.speakerOptions,unitCount:tables?.unitCount,pilotContext:tables?.pilotContext,reinforcementRoot:tables?.reinforcementRoot,regionContexts:bindings});
+  const rawDeployments=readScenarioDeployments(dialogue.archive,maps,tables);
+  const regionContexts=buildRegionContexts(dialogue.archive,maps,rawDeployments.scenarios,tables);
+  if(JSON.stringify(bindings)!==JSON.stringify(regionContexts))throw new Error('RG01 dialogue restoration changed map binding.');
+  const {archive,deadlines,reinforcements:rawReinforcements,eventCriteria,eventPhases}=normalizeScenarioDeadlines(dialogue.archive,{unitCount:tables?.unitCount,pilotContext:tables?.pilotContext,reinforcementRoot:tables?.reinforcementRoot,regionContexts});
   const banks = readMapBankArchive(bankBytes, gameId), deployments = readScenarioDeployments(archive, maps, tables,{eventCriteria,eventPhases});
   const canonicalRegionContexts=buildRegionContexts(archive,maps,deployments.scenarios,tables);
   if(JSON.stringify(regionContexts)!==JSON.stringify(canonicalRegionContexts))throw new Error('RG01 raw/canonical map binding differs.');
@@ -85,7 +92,7 @@ export function inspectScenarioScopes({ gameId, scenarioBytes, mapBytes, bankByt
     },
   };
   const reinforcements=validateScenarioReinforcements(rawReinforcements,deployments);
-  return { archive, rawArchive, regionContexts:canonicalRegionContexts, deadlines, reinforcements, eventCriteria, eventPhases, maps, banks, deployments, scope, scenarioCarrierMasks, mapCarrierMasks };
+  return { archive, rawArchive, rosterLevels:deployments.rosterLevels, dialogues:dialogue.dialogues, dialogueEdits:dialogue.dialogueEdits, dialogueCoverage:dialogue.dialogueCoverage, regionContexts:canonicalRegionContexts, deadlines, reinforcements, eventCriteria, eventPhases, maps, banks, deployments, scope, scenarioCarrierMasks, mapCarrierMasks };
 }
 
 export function scenarioRawMasks(files, inspected) {

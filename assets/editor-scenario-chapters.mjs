@@ -1,6 +1,6 @@
-import { SCENARIO_EDITOR_PROFILES } from './editor-scenario-profiles.mjs?v=20261104-save3';
-import { SCENARIO_CHAPTER_BINDINGS } from './editor-scenario-chapter-data.mjs?v=20261104-save3';
-import { ownData, readDenseList } from './editor-own.mjs?v=20261104-save3';
+import { SCENARIO_EDITOR_PROFILES } from './editor-scenario-profiles.mjs?v=20261104-part1';
+import { SCENARIO_CHAPTER_BINDINGS } from './editor-scenario-chapter-data.mjs?v=20261104-part1';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261104-part1';
 
 const freeze = Object.freeze;
 const SOURCE = 'user-bin-scenario-chapter';
@@ -24,8 +24,8 @@ function sourceMatches(gameId, binding, scene, scope) {
     || selected.list.some((slot, index) => slot !== expected[index])) return false;
   const body = ownData(ownData(ownData(scope, 'scenario'), 'bodies'), binding.physicalIndex);
   return Boolean(body) && SCENARIO_EDITOR_PROFILES.some(profile => profile.gameId === gameId
-    && scopeKeys.every(key => ownData(body, key)
-      === profile.scenarioScopes?.scenario?.bodies?.[binding.physicalIndex]?.[key]));
+    && [profile.scenarioScopes,profile.scenarioLabelScopes].some(source=>scopeKeys.every(key => ownData(body, key)
+      === source?.scenario?.bodies?.[binding.physicalIndex]?.[key])));
 }
 
 function readTitle(titleTable, titleIndex) {

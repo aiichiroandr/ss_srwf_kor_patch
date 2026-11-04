@@ -1,0 +1,60 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {DEBUG_ENTRY as p,debug,syntheticDebugCore} from './helpers/synthetic-overlay-windows.mjs';
+const {inspectDebugEntry,debugEntryRows,setDebugEntry,normalizeDebugEntry}=debug;
+import {buildGame,descriptorFor,trustFor} from './helpers/synthetic-game.mjs';
+import {world} from './helpers/synthetic-tsr.mjs';
+import {buildDisc,packGreedy,echoRequest} from './helpers/synthetic-iso.mjs';
+const {createEditorInspector,splitRootSegments,exportEditedImage,buildEditedImage}=await syntheticDebugCore();
+import {extractMigrationPreset,requireMigrationIdentities} from '../assets/editor-migration.mjs';
+
+const game='srwf-final';
+function fixture(){
+ const parts=Object.fromEntries(splitRootSegments(buildGame({units:4})).map((r,i)=>[i,r.bytes]));
+ parts[0]=new Uint8Array(0x600);
+ const bytes=world(parts,{rooted:true}).decoded;bytes.set(Buffer.from(p.context,'hex'),p.start);return bytes;
+}
+test('debug branch preserves non-START path and modifies only its existing relative byte',()=>{
+ const off=fixture(),on=setDebugEntry(off,game,true);
+ assert.deepEqual([...on.keys()].filter(i=>on[i]!==off[i]),[p.offset]);
+ assert.equal(on.length,off.length);assert.equal(off[p.offset],4);assert.equal(on[p.offset],12);
+ assert.equal(inspectDebugEntry(on,game).enabled,true);
+ assert.deepEqual(normalizeDebugEntry(on,game),off);assert.deepEqual(setDebugEntry(on,game,false),off);
+ assert.equal(inspectDebugEntry(off,'srwf-f').available,false);
+ for(const value of [0,1,undefined,'true'])assert.throws(()=>setDebugEntry(off,game,value),{code:'EDITOR_DEBUG_ENTRY_UNSUPPORTED'});
+ const tampered=on.slice();tampered[p.start+1]^=1;
+ assert.equal(inspectDebugEntry(tampered,game).available,false);
+ assert.strictEqual(normalizeDebugEntry(tampered,game),tampered,'unknown neighboring bytes are not normalized');
+ assert.throws(()=>setDebugEntry(tampered,game,false));
+ assert.deepEqual(debugEntryRows({available:false}),[]);
+ const buffer=Buffer.from(off),copy=setDebugEntry(buffer,game,true);
+ assert.equal(buffer[p.offset],4);assert.equal(copy[p.offset],12);assert.notEqual(copy.buffer,buffer.buffer);
+});
+test('actual writer and inspector preserve debug option with stats, reject adjacent tampering, and restore',async()=>{
+ const decoded=fixture(),disc=buildDisc({slot:packGreedy(decoded),product:'20612G'});
+ const inspector=createEditorInspector(trustFor(disc)),opened=await inspector.inspectPatchedImage(disc.blob,descriptorFor(disc));
+ assert.equal(opened.view.debugEntry.available,true);assert.equal(opened.view.debugEntries[0].enabled,0);
+ const profile=await inspector.createEditorProvenanceProfile(opened.session),full=createEditorInspector(trustFor(disc,[profile]));
+ const request={...echoRequest(opened.session,opened.view),debugEntry:true};
+ request.unitEdits.find(e=>e.recordIndex===1).fields.hp=1234;
+ const written=await exportEditedImage(opened.session,request);
+ const descriptor={...descriptorFor(disc),imageKind:'local'};
+ const reopened=await full.inspectPatchedImage(written.outputBlob,descriptor);
+ assert.equal(reopened.view.debugEntry.enabled,true);assert.equal(reopened.view.units.find(r=>r.recordIndex===1).hp,1234);
+ const noOp=await exportEditedImage(reopened.session,echoRequest(reopened.session,reopened.view));
+ assert.strictEqual(noOp.outputBlob,reopened.session.sourceBlob);
+ const {preset}=extractMigrationPreset(opened.view,reopened.view);
+ assert.deepEqual(preset.debugEntries[0].fields.enabled,{from:0,to:1});
+ assert.equal(preset.debugEntries[0].identity,opened.view.debugEntries[0].identity);
+ requireMigrationIdentities({releaseId:preset.base.releaseId,entries:{debug:preset.debugEntries}},'srwf-final-20261027-v0-4-c');
+ const adjacent=reopened.session.decoded.slice();adjacent[p.start+1]^=1;
+ const bad=await buildEditedImage(reopened.session,adjacent);
+ await assert.rejects(()=>full.inspectPatchedImage(bad.outputBlob,descriptor),{code:'EDITOR_CUSTOM_PROVENANCE'});
+ const restored=await exportEditedImage(reopened.session,{...echoRequest(reopened.session,reopened.view),debugEntry:false});
+ const offAgain=await full.inspectPatchedImage(restored.outputBlob,descriptor);
+ assert.equal(offAgain.view.debugEntry.enabled,false);assert.equal(offAgain.view.units.find(r=>r.recordIndex===1).hp,1234);
+ await assert.rejects(()=>exportEditedImage(opened.session,{sessionToken:opened.session.sessionToken,debugEntry:1}),{code:'EDITOR_REQUEST_INVALID'});
+ let invoked=false;const accessor={sessionToken:opened.session.sessionToken,get debugEntry(){invoked=true;return true;}};
+ await assert.rejects(()=>exportEditedImage(opened.session,accessor),{code:'EDITOR_REQUEST_INVALID'});assert.equal(invoked,false);
+ assert.deepEqual(opened.session.decoded,decoded);
+});

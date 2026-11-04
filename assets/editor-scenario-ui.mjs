@@ -1,14 +1,22 @@
-import { packMeasuredGroups } from './editor-layout.mjs?v=20261104-save3';
-import { createScenarioTilePicker } from './editor-scenario-tile-picker.mjs?v=20261104-save3';
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261104-save3';
-import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261104-save3';
-import { rewardOutcomeLabel } from './editor-rewards.mjs?v=20261104-save3';
-import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption, sortScenarioSelections } from './editor-scenario-labels.mjs?v=20261104-save3';
-import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261104-save3';
-import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261104-save3';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261104-save3';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261104-save3';
-import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261104-save3';
+import { packMeasuredGroups } from './editor-layout.mjs?v=20261104-part1';
+import {createScenarioPlacementList} from './editor-scenario-placement-list.mjs?v=20261104-part1';
+import { createScenarioTilePicker } from './editor-scenario-tile-picker.mjs?v=20261104-part1';
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261104-part1';
+import {decodeMapIcon} from './editor-map-icons.mjs?v=20261104-part1';
+import { eventConditionLabel } from './editor-scenario-events.mjs?v=20261104-part1';
+import { rewardOutcomeLabel } from './editor-rewards.mjs?v=20261104-part1';
+import {createScenarioCombatRewards} from './editor-scenario-combat-rewards.mjs?v=20261104-part1';
+import { scenarioSelectionLabel, scenarioSelectionDescription, scenarioSharedCaption, sortScenarioSelections } from './editor-scenario-labels.mjs?v=20261104-part1';
+import { CRITERIA_FIELDS, encodeObjectiveRule, decodeObjectiveRule, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261104-part1';
+import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261104-part1';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, eventCriteriaTurnSummary } from './editor-scenario-event-criteria.mjs?v=20261104-part1';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261104-part1';
+import { createRegionRuleControls, paintRegionOutline } from './editor-scenario-region-ui.mjs?v=20261104-part1';
+import {createScenarioRosterEditor} from './editor-scenario-roster-ui.mjs?v=20261104-part1';
+import {createAllyReinforcementEditor} from './editor-scenario-reinforcement-ui.mjs?v=20261104-part1';
+import {validateAllyReinforcement} from './editor-scenario-reinforcement-data.mjs?v=20261104-part1';
+import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261104-part1';
+import { createScenarioDialogueEditor } from './editor-scenario-dialogue-ui.mjs?v=20261104-part1';
 const eventRuleControls=[1,2,3].map(n=>({field:`eventRule${n}`,prefix:`scenarioEventRule${n}`}));
 const eventCriteriaIds=['scenarioEventPhaseGroup','scenarioEventPhase','scenarioEventPhaseHint','scenarioEventCriteriaChoice','scenarioEventJoin','scenarioEventAdd','scenarioEventCriteriaReset',...eventRuleControls.flatMap(({prefix})=>['Group','Comparison','Value','Remove'].map(suffix=>prefix+suffix))];
 const ruleControls = ['Victory','Defeat'].flatMap(outcome => [1,2,3].map(n => ({field:`${outcome.toLowerCase()}Rule${n}`,prefix:`scenario${outcome}Rule${n}`})));
@@ -22,12 +30,12 @@ const containsElement=(container,target)=>{for(let node=target;node;node=node.pa
 export function createScenarioEditor(host) {
   const ui = Object.fromEntries(['scenarioEditorPanel', 'scenarioSelector', 'scenarioMapSelector', 'scenarioPlaneSelector',
     'scenarioMapViewport', 'scenarioMapCanvas', 'scenarioMapSummary', 'scenarioSelectionDescription', 'scenarioCellInfo', 'scenarioZoom',
-    'scenarioDeploymentTool', 'scenarioEventTool', 'scenarioObjectiveTool', 'scenarioTileTool', 'scenarioTaskHint', 'scenarioMapLegend', 'scenarioTilePickerOpen', 'scenarioCurrentTilePreview', 'scenarioCurrentTileName', 'scenarioTileName', 'scenarioDeploymentFields', 'scenarioTileFields',
-    'scenarioDeploymentSelector', 'scenarioX', 'scenarioY', 'scenarioMove', 'scenarioReward', 'scenarioRewardDetail', 'scenarioPilotName',
-    'scenarioDeploymentReset', 'scenarioTileSelector', 'scenarioTilePickerOpen', 'scenarioApplyTile', 'scenarioBrush', 'scenarioTerrainLink',
+    'scenarioDeploymentTool', 'scenarioEventTool', 'scenarioObjectiveTool', 'scenarioTileTool', 'scenarioDialogueTool', 'scenarioDialoguePanel', 'scenarioRosterTool', 'scenarioRosterPanel', 'scenarioTaskHint', 'scenarioMapLegend', 'scenarioTilePickerOpen', 'scenarioCurrentTilePreview', 'scenarioCurrentTileName', 'scenarioTileName', 'scenarioDeploymentFields', 'scenarioTileFields',
+    'scenarioDeploymentSelector', 'scenarioEntityArt', 'scenarioSpawnArt', 'scenarioX', 'scenarioY', 'scenarioMove', 'scenarioReward', 'scenarioRewardDetail', 'scenarioPilotName',
+    'scenarioDeploymentReset', 'scenarioCombatRewards', 'scenarioTileSelector', 'scenarioTilePickerOpen', 'scenarioApplyTile', 'scenarioBrush', 'scenarioTerrainLink',
     'scenarioTileReset', 'scenarioTilePreview', 'scenarioStatus', 'scenarioViewPager', 'scenarioMapPage', 'scenarioFieldsPage',
     'scenarioFieldsPager', 'scenarioFieldsPrev', 'scenarioFieldsNext', 'scenarioFieldsPosition',
-    'scenarioSpawnChoice','scenarioSpawnPosition','scenarioSpawnRewardGroup','scenarioSpawnTemplate','scenarioSpawnPilot','scenarioSpawnToggle','scenarioSpawnReset','scenarioSpawnTurn','scenarioSpawnX','scenarioSpawnY','scenarioSpawnMove','scenarioSpawnReward',
+    'scenarioSpawnChoice','scenarioSpawnPosition','scenarioSpawnNoteGroup','scenarioSpawnUnit','scenarioSpawnPilot','scenarioSpawnToggle','scenarioSpawnReset','scenarioSpawnLevel','scenarioSpawnTriggerX','scenarioSpawnTriggerY','scenarioSpawnTriggerPick','scenarioSpawnX','scenarioSpawnY','scenarioSpawnPick',
     'scenarioObjectiveFields','scenarioObjectiveDescription','scenarioDeadline','scenarioDeadlineRule','scenarioObjectiveReset','scenarioVictoryText','scenarioDefeatText',
     ...criteriaIds,...eventCriteriaIds,'scenarioObjectiveNote','scenarioEventSelector','scenarioFactionSelector','scenarioRelatedDeploymentButton','scenarioEventFields','scenarioEventChoice','scenarioConditionSelector','scenarioTurn','scenarioConditionRule','scenarioEventReset'].map(id => [id, $(id)]));
   let mapIndex = null, planeIndex = 0, selected = null, scenarioIndex = null, tool = 'deployment', mode = 'placement';
@@ -36,16 +44,26 @@ export function createScenarioEditor(host) {
   let fieldsPages = [];
   let explanationContent, explanationPager, explanationPrevious, explanationNext, explanationPosition;
   let explanationPages = [], explanationPage = 0, explanationSource;
-  let eventIndex=null,conditionIndex=null,faction='all';
+  let eventIndex=null,conditionIndex=null,faction='all',spawnPicker=null;
   const factionNames={player:'아군',enemy:'적군',other:'기타 진영',unknown:'미확인'};
-  const filterNames={...factionNames,sortie:'출격 위치'};
+  const filterNames={...factionNames,player:'아군·편성 출격',sortie:'출격 위치'};
   const factionColors={player:'#66c7ff',enemy:'#ff8e8e',other:'#c6baff',unknown:'#e6f9ff'};
   const initialFaction=item=>item.factionSource==='ca02-group-selector'&&Object.hasOwn(factionNames,item.faction)?item.faction:'unknown';
-  const inFaction=item=>faction==='all'||(faction==='sortie'?['roster-reference','sortie-position'].includes(item.placementKind):initialFaction(item)===faction);
-  const texture = document.createElement('canvas');
+  const inFaction=item=>faction==='all'||((faction==='sortie'||faction==='player')&&['roster-reference','sortie-position'].includes(item.placementKind))||(faction!=='sortie'&&initialFaction(item)===faction);
+  const texture = document.createElement('canvas'),iconTexture=document.createElement('canvas');
   const model = () => host.model(), map = () => model().mapFor(mapIndex), plane = () => map()?.planes[planeIndex];
+  const dialogueRows=()=> (model().dialogues??[]).filter(item=>item.physicalIndex===scenarioIndex);
+  const dialogueEditor=createScenarioDialogueEditor({el:$,rows:dialogueRows,canEdit:host.canEdit,validateText:host.validateDialogueText,validatePages:host.validateDialoguePages,validateAfter:host.validateDialogueAfter,setAfter:host.setAfterDialogue,speakerOptions:host.dialogueSpeakerOptions,validateSpeaker:host.validateDialogueSpeaker,setSpeaker:host.setDialogueSpeaker,appendArtwork:host.appendArtwork,onChange:host.onChange,onInvalid:()=>{host.open();mode='dialogue';renderMode();measure();}});
+  const rosterRows=()=> (model().rosterLevels??[]).filter(item=>item.physicalIndex===scenarioIndex);
+  const rosterEditor=createScenarioRosterEditor({el:$,rows:rosterRows,context:()=>model(),canEdit:host.canEdit,appendArtwork:host.appendArtwork,onChange:host.onChange,onOpenDialogue:PUBLIC_EDITOR_FEATURES.scenarioDialogueEditing?focusDialogue:null,onInvalid:()=>{host.open();mode='roster';renderMode();measure();}});
+  function focusDialogue(id){
+    if(!rosterEditor.validate({report:true})||!dialogueEditor.validate({report:true}))return false;
+    const target=(model().dialogues??[]).find(item=>item.recordIndex===id);if(!target)return false;
+    mode='dialogue';scenarioIndex=target.physicalIndex;mapIndex=scene()?.mapIndex??mapIndex;planeIndex=0;eventIndex=conditionIndex=selected=null;refresh();return dialogueEditor.focus(id);
+  }
   const scene=()=>model().scenarios.find(item=>item.physicalIndex===scenarioIndex);
-  const onMap=item=>map()?.mapSlots.includes(item.mapIndex);
+  const appearanceMap=item=>item.displayMapIndex??item.mapIndex;
+  const onMap=item=>map()?.mapSlots.includes(appearanceMap(item));
   const scenePlacements=()=>scenarioIndex===null?[]:model().deployments.filter(item=>item.physicalIndex===scenarioIndex);
   const relatedWaves=()=>mode==='events'&&eventIndex?.startsWith('event:')
     ?(scene()?.waves??[]).filter(item=>item.guards?.some(guard=>guard.recordIndex===eventIndex.slice(6))):[];
@@ -58,14 +76,17 @@ export function createScenarioEditor(host) {
   const unreadPlacements=()=>Boolean(scene()&&!scenePlacements().length);
   const incompletePlacements=()=>Array.isArray(scene()?.coverage?.frontiers)?scene().coverage.frontiers.length>0
     :Boolean(scene()?.frontiers?.some(item=>/unknown-command|state-limit|budget|boundary-conflict/u.test(item.reason)));
-  const placementName=item=>item.name||item.unitName||(item.placementKind==='sortie-position'?'출격 선택 기체':'편성 기체');
-  const placementLabel=(item,index)=>`${index+1}. ${placementName(item)} · ${positioned(item)?`(${item.x}, ${item.y})`:'위치 미확인'}`;
-  const placementDescription=item=>`${placementName(item)} · ${item.pilotName||'파일럿 미확인'} · ${positioned(item)?`(${item.x}, ${item.y})`:'위치 미확인'} · 초기 진영 ${factionNames[initialFaction(item)]}${Number.isInteger(item.rosterReference)?` · 편성 참조 0x${item.rosterReference.toString(16).toUpperCase()}`:''}${onMap(item)?'':model().mapFor(item.mapIndex)?' · 다른 맵':' · 맵 연결 미확인'}${item.readOnlyReason?' · '+item.readOnlyReason:''}`;
+  const placementName=item=>item.displayName||item.name||item.unitName||(item.placementKind==='sortie-position'?'출격 선택 기체':'편성 기체');
+  const placementLabel=(item,index)=>`${index+1}. ${placementName(item)} · ${item.pilotName||'실행 시 결정'} · ${positioned(item)?`(${item.x}, ${item.y})`:'위치 미확인'}`;
+  const placementDescription=item=>`${placementName(item)} · ${item.pilotName||'파일럿 미확인'} · ${positioned(item)?`(${item.x}, ${item.y})`:'위치 미확인'}${item.appearanceNote?' · '+item.appearanceNote:''}${item.mapAppearanceSource?' · 기본 지도 위 예상 위치':''} · 초기 진영 ${factionNames[initialFaction(item)]}${Number.isInteger(item.rosterReference)?` · 편성 참조 0x${item.rosterReference.toString(16).toUpperCase()}`:''}${onMap(item)?'':model().mapFor(item.mapIndex)?' · 다른 맵':' · 맵 연결 미확인'}${item.readOnlyReason?' · '+item.readOnlyReason:''}`;
+  const placementList=createScenarioPlacementList({list:$('scenarioPlacementList'),select:ui.scenarioDeploymentSelector,name:placementName,description:placementDescription,appendArtwork:host.appendArtwork});
   const condition=()=>model().events.find(item=>item.recordIndex===conditionIndex);
   const reinforcement=()=>model().reinforcements.find(item=>item.physicalIndex===scenarioIndex);
   const spawnMode=()=>Boolean(eventIndex?.startsWith('reinforcement:'));
-  const spawnGroups=()=>[ui.scenarioSpawnChoice,ui.scenarioSpawnPosition,ui.scenarioSpawnRewardGroup];
-  const spawnFields=['enabled','templateOffset','turn','x','y','rewardSelector'];
+  const spawnGroups=()=>[ui.scenarioSpawnChoice,ui.scenarioSpawnPosition,ui.scenarioSpawnNoteGroup];
+  const spawnEditor=createAllyReinforcementEditor({el:$,row:reinforcement,canEdit:host.canEdit,active:()=>spawnMode()&&planeIndex===0,appendArtwork:host.appendArtwork,onChange:host.onChange,redraw:()=>{draw();sync();},say,
+    onInvalid:input=>{host.open();showPage('fields');focusAfterReset(input);},onReset:input=>focusAfterReset(input),
+    onPick:kind=>{spawnPicker=kind;say(kind==='trigger'?'아군이 도착하면 발동할 칸을 고르세요. Esc로 취소합니다.':'등장 희망 칸을 고르세요. 막힌 칸은 게임이 주변을 탐색합니다.');showPage('map');ui.scenarioMapCanvas.focus({preventScroll:true});draw();}});
   const objective=()=>model().objectives.find(item=>item.physicalIndex===scenarioIndex);
   const criteriaGroups=()=>[ui.scenarioCriteriaChoice,ui.scenarioVictoryChoice,ui.scenarioDefeatChoice,...ruleControls.map(({prefix})=>ui[prefix+'Group'])];
   let lastCriteriaControl=null;
@@ -96,15 +117,20 @@ export function createScenarioEditor(host) {
   const customCriteria=row=>row?.criteriaEditable&&CRITERIA_FIELDS.some(field=>row[field]!==row.criteriaDefaults[field]);
   const wave=()=>scene()?.waves?.find(item=>item.recordIndex===eventIndex);
   const row = () => mode==='placement' ? placements().find(row => row.recordIndex === selected) : null;
+  const combatRewards=createScenarioCombatRewards({
+    el:$,placement:row,rows:kind=>host.combatRows?.(kind)??[],aliases:()=>host.pilotAliases?.()??[],
+    canEdit:host.canEdit,onChange:host.onChange,
+    reveal:input=>{host.open();chooseTool('deployment');focusAfterReset(input);input.reportValidity();},
+  });
   const cell = () => map() ? model().cell(map().mapIndex, planeIndex, x, y) : null;
   const terrainId = tileId => model().bankFor(map())?.terrainIds[tileId];
-  const terrainName = id => host.terrainName(id) || `지형 #${id}`;
+  const terrainName = id => Number.isInteger(id) ? host.terrainName(id) || `지형 #${id}` : '선택 안 됨';
   function say(text = '',description=text) { ui.scenarioStatus.textContent = text;ui.scenarioStatus.title=description; requestAnimationFrame(measure); }
 
   function draw() {
     const current = plane(), viewport = ui.scenarioMapViewport;
     const ctx = ui.scenarioMapCanvas.getContext?.('2d');
-    if (!current || !ctx?.fillRect || ui.scenarioEditorPanel.hidden) return;
+    if (!current || !ctx?.fillRect || ui.scenarioEditorPanel.hidden || mode==='dialogue') return;
     const fit = Math.min(viewport.clientWidth / current.width, viewport.clientHeight / current.height);
     viewport.dataset.zoom = String(zoom);
     const size = Math.max(1, fit * zoom), width = Math.max(1, Math.floor(current.width * size)), height = Math.max(1, Math.floor(current.height * size));
@@ -129,13 +155,29 @@ export function createScenarioEditor(host) {
     if (planeIndex === 0) for (const item of shown) {
       if (item.x >= current.width || item.y >= current.height) continue;
       const active = item.recordIndex === selected;
+      const unit=model().units.find(row=>row.recordIndex===(item.displayUnitId??item.unitId));
+      const icon=unit&&decodeMapIcon(model().mapIcons,unit.mapIcon,item.appearanceSource==='rom-default-roster'?'player':initialFaction(item));
+      if(icon&&ctx.drawImage&&paintTilePreview(iconTexture,icon)){
+        ctx.imageSmoothingEnabled=false;ctx.drawImage(iconTexture,item.x*size,item.y*size,size,size);
+        if(active){ctx.strokeStyle='#ffe39e';ctx.lineWidth=Math.max(1,size*.06);ctx.strokeRect(item.x*size,item.y*size,size,size);}
+        continue;
+      }
+      if(['sortie-position','roster-reference'].includes(item.placementKind)){
+        // A free sortie has no unit ID in the ROM. Show its actual target
+        // position rather than inventing a unit or silently omitting it.
+        const inset=Math.max(.5,size*.1),left=item.x*size+inset,top=item.y*size+inset,edge=size-2*inset;
+        ctx.fillStyle='#07273d';ctx.fillRect(left,top,edge,edge);
+        ctx.strokeStyle=active?'#ffe39e':'#66c7ff';ctx.lineWidth=Math.max(1,size*.06);ctx.strokeRect(left,top,edge,edge);
+        if(size>=12){ctx.fillStyle='#cbeaff';ctx.font=`bold ${Math.max(8,Math.min(12,size*.48))}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(item.placementKind==='sortie-position'?'출':'?',(item.x+.5)*size,(item.y+.5)*size);}
+        continue;
+      }
       ctx.fillStyle = factionColors[initialFaction(item)];
       ctx.beginPath(); ctx.arc((item.x + .5) * size, (item.y + .5) * size, Math.max(1.5, size * .28), 0, Math.PI * 2); ctx.fill();
       if(active){ctx.strokeStyle='#ffe39e';ctx.lineWidth=Math.max(1,size*.06);ctx.stroke();}
       if (size >= 23) { ctx.fillStyle = '#07192d'; ctx.font = `bold ${Math.min(14, size * .42)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(list.indexOf(item) + 1), (item.x + .5) * size, (item.y + .5) * size); }
     }
     if(spawnMode()&&reinforcement()?.enabled&&planeIndex===0){
-      const added=reinforcement();ctx.fillStyle='#ff9689';ctx.beginPath();ctx.arc((added.x+.5)*size,(added.y+.5)*size,Math.max(2,size*.32),0,Math.PI*2);ctx.fill();
+      const added=reinforcement();paintRegionOutline(ctx,{x0:added.triggerX,y0:added.triggerY,x1:added.triggerX,y1:added.triggerY},size,'#ffe39e','발동');ctx.fillStyle='#66c7ff';ctx.beginPath();ctx.arc((added.x+.5)*size,(added.y+.5)*size,Math.max(2,size*.32),0,Math.PI*2);ctx.fill();
     }
     if(criteriaActive()&&regionAvailable()&&planeIndex===0&&model().mapFor(objectiveContext().regionContext.mapIndex)===map()){
       for(const {field}of ruleControls){
@@ -154,7 +196,7 @@ export function createScenarioEditor(host) {
   function describeCell() {
     if (ui.scenarioSelectionDescription) ui.scenarioSelectionDescription.textContent = `${scenarioSelectionDescription(scene())}${scene()?unreadPlacements()
       ?' 이 시나리오의 배치 명령을 아직 읽지 못했습니다. 기체가 없다는 뜻이 아닙니다.'
-      :` 읽은 배치 ${scenePlacements().length}기만 표시합니다.${incompletePlacements()?' 일부 명령은 아직 읽지 못해 초기 배치나 다른 증원이 빠질 수 있습니다.':''} 초기 진영이 확인된 고정 기체만 아군·적군·기타로 구분합니다. 출격 편성 참조의 기체·파일럿은 게임 실행 시 결정됩니다. 게임 중 진영 변경은 반영하지 않습니다.`:''}`;
+      :` 읽은 배치 ${scenePlacements().length}기만 표시합니다.${incompletePlacements()?' 일부 명령은 아직 읽지 못해 초기 배치나 다른 증원이 빠질 수 있습니다.':''} 편성 참조의 파일럿은 ROM 명령에서, 기본 기체는 ROM 탑승표에서 읽습니다. 실제 탑승 기체와 자유 출격은 세이브의 편성에 따라 달라집니다. 직접 맵 연결이 없는 읽기 전용 배치는 단일 기본 지도에 예상 위치로 표시하며 편집하지 않습니다. 자유 출격은 기체 대신 파란 출격 표시로 구분합니다. 게임 중 진영 변경은 반영하지 않습니다.`:''}`;
     const current = plane();
     if (!current) { ui.scenarioCellInfo.textContent = '맵 데이터가 없습니다'; return; }
     const tileId = model().tile(mapIndex, planeIndex, x, y), terrain = terrainId(tileId);
@@ -164,8 +206,9 @@ export function createScenarioEditor(host) {
     const listed=mode==='placement'?placements():relatedPlacements();
     const count=shown.length===listed.length?`${shown.length}기`:`${shown.length}/${listed.length}기`;
     ui.scenarioMapLegend.hidden = planeIndex!==0||!listed.length;
-    ui.scenarioMapLegend.textContent=mode==='events'?`● 연계 배치 ${count}`:faction==='all'?`● 배치 ${count}`:`● ${filterNames[faction]} ${count}`;
-    ui.scenarioMapLegend.title=`현재 지도에 ${shown.length}기 / 선택 목록 ${listed.length}기 표시. 맵 연결·좌표가 확인되지 않은 항목과 다른 맵의 배치는 표시하지 않습니다. 아군 파랑 · 적군 빨강 · 기타 진영 보라 · 미확인 흰색 · 선택 노란 테두리. 기체 생성 시 초기 진영이며 게임 중 변경은 별도입니다.${mode==='events'?' 선택한 사건에 연결된 배치입니다. 점을 누르거나 ‘배치 보기’로 편집합니다.':''}`;
+    const defaults=shown.filter(r=>r.appearanceSource==='rom-default-roster').length,estimated=shown.filter(r=>r.mapAppearanceSource).length;
+    ui.scenarioMapLegend.textContent=(mode==='events'?`● 연계 배치 ${count}`:faction==='all'?`● 배치 ${count}`:`● ${filterNames[faction]} ${count}`)+(estimated?` · 예상 ${estimated}기`:defaults?' · ROM 기본':'');
+    ui.scenarioMapLegend.title=`현재 지도에 ${shown.length}기 / 선택 목록 ${listed.length}기 표시. ROM 기본 탑승 ${defaults}기, 단일 기본 지도 위 예상 위치 ${estimated}기이며 실제 세이브 상태는 아닙니다. 좌표가 없는 항목과 다른 맵의 배치는 표시하지 않습니다. 아군·기본 편성 파랑 · 적군 빨강 · 기타 진영 보라 · 미확인 흰색 · 선택 노란 테두리.${mode==='events'?' 선택한 사건에 연결된 배치입니다. 점을 누르거나 ‘배치 보기’로 편집합니다.':''}`;
     const bank=model().bankFor(map()),orientation=current.orientations?.[y*current.width+x]??0;
     ui.scenarioCurrentTilePreview.hidden=!paintTilePreview(ui.scenarioCurrentTilePreview,bank&&model().graphics.tile(bank,tileId,orientation));
     ui.scenarioCurrentTileName.textContent=terrainName(terrain);ui.scenarioCurrentTileName.title=`${terrainName(terrain)} · #${tileId}`;
@@ -201,6 +244,7 @@ export function createScenarioEditor(host) {
     showFieldsPage(); showPage('fields'); control.focus({ preventScroll: true });
   }
   function fieldGroups(){
+    if(mode==='dialogue')return [];
     const groups=[...(tool==='deployment'?ui.scenarioDeploymentFields:ui.scenarioTileFields).children];
     if(tool==='tile')return groups;
     if(spawnMode())return groups.filter(group=>spawnGroups().includes(group)&&Boolean(reinforcement()));
@@ -214,7 +258,8 @@ export function createScenarioEditor(host) {
     return groups.filter(group=>!spawnGroups().includes(group)&&!criteriaGroups().includes(group)&&!eventGroups.includes(group)&&group!==ui.scenarioObjectiveFields&&group!==ui.scenarioObjectiveDescription
       &&(containsElement(group,ui.scenarioDeploymentSelector)||Boolean(current))
       &&(!containsElement(group,ui.scenarioX)||positioned(current))
-      &&(!containsElement(group,ui.scenarioReward)||current?.rewardSelector!==null));
+      &&(!containsElement(group,ui.scenarioReward)||current?.rewardSelector!==null)
+      &&(group!==ui.scenarioCombatRewards||combatRewards.available()));
   }
   function measureExplanation() {
     const popup = ui.scenarioSelectionDescription?.closest?.('.reward-explanation');
@@ -288,10 +333,11 @@ export function createScenarioEditor(host) {
     const panel = ui.scenarioEditorPanel;
     if (panel.hidden || !panel.getClientRects?.().length) return;
     const footer = document.querySelector('.editor-footer'), top = panel.getBoundingClientRect().top;
-    panel.dataset.compact = String(window.innerHeight - top < 540);
+    panel.dataset.compact = String(window.innerWidth<1100&&window.innerHeight - top < 540);
     const available = Math.max(100, window.innerHeight - top - (footer?.getBoundingClientRect().height ?? 80) - 28);
     panel.style.setProperty('--scenario-height', `${available}px`);
     panel.dataset.paged = 'false'; ui.scenarioViewPager.hidden = true;
+    if(mode==='dialogue'){fieldsPaged=false;ui.scenarioFieldsPager.hidden=true;measureExplanation();return;}
     const inspector = panel.querySelector('.scenario-inspector'), work = panel.querySelector('.scenario-workarea');
     const groups = fieldGroups();
     const focused = groups.findIndex(group => containsElement(group,document.activeElement));
@@ -300,27 +346,38 @@ export function createScenarioEditor(host) {
     const stackHeight=(element,minimumChild=null)=>{
       const children=[...element.children].filter(child=>child.getClientRects().length),style=getComputedStyle(element);
       const pixel=key=>Number.parseFloat(style[key])||0;
-      return children.reduce((sum,child)=>sum+(child===minimumChild?64:child.getBoundingClientRect().height),0)
+      return children.reduce((sum,child)=>sum+(child===minimumChild?(mode==='placement'&&window.innerWidth<760?144:64):child.getBoundingClientRect().height),0)
         +Math.max(0,children.length-1)*pixel('rowGap')+pixel('paddingTop')+pixel('paddingBottom')+pixel('borderTopWidth')+pixel('borderBottomWidth');
     };
     let inspectorHeight = stackHeight(inspector);
     // Keep a 64px map picture plus its measured caption, cell line and gaps.
     // Compact fields share the screen with it whenever both actually fit.
     let minimumMapHeight=stackHeight(panel.querySelector('.scenario-map-area'),ui.scenarioMapViewport);
+    const rail=panel.querySelector('.scenario-placement-rail');
+    const mobileSplit=mode==='placement'&&window.innerWidth<760&&window.innerHeight>=700;
+    panel.dataset.mobileSplit=String(mobileSplit);
+    $('scenarioPlacementList').setAttribute('aria-orientation',mobileSplit&&panel.dataset.mapShape!=='tall'?'horizontal':'vertical');
+    const wideSidebar=mode==='placement'&&panel.dataset.mapShape==='wide'&&window.innerWidth>=760;
+    const railHeight=mode==='placement'&&window.innerWidth<1000&&!wideSidebar&&rail?.getClientRects().length?rail.getBoundingClientRect().height:0;
     // A tight screen can fit both by using the existing compact controls.
     // Try their measured layout before separating the map from its fields.
-    if(window.innerWidth<760&&panel.dataset.compact!=='true'&&work.getBoundingClientRect().height<inspectorHeight+minimumMapHeight){
+    if(window.innerWidth<760&&panel.dataset.compact!=='true'&&work.getBoundingClientRect().height<inspectorHeight+minimumMapHeight+railHeight){
       panel.dataset.compact='true';
       inspectorHeight=stackHeight(inspector);
       minimumMapHeight=stackHeight(panel.querySelector('.scenario-map-area'),ui.scenarioMapViewport);
     }
     const heights = new Map(groups.map(group => [group, group.getBoundingClientRect().height]));
-    const paged = window.innerWidth < 760 && work.getBoundingClientRect().height < inspectorHeight + minimumMapHeight;
-    panel.dataset.paged = String(paged); ui.scenarioViewPager.hidden = !paged;
-    fieldsPaged = work.getBoundingClientRect().height < inspectorHeight;
+    const currentPlane=plane(), viewport=ui.scenarioMapViewport;
+    const availableMapHeight=Math.max(0,work.getBoundingClientRect().height-railHeight-(minimumMapHeight-(mode==='placement'?144:64)));
+    const desiredMapHeight=currentPlane&&viewport.clientWidth>0?Math.min(availableMapHeight,viewport.clientWidth*currentPlane.height/currentPlane.width):0;
+    const mapTooSmall=desiredMapHeight>0&&viewport.clientHeight<desiredMapHeight*.8;
+    const paged = !mobileSplit && window.innerWidth < 760 && (work.getBoundingClientRect().height < inspectorHeight + minimumMapHeight + railHeight || mapTooSmall);
+    panel.dataset.paged = String(paged); ui.scenarioViewPager.hidden = !(paged||mobileSplit);
+    const fieldHeight=wideSidebar?inspector.getBoundingClientRect().height:work.getBoundingClientRect().height-railHeight;
+    fieldsPaged = !mobileSplit&&(wideSidebar||window.innerWidth<1100)&&fieldHeight < inspectorHeight;
     // A needed pager must participate in the same height budget as its fields.
     ui.scenarioFieldsPager.hidden = !fieldsPaged;
-    const budget = work.getBoundingClientRect().height - panel.querySelector('.scenario-tools').getBoundingClientRect().height
+    const budget = fieldHeight - panel.querySelector('.scenario-tools').getBoundingClientRect().height
       - ui.scenarioStatus.getBoundingClientRect().height - 16;
     const groupGap=typeof getComputedStyle==='function'?Number.parseFloat(getComputedStyle(tool==='deployment'?ui.scenarioDeploymentFields:ui.scenarioTileFields).rowGap)||0:6;
     fieldsPages = fieldsPaged ? packMeasuredGroups(groups, pageGroups => pageGroups.reduce((sum, group) => sum + heights.get(group), 0) + (pageGroups.length - 1) * groupGap <= budget) : [groups];
@@ -333,22 +390,20 @@ export function createScenarioEditor(host) {
     draw();
   }
   function sync() {
+    rosterEditor.sync();
     const editable = host.canEdit(), current = row();
     for(const [next,id]of Object.entries(modeButtons))ui[id].disabled=!editable||!modeEntries(next).length;
     if(!editable&&regionPicker){regionPicker=null;say();draw();}
-    for (const id of ['scenarioSelector', 'scenarioMapSelector', 'scenarioPlaneSelector', 'scenarioZoom']) ui[id].disabled = !editable || !map();
+    for (const id of ['scenarioSelector', 'scenarioMapSelector', 'scenarioPlaneSelector', 'scenarioZoom']) ui[id].disabled = !editable || (id==='scenarioSelector'?!model().scenarios.length:!map());
     ui.scenarioDeploymentSelector.disabled=!editable||mode!=='placement'||!placements().length||planeIndex!==0;
+    placementList.sync();
     for (const id of ['scenarioX', 'scenarioY', 'scenarioMove', 'scenarioReward']) ui[id].disabled = !editable || !current?.editable || planeIndex !== 0;
     ui.scenarioMove.hidden=!current?.editable;ui.scenarioDeploymentReset.hidden=!current?.editable;
     for (const id of ['scenarioTileSelector', 'scenarioTilePickerOpen', 'scenarioApplyTile', 'scenarioBrush', 'scenarioTerrainLink']) ui[id].disabled = !editable || !map();
     ui.scenarioRewardDetail.disabled=!editable||!current||!host.rewardRows().some(item=>item.editable&&item.aliases.includes(current.rewardSelector));
     ui.scenarioDeploymentReset.disabled = !editable || !current?.editable || !modified(current, ['x', 'y', 'rewardSelector']);
     ui.scenarioTileReset.disabled = !editable || !modified(cell(), ['tileId']);
-    const spawn=reinforcement();
-    for(const id of ['scenarioSpawnTemplate','scenarioSpawnTurn','scenarioSpawnX','scenarioSpawnY','scenarioSpawnMove','scenarioSpawnReward'])ui[id].disabled=!editable||!spawn?.enabled||planeIndex!==0;
-    ui.scenarioSpawnToggle.disabled=!editable||!spawn?.editable||planeIndex!==0;
-    ui.scenarioSpawnReset.disabled=!editable||!modified(spawn,spawnFields);
-    for(const [field,id]of [['turn','scenarioSpawnTurn'],['x','scenarioSpawnX'],['y','scenarioSpawnY'],['rewardSelector','scenarioSpawnReward']])ui[id].classList.toggle('is-modified',Boolean(modified(spawn,[field])));
+    spawnEditor.sync();if(spawnPicker&&(!spawnMode()||planeIndex!==0||!editable)){spawnPicker=null;say();}
     ui.scenarioDeadline.disabled=!editable||!objective()?.editable;
     ui.scenarioObjectiveReset.disabled=!editable||!modified(objective(),['deadline']);
     ui.scenarioDeadline.classList.toggle('is-modified',Boolean(modified(objective(),['deadline'])));
@@ -366,7 +421,7 @@ export function createScenarioEditor(host) {
     }
     ui.scenarioEventSelector.disabled=!editable;
     if(ui.scenarioFactionSelector){ui.scenarioFactionSelector.hidden=!scene()||!['placement','events'].includes(mode);ui.scenarioFactionSelector.disabled=!editable;ui.scenarioFactionSelector.value=faction;}
-    if(ui.scenarioRelatedDeploymentButton)ui.scenarioRelatedDeploymentButton.disabled=!editable||!relatedPlacements().some(item=>positioned(item)&&model().mapFor(item.mapIndex));
+    if(ui.scenarioRelatedDeploymentButton)ui.scenarioRelatedDeploymentButton.disabled=!editable||!relatedPlacements().some(item=>positioned(item)&&model().mapFor(appearanceMap(item)));
     ui.scenarioConditionSelector.disabled=!editable;
     ui.scenarioTurn.disabled=!editable||!condition()?.editable;
     ui.scenarioEventReset.disabled=!editable||!condition()?.editable||!modified(condition(),['turn']);
@@ -388,6 +443,8 @@ export function createScenarioEditor(host) {
       ui[prefix+'Remove'].disabled=!editable||!active||eventCount<=1||Boolean(condition()?.[field])&&committedEventCount<=1;
     }
     for (const [field, input] of [['x', ui.scenarioX], ['y', ui.scenarioY], ['rewardSelector', ui.scenarioReward]]) input.classList.toggle('is-modified', Boolean(current && current[field] !== current.original[field]));
+    combatRewards.sync();
+    dialogueEditor.sync();
   }
   function renderDeployment() {
     const rows = placements();
@@ -398,6 +455,7 @@ export function createScenarioEditor(host) {
     ui.scenarioDeploymentSelector.replaceChildren(...rows.map((item, i) => {const choice=option(item.recordIndex,placementLabel(item,i));choice.title=placementDescription(item);return choice;}));
     if (!rows.length) ui.scenarioDeploymentSelector.append(option('', unreadPlacements()?'배치 데이터 읽기 미지원':faction==='all'?'이 선택에서 읽은 배치 0기':`${filterNames[faction]} · 읽은 배치 0기`));
     ui.scenarioDeploymentSelector.value = selected ?? '';
+    placementList.render(rows);
     const current = row();
     for (const [field, input] of [['x', ui.scenarioX], ['y', ui.scenarioY]]) {
       input.value = current&&Number.isInteger(current[field]) ? String(current[field]) : ''; input.max = String((current?.[field === 'x' ? 'width' : 'height'] ?? 64) - 1);
@@ -411,11 +469,14 @@ export function createScenarioEditor(host) {
     if(current&&!Array.from(ui.scenarioReward.options).some(item=>Number(item.value)===current.rewardSelector))ui.scenarioReward.append(option(current.rewardSelector??'unknown',current.rewardSelector===null?'게임 실행 시 결정':'현재 보상(명칭 미확인)'));
     ui.scenarioReward.value = String(current?current.rewardSelector??'unknown':255);
     ui.scenarioReward.title=ui.scenarioReward.selectedOptions?.[0]?.title??'';
-    ui.scenarioPilotName.textContent = current ? current.pilotName : '';
-    ui.scenarioPilotName.title = current?.pilotName ?? '';
-    const readOnlyHint=current?.readOnlyReason&&(!onMap(current)?model().mapFor(current.mapIndex)?'다른 맵의 배치 · 목록에서 위치 확인':'맵 연결 미확인 · 지도 표시 불가':current.placementKind==='roster-reference'?'출격 편성 참조 · 읽기 전용':current.placementKind==='sortie-position'?'출격 목표 위치 · 읽기 전용':current.placementStage==='scenario-script'?'등장 시점 미확인 · 읽기 전용':current.readOnlyReason);
+    ui.scenarioPilotName.textContent = current ? `${placementName(current)} · ${current.pilotName||'실행 시 결정'}${current.appearanceSource==='rom-default-roster'?' · ROM 기본 편성':''}` : '';
+    ui.scenarioPilotName.title = current?.appearanceNote??current?.pilotName ?? '';
+    ui.scenarioEntityArt.replaceChildren();
+    if (current) host.appendArtwork?.(ui.scenarioEntityArt,current);
+    combatRewards.render();
+    const readOnlyHint=current?.readOnlyReason&&(current.mapAppearanceSource?'기본 지도 위 예상 위치 · 읽기 전용':!onMap(current)?model().mapFor(current.mapIndex)?'다른 맵의 배치 · 목록에서 위치 확인':'맵 연결 미확인 · 지도 표시 불가':current.placementKind==='roster-reference'?'출격 편성 참조 · 읽기 전용':current.placementKind==='sortie-position'?'출격 목표 위치 · 읽기 전용':current.placementStage==='scenario-script'?'등장 시점 미확인 · 읽기 전용':current.readOnlyReason);
     say(mode==='placement'?(readOnlyHint || (planeIndex !== 0 ? '기체 배치는 맵 데이터 1에서 편집합니다.' : !rows.length&&faction!=='all'?'선택 진영에서 읽은 배치 0기':incompletePlacements()?'일부 배치 읽기 미지원 · 도움말 확인':'')):mode==='tile'&&unreadPlacements()?'배치 읽기 미지원 · 도움말 확인':'',current?.readOnlyReason);
-    if(mode==='placement')ui.scenarioTaskHint.textContent=current&&!current.editable?['roster-reference','sortie-position'].includes(current.placementKind)?'출격 위치 확인 · 기체는 게임에서 결정':'배치 확인 · 위치 수정 불가':'기체 선택 → 지도에서 칸 선택 → 이동';
+    if(mode==='placement')ui.scenarioTaskHint.textContent=current&&!current.editable?current.appearanceSource==='rom-default-roster'?'ROM 기본 기체·파일럿 표시 · 실제 탑승은 세이브 편성에 따름':['roster-reference','sortie-position'].includes(current.placementKind)?'출격 위치 확인 · 기체는 게임에서 결정':'배치 확인 · 위치 수정 불가':'기체 선택 → 지도에서 칸 선택 → 이동';
     const visible=fieldGroups();for(const group of [...ui.scenarioDeploymentFields.children,...ui.scenarioTileFields.children])group.hidden=!visible.includes(group);
     sync();
   }
@@ -458,17 +519,19 @@ export function createScenarioEditor(host) {
     }
     ui.scenarioEventSelector.setAttribute('aria-label',`등장·사건 선택${text?`. ${text}`:''}`);
   }
-  const modeButtons={placement:'scenarioDeploymentTool',events:'scenarioEventTool',objective:'scenarioObjectiveTool',tile:'scenarioTileTool'};
+  const modeButtons={placement:'scenarioDeploymentTool',events:'scenarioEventTool',objective:'scenarioObjectiveTool',tile:'scenarioTileTool',dialogue:'scenarioDialogueTool',roster:'scenarioRosterTool'};
   function modeEntries(next){
-    const current=scene(),waves=(current?.waves??[]).filter(w=>w.placements.length),events=model().events.filter(row=>row.physicalIndex===scenarioIndex);
+    const current=scene(),sceneRows=scenePlacements(),sceneWaves=(current?.waves??[]).filter(w=>w.placements.length),waves=sceneWaves.filter(w=>sceneRows.some(row=>row.waveIndex===w.recordIndex&&inFaction(row))),events=model().events.filter(row=>row.physicalIndex===scenarioIndex);
     if(next==='placement'){
-      const rows=scenePlacements(),later=waves.filter(item=>!item.initial&&item.placementStage!=='scenario-script'),scripts=waves.filter(item=>item.placementStage==='scenario-script');
+      const rows=sceneRows,later=waves.filter(item=>!item.initial&&item.placementStage!=='scenario-script'),scripts=waves.filter(item=>item.placementStage==='scenario-script');
       if(!rows.length)return [];
       const all=['all',`전체 · ${rows.filter(inFaction).length}기`,`읽은 초기·증원 배치 ${rows.length}기. 다른 맵의 기체를 고르면 그 맵으로 이동합니다.${incompletePlacements()?' 아직 읽지 못한 명령이 있어 실제 전체 배치 수는 다를 수 있습니다.':''}`];
-      return waves.length?[...(waves.length>1?[all]:[]),...waves.filter(item=>item.initial&&item.placementStage!=='scenario-script').map(item=>[item.recordIndex,waveLabel(item),waveDescription(item)]),...(later.length>1?[['later',`증원 전체 · ${rows.filter(row=>inFaction(row)&&later.some(item=>item.recordIndex===row.waveIndex)).length}기`]]:[]),...later.map(item=>[item.recordIndex,waveLabel(item),waveDescription(item)]),...scripts.map(item=>[item.recordIndex,waveLabel(item),waveDescription(item)])]:[all];
+      return waves.length?[...(sceneWaves.length>1?[all]:[]),...waves.filter(item=>item.initial&&item.placementStage!=='scenario-script').map(item=>[item.recordIndex,waveLabel(item),waveDescription(item)]),...(later.length>1?[['later',`증원 전체 · ${rows.filter(row=>inFaction(row)&&later.some(item=>item.recordIndex===row.waveIndex)).length}기`]]:[]),...later.map(item=>[item.recordIndex,waveLabel(item),waveDescription(item)]),...scripts.map(item=>[item.recordIndex,waveLabel(item),waveDescription(item)])]:[all];
     }
-    if(next==='events')return [...events.map((item,i)=>[`event:${item.recordIndex}`,standaloneLabel(item,i),standaloneDescription(item,i)]),...(reinforcement()?.editable?[[`reinforcement:${reinforcement().recordIndex}`,'새 증원 · 적군 시작']]:[])];
+    if(next==='events')return [...events.map((item,i)=>[`event:${item.recordIndex}`,standaloneLabel(item,i),standaloneDescription(item,i)]),...(spawnEditor.available()?[[`reinforcement:${reinforcement().recordIndex}`,'새 아군 증원 · 좌표 도착']]:[])];
     if(next==='objective')return objective()?.editable?[[`objective:${objective().recordIndex}`,objective().criteriaEditable?'승리·패배 조건':'추가 턴 제한']]:[];
+    if(next==='roster')return rosterRows().map(item=>[item.recordIndex]);
+    if(next==='dialogue')return PUBLIC_EDITOR_FEATURES.scenarioDialogueEditing?dialogueRows().map(item=>[item.recordIndex]):[];
     return map()?[['tile','타일']]:[];
   }
   function renderMode(){
@@ -476,24 +539,29 @@ export function createScenarioEditor(host) {
     ui.scenarioEditorPanel.dataset.mode=mode;ui.scenarioEditorPanel.dataset.tool=tool;
     for(const [next,id]of Object.entries(modeButtons)){
       const available=modeEntries(next).length>0;
-      ui[id].disabled=!host.canEdit()||!available;ui[id].setAttribute('aria-pressed',String(next===mode));
-      ui[id].title=available?({placement:'읽은 초기·증원 기체의 위치와 격추 보상 편집',events:'확인된 턴 검사 편집',objective:'이 시나리오에서 지원하는 승리·패배 조건 편집',tile:'지도 한 칸의 그림과 지형 교체'}[next]):next==='placement'&&scene()?'배치 명령 읽기 미지원 · 기체가 없다는 뜻은 아닙니다':'이 시나리오에서 확인된 편집 대상이 없습니다';
+      ui[id].disabled=!host.canEdit()||!available;if(next==='dialogue')ui[id].hidden=!PUBLIC_EDITOR_FEATURES.scenarioDialogueEditing;ui[id].setAttribute('aria-pressed',String(next===mode));
+      ui[id].title=available?({placement:'읽은 초기·증원 기체의 위치와 격추 보상 편집',events:'확인된 턴 검사 편집',objective:'이 시나리오에서 지원하는 승리·패배 조건 편집',tile:'지도 한 칸의 그림과 지형 교체',roster:'초기 구성·인계 포함 · 생성 레벨 편집과 조건·파일럿·대사 연결 확인',dialogue:'대사 수정 · 확인된 본문 확장 · 제어 명령 유지'}[next]):next==='placement'&&scene()?'배치 명령 읽기 미지원 · 기체가 없다는 뜻은 아닙니다':'이 시나리오에서 확인된 편집 대상이 없습니다';
     }
     const details=ui.scenarioMapSelector.closest?.('details');
     if(details){details.hidden=mode!=='tile';if(details.hidden)details.open=false;}
-    ui.scenarioTaskHint.textContent=({placement:'기체 선택 → 지도에서 칸 선택 → 이동',events:'턴 검사 편집 · 다른 이벤트 조건 유지',objective:objective()?.criteriaEditable?'승리·패배 조건을 조합하세요':'기존 승패에 추가할 턴 제한을 정하세요',tile:'칸 선택 → 타일 고르기 → 교체'}[mode]);
-    ui.scenarioDeploymentFields.hidden=tool!=='deployment';ui.scenarioTileFields.hidden=tool!=='tile';
+    ui.scenarioTaskHint.textContent=({placement:'기체 선택 → 지도에서 칸 선택 → 이동',events:'턴 검사 편집 · 다른 이벤트 조건 유지',objective:objective()?.criteriaEditable?'승리·패배 조건을 조합하세요':'기존 승패에 추가할 턴 제한을 정하세요',tile:'칸 선택 → 타일 고르기 → 교체',roster:'생성 레벨 편집 · 연결을 펼쳐 조건·파일럿·대사 확인 · 조기 이동 미지원',dialogue:'본문 선택 → 대사 수정 · 없는 글자는 저장 공간 확인 후 자동 추가'}[mode]);
+    ui.scenarioDialoguePanel.hidden=mode!=='dialogue';
+    ui.scenarioRosterPanel.hidden=mode!=='roster';
+    if(mode==='roster')rosterEditor.refresh(scenarioIndex);
+    ui.scenarioDeploymentFields.hidden=tool!=='deployment'||['dialogue','roster'].includes(mode);ui.scenarioTileFields.hidden=tool!=='tile';
+    if(mode==='dialogue')dialogueEditor.refresh(scenarioIndex);
   }
   function renderEvents(){
-    if(!modeEntries(mode).length)mode=['placement','objective','events','tile'].find(next=>modeEntries(next).length)||'tile';
+    if(!modeEntries(mode).length)mode=['placement','objective','events','dialogue','roster','tile'].find(next=>modeEntries(next).length)||'tile';
     renderMode();
-    const entries=mode==='tile'?[]:modeEntries(mode);
+    const entries=['tile','dialogue','roster'].includes(mode)?[]:modeEntries(mode);
     if(!entries.some(([id])=>id===eventIndex))eventIndex=entries[0]?.[0]??null;
     ui.scenarioEventSelector.replaceChildren(...entries.map(([id,label,description])=>{const item=option(id,label);item.title=description??label;return item;}));
     ui.scenarioEventSelector.value=eventIndex??'';
-    if(mode==='placement'&&wave()&&model().mapFor(wave().mapIndex))mapIndex=wave().mapIndex;
+    if(spawnMode()&&model().mapFor(reinforcement()?.mapIndex)){mapIndex=reinforcement().mapIndex;planeIndex=0;}
+    else if(mode==='placement'&&wave()&&model().mapFor(wave().mapIndex))mapIndex=wave().mapIndex;
     else if(mode==='placement'&&placements().length&&!placements().some(onMap)){
-      const first=placements().find(item=>model().mapFor(item.mapIndex));if(first)mapIndex=first.mapIndex;
+      const first=placements().find(item=>model().mapFor(appearanceMap(item)));if(first)mapIndex=appearanceMap(first);
     }
     else if(mode==='events'&&relatedWaves().length&&!relatedPlacements().some(onMap)){
       const first=relatedWaves().find(item=>model().mapFor(item.mapIndex));if(first){mapIndex=first.mapIndex;planeIndex=0;}
@@ -507,35 +575,13 @@ export function createScenarioEditor(host) {
     ui.scenarioConditionSelector.value=conditionIndex??'';renderCondition();renderObjective();renderSpawn();
   }
   function renderSpawn(){
-    const current=reinforcement(),shown=spawnMode()&&Boolean(current);
+    const shown=spawnMode()&&spawnEditor.available();
     spawnGroups().forEach(group=>{group.hidden=!shown;});
-    ui.scenarioSpawnTemplate.replaceChildren(...(current?.templates??[]).map(t=>option(t.byteOffset,`${t.name} · Lv${t.level}`)));
-    ui.scenarioSpawnTemplate.value=String(current?.templateOffset??'');
-    const template=current?.templates.find(t=>t.byteOffset===current.templateOffset);
-    ui.scenarioSpawnPilot.textContent=template?.pilotName??'';ui.scenarioSpawnPilot.title=template?.pilotName??'';
-    ui.scenarioSpawnToggle.textContent=current?.enabled?'증원 삭제':'증원 추가';
-    for(const [field,id]of [['turn','scenarioSpawnTurn'],['x','scenarioSpawnX'],['y','scenarioSpawnY']]){
-      ui[id].value=String(current?.[field]??'');ui[id].setCustomValidity('');ui[id].removeAttribute('aria-invalid');
-    }
-    ui.scenarioSpawnX.max=String((current?.width??64)-1);ui.scenarioSpawnY.max=String((current?.height??64)-1);
-    ui.scenarioSpawnReward.replaceChildren(option(255,'보상 없음'),...host.rewardRows().flatMap(item=>item.aliases.map(id=>{const choice=option(id,rewardOutcomeLabel(item,host.partName,{compact:true}));choice.title=rewardOutcomeLabel(item,host.partName);return choice;})));
-    ui.scenarioSpawnReward.value=String(current?.rewardSelector??255);
+    if(shown)ui.scenarioTaskHint.textContent='아군 도착 칸 → 새 아군 증원 · 등장 희망 칸은 게임의 주변 탐색 대상';
+    spawnEditor.render();
   }
   function acceptSpawn({report=false}={}){
-    const current=reinforcement();if(!spawnMode()||!current?.enabled||!host.canEdit())return true;
-    const wanted={templateOffset:Number(ui.scenarioSpawnTemplate.value),rewardSelector:Number(ui.scenarioSpawnReward.value)};
-    for(const [field,id,min,max]of [['turn','scenarioSpawnTurn',2,99],['x','scenarioSpawnX',0,current.width-1],['y','scenarioSpawnY',0,current.height-1]]){
-      const input=ui[id];input.setCustomValidity('');input.removeAttribute('aria-invalid');
-      wanted[field]=input.value===''?NaN:Number(input.value);
-      if(!Number.isInteger(wanted[field])||wanted[field]<min||wanted[field]>max){
-        const text=`${field==='turn'?'턴':field.toUpperCase()}는 ${min}~${max}의 정수로 입력해주세요.`;
-        input.setCustomValidity(text);input.setAttribute('aria-invalid','true');say(text);if(report)input.reportValidity();return false;
-      }
-    }
-    if(!current.templates.some(t=>t.byteOffset===wanted.templateOffset)||!(wanted.rewardSelector>=0&&wanted.rewardSelector<48||wanted.rewardSelector===255))return false;
-    const changed=Object.keys(wanted).some(k=>current[k]!==wanted[k]);Object.assign(current,wanted);
-    const template=current.templates.find(t=>t.byteOffset===current.templateOffset);ui.scenarioSpawnPilot.textContent=template.pilotName;
-    say();sync();draw();if(changed)host.onChange('reinforcement',current);return true;
+    return !spawnMode()||spawnEditor.accept({report});
   }
   function renderCondition(){
     const current=condition();ui.scenarioEventFields.hidden=mode!=='events'||!current||eventCriteriaActive();
@@ -775,7 +821,7 @@ export function createScenarioEditor(host) {
     const control=remove?ui[`scenario${outcome}Add`]:ui[chosen.prefix+'Query'];
     fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,control)));showFieldsPage();showPage('fields');control.focus();
   }
-  function validateAll(){return acceptSpawn({report:true})&&acceptCriteria({report:true})&&acceptDeadline({report:true})&&acceptTurn({report:true})&&accept({report:true});}
+  function validateAll({report=true}={}){return rosterEditor.validate({report})&&dialogueEditor.validate({report})&&combatRewards.validate({report})&&acceptSpawn({report})&&acceptCriteria({report})&&acceptDeadline({report})&&acceptTurn({report})&&accept({report});}
   function chooseTool(next){
     // Internal error/focus paths retain their current editing context.
     if(next==='tile')mode='tile';
@@ -785,13 +831,15 @@ export function createScenarioEditor(host) {
   }
   function chooseMode(next){
     if(next===mode||!modeEntries(next).length||!host.canEdit()||!validateAll())return;
-    regionPicker=null;mode=next;eventIndex=conditionIndex=selected=null;fieldsPage=0;brush=false;ui.scenarioBrush.setAttribute('aria-pressed','false');
+    regionPicker=null;spawnPicker=null;mode=next;eventIndex=conditionIndex=selected=null;fieldsPage=0;brush=false;ui.scenarioBrush.setAttribute('aria-pressed','false');
     if(next!=='tile'){planeIndex=0;if(model().mapFor(scene()?.mapIndex))mapIndex=scene().mapIndex;}
     ui.scenarioPlaneSelector.value=String(planeIndex);renderEvents();renderMap();
-    if(next==='events'||next==='objective')showPage('fields');else showPage('map');
+    if(next==='events'||next==='objective'||next==='dialogue'||next==='roster')showPage('fields');else showPage('map');
   }
   function renderMap() {
-    const current = plane(); if (current) { x = Math.min(x, current.width - 1); y = Math.min(y, current.height - 1); }
+    const current = plane();
+    ui.scenarioEditorPanel.dataset.mapShape = !current ? 'unknown' : current.width > current.height * 1.2 ? 'wide' : current.height > current.width * 1.2 ? 'tall' : 'square';
+    if (current) { x = Math.min(x, current.width - 1); y = Math.min(y, current.height - 1); }
     const bank = map() ? model().bankFor(map()) : null;
     ui.scenarioTileSelector.replaceChildren(...(bank ? Array.from(bank.terrainIds, (id, tileId) => option(tileId, `#${tileId} · ${terrainName(id)}`)) : []));
     paintedTile = model().tile(mapIndex, planeIndex, x, y) ?? 0;
@@ -804,15 +852,16 @@ export function createScenarioEditor(host) {
     const orientation = plane()?.orientations?.[y * plane().width + x] ?? 0;
     const pixels = bank && model().graphics.tile(bank, paintedTile, orientation);
     ui.scenarioTilePreview.hidden = !paintTilePreview(ui.scenarioTilePreview, pixels);
-    const text=`${terrainName(terrainId(paintedTile))} · #${paintedTile}`;
+    const text=bank ? `${terrainName(terrainId(paintedTile))} · #${paintedTile}` : '타일 선택 안 됨';
     ui.scenarioTilePreview.setAttribute('aria-label',text);ui.scenarioTileName.textContent=terrainName(terrainId(paintedTile));ui.scenarioTileName.title=text;
   }
   function refresh() {
     const m = model();
     const supportedObjective=scene=>m.objectives.some(row=>row.physicalIndex===scene.physicalIndex&&row.editable);
+    const reinforcementScenes=new Set((m.reinforcements??[]).filter(row=>validateAllyReinforcement(row).valid).map(row=>row.physicalIndex));
     const scenes = sortScenarioSelections(m.scenarios.filter(scene => (scene.chapter?.source === 'user-bin-scenario-chapter'
-      || scene.placements.length || scene.conditions?.length || supportedObjective(scene)) && m.mapFor(scene.mapIndex)));
-    if (!m.mapFor(mapIndex)) { const first = scenes.find(scene => scene.placements.some(item => item.editable))??scenes.find(supportedObjective); mapIndex = first?.mapIndex ?? m.maps[0]?.mapIndex ?? null; scenarioIndex = first?.physicalIndex ?? null; }
+      || scene.placements.length || scene.conditions?.length || supportedObjective(scene)||reinforcementScenes.has(scene.physicalIndex)||[...(m.dialogues??[]),...(m.rosterLevels??[])].some(row=>row.physicalIndex===scene.physicalIndex)) && (m.mapFor(scene.mapIndex)||[...(m.dialogues??[]),...(m.rosterLevels??[])].some(row=>row.physicalIndex===scene.physicalIndex))));
+    if (!m.mapFor(mapIndex)&&!scenes.some(scene=>scene.physicalIndex===scenarioIndex)) { const first = scenes.find(scene => scene.placements.some(item => item.editable))??scenes.find(supportedObjective)??scenes[0]; mapIndex = first?.mapIndex ?? m.maps[0]?.mapIndex ?? null; scenarioIndex = first?.physicalIndex ?? null; }
     ui.scenarioSelector.replaceChildren(option('', '시나리오 선택'), ...scenes.map(scene => {
       const item = option(scene.physicalIndex, scenarioSelectionLabel(scene));
       item.title = scenarioSelectionDescription(scene); return item;
@@ -821,7 +870,7 @@ export function createScenarioEditor(host) {
     ui.scenarioSelector.title = scenarioSelectionDescription(scene());
     ui.scenarioSelector.setAttribute('aria-label', `시나리오 선택. ${scenarioSelectionDescription(scene())}`);
     ui.scenarioMapSelector.replaceChildren(...m.maps.map(item => option(item.mapIndex, `맵 #${aliasText(item.mapSlots)}`)));
-    ui.scenarioMapSelector.value = mapIndex === null ? '' : String(m.mapFor(mapIndex).mapIndex);
+    ui.scenarioMapSelector.value = m.mapFor(mapIndex)?String(m.mapFor(mapIndex).mapIndex):'';
     ui.scenarioPlaneSelector.value = String(planeIndex);
     renderEvents();renderMap();
   }
@@ -865,6 +914,7 @@ export function createScenarioEditor(host) {
     const current = plane(); if (!current) return;
     x = Math.max(0, Math.min(current.width - 1, cx)); y = Math.max(0, Math.min(current.height - 1, cy));
     if(clicked&&regionPicker){describeCell();selectRegionPoint();return;}
+    if(clicked&&spawnPicker){describeCell();selectSpawnPoint();return;}
     if(clicked&&mode==='events'&&planeIndex===0){
       const target=shownPlacements().find(item=>item.x===x&&item.y===y);
       if(target){openRelatedDeployment(target,true);return;}
@@ -879,10 +929,10 @@ export function createScenarioEditor(host) {
     }
     describeCell(); previewTile(); if (clicked && tool === 'tile' && brush) applyTile(); draw();
   }
-  function openRelatedDeployment(target=relatedPlacements().find(item=>positioned(item)&&model().mapFor(item.mapIndex)),edit=false){
-    if(!target||!positioned(target)||!host.canEdit()||!model().mapFor(target.mapIndex)||!validateAll())return;
+  function openRelatedDeployment(target=relatedPlacements().find(item=>positioned(item)&&model().mapFor(appearanceMap(item))),edit=false){
+    if(!target||!positioned(target)||!host.canEdit()||!model().mapFor(appearanceMap(target))||!validateAll())return;
     mode='placement';eventIndex=target.waveIndex??'all';conditionIndex=null;selected=target.recordIndex;
-    mapIndex=target.mapIndex;planeIndex=0;x=target.x;y=target.y;fieldsPage=0;regionPicker=null;
+    mapIndex=appearanceMap(target);planeIndex=0;x=target.x;y=target.y;fieldsPage=0;regionPicker=null;
     brush=false;ui.scenarioBrush.setAttribute('aria-pressed','false');renderEvents();renderMap();
     if(edit&&target.editable)focusAfterReset(ui.scenarioX);
     else{showPage('map');ui.scenarioMapCanvas.focus({preventScroll:true});}
@@ -916,6 +966,8 @@ export function createScenarioEditor(host) {
     const control=regionPicker?.control;if(!control)return;
     regionPicker=null;say();focusAfterReset(control.pick);draw();
   }
+  function selectSpawnPoint(){const kind=spawnPicker;if(!kind)return;if(!spawnMode()||planeIndex!==0||!host.canEdit()){spawnPicker=null;return;}if(spawnEditor.applyPoint(kind,x,y)){spawnPicker=null;say();focusAfterReset(spawnEditor.control(kind==='trigger'?'triggerX':'x'));draw();}}
+  function cancelSpawnPick(){const kind=spawnPicker;if(!kind)return;spawnPicker=null;say();focusAfterReset(spawnEditor.control(kind==='trigger'?'triggerX':'x'));draw();}
   ui.scenarioMapCanvas.addEventListener('click', event => {
     const current = plane(), rect = ui.scenarioMapCanvas.getBoundingClientRect(); if (!current || !rect.width || !rect.height) return;
     selectCell(Math.floor((event.clientX - rect.left) / rect.width * current.width), Math.floor((event.clientY - rect.top) / rect.height * current.height), { clicked: true });
@@ -924,33 +976,26 @@ export function createScenarioEditor(host) {
     const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     if (arrows[event.key]) { event.preventDefault(); const [dx, dy] = arrows[event.key]; selectCell(x + dx, y + dy); }
     if(event.key==='Escape'&&regionPicker){event.preventDefault();cancelRegionPick();return;}
-    if (event.key === 'Enter') { event.preventDefault(); if(regionPicker)selectRegionPoint();else if (tool === 'tile') applyTile(); else move(); }
+    if(event.key==='Escape'&&spawnPicker){event.preventDefault();cancelSpawnPick();return;}
+    if (event.key === 'Enter') { event.preventDefault(); if(regionPicker)selectRegionPoint();else if(spawnPicker)selectSpawnPoint();else if (tool === 'tile') applyTile(); else move(); }
   });
   ui.scenarioEditorPanel.addEventListener('keydown',event=>{
     if(event.key==='Escape'&&regionPicker){event.preventDefault();cancelRegionPick();}
+    if(event.key==='Escape'&&spawnPicker){event.preventDefault();cancelSpawnPick();}
   });
   ui.scenarioSelector.addEventListener('change', () => {
-    if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioSelector.value=String(scenarioIndex??'');return;}
+    if(!validateAll()){ui.scenarioSelector.value=String(scenarioIndex??'');return;}
     scenarioIndex = ui.scenarioSelector.value === '' ? null : Number(ui.scenarioSelector.value);
     const scene = model().scenarios.find(item => item.physicalIndex === scenarioIndex);
     if (scene && model().mapFor(scene.mapIndex)) { mapIndex = scene.mapIndex; planeIndex = 0; selected = null; x = y = 0; }
     eventIndex=conditionIndex=null;faction='all';refresh();
   });
   ui.scenarioEventSelector.addEventListener('change',()=>{
-    if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioEventSelector.value=eventIndex??'';return;}
-    eventIndex=ui.scenarioEventSelector.value;conditionIndex=selected=null;const current=wave();if(current&&model().mapFor(current.mapIndex))mapIndex=current.mapIndex;
+    if(!validateAll()){ui.scenarioEventSelector.value=eventIndex??'';return;}
+    eventIndex=ui.scenarioEventSelector.value;conditionIndex=selected=null;spawnPicker=null;const current=wave();if(current&&model().mapFor(current.mapIndex))mapIndex=current.mapIndex;
     else if(mode==='placement'&&eventIndex==='all'&&model().mapFor(scene()?.mapIndex))mapIndex=scene().mapIndex;
     renderEvents();renderMap();
   });
-  for(const id of ['scenarioSpawnTemplate','scenarioSpawnTurn','scenarioSpawnX','scenarioSpawnY','scenarioSpawnReward'])for(const type of ['input','change'])ui[id].addEventListener(type,()=>acceptSpawn());
-  ui.scenarioSpawnToggle.addEventListener('click',()=>{
-    const current=reinforcement();if(!host.canEdit()||!current?.editable||!spawnMode()||planeIndex!==0)return;
-    if(current.enabled){current.enabled=0;if(!current.original.enabled)Object.assign(current,current.original);}
-    else{current.enabled=1;current.x=x;current.y=y;}
-    renderSpawn();sync();draw();measure();host.onChange('reinforcement',current);
-  });
-  ui.scenarioSpawnReset.addEventListener('click',()=>{const current=reinforcement();if(!host.canEdit()||!current)return;Object.assign(current,current.original);renderSpawn();sync();draw();host.onChange('reinforcement',current);focusAfterReset(ui.scenarioSpawnTurn,ui.scenarioSpawnToggle);});
-  ui.scenarioSpawnMove.addEventListener('click',()=>{if(!reinforcement()?.enabled||planeIndex!==0)return;ui.scenarioSpawnX.value=String(x);ui.scenarioSpawnY.value=String(y);acceptSpawn();});
   ui.scenarioConditionSelector.addEventListener('change',()=>{if(!acceptTurn({report:true})){ui.scenarioConditionSelector.value=conditionIndex??'';return;}conditionIndex=ui.scenarioConditionSelector.value;renderCondition();sync();});
   for(const id of ['scenarioObjectivePriority','scenarioVictoryJoin','scenarioDefeatJoin'])ui[id].addEventListener('change',()=>acceptCriteria({trigger:ui[id]}));
   for(const {field,prefix}of ruleControls){
@@ -978,12 +1023,12 @@ export function createScenarioEditor(host) {
   ui.scenarioEventAdd.addEventListener('click',()=>changeEventRule(null,false));
   ui.scenarioEventCriteriaReset.addEventListener('click',()=>{const current=condition();if(!eventCriteriaActive()||!host.canEdit())return;pendingEventCriteria.clear();Object.assign(current,Object.fromEntries(eventFields(current).map(field=>[field,current.original[field]])));if(current.eventExactTurnOnly)current.turn=current.original.turn;renderEvents();say();sync();measure();host.onChange('event',current);focusAfterReset(current.eventPhaseEditable?ui.scenarioEventPhase:ui.scenarioEventJoin);});
   ui.scenarioEventReset.addEventListener('click',()=>{const current=condition();if(!current?.editable||!host.canEdit())return;current.turn=current.original.turn;renderEvents();say();sync();host.onChange('event',current);focusAfterReset(ui.scenarioTurn);});
-  ui.scenarioMapSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioMapSelector.value=String(mapIndex);return;}mapIndex = Number(ui.scenarioMapSelector.value); scenarioIndex = null;mode='tile';eventIndex=conditionIndex=null;selected = null; x = y = 0; refresh();ui.scenarioMapSelector.closest?.('details')?.removeAttribute('open'); });
-  ui.scenarioPlaneSelector.addEventListener('change', () => { if(!acceptSpawn({report:true})||!acceptCriteria({report:true})||!acceptDeadline({report:true})||!acceptTurn({report:true})||!accept({report:true})){ui.scenarioPlaneSelector.value=String(planeIndex);return;}regionPicker=null;planeIndex = Number(ui.scenarioPlaneSelector.value); if(planeIndex!==0&&mode==='placement'){mode='tile';eventIndex=conditionIndex=null;renderEvents();}brush = false; ui.scenarioBrush.setAttribute('aria-pressed', 'false'); renderMap(); });
+  ui.scenarioMapSelector.addEventListener('change', () => { if(!validateAll()){ui.scenarioMapSelector.value=String(mapIndex);return;}mapIndex = Number(ui.scenarioMapSelector.value); scenarioIndex = null;mode='tile';eventIndex=conditionIndex=null;selected = null; x = y = 0; refresh();ui.scenarioMapSelector.closest?.('details')?.removeAttribute('open'); });
+  ui.scenarioPlaneSelector.addEventListener('change', () => { if(!validateAll()){ui.scenarioPlaneSelector.value=String(planeIndex);return;}regionPicker=null;planeIndex = Number(ui.scenarioPlaneSelector.value); if(planeIndex!==0&&mode==='placement'){mode='tile';eventIndex=conditionIndex=null;renderEvents();}brush = false; ui.scenarioBrush.setAttribute('aria-pressed', 'false'); renderMap(); });
   ui.scenarioDeploymentSelector.addEventListener('change', () => {
     if(!validateAll()){ui.scenarioDeploymentSelector.value=selected??'';return;}
     selected=ui.scenarioDeploymentSelector.value;const target=row();
-    if(target&&model().mapFor(target.mapIndex)){mapIndex=target.mapIndex;ui.scenarioMapSelector.value=String(map().mapIndex);if(positioned(target)){x=target.x;y=target.y;}}
+    if(target&&model().mapFor(appearanceMap(target))){mapIndex=appearanceMap(target);ui.scenarioMapSelector.value=String(map().mapIndex);if(positioned(target)){x=target.x;y=target.y;}}
     renderMap();
   });
   for (const input of [ui.scenarioX, ui.scenarioY, ui.scenarioReward]) { input.addEventListener('input', () => accept()); input.addEventListener('change', () => accept()); }
@@ -1000,8 +1045,8 @@ export function createScenarioEditor(host) {
   ui.scenarioTileReset.addEventListener('click', () => { const current = cell(); if (!host.canEdit() || !current) return; current.tileId = current.original.tileId; describeCell();previewTile(); draw(); host.onChange('map', current); focusAfterReset(ui.scenarioTilePickerOpen); });
   ui.scenarioTerrainLink.addEventListener('click', () => host.openTerrain(terrainId(paintedTile)));
   ui.scenarioZoom.addEventListener('change', () => { zoom = Number(ui.scenarioZoom.value); draw(); });
-  ui.scenarioMapPage.addEventListener('click', () => showPage('map'));
-  ui.scenarioFieldsPage.addEventListener('click', () => showPage('fields'));
+  ui.scenarioMapPage.addEventListener('click', () => {showPage('map');if(ui.scenarioEditorPanel.dataset.mobileSplit==='true')ui.scenarioMapCanvas.focus({preventScroll:true});});
+  ui.scenarioFieldsPage.addEventListener('click', () => {showPage('fields');if(ui.scenarioEditorPanel.dataset.mobileSplit==='true'){const inspector=ui.scenarioEditorPanel.querySelector('.scenario-inspector');inspector.tabIndex=-1;inspector.focus({preventScroll:true});}});
   ui.scenarioFieldsPrev.addEventListener('click', () => { fieldsPage--; showFieldsPage(); if(ui.scenarioFieldsPrev.disabled&&!ui.scenarioFieldsNext.disabled)ui.scenarioFieldsNext.focus({preventScroll:true}); });
   ui.scenarioFieldsNext.addEventListener('click', () => { fieldsPage++; showFieldsPage(); if(ui.scenarioFieldsNext.disabled&&!ui.scenarioFieldsPrev.disabled)ui.scenarioFieldsPrev.focus({preventScroll:true}); });
   ui.scenarioSelectionDescription?.closest?.('details')?.addEventListener('toggle', measureExplanation);
@@ -1015,17 +1060,22 @@ export function createScenarioEditor(host) {
   $('scenarioMapDetailsClose')?.addEventListener('click',()=>{if(mapDetails){mapDetails.open=false;mapDetails.querySelector('summary').focus({preventScroll:true});}});
   window.addEventListener('resize',measureMapDetails);
   window.addEventListener('resize', measure); document.fonts?.ready.then(measure);
-  return Object.freeze({ refresh, sync, measure, validate: () => acceptSpawn({report:true})&&acceptCriteria({report:true})&&acceptDeadline({report:true})&&acceptTurn({report:true})&&accept({ report: true }),
-    openCell: target => { mode='tile';mapIndex = target.mapIndex; planeIndex = target.plane; scenarioIndex = null; selected = null;
+  return Object.freeze({ refresh, sync, measure, validate: validateAll,
+    selectedDialogue:()=>mode==='dialogue'?dialogueEditor.selectedRow():null,
+    visibleDialogues:()=>mode==='dialogue'?dialogueEditor.visibleRows():null,
+    openCell: target => { if (!validateAll()) return false; mode='tile';mapIndex = target.mapIndex; planeIndex = target.plane; scenarioIndex = null; selected = null;
       x = target.x; y = target.y; refresh(); chooseTool('tile'); showPage('map'); ui.scenarioMapCanvas.focus(); },
-    reset: () => { mode='placement';faction='all';regionPicker=null;pendingCriteria.clear();pendingEventCriteria.clear();mapIndex = selected = scenarioIndex = eventIndex=conditionIndex=null; planeIndex = 0; x = y = 0; brush = false; zoom = 1; ui.scenarioZoom.value = '1'; page = 'map'; chooseTool('deployment'); refresh(); },
+    reset: () => { dialogueEditor.reset();mode='placement';faction='all';regionPicker=spawnPicker=null;pendingCriteria.clear();pendingEventCriteria.clear();mapIndex = selected = scenarioIndex = eventIndex=conditionIndex=null; planeIndex = 0; x = y = 0; brush = false; zoom = 1; ui.scenarioZoom.value = '1'; page = 'map'; chooseTool('deployment'); refresh(); },
     focus: (kind, id, fields = []) => {
+      if(!validateAll())return false;
       if(['deployment','event','reinforcement'].includes(kind))faction='all';
+      if(kind==='roster'){const target=(model().rosterLevels??[]).find(item=>item.recordIndex===id);if(!target)return false;mode='roster';scenarioIndex=target.physicalIndex;mapIndex=scene()?.mapIndex??mapIndex;refresh();return rosterEditor.focus(id);}
+      if(kind==='dialogue'){const target=(model().dialogues??[]).find(item=>item.recordIndex===id);if(!target)return false;mode='dialogue';scenarioIndex=target.physicalIndex;mapIndex=scene()?.mapIndex??mapIndex;planeIndex=0;eventIndex=conditionIndex=selected=null;refresh();return dialogueEditor.focus(id,{field:fields.includes('afterDialogueJson')?'afterDialogueJson':fields.includes('speakerId')?'speakerId':null});}
       if(kind==='reinforcement'){mode='events';
         const target=model().reinforcements.find(item=>item.recordIndex===id);if(!target)return false;
-        scenarioIndex=target.physicalIndex;mapIndex=target.mapIndex;planeIndex=0;eventIndex=`reinforcement:${id}`;conditionIndex=selected=null;
+        scenarioIndex=target.physicalIndex;mapIndex=target.mapIndex??scene()?.mapIndex;planeIndex=0;eventIndex=`reinforcement:${id}`;conditionIndex=selected=null;spawnPicker=null;
         refresh();chooseTool('deployment');showPage('fields');
-        const control=({turn:ui.scenarioSpawnTurn,x:ui.scenarioSpawnX,y:ui.scenarioSpawnY,rewardSelector:ui.scenarioSpawnReward,templateOffset:ui.scenarioSpawnTemplate}[fields[0]]??ui.scenarioSpawnToggle);
+        const control=spawnEditor.control(fields[0]);
         fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,control)));showFieldsPage();control.focus();
       }else if(kind==='objective'){mode='objective';
         const target=model().objectives.find(item=>item.recordIndex===id);if(!target)return false;
@@ -1042,8 +1092,8 @@ export function createScenarioEditor(host) {
         const eventControl=eventCriteriaActive()?(fields[0]==='eventPhase'&&target.eventPhaseEditable?ui.scenarioEventPhase:fields[0]==='eventJoin'?ui.scenarioEventJoin:ui[(eventRuleControls.find(c=>c.field===fields[0])?.prefix??'scenarioEventRule1')+'Value']):ui.scenarioTurn;
         fieldsPage=fieldsPages.findIndex(groups=>groups.some(group=>containsElement(group,eventControl)));showFieldsPage();eventControl.focus();
       }else if (kind === 'deployment') { mode='placement';const target = model().deployments.find(item => item.recordIndex === id); if (!target) return false;
-        mapIndex = target.mapIndex; planeIndex = 0; scenarioIndex = target.physicalIndex;eventIndex=target.waveIndex??null;conditionIndex=null; selected = id; x = target.x; y = target.y; refresh(); chooseTool('deployment'); showPage('fields');
-        const control = ({ x: ui.scenarioX, y: ui.scenarioY, rewardSelector: ui.scenarioReward }[fields[0]] ?? ui.scenarioDeploymentSelector);
+        mapIndex = appearanceMap(target); planeIndex = 0; scenarioIndex = target.physicalIndex;eventIndex=target.waveIndex??null;conditionIndex=null; selected = id; x = target.x; y = target.y; refresh(); chooseTool('deployment'); showPage('fields');
+        const control = ({ x: ui.scenarioX, y: ui.scenarioY, rewardSelector: ui.scenarioReward, killMoney:$('scenarioKillMoney'),killExp:$('scenarioUnitExp'),exp:$('scenarioPilotExp') }[fields[0]] ?? ui.scenarioDeploymentSelector);
         fieldsPage = fieldsPages.findIndex(groups => groups.some(group => containsElement(group,control))); showFieldsPage(); control.focus();
       } else { mode='tile';const target = model().rows('map').find(item => item.recordIndex === id); if (!target) return false;
         mapIndex = target.mapIndex; planeIndex = target.plane; scenarioIndex = null; x = target.x; y = target.y; refresh(); chooseTool('tile'); showPage('fields'); ui.scenarioTilePickerOpen.focus(); }

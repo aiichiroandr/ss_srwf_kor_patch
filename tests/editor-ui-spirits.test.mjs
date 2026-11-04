@@ -1,8 +1,8 @@
+import {chooseSkillControl,offeredSkillIds} from "./helpers/skill-controls.mjs";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
-import { choosePilotSkill } from "./helpers/pilot-skill-controls.mjs";
 
 // The six spirit command slots of the pilot page: what choosing, re-levelling, adding and deleting do to the edited row, what
 // the export request carries and how the change count follows. Behaviour only; layout is measured in a real browser.
@@ -60,7 +60,6 @@ function view() {
     pilot(5, [], { capacity: 1, spiritEditable: false, spiritEditReason: "no-spirit-block", spiritMinimum: null, addableSpirits: [], spiritCommands: [{ id: 0, level: 1, name: "정신커맨드 없음", placeholder: true }] }),
     { ...pilot(6, []), spirits: undefined, spiritEditable: undefined, pairCapacity: undefined },
     pilot(7, [spirit(3, 1), spirit(26, 1), spirit(4, 8), spirit(10, 16), spirit(6, 13)], { skills: [skill(60)] }),
-    pilot(8, [spirit(3, 1), spirit(26, 1), spirit(4, 8), spirit(10, 16), spirit(6, 13), spirit(29, 58)], { capacity: 7, skills: [skill(60)] }),
   ];
   return { units: [unit], pilots, weapons: [weapon], pilotAliases: [], unitAbilityNames: [""], pilotAbilityNames: [] };
 }
@@ -106,7 +105,7 @@ test("an editable pilot shows six slots: a choice, a level box and a delete butt
   assert.equal(slots()[4].querySelector("select[data-spirit-add]"), addBox());
   assert.equal(slots()[5].querySelector("select"), null);
   assert.deepEqual(optionIds(addBox()), CATALOG.map(({ id }) => id).filter((id) => ![3, 26, 4, 10].includes(id)));
-  // the panel shows occupied spirit slots, independently from ability storage
+  // The compact counter reports occupied spirit slots, not spare skill bytes.
   assert.equal(byId("pilotSpiritRoom").textContent, "4/6");
   // nothing is changed by looking
   assert.equal(hooks.countEditorChanges(), 0);
@@ -148,6 +147,31 @@ test("a level box takes 1 to 99; another value is flagged and never reaches the 
   assert.equal(hooks.countEditorChanges(), 0);
 });
 
+test('returning an invalid spirit level to its current value clears the error and invalidates stale previews',()=>{
+ const row=open(1),box=levelBox(0),value=row.spirits[0].level,revision=state.editorEditRevision;
+ type(box,'');assert.equal(box.getAttribute('aria-invalid'),'true');assert.ok(state.editorEditRevision>revision);
+ const afterInvalid=state.editorEditRevision;type(box,value);
+ assert.equal(box.getAttribute('aria-invalid'),null);assert.ok(state.editorEditRevision>afterInvalid);assert.equal(row.spirits[0].level,value);
+});
+
+test('invalid spirit level survives switching tabs and blocks changing the pilot until corrected',()=>{
+ const row=open(1);hooks.selectEditorTab('pilot');const box=levelBox(0);type(box,'');
+ hooks.selectEditorTab('unit');hooks.selectEditorTab('pilot');assert.equal(levelBox(0),box);assert.equal(box.value,'');
+ change(pick(1),7);assert.equal(pick(1).value,'26');assert.equal(box.value,'');
+ removeButton(1).click();assert.equal(row.spirits.length,4);assert.equal(box.value,'');
+ hooks.selectEditorRecord('pilot',2);assert.equal(state.editorSelected.pilot,1);assert.equal(box.value,'');
+ type(box,row.spirits[0].level);hooks.selectEditorRecord('pilot',2);assert.equal(state.editorSelected.pilot,2);
+});
+
+test('closing and reopening the skill dialog preserves an invalid level',()=>{
+ const row=open(3);hooks.selectEditorTab('pilot');byId('pilotSkillScheduleButton').click();
+ const box=byId('pilotSkillSchedule').querySelector('[data-skill-level]');assert.ok(box);type(box,'');
+ const remove=byId('pilotSkillSchedule').querySelector('[data-skill-remove]');remove.click();assert.equal(row.specialAbilities.length,1);assert.equal(box.value,'');
+ byId('pilotSkillDialogClose').click();
+ byId('pilotSkillScheduleButton').click();assert.equal(byId('pilotSkillSchedule').querySelector('[data-skill-level]'),box);assert.equal(box.value,'');
+ type(box,row.specialAbilities[0].level);byId('pilotSkillDialogClose').click();
+});
+
 test("deleting a slot frees room; adding fills the first empty slot at level 1 while room remains", () => {
   const row = open(2);
   assert.equal(addBox(), null, "six slots: nothing to add");
@@ -166,23 +190,28 @@ test("deleting a slot frees room; adding fills the first empty slot at level 1 w
   assert.ok(addBox());
 });
 
-test("deleting a spirit reserves its slot for another spirit and cannot trade it for a new skill", () => {
-  const row = open(8);
+test("deleting a spirit reserves all six command slots and cannot fund a new skill; the spirit slot can be refilled", () => {
+  const row = open(7);
   hooks.openPilotSkillDialog();
   const chooseSkill = (id) => {
-    choosePilotSkill(byId, state.editorGameId, id, 3);
+    chooseSkillControl(document,id);
+    type(byId("pilotSkillAddLevel"), 3);
   };
   chooseSkill(78);
   assert.equal(byId("pilotSkillAddButton").disabled, true, "no room for a skill");
   removeButton(4).click();
   chooseSkill(78);
-  assert.equal(byId("pilotSkillAddButton").disabled, true, "all six spirit slots remain reserved");
-  byId("pilotSkillAddButton").click();
-  assert.deepEqual(row.specialAbilities.map(({ id }) => id), [60]);
-  assert.ok(addBox(), "the sixth spirit can still be restored");
-  change(addBox(), 9);
-  assert.equal(row.spirits.length, 6);
-  assert.deepEqual(row.specialAbilities.map(({ id }) => id), [60]);
+  assert.equal(byId("pilotSkillAddButton").disabled, true, "a deleted spirit never releases its reservation to new skills");
+  assert.match(byId("pilotSkillAddHint").textContent, /정신커맨드 6칸과 기존 능력은 유지/);
+  hooks.addPilotSkillFromDialog();
+  assert.deepEqual(row.specialAbilities.map(({ id }) => id), [60], "a direct add cannot bypass the reservation");
+  assert.deepEqual(ids(row), [[3,1],[26,1],[4,8],[10,16]]);
+  assert.ok(addBox(), "the room remains available for a spirit command");
+  change(addBox(),9);
+  assert.deepEqual(ids(row), [[3,1],[26,1],[4,8],[10,16],[9,1]]);
+  chooseSkill(78);
+  assert.equal(byId("pilotSkillAddButton").disabled,true);
+  assert.deepEqual(row.specialAbilities.map(({id})=>id),[60]);
   byId("pilotSkillDialog").open = false;
 });
 
@@ -234,114 +263,4 @@ test("the export request carries every pilot's spirit list as ids and levels; a 
   assert.equal(row.original.spirits[0].id, 3, "the opened list stays as it was");
   state.editorBusy = false;
   state.editorWorker = null;
-});
-
-function openExpansionSpiritView({ gameId = "srwf-final", publicTrade = false, reopened = false } = {}) {
-  const inspected = view();
-  const originalFive = [spirit(3, 1), spirit(26, 1), spirit(4, 8), spirit(10, 16), spirit(6, 13)];
-  const existingSkills = [skill(69, 30), skill(70, 38), skill(78, 1), ...(publicTrade ? [skill(41, 1)] : [])];
-  const ownCapacity = 5 + existingSkills.length + (reopened ? 1 : 0);
-  const pool = reopened ? 0 : 1;
-  inspected.pilots.push(
-    pilot(9, originalFive, {
-      capacity: ownCapacity, skills: existingSkills, pilotSpiritReserve: 6,
-      pilotExpansionGroup: "restoration-span", pilotExpansionPairs: pool,
-      sharedPilotPairFree: pool, skillExpansionPairs: pool,
-    }),
-    pilot(10, [spirit(3, 1), spirit(26, 1), spirit(4, 8), spirit(10, 16), spirit(6, 13), spirit(29, 58)], {
-      capacity: 6 + pool, pilotSpiritReserve: 6,
-      pilotExpansionGroup: "restoration-span", pilotExpansionPairs: pool,
-      sharedPilotPairFree: pool, skillExpansionPairs: 0,
-    }),
-  );
-  hooks.installEditorRows(inspected);
-  hooks.renderRecordList("pilot");
-  state.editorGameId = gameId;
-  hooks.selectEditorRecord("pilot", 9);
-  return {
-    receiver: state.editorPilots.find((row) => row.recordIndex === 9),
-    donor: state.editorPilots.find((row) => row.recordIndex === 10),
-  };
-}
-
-test("a full five-spirit pilot restores its sixth command through verified padding while preserving every existing ability", () => {
-  for (const gameId of ["srwf-f", "srwf-final"]) {
-    for (const publicTrade of [false, true]) {
-      const { receiver } = openExpansionSpiritView({ gameId, publicTrade });
-      const originalSpirits = ids(receiver);
-      const originalSkills = receiver.specialAbilities.map(({ id, level }) => [id, level]);
-      assert.equal(receiver.pairFree, 0, "the original local record has no spare pair");
-      assert.ok(addBox(), "the inspector's external padding permits a sixth spirit");
-      change(addBox(), 29);
-      assert.deepEqual(ids(receiver), [...originalSpirits, [29, 1]]);
-      assert.deepEqual(receiver.specialAbilities.map(({ id, level }) => [id, level]), originalSkills);
-      assert.equal(slots().length, 6);
-      assert.equal(addBox(), null, "a seventh spirit is never offered even when a padding pool exists");
-    }
-  }
-});
-
-test("another pilot spending the final shared pair blocks sixth-spirit restoration until that addition is undone", () => {
-  const { receiver, donor } = openExpansionSpiritView();
-  const originalSpirits = ids(receiver);
-  const originalSkills = receiver.specialAbilities.map(({ id, level }) => [id, level]);
-  assert.ok(addBox());
-  hooks.selectEditorRecord("pilot", 10);
-  hooks.openPilotSkillDialog();
-  choosePilotSkill(byId, state.editorGameId, 41, 1);
-  assert.equal(byId("pilotSkillAddButton").disabled, false);
-  byId("pilotSkillAddButton").click();
-  byId("pilotSkillDialogClose").click();
-  assert.deepEqual(donor.specialAbilities.map(({ id, level }) => [id, level]), [[41, 1]]);
-  hooks.selectEditorRecord("pilot", 9);
-  assert.equal(addBox(), null, "both pilots cannot spend the same last pair");
-  assert.deepEqual(ids(receiver), originalSpirits);
-  assert.deepEqual(receiver.specialAbilities.map(({ id, level }) => [id, level]), originalSkills);
-  hooks.selectEditorRecord("pilot", 10);
-  hooks.openPilotSkillDialog();
-  byId("pilotSkillRevertButton").click();
-  byId("pilotSkillDialogClose").click();
-  hooks.selectEditorRecord("pilot", 9);
-  assert.ok(addBox(), "undo restores the verified pool rather than permanently disabling the sixth slot");
-  change(addBox(), 29);
-  assert.equal(receiver.spirits.length, 6);
-  assert.deepEqual(receiver.specialAbilities.map(({ id, level }) => [id, level]), originalSkills);
-});
-
-test("reopening a personal five-spirit image keeps the canonical sixth slot for spirit restoration and excludes it from ability additions", () => {
-  const { receiver, donor } = openExpansionSpiritView({ reopened: true });
-  const originalSkills = receiver.specialAbilities.map(({ id, level }) => [id, level]);
-  assert.equal(receiver.sharedPilotPairFree, 0, "the canonical reserve is excluded from shared donor padding");
-  assert.ok(addBox());
-  hooks.openPilotSkillDialog();
-  choosePilotSkill(byId, state.editorGameId, 41, 1);
-  assert.equal(byId("pilotSkillAddButton").disabled, true, "the reserved sixth spirit pair cannot become another ability");
-  byId("pilotSkillDialogClose").click();
-  hooks.selectEditorRecord("pilot", 10);
-  hooks.openPilotSkillDialog();
-  choosePilotSkill(byId, state.editorGameId, 41, 1);
-  assert.equal(byId("pilotSkillAddButton").disabled, true, "another pilot cannot borrow the canonical sixth slot");
-  byId("pilotSkillDialogClose").click();
-  assert.deepEqual(donor.specialAbilities, []);
-  hooks.selectEditorRecord("pilot", 9);
-  change(addBox(), 29);
-  assert.equal(receiver.spirits.length, 6);
-  assert.deepEqual(receiver.specialAbilities.map(({ id, level }) => [id, level]), originalSkills);
-});
-
-test("a verified pool does not unlock F's original no-spirit-block record", () => {
-  const inspected = view();
-  const locked = inspected.pilots.find((row) => row.recordIndex === 5);
-  Object.assign(locked, {
-    pilotExpansionGroup: "locked-spirit-row", pilotExpansionPairs: 20,
-    sharedPilotPairFree: 20, skillExpansionPairs: 20,
-  });
-  hooks.installEditorRows(inspected);
-  hooks.renderRecordList("pilot");
-  state.editorGameId = "srwf-f";
-  hooks.selectEditorRecord("pilot", 5);
-  assert.equal(grid().querySelector("select"), null);
-  assert.equal(grid().querySelector("input"), null);
-  assert.equal(addBox(), null);
-  assert.deepEqual(state.editorPilots.find((row) => row.recordIndex === 5).spirits, []);
 });

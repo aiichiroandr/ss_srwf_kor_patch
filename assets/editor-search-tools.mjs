@@ -1,5 +1,6 @@
-import { filterFields, filterField, gradeChoices, gradeText, filterValue, isValidCondition, matchesConditions, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit, MAX_EDITOR_CONDITIONS } from "./editor-filter.mjs?v=20261104-save3";
-import { packMeasuredGroups } from "./editor-layout.mjs?v=20261104-save3";
+import { filterFields, filterField, gradeChoices, gradeText, filterValue, isValidCondition, matchesConditions, isValidBulkValue, planBulkEdit, applyBulkEdit, undoBulkEdit, MAX_EDITOR_CONDITIONS } from "./editor-filter.mjs?v=20261104-part1";
+import { packMeasuredGroups } from "./editor-layout.mjs?v=20261104-part1";
+import { criticalChoices, criticalPercentLabel, criticalValues } from "./editor-critical-values.mjs?v=20261104-part1";
 
 const KINDS = ["unit", "pilot", "weapon"];
 const NOUNS = { unit: "기체", pilot: "파일럿", weapon: "무기" };
@@ -28,7 +29,7 @@ export function createEditorSearchTools(host) {
   const session = () => host.session();
   const rowsFor = kind => session()[{ unit: "units", pilot: "pilots", weapon: "weapons" }[kind]] ?? [];
   const readValue = input => input.type === "number" ? (input.value.trim() === "" ? null : Number(input.value)) : Number(input.value);
-  const format = (kind, key, value) => filterField(kind, key)?.type === "grade" ? gradeText(kind, value) : typeof value === "boolean" ? (value ? "있음" : "없음") : String(value);
+  const format = (kind, key, value) => filterField(kind, key)?.type === "critical" ? criticalPercentLabel(criticalValues(value)?.display) : filterField(kind, key)?.type === "grade" ? gradeText(kind, value) : typeof value === "boolean" ? (value ? "있음" : "없음") : String(value);
   const reasonText = reason => reason === "weapon-domain" && pending?.key === "ammo" ? "탄수 없는 무기" : REASONS[reason] ?? "편집 제한";
   const catalog = (kind, key) => { const id = `${kind}/${key}`; if (!catalogs.has(id)) catalogs.set(id, host.choices(kind, key)); return catalogs.get(id); };
   function describe(kind, condition) {
@@ -74,6 +75,7 @@ export function createEditorSearchTools(host) {
       actions.append(button(appliedView[kind] ? "검색 결과로" : "적용 항목 보기", () => { appliedView[kind] = !appliedView[kind]; host.refresh(kind); }, "record-note-button"));
       const undo = button("되돌리기", () => {
         if (!host.canEdit() || transaction !== history.at(-1)) return;
+        if (host.beforeApply?.({report:true}) === false) return;
         try { undoBulkEdit(transaction, session()); history.pop(); appliedView[kind] = false; host.afterApply(); host.announce(`${count}개를 일괄 편집 직전 값으로 되돌렸습니다.`); }
         catch (exception) { host.announce(exception.message); }
       }, "record-note-button");
@@ -98,7 +100,7 @@ export function createEditorSearchTools(host) {
   }
   function defaultCondition(kind, key = "space") {
     const field = filterField(kind, key);
-    return { field: key, op: field.type === "membership" ? "has" : field.type === "number" ? "gte" : "eq", value: field.type === "membership" ? catalog(kind, key)[0]?.id ?? null : field.type === "boolean" ? true : field.type === "grade" ? (kind === "weapon" ? 2 : 3) : field.bounds[0] };
+    return { field: key, op: field.type === "membership" ? "has" : field.type === "number" ? "gte" : "eq", value: field.type === "membership" ? catalog(kind, key)[0]?.id ?? null : field.type === "boolean" ? true : field.type === "critical" ? 1 : field.type === "grade" ? (kind === "weapon" ? 2 : 3) : field.bounds[0] };
   }
   function fieldsSelect(select, kind, editableOnly = false) {
     select.replaceChildren(); let group = null;
@@ -115,6 +117,7 @@ export function createEditorSearchTools(host) {
       input.step = "1"; input.inputMode = field.bounds[0] < 0 ? "text" : "numeric";
       if (edit) input.placeholder = "새 값 입력";
     } else if (field.type === "grade") gradeChoices(kind).forEach(choice => option(input, choice.value, choice.letter));
+    else if (field.type === "critical") criticalChoices().forEach(choice => option(input, choice.value, choice.label));
     else if (field.type === "boolean") { option(input, 1, field.key === "modified" ? "수정됨" : "있음"); option(input, 0, field.key === "modified" ? "수정 안 함" : "없음"); }
     else { option(input, "", "능력 선택"); catalog(kind, field.key).forEach(item => option(input, item.id, item.name)); }
     input.value = value === null ? "" : typeof value === "boolean" ? (value ? "1" : "0") : String(value);
@@ -161,7 +164,7 @@ export function createEditorSearchTools(host) {
     if (!rows.some(row => row.editable !== false && row.statsValid !== false)) return;
     const key = criteria[kind].find(condition => filterField(kind, condition.field)?.editable)?.field ?? "space";
     const field = filterField(kind, key);
-    pending = { mode: "bulk", kind, ids: rows.map(row => row.recordIndex), selected: new Set(rows.filter(row => row.editable !== false && row.statsValid !== false).map(row => row.recordIndex)), key, value: field.type === "grade" ? (kind === "weapon" ? 3 : 4) : field.type === "boolean" ? true : null, expanded: false, token: host.token(), revision: host.revision(), scope: appliedView[kind] ? "방금 편집한 항목" : !criteria[kind].length && !host.query(kind).trim() ? "전체 목록" : "검색 결과" };
+    pending = { mode: "bulk", kind, ids: rows.map(row => row.recordIndex), selected: new Set(rows.filter(row => row.editable !== false && row.statsValid !== false).map(row => row.recordIndex)), key, value: field.type === "critical" ? 1 : field.type === "grade" ? (kind === "weapon" ? 3 : 4) : field.type === "boolean" ? true : null, expanded: false, token: host.token(), revision: host.revision(), scope: appliedView[kind] ? "방금 편집한 항목" : !criteria[kind].length && !host.query(kind).trim() ? "전체 목록" : "검색 결과" };
     if (!show(kind, "bulk", controls[kind].bulk)) { pending = null; return; }
     fieldsSelect(ui.field, kind, true); ui.field.value = key; renderBulkValue(); renderBulk(); ui.field.focus?.({ preventScroll: true });
   }
@@ -169,7 +172,7 @@ export function createEditorSearchTools(host) {
     const { kind, key, value } = pending;
     const field = filterField(kind, key), input = valueControl(kind, field, value, true); input.id = "editorBulkValueInput";
     input.setAttribute("aria-label", `${field.label}에 일괄 적용할 값`);
-    input.addEventListener(field.type === "number" ? "input" : "change", () => { pending.value = field.type === "boolean" ? input.value === "1" : readValue(input); renderBulk(); });
+    input.addEventListener(field.type === "number" ? "input" : "change", () => { pending.value = field.type === "boolean" ? input.value === "1" : field.type === "critical" && input.value === "" ? null : readValue(input); renderBulk(); });
     ui.value.replaceChildren(input);
   }
   function pendingRows() { const ids = new Set(pending.ids); return host.allRows(pending.kind).filter(row => ids.has(row.recordIndex)); }
@@ -234,6 +237,8 @@ export function createEditorSearchTools(host) {
     }
     if (host.token() !== pending.token || host.revision() !== pending.revision) { error("편집 중인 값이 바뀌었습니다. 일괄 편집을 다시 열어 주세요."); return; }
     if (!isValidBulkValue(pending.kind, pending.key, pending.value)) { error("적용할 값을 확인해 주세요."); return; }
+    if (host.beforeApply?.({report:false}) === false) { error("적용되지 않은 입력이 있습니다. 창을 닫고 수정하거나 복원한 뒤 다시 시도해 주세요."); return; }
+    if (host.token() !== pending.token || host.revision() !== pending.revision) { error("편집 중인 값이 바뀌었습니다. 일괄 편집을 다시 열어 주세요."); return; }
     try {
       const transaction = applyBulkEdit(bulkPlan(), session());
       if (!transaction.applied) return;
@@ -311,7 +316,7 @@ export function createEditorSearchTools(host) {
   ui.dialog.addEventListener("close", () => { if (!ui.dialog.open) finishClose(); });
   ui.add.addEventListener("click", () => { if (!pending || pending.draft.length >= MAX_EDITOR_CONDITIONS) return; pending.draft.push(defaultCondition(pending.kind, filterFields(pending.kind).find(field => field.type === "number").key)); renderConditions(pending.draft.length - 1); updateFilter(); });
   ui.clear.addEventListener("click", () => { pending.draft = []; pageAnchor = 0; renderConditions(); updateFilter(); });
-  ui.field.addEventListener("change", () => { pending.key = ui.field.value; const field = filterField(pending.kind, pending.key); pending.value = field.type === "grade" ? (pending.kind === "weapon" ? 3 : 4) : field.type === "boolean" ? true : null; renderBulkValue(); renderBulk(); });
+  ui.field.addEventListener("change", () => { pending.key = ui.field.value; const field = filterField(pending.kind, pending.key); pending.value = field.type === "critical" ? 1 : field.type === "grade" ? (pending.kind === "weapon" ? 3 : 4) : field.type === "boolean" ? true : null; renderBulkValue(); renderBulk(); });
   ui.targetsToggle.addEventListener("click", () => { pending.expanded = !pending.expanded; pageAnchor = 0; renderBulk(); });
   ui.all.addEventListener("click", () => { pending.selected = new Set(pendingRows().filter(row => row.editable !== false && row.statsValid !== false).map(row => row.recordIndex)); renderBulk(); });
   ui.none.addEventListener("click", () => { pending.selected.clear(); renderBulk(); });

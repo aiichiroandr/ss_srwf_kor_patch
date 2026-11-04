@@ -3,6 +3,9 @@
 // ids, boarding and link slots, upgrade nibbles, part ids); a repair only makes
 // them safe. Warnings are unusual but possibly legitimate and are never changed.
 // Original values cannot be recovered, so a repair never invents them.
+// Money is also an error: 10,000,000 or more is wider than its field in the load
+// list and stops the game (save-field-rules.mjs); the repair lowers it to 9,999,999.
+import { SAVE_MONEY_SCREEN_MAX } from './save-field-rules.mjs?v=20261104-part1';
 const UNIT_BASE = 0x100, UNIT_SIZE = 30, PILOT_BASE = 0x1000, PILOT_SIZE = 12, SLOTS = 128, NONE = 255, PART_MAX = 22;
 const UPGRADES = Object.freeze({hpUpgrade:[3,7,'HP'],enUpgrade:[4,11,'EN'],armorUpgrade:[4,7,'장갑'],limitUpgrade:[5,11,'한계'],mobilityUpgrade:[5,7,'운동성']});
 const u16 = (b,p) => b[p]*256+b[p+1];
@@ -19,6 +22,8 @@ export function checkSaveBytes(b, {gameId=null, upgradeLimit=5}={}, catalog={}) 
   const add = (level, type, slot, id, message, fix=null) => issues.push({level, type, slot, id, message, fix});
   const pilotOk = slot => slot < SLOTS && pilotAt(slot) !== 0 && (!pilotIds || pilotIds.has(pilotAt(slot)));
   const unitOk = slot => slot < SLOTS && unitAt(slot) !== 0 && (!unitIds || unitIds.has(unitAt(slot)));
+  const money = b[10]*65536+b[11]*256+b[12];
+  if (money > SAVE_MONEY_SCREEN_MAX) add('error','money',null,null,`자금 ${money.toLocaleString('ko-KR')}이 화면 칸(최대 ${SAVE_MONEY_SCREEN_MAX.toLocaleString('ko-KR')})보다 김. 불러오기 목록에서 게임이 멈춤`,{kind:'money',value:SAVE_MONEY_SCREEN_MAX});
   const seenPilots = new Map(), boarded = new Map();
   for (let slot = 0; slot < SLOTS; slot++) {
     const p = PILOT_BASE + slot*PILOT_SIZE, id = u16(b, p);
@@ -69,7 +74,8 @@ export function repairSaveBytes(b, record, catalog={}) {
       } else if (fix.kind === 'clearPilot') {
         b.fill(0, PILOT_BASE+slot*PILOT_SIZE, PILOT_BASE+(slot+1)*PILOT_SIZE);
         for (let s = 0; s < SLOTS; s++) if (u16(b, UNIT_BASE+s*UNIT_SIZE) && b[UNIT_BASE+s*UNIT_SIZE+15] === slot) b[UNIT_BASE+s*UNIT_SIZE+15] = NONE;
-      } else if (fix.kind === 'level') b[PILOT_BASE+slot*PILOT_SIZE+2] = fix.value;
+      } else if (fix.kind === 'money') { b[10] = fix.value >>> 16; b[11] = (fix.value >>> 8) & 255; b[12] = fix.value & 255; }
+      else if (fix.kind === 'level') b[PILOT_BASE+slot*PILOT_SIZE+2] = fix.value;
       else if (fix.kind === 'byte') b[fix.offset] = fix.value;
       else if (fix.kind === 'nibble16') {
         const v = (u16(b, fix.offset) & ~(15<<fix.shift)) | (fix.value<<fix.shift);

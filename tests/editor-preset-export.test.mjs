@@ -8,9 +8,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { exportEditedImage, previewEditorRecord } from "../assets/editor-core.mjs";
 import { createEditorWorker } from "../assets/editor-worker.mjs";
+import {groupedSkillCatalog} from '../assets/editor-skill-list.mjs';
 import { parsePreset } from "../assets/editor-preset.mjs";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
-import { choosePilotSkill, indexedSkillRows } from "./helpers/pilot-skill-controls.mjs";
 import { F_GAME, GAME, makeBase } from "./helpers/synthetic-game.mjs";
 import { CELL, skillTable } from "./helpers/synthetic-pilots.mjs";
 
@@ -63,6 +63,10 @@ class RealWorker {
 
   addEventListener(type, listener) {
     this.#listeners.set(type, [...(this.#listeners.get(type) ?? []), listener]);
+  }
+
+  removeEventListener(type, listener) {
+    this.#listeners.set(type, (this.#listeners.get(type) ?? []).filter(item => item !== listener));
   }
 
   postMessage(message) {
@@ -126,13 +130,17 @@ function editSkills(recordIndex, change) {
   byId("pilotSkillDialog").close();
 }
 function addSkill(id, level) {
-  choosePilotSkill(byId, state.editorGameId, id, level);
+  const row=rowOf('pilot',state.editorSelected.pilot),group=groupedSkillCatalog(row,state.editorGameId).find(group=>group.choices.some(choice=>choice.id===id));
+  assert.ok(group,'the skill is available in the current grouped picker');
+  setControl(byId('pilotSkillAddSelect'),group.key);
+  if(group.ranked)setControl(byId('pilotSkillAddRank'),id);
+  byId("pilotSkillAddLevel").value = String(level);
   hooks.addPilotSkillFromDialog();
 }
 function removeSkill(recordIndex, id) {
   const index = rowOf("pilot", recordIndex).specialAbilities.findIndex((entry) => entry.id === id);
   assert.ok(index >= 0, `skill ${id} is held`);
-  indexedSkillRows(byId)[index].querySelector(".pilot-skill-remove").click();
+  byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-row")[index].querySelector(".pilot-skill-remove").click();
 }
 
 function makeEdits() {
@@ -209,7 +217,7 @@ test("the structural ability of a unit stays out of reach of a preset, the other
     format: "srwf.editor-preset",
     version: 1,
     gameId: GAME,
-    units: [{ recordIndex: 10, fields: { ability2: { from: 17, to: 5 }, hp: { from: rowOf("unit", 10).hp, to: 4321 } } }],
+    units: [{ recordIndex: 10, identity: rowOf("unit", 10).identity, fields: { ability2: { from: 17, to: 5 }, hp: { from: rowOf("unit", 10).hp, to: 4321 } } }],
     pilots: [],
     weapons: [],
   });

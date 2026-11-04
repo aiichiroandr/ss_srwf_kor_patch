@@ -20,7 +20,7 @@ test('terrain reduction direction and recovery control bit survive writes and ma
  assert.ok(terrainDecodedMasks(s,'srwf-f').some(([start,len,mask])=>start===s.start+r.recoveryOffset+1&&len===1&&mask===127));
 });
 test('terrain writer is atomic and rejects unknown fields, accessors, duplicates and invalid lists',()=>{
- for(const fields of [{defenseBonus:-1},{enRecovery:101},{hpRecovery:0.1},{unknown:1},{avoidanceBonus:undefined}]){
+ for(const fields of [{defenseBonus:-101},{enRecovery:101},{hpRecovery:0.1},{unknown:1},{avoidanceBonus:undefined}]){
   const s=fixture('srwf-f'),before=s.bytes.slice();assert.throws(()=>updateTerrainRecords(s,'srwf-f',[{recordIndex:0,fields:{hpRecovery:30}},{recordIndex:4,fields}]),code);assert.deepEqual(s.bytes,before);
  }
  const s=fixture('srwf-f'),getter={};Object.defineProperty(getter,'enRecovery',{get(){throw new Error('no getter execution')}});
@@ -30,7 +30,7 @@ test('terrain writer is atomic and rejects unknown fields, accessors, duplicates
  assert.throws(()=>updateTerrainRecords(s,'srwf-f',null),code);assert.doesNotThrow(()=>updateTerrainRecords(undefined,'srwf-f',[]));
 });
 test('terrain malformed layouts fail closed and old presets remain compatible',()=>{
- for(const mutate of [s=>new DataView(s.bytes.buffer).setInt32(12,30),s=>s.bytes[26]=101,s=>s.bytes[s.bytes.length-1]=127]){const s=fixture('srwf-f');mutate(s);assert.throws(()=>readTerrainTable(s,'srwf-f'),code);}
+ for(const mutate of [s=>new DataView(s.bytes.buffer).setInt32(12,30),s=>s.bytes[26]=201,s=>s.bytes[s.bytes.length-1]=127]){const s=fixture('srwf-f');mutate(s);assert.throws(()=>readTerrainTable(s,'srwf-f'),code);}
  assert.throws(()=>readTerrainTable(fixture('srwf-f'),'srwf-final'),code);
  const rows=pending(fixture('srwf-f'));rows[4].enRecovery=60;
  const preset=parsePreset(serializePreset(buildPreset({gameId:'srwf-f'},{terrain:rows}))),target=pending(fixture('srwf-f'));
@@ -49,4 +49,11 @@ for(const gameId of ['srwf-f','srwf-final'])test(`${gameId}: terrain export, fre
  const row=readTerrainTable(before,gameId)[4],allowed=[row.combatOffset,row.combatOffset+1,row.recoveryOffset,row.recoveryOffset+1];
  for(let i=0;i<before.bytes.length;i++)if(!allowed.includes(i))assert.equal(after.bytes[i],before.bytes[i]);
  assert.equal(after.bytes[row.recoveryOffset+1]&128,128);
+});
+for(const gameId of ['srwf-f','srwf-final'])test(`${gameId}: every terrain accepts both combat directions and all recovery boundaries`,()=>{
+ const s=fixture(gameId),before=s.bytes.slice(),count=readTerrainTable(s,gameId).length;
+ for(const vector of [[-100,100,100,0],[100,-100,0,100],[0,0,0,0]]){
+  updateTerrainRecords(s,gameId,Array.from({length:count},(_,recordIndex)=>({recordIndex,fields:Object.fromEntries(TERRAIN_FIELDS.map((f,i)=>[f,vector[i]]))})));
+  for(const row of readTerrainTable(s,gameId)){assert.deepEqual(TERRAIN_FIELDS.map(f=>row[f]),vector);assert.equal(s.bytes[row.recoveryOffset+1]&128,before[row.recoveryOffset+1]&128);}
+ }
 });

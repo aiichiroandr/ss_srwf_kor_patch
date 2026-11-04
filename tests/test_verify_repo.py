@@ -1662,5 +1662,83 @@ class RetiredWebPortBoundaryTests(unittest.TestCase):
         self.assertFalse(any('ordinary.mjs' in e for e in errors), errors)
 
 
+
+class Srw4AuxiliarySourceTests(unittest.TestCase):
+    PIN = "efd72094b2727c4903924cf9296b3946b95a354f639b600e1d76d9ec6b9ca18b"
+    GOOD_MODULE = (
+        "export const SRW4_REV1_SHA256='" + PIN + "';\n"
+        "export const P=[{id:'srw4-jp-rev1',sha256:SRW4_REV1_SHA256}];\n"
+        "const ok=p=>p.sha256===sha256;const tiles=[0,1,16,17];\n"
+    ).encode()
+
+    def check(self, files):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            paths = []
+            for name, data in files.items():
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+                paths.append(path)
+            with verifier_root(root):
+                verifier.validate_srw4_auxiliary_source(paths)
+                return list(verifier.errors)
+
+    def base(self, **extra):
+        files = {
+            "AGENTS.md": ("Rev 1 SHA-256 `" + self.PIN + "`\n").encode(),
+            "assets/editor-srw4-rom.mjs": self.GOOD_MODULE,
+        }
+        files.update(extra)
+        return files
+
+    def test_repository_pin_matches_browser_module_and_agents(self):
+        self.assertEqual(verifier.SRW4_REV1_SHA256, self.PIN)
+        text = (PROJECT_ROOT / "assets/editor-srw4-rom.mjs").read_text(encoding="utf-8")
+        self.assertIn("export const SRW4_REV1_SHA256='" + self.PIN + "';", text)
+        self.assertIn(self.PIN, (PROJECT_ROOT / "AGENTS.md").read_text(encoding="utf-8"))
+        files = [p for p in verifier.repository_files()]
+        verifier.errors.clear()
+        try:
+            verifier.validate_srw4_auxiliary_source(files)
+            self.assertEqual(verifier.errors, [])
+        finally:
+            verifier.errors.clear()
+
+    def test_clean_synthetic_module_passes(self):
+        self.assertEqual(self.check(self.base()), [])
+
+    def test_missing_or_changed_pin_and_uncompared_hash_are_rejected(self):
+        changed = self.GOOD_MODULE.replace(self.PIN.encode(), b"0" * 64)
+        errors = self.check(self.base(**{"assets/editor-srw4-rom.mjs": changed}))
+        self.assertTrue(any("pin is missing or changed" in e for e in errors), errors)
+        uncompared = self.GOOD_MODULE.replace(b"p.sha256===sha256", b"true")
+        errors = self.check(self.base(**{"assets/editor-srw4-rom.mjs": uncompared}))
+        self.assertTrue(any("must be compared" in e for e in errors), errors)
+        errors = self.check(self.base(**{"AGENTS.md": b"no pin\n"}))
+        self.assertTrue(any("AGENTS.md" in e for e in errors), errors)
+
+    def test_non_rev1_profile_is_rejected(self):
+        module = self.GOOD_MODULE + b"const old={id:'srw4-jp',sha1:'x'};\n"
+        errors = self.check(self.base(**{"assets/editor-srw4-rom.mjs": module}))
+        self.assertTrue(any("only the Rev 1" in e for e in errors), errors)
+
+    def test_sfc_color_literals_are_rejected_in_srw4_and_map_icon_modules(self):
+        errors = self.check(self.base(**{
+            "assets/editor-srw4-extra.mjs": b'const f={"paletteWords":[0,1,2]};\n',
+            "assets/editor-map-icons.mjs": b"const words=[0,1234,5678,9,10];\n",
+            "assets/editor-kom-recovery.mjs": b"const pal=[0x0000,0x7fff,0x1f,0x3e0,0x7c00];\n",
+            "assets/editor-other.mjs": b"const unrelated=[0,1234,5678,9,10];\n",
+        }))
+        self.assertTrue(any("editor-srw4-extra.mjs" in e and "palette word" in e for e in errors), errors)
+        self.assertTrue(any("editor-map-icons.mjs" in e and "numeric word list" in e for e in errors), errors)
+        self.assertTrue(any("editor-kom-recovery.mjs" in e and "numeric word list" in e for e in errors), errors)
+        self.assertFalse(any("editor-other.mjs" in e for e in errors), errors)
+
+    def test_sfc_rom_files_are_forbidden_artifacts(self):
+        self.assertIn(".sfc", verifier.FORBIDDEN_SUFFIXES)
+        self.assertIn(".smc", verifier.FORBIDDEN_SUFFIXES)
+
+
 if __name__ == "__main__":
     unittest.main()

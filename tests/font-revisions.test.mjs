@@ -73,3 +73,14 @@ test("versions, dates and games stay separate and ambiguous or unaccepted groups
     { ...row("srwf-f", "0-4", "b"), label: "2026.09.09 · v0.4 (설치 비권장)" },
   ]), /Ambiguous/);
 });
+
+test("review versions require an explicit catalog entry and never gain accepted status", () => {
+  const review = {...row('srwf-final', '0-4', 'c'), state:'REVIEW', label:'v0.4 · 검수본'};
+  assert.throws(() => groupFontReleases([review]), /Unaccepted/);
+  assert.throws(() => groupFontReleases([review], {reviewIds:new Set(['different-id'])}), /Unaccepted/);
+  const [group] = groupFontReleases([review], {reviewIds:new Set([review.id])});
+  assert.equal(selectFontRelease(group, 'c'), review);
+  assert.equal(selectFontRelease(group, 'a'), null);
+  assert.equal(review.state, 'REVIEW');
+  assert.throws(() => groupFontReleases([{...review, state:'CANDIDATE'}], {reviewIds:new Set([review.id])}), /Unaccepted/);
+});

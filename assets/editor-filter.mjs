@@ -1,8 +1,9 @@
 // Conditions inspect the current editor rows. Bulk edits use the preset planner's writer-domain checks;
 // no second binary writer and no game data. Unit/pilot and weapon grade encodings remain distinct.
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261104-save3";
-import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261104-save3";
-import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261104-save3";
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261104-part1";
+import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261104-part1";
+import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261104-part1";
+import { criticalChoices, criticalValues } from "./editor-critical-values.mjs?v=20261104-part1";
 
 const TYPES = ["unit", "pilot", "weapon"];
 const TABLES = { unit: "units", pilot: "pilots", weapon: "weapons" };
@@ -10,14 +11,14 @@ const TERRAIN = ["air", "ground", "sea", "space"];
 const TERRAIN_NAMES = ["공중", "지상", "바다", "우주"];
 const NUMBERS = {
   unit: [["hp", "HP"], ["en", "EN"], ["move", "이동력"], ["speed", "운동성"], ["armor", "장갑"], ["limit", "한계 반응"]],
-  pilot: [["atk", "격투"], ["shot", "사격"], ["hit", "명중"], ["agi", "회피"], ["mp", "SP"], ["tech", "기량"], ["cnt", "반응"], ["exp", "초기 경험치"]],
-  weapon: [["attack", "공격력"], ["hit", "명중 보정"], ["critical", "크리티컬"], ["minRange", "최소 사거리"], ["maxRange", "최대 사거리"], ["energy", "소비 EN"], ["ammo", "탄수"], ["requiredMorale", "필요 기력"]],
+  pilot: [["atk", "격투"], ["shot", "사격"], ["hit", "명중"], ["agi", "회피"], ["mp", "SP"], ["tech", "기량"], ["cnt", "반응"], ["exp", "파일럿 기본 EXP"]],
+  weapon: [["attack", "공격력"], ["hit", "명중 보정"], ["critical", "크리티컬 보정"], ["minRange", "최소 사거리"], ["maxRange", "최대 사거리"], ["energy", "소비 EN"], ["ammo", "탄수"], ["requiredMorale", "필요 기력"]],
 };
 export const MAX_EDITOR_CONDITIONS = 12;
 export function filterFields(kind, { editableOnly = false } = {}) {
   if (!TYPES.includes(kind)) return [];
   const fields = TERRAIN.map((key, i) => ({ key, label: TERRAIN_NAMES[i], group: `${kind === "weapon" ? "무기" : kind === "pilot" ? "파일럿" : "기체"} 지형`, type: "grade", editable: true }));
-  fields.push(...NUMBERS[kind].map(([key, label]) => ({ key, label, group: "능력치", type: "number", editable: true, bounds: EDITOR_FIELD_BOUNDS[kind][key] })));
+  fields.push(...NUMBERS[kind].map(([key, label]) => ({ key, label, group: "능력치", type: kind === "weapon" && key === "critical" ? "critical" : "number", editable: true, bounds: EDITOR_FIELD_BOUNDS[kind][key] })));
   if (kind === "unit") fields.push(...[["shield", "실드"], ["parry", "베어내기 가능"]].map(([key, label]) => ({ key, label, group: "기체 기능", type: "boolean", editable: true })));
   if (kind !== "weapon") fields.push({ key: "ability", label: "특수능력", group: "보유 능력", type: "membership", editable: false });
   if (kind === "pilot") fields.push({ key: "spirit", label: "정신커맨드", group: "보유 능력", type: "membership", editable: false });
@@ -57,6 +58,7 @@ export function isValidCondition(kind, condition) {
   if (field.type === "membership") return ["has", "lacks"].includes(op) && Number.isInteger(value) && value > 0 && value <= 255;
   if (field.type === "boolean") return op === "eq" && typeof value === "boolean";
   if (!["eq", "gte", "lte"].includes(op) || !Number.isSafeInteger(value)) return false;
+  if (field.type === "critical") return criticalChoices().some(choice => choice.value === value);
   const [min, max] = field.type === "grade" ? [0, kind === "weapon" ? 3 : 4] : field.bounds;
   return value >= min && value <= max;
 }
@@ -64,20 +66,27 @@ export function matchesConditions(kind, row, conditions, isModified) {
   if (!Array.isArray(conditions) || conditions.length > MAX_EDITOR_CONDITIONS) return false;
   return conditions.every(condition => {
     if (!isValidCondition(kind, condition)) return false;
-    const actual = filterValue(kind, row, condition.field, isModified);
+    let actual = filterValue(kind, row, condition.field, isModified), expected = condition.value;
     if (actual === null || actual === undefined) return false;
-    if (filterField(kind, condition.field).type === "grade" && !gradeChoices(kind).some(choice => choice.value === actual)) return false;
+    const field = filterField(kind, condition.field);
+    if (field.type === "grade" && !gradeChoices(kind).some(choice => choice.value === actual)) return false;
+    if (field.type === "critical") {
+      actual = criticalValues(actual)?.display;
+      expected = criticalValues(expected)?.display;
+      if (actual === undefined || expected === undefined) return false;
+    }
     if (condition.op === "has") return actual.includes(condition.value);
     if (condition.op === "lacks") return !actual.includes(condition.value);
-    if (condition.op === "eq") return actual === condition.value;
+    if (condition.op === "eq") return actual === expected;
     if (!Number.isSafeInteger(actual)) return false;
-    return condition.op === "gte" ? actual >= condition.value : actual <= condition.value;
+    return condition.op === "gte" ? actual >= expected : actual <= expected;
   });
 }
 export function isValidBulkValue(kind, key, value) {
   const field = filterField(kind, key);
   if (!field?.editable) return false;
   if (field.type === "grade") return gradeChoices(kind).some(choice => choice.value === value);
+  if (field.type === "critical") return criticalChoices().some(choice => choice.value === value);
   if (!isFieldValueInBounds(kind, key, value)) return false;
   if (screenFieldLimit(kind, key) && !isScreenFieldEditAllowed(kind, key, value)) return false;
   // The same changed-value limits as the writer and the preset planner, before making a plan.

@@ -1,14 +1,47 @@
-import { createSaveNameAuthority } from './save-name-support.mjs?v=20261104-save3';
-import { createSaveEditor } from './save-ui.mjs?v=20261104-save3';
-// The save editor reads the verified editor session; it is created once the page's elements exist.
-let saveEditor = null, saveNameAuthority = null;
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261104-save3';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261104-save3';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261104-save3";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261104-save3";
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261104-save3";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261104-save3";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261104-save3";
+import {createSaveNameAuthority} from './save-name-support.mjs?v=20261104-part1';
+import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261104-part1';
+import {editorReviewSupport} from './editor-review-support.mjs?v=20261104-part1';
+import {createMiscExamples} from './editor-misc-examples.mjs?v=20261104-part1';
+import {decodeMapIcon} from './editor-map-icons.mjs?v=20261104-part1';
+import {exSBeamCloneIds,freshExSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261104-part1';
+import {planSrw4UnusedImport,SRW4_UNUSED_PRESETS} from './editor-srw4-unused.mjs?v=20261104-part1';
+import {captureSrw4Import,pendingSrw4Import,rollbackSrw4Import} from './editor-srw4-undo.mjs?v=20261104-part1';
+import {decorateAlicePilot} from './editor-alice.mjs?v=20261104-part1';
+import {aliceEditorRow,aliceCrewRequest,ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261104-part1';
+import {createAliceCrewEditor} from './editor-alice-crew-ui.mjs?v=20261104-part1';
+import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261104-part1';
+import {criticalValues,criticalChoices,criticalPercentLabel,criticalAppliedText} from './editor-critical-values.mjs?v=20261104-part1';
+import {createSrw4SourcePanel} from './editor-srw4-source-ui.mjs?v=20261104-part1';
+import {createFCampaignSourcePanel,campaignCanonicalTracks,campaignDownloadCue,ingameCanonicalTracks,ingameDownloadCue} from './editor-v04-unsupported.mjs?v=20261104-part1';
+import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261104-part1';
+import {connectDefaultAlice,cancelDefaultAlice} from './editor-alice-construction.mjs?v=20261104-part1';
+import {requireMigrationIdentities} from './editor-migration.mjs?v=20261104-part1';
+import {createUnitUpgradeUI} from './editor-unit-upgrade-ui.mjs?v=20261104-part1';
+import {createEditorStorageUI} from './editor-storage-ui.mjs?v=20261104-part1';
+import {encodeEditorText,editorTextMetrics,nameMap} from './editor-text-codec.mjs?v=20261104-part1';
+import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261104-part1';
+import {afterDialogueText} from './editor-dialogue-sequence.mjs?v=20261104-part1';
+import {createBattleTimeline} from './editor-battle-timeline.mjs?v=20261104-part1';
+import {createWeaponNameControl} from './editor-name-control.mjs?v=20261104-part1';
+import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261104-part1';
+import {UNUSED_UNIT_PRESETS,UNIT_CONSTRUCTION_VISIBLE_PRESETS,constructUnitRow,replaceUnitRow,cancelUnitConstruction,unitConstructionPreset,UNIT_CONCEPTS,planConceptUnitConstruction,planExSCruiserConstruction,planSCruiserConstruction,pruneConstructionWeaponClones} from './editor-unit-construction.mjs?v=20261104-part1';
+import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261104-part1';
+import { createSaveEditor } from './save-ui.mjs?v=20261104-part1';
+import { UNIT_WEAPON_FIELDS, isUnitWeaponField, pendingUnitWeapons, unitWeaponFields,planUnitLoadouts } from './editor-loadout.mjs?v=20261104-part1';
+import { createUnitWeaponScroller } from './editor-loadout-ui.mjs?v=20261104-part1';
+import {createUnitWeaponEditor} from './editor-unit-weapon-ui.mjs?v=20261104-part1';
+import { unitsOfWeapon, weaponOwnership } from './editor-weapon-links.mjs?v=20261104-part1';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261104-part1';
+import { requestEditorNotice } from './editor-notice.mjs?v=20261104-part1';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261104-part1';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261104-part1";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261104-part1";
+import { createEntityArtwork } from './editor-entity-art.mjs?v=20261104-part1';
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261104-part1";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261104-part1";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261104-part1";
+import { animationChoices,animationDefaultPilot, createInlineAnimationPreview } from "./editor-animation.mjs?v=20261104-part1";
+import {createPreviewResources} from './editor-preview-resources.mjs?v=20261104-part1';
 import {
   canStep,
   filterRecords,
@@ -17,7 +50,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261104-save3";
+} from "./editor-list.mjs?v=20261104-part1";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -28,7 +61,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261104-save3";
+} from "./editor-grades.mjs?v=20261104-part1";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -62,42 +95,43 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261104-save3";
+} from "./editor-skill-list.mjs?v=20261104-part1";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261104-save3";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261104-save3";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261104-save3";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261104-save3";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261104-save3";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261104-save3";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261104-save3";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261104-save3";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261104-save3";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261104-save3";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261104-save3";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261104-save3";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261104-save3";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261104-save3";
+} from "./editor-facts.mjs?v=20261104-part1";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261104-part1";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261104-part1";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261104-part1";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261104-part1";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261104-part1";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261104-part1";
+import { createCostEditor } from "./editor-cost-ui.mjs?v=20261104-part1";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261104-part1";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261104-part1";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261104-part1";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261104-part1";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261104-part1";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261104-part1";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261104-part1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
   fontReleaseIdentity,
-  groupFontReleases,
+  groupFontReleases as groupPublicFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261104-save3";
+} from "./font-revisions.mjs?v=20261104-part1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261104-save3";
+} from "./release-notes.mjs?v=20261104-part1";
 
-const STATIC_ASSET_REVISION = "20261104-save3";
+const STATIC_ASSET_REVISION = "20261104-part1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -296,6 +330,8 @@ const elements = {
   rewardEditorPanel: byId("rewardEditorPanel"),
   scenarioTabButton: byId("scenarioTabButton"),
   scenarioEditorPanel: byId("scenarioEditorPanel"),
+  miscTabButton: byId("miscTabButton"),
+  miscEditorPanel: byId("miscEditorPanel"),
   unitEditorPanel: byId("unitEditorPanel"),
   pilotEditorPanel: byId("pilotEditorPanel"),
   weaponEditorPanel: byId("weaponEditorPanel"),
@@ -319,6 +355,8 @@ const elements = {
   weaponPosition: byId("weaponPosition"),
   unitWeaponList: byId("unitWeaponList"),
   unitWeaponNote: byId("unitWeaponNote"),
+  unitWeaponSearch: byId("unitWeaponSearch"),
+  unitWeaponToolbar: byId('unitWeaponToolbar'), unitWeaponAddChoice: byId('unitWeaponAddChoice'), unitWeaponAddButton: byId('unitWeaponAddButton'),
   unitWeaponTotal: byId("unitWeaponTotal"),
   unitWeaponPageCount: byId("unitWeaponPageCount"),
   weaponOwnerList: byId("weaponOwnerList"),
@@ -373,6 +411,8 @@ const elements = {
   workflowSaveRegion: byId("workflowSaveRegion"),
   workflowSaveSummary: byId("workflowSaveSummary"),
   workflowSaveButton: byId("workflowSaveButton"),
+  editorStorageBudget:byId('editorStorageBudget'),
+  editorStorageCheck:byId('editorStorageCheck'),
   workflowFolderSave: byId("workflowFolderSave"),
   workflowFolderStatus: byId("workflowFolderStatus"),
   workflowBackEditor: byId("workflowBackEditor"),
@@ -425,6 +465,34 @@ const EDITOR_SOURCE = Object.freeze({
   errorTitle: byId("editorSourceErrorTitle"),
   errorMessage: byId("editorSourceErrorMessage"),
 });
+// B30: an image an older editor saved over a longer accepted TSR stream keeps
+// that stream's leftover bytes. The core verifies them only against the user's
+// own exact base image (never bundled digests), so INSPECT can ask for it.
+const EDITOR_TAIL_REFERENCE = (() => {
+  const picker = document.createElement("label");
+  picker.className = "record-tool";
+  picker.id = "editorTailReferencePicker";
+  picker.hidden = true;
+  picker.append("같은 버전의 편집 전 BIN 선택");
+  const file = document.createElement("input");
+  file.type = "file";
+  file.id = "editorTailReferenceFile";
+  file.accept = ".bin";
+  file.setAttribute("aria-label", "편집 전 기준 BIN 선택");
+  picker.append(file);
+  EDITOR_SOURCE.feedback.append(picker);
+  return Object.freeze({ picker, file });
+})();
+let pendingTailReference = null;
+EDITOR_TAIL_REFERENCE.file.addEventListener("change", () => {
+  const reference = EDITOR_TAIL_REFERENCE.file.files?.[0];
+  const pending = pendingTailReference;
+  EDITOR_TAIL_REFERENCE.file.value = "";
+  if (!reference || !pending || state.editorBusy) return;
+  pendingTailReference = null;
+  EDITOR_TAIL_REFERENCE.picker.hidden = true;
+  beginEditorInspection(pending.imageBlob, {...pending.options, tailReferenceBlob: reference});
+});
 // The editor's third card: what the editor does, and which file kinds start it how.
 const EDITOR_ENTRY = Object.freeze({
   region: byId("editorEntryRegion"),
@@ -465,6 +533,9 @@ const SOURCE_WAIT_APPLY_HINT = "데스크톱은 원본 폴더에 새 BIN/CUE를 
 // 같은 이름의 결과가 폴더에 있어 쓰지 않았을 때. 패치 실행은 그 파일을 옮긴 뒤에만 새로 만든다.
 const OUTPUT_CONFLICT_APPLY_HINT = "기존 파일을 다른 폴더로 옮기면 새로 만들 수 있습니다.";
 
+// Optional Final output fixes (see the output-switch listeners below).
+const OUTPUT_SWITCH_KEYS=Object.freeze(['dictionaryPortraits','titleLogo']);
+const OUTPUT_SWITCH_IDS=Object.freeze({dictionaryPortraits:'dictionaryPortrait',titleLogo:'titleLogo'});
 const state = {
   // 한글 패치가 기본이다. 에디터는 같은 게임·버전·폰트 선택을 쓰지만 자기 폴더 카드와 세션을 따로 가진다.
   // 모드 막대는 보기 전환일 뿐이라 어느 쪽 상태도 전환으로 지워지지 않는다.
@@ -476,10 +547,15 @@ const state = {
   workflowDirectOutput: false,
   workflowOutput: null,
   workflowSourceHandles: [],
+  editorSourceFallback: null,
   workflowSaving: false,
   editorSetupOpen: false,
   editorDisc: null,
   editorCueTracks: null,
+  editorCanonicalSize: null,
+  editorIngame: null,
+  editorFCampaign: null,
+  editorFCampaignOriginal: false,
   // 열린 세션의 출발점: "stock"(정품 원본에 한글패치를 적용) | "patched"(패치본 BIN: 공개 패치본 또는 내 수정본) | null.
   editorOrigin: null,
   editorProvenance: null,
@@ -495,6 +571,7 @@ const state = {
   // 폴더를 고른 뒤의 확인·준비 작업이 돌고 있는지(진행 막대가 에디터 폴더 카드 안에 보인다).
   editorActive: false,
   editorInspectContext: null,
+  editorTailReferenceBlob: null,
   editorScan: null,
   progressOwner: "patch",
   fileSystemSupported: detectFileSystemSupport(),
@@ -558,13 +635,29 @@ const state = {
   editorSessionToken: null,
   editorGameId: null,
   editorTargetHash: null,
+  webPortInput: null,
   editorUnits: [],
   editorPilots: [],
   editorWeapons: [],
   editorTerrains: [],
   editorRewards: [],
+  editorCollectionRows: [],
+  editorDebugRows: [],
+  editorCriticalRows: [],
+  editorBeamRows: [],
+  editorBeamSupported: false,
+  editorBeamExplicit: false,
+  editorBeamSeenFresh: [],
+  editorAliceRows: [],
+  editorAliceSource: null,
+  editorCollectionUnlock: false,
+  editorCollectionUnlockOriginal: false,
+  // Optional Final output fixes: explicit switches, never carried by presets.
+  editorOutputSwitches: {dictionaryPortraits:null,titleLogo:null},
+  editorUpgradeCosts: [],
   editorScenario: createScenarioModel(),
   editorPartNames: [],
+  editorSaveTitles: [],
   editorUnitAbilityNames: [],
   editorPilotAbilityNames: [],
   // 탭마다 고른 레코드 번호, 지금 목록(검색·미사용 토글 반영)에 보이는 번호들, 좁은 화면의 구역.
@@ -575,6 +668,7 @@ const state = {
   // 기체 특수능력의 조건 플래그 번호 칸은 거의 항상 0이라 기본은 접어 두고, 0이 아닌 값이 있으면 저절로 보인다.
   unitFlagsOpen: false,
   editorTab: "unit",
+  editorGlyphSource:null,editorGlyphBaseHash:null,editorGlyphSeed:[],editorGlyphEntries:[],editorGlyphMap:new Map(),editorGlyphRows:[],editorGlyphExplicit:'',editorGlyphReserved:new Set(),editorSaveNameTexts:new Map(),editorGlyphNotice:'',
   editorEditRevision: 0,
   editorExportedRevision: 0,
   showUnused: { unit: false, pilot: false, weapon: false },
@@ -652,10 +746,211 @@ elements.patchImageDialog.addEventListener("click", (event) => {
 elements.sourceButton.addEventListener("click", () => chooseSource());
 elements.patchButton.addEventListener("click", applyPatch);
 elements.redownloadButton.addEventListener("click", startFolderSafeDownload);
+elements.editorDownloadBinLink.addEventListener("click", event => {
+  if (!event.defaultPrevented && state.editorSessionToken && !state.workflowDirectOutput && state.workflowOutput && state.editorDownloadUrls.length) {
+    state.editorExportedRevision = state.editorEditRevision;
+  }
+});
 elements.cancelButton.addEventListener("click", cancelActiveJob);
 elements.cueButton.addEventListener("click", saveCueFile);
 elements.modePatchButton.addEventListener("click", () => setMode("patch"));
 elements.modeEditorButton.addEventListener("click", () => setMode("editor"));
+let saveNameAuthority=null;
+let saveCatalogSnapshot=null,saveCatalogPreparation=null;
+const saveEditor = createSaveEditor(() => ({ verified: Boolean(state.editorSessionToken) && !anyJobBusy(), gameId: state.editorGameId, pilots: state.editorPilots, units: saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.units:state.editorUnits.filter(row=>!row.pendingConstruction), weapons: state.editorWeapons, partNames: state.editorPartNames, saveTitles: state.editorSaveTitles, sessionToken: state.editorSessionToken, saveNameSupport:state.editorSaveNameSupport, preview: requestSaveEditorPreview, glyphMap:state.editorGlyphMap,glyphPending:state.editorGlyphRows.some(row=>row.characters!==row.original.characters),encodeText:encodeEditorInput,syncSaveGlyphTexts:texts=>{state.editorSaveNameTexts=new Map(texts);try{commitEditorGlyphPlan(editorGlyphPlan());updateEditorStatus('glyph',state.editorGlyphRows[0]);}catch(error){showEditorError('추가 글자를 적용할 수 없습니다',error.message);}},reserveGlyphCodes:codes=>{state.editorGlyphReserved=new Set(codes);} }), {prepare:()=>prepareWorkflow('save-editor'),verifyOutputCatalog:prepareSaveEditorCatalog});
+let srw4SourceJob=null,srw4ImportUndo=null,srw4BaseMapIcons=null,srw4BasePending=false;
+let fCampaignSourceJob=null;
+const fCampaignSourcePanel=createFCampaignSourcePanel(byId('fCampaignSourcePanel'),{
+ context:()=>({available:PUBLIC_EDITOR_FEATURES.fCampaignImport&&state.editorGameId==='srwf-final'&&/-c$/.test(state.editorBaseReleaseId??'')&&state.workflowBaseKind==='korean',ready:Boolean(state.editorSessionToken)&&!anyJobBusy()}),
+ connect:connectEditorFCampaignSource,cancel:cancelEditorOperation,
+});
+const miscExamples=createMiscExamples({criticalPanel:byId('criticalFixSettings'),debugPanel:byId('debugEntrySettings')});
+const srw4SourcePanel=createSrw4SourcePanel(byId('srw4SourcePanel'),{
+  canConnect:()=>Boolean(state.editorSessionToken)&&!anyJobBusy(),connect:connectEditorSrw4Source,cancel:cancelEditorOperation,
+  canUndo:canUndoSrw4Import,undo:undoEditorSrw4Import,
+});
+const battleTimeline=createBattleTimeline(byId('weaponTimeline'),{textMap:()=>nameMap(state.editorGameId,'weapon',state.editorGlyphMap),pilotTextMap:()=>nameMap(state.editorGameId,'hero',state.editorGlyphMap)});
+function syncWeaponPreviewLayout(visible=!byId('weaponAnimationPanel').hidden){
+  const map=selectedEditorRow('weapon')?.mapType!=null;
+  byId('weaponStatsForm').dataset.mapPreview=String(map);
+  battleTimeline.setVisible(visible&&!map);
+}
+const previewResources=createPreviewResources({getKey:()=>[state.editorSessionToken,state.editorEditRevision],getSource:requestAnimationSource,
+  getRuntimeRequirements:()=>({aliceCrew:aliceRequiresNativeRuntime()}),
+  getRuntimeManifest:()=>!state.editorSessionToken?null:state.editorGameId==='srwf-f'?'f-current.json':state.editorGameId==='srwf-final'?'current.json':null});
+let localEditorSupport=null,localPreviewResources=null;
+const reviewSession=()=>Boolean(localEditorSupport?.isTarget(state.editorBaseTargetHash));
+const currentPreviewResources=()=>reviewSession()?localPreviewResources:previewResources;
+const localPreviewPage=()=>reviewSession()?localEditorSupport.previewPage:null;
+const groupFontReleases=rows=>groupPublicFontReleases(rows,{reviewIds:new Set(localEditorSupport?.rows?.map(row=>row.id)??[])});
+
+// Static review profiles do not change the accepted release index or its defaults.
+export function registerLocalEditorSupport(support){
+  if(localEditorSupport)throw Error('검수 연결이 이미 등록되어 있습니다.');
+  if(typeof support?.isTarget!=='function'||typeof support?.createPreviewResources!=='function')throw Error('로컬 검수 설정이 올바르지 않습니다.');
+  localEditorSupport=support;
+  localPreviewResources=support.createPreviewResources({getKey:()=>[state.editorSessionToken,state.editorEditRevision],getSource:requestAnimationSource,
+    getRuntimeRequirements:()=>({aliceCrew:aliceRequiresNativeRuntime()}),getRuntimeManifest:()=>support.runtimeManifest(state.editorBaseTargetHash)});
+}
+
+export async function openLocalEditorFile({file,release,workerUrl,onProgress=()=>{},signal=null}){
+  const ownScan=()=>Boolean(signal&&state.editorScan?.signal===signal);
+  if(!localEditorSupport||anyJobBusy()&&!ownScan())throw Error('현재 작업이 끝난 뒤 파일을 열어 주세요.');
+  const url=new URL(workerUrl,location.href);
+  if(url.origin!==location.origin||!localEditorSupport.workerUrls.some(allowed=>new URL(allowed).pathname===url.pathname))throw Error('검수 작업 경로가 올바르지 않습니다.');
+  const before=[state.editorSessionToken,state.editorEditRevision],jobId=`local-review-${crypto.randomUUID()}`;
+  const worker=new Worker(url,{type:'module',name:'srwf-local-file-inspection'});
+  let adopted=false;
+  try{
+    const message=await new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>finish(Error('파일 검증 시간이 초과됐습니다. 기존 편집은 유지됩니다.')),120000);
+      const finish=(error,value)=>{clearTimeout(timer);signal?.removeEventListener('abort',abort);worker.removeEventListener('message',receive);worker.removeEventListener('error',crash);error?reject(error):resolve(value);};
+      const abort=()=>finish(new DOMException('폴더 확인을 중단했습니다.','AbortError'));
+      const crash=()=>finish(Error('파일 검증을 시작하지 못했습니다. 기존 편집은 유지됩니다.'));
+      const receive=({data})=>{if(data?.jobId!==jobId)return;if(data.type==='PROGRESS'){onProgress(data);return;}if(data.type==='INSPECT_COMPLETE')finish(null,data);else if(data.type==='ERROR')finish(Object.assign(Error(friendlyEditorError(data.error?.code,'',data.error?.details).message),{code:data.error?.code}));};
+      worker.addEventListener('message',receive);worker.addEventListener('error',crash);
+      signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted){abort();return;}
+      try{worker.postMessage({type:'INSPECT',jobId,imageBlob:file,descriptor:{gameId:release.gameId,targetSize:file.size,targetSha256:release.target.sha256,imageKind:'local',customOutputReceipts:readEditorOutputReceipts()}});}catch(error){finish(error);}
+    });
+    signal?.throwIfAborted();
+    if(anyJobBusy()&&!ownScan()||before[0]!==state.editorSessionToken||before[1]!==state.editorEditRevision)throw Error('검증 중 현재 편집이 바뀌었습니다. 기존 편집을 유지했으니 다시 열어 주세요.');
+    release=localEditorSupport.releaseForTarget?.(message.view?.baseTargetSha256)??release;
+    if(!confirmReplaceEditorSession())return false;
+    const old=state.editorWorker;
+    worker.addEventListener('message',handleEditorWorkerMessage);worker.addEventListener('error',handleEditorWorkerCrash);worker.addEventListener('messageerror',handleEditorWorkerCrash);
+    state.editorWorker=worker;state.editorWorkerProfile=localEditorSupport.isTarget(message.view?.baseTargetSha256)?'review':'public';state.editorRelease=release;
+    elements.editorError.hidden=true;
+    state.editorSource={...state.editorSource,name:file.name,typeLabel:'BIN'};
+    const cueTracks=PATCHED_IMAGE_CUE_TRACKS.get(release.target.sha256)??PATCHED_IMAGE_CUE_TRACKS.get('0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d');
+    state.editorInspectContext={origin:'patched',release,localImage:true,cueTracks,inputSize:file.size,webPortInput:file};
+    state.editorJobId=jobId;state.editorOperation='INSPECT';state.editorBusy=true;state.editorActive=true;
+    handleEditorWorkerMessage({data:message});
+    if(state.editorSessionToken!==message.view?.sessionToken){state.editorWorker=old;throw Error('검증한 파일의 편집 세션을 열지 못했습니다.');}
+    adopted=true;old?.terminate();previewResources.clear();localPreviewResources?.clear();
+    return true;
+  }finally{if(!adopted)worker.terminate();}
+}
+function requestPreviewResources(){
+  if(!validateEditorForms({report:false}))return Promise.reject(Error(editorValidationIssue||'입력한 편집값을 확인해 주세요.'));
+  return currentPreviewResources().get();
+}
+// Runtime previews need the weapon-preview runtime, which the public site does not carry (editor-public-features.mjs).
+function inertAnimationPreview(button,panel){
+  button.hidden=true;panel.hidden=true;const none=()=>{};
+  return Object.freeze({close:none,hide:none,select:none,refreshChoices:none,show:none,invalidate:none});
+}
+const animationPreview = !PUBLIC_EDITOR_FEATURES.runtimePreview ? inertAnimationPreview(byId("weaponAnimationButton"),byId("weaponAnimationPanel")) : createInlineAnimationPreview({
+  getPreviewPage:localPreviewPage,
+  preferBattleCrop:true,
+  onTimeline:message=>battleTimeline.receive(message),
+  onVisibility:syncWeaponPreviewLayout,
+  button:byId("weaponAnimationButton"), panel:byId("weaponAnimationPanel"),
+  getChoices:() => animationChoices(state.editorWeapons,state.editorUnits,state.editorPilots,[...state.editorScenario.pilotAssignments,...state.editorScenario.deployments],state.editorGameId),
+  getWeapon:() => selectedEditorRow("weapon")?.recordIndex,
+  getPilot:()=>weaponDialogueSource.pilot(),
+  onSelection:s=>{if(s.weapon===selectedEditorRow('weapon')?.recordIndex){weaponDialogueSource.setPilot(s.pilot);syncWeaponPreviewLayout();}},
+  getSource:requestPreviewResources,
+  getRevision:()=>state.editorEditRevision,
+});
+
+
+let unitPreviewWeapon = null;
+// Weapon controls stay in their own work area when the player is toggled.
+function syncUnitPreviewDetails() {
+  const detail=byId('unitWeaponDetail'),home=byId('unitWeaponWorkarea'),form=byId('unitStatsForm');
+  if(detail.parentElement!==home){const focused=detail.contains?.(document.activeElement)?document.activeElement:null;home.append(detail);if(focused?.isConnected)focused.focus({preventScroll:true});}
+  delete form.dataset.previewDetail;
+}
+window.addEventListener('resize',()=>requestAnimationFrame(()=>syncUnitPreviewDetails(!byId('unitAnimationPanel').hidden)));
+const unitAnimationPreview = !PUBLIC_EDITOR_FEATURES.runtimePreview ? inertAnimationPreview(byId('unitAnimationButton'),byId('unitAnimationPanel')) : createInlineAnimationPreview({
+  getPreviewPage:localPreviewPage,
+  onVisibility:visible=>{if(!visible)syncUnitPreviewDetails(false);else queueMicrotask(()=>syncUnitPreviewDetails(!byId('unitAnimationPanel').hidden));},
+  button: byId('unitAnimationButton'), panel: byId('unitAnimationPanel'),
+  getChoices: () => animationChoices(state.editorWeapons, state.editorUnits, state.editorPilots,
+    [...state.editorScenario.pilotAssignments, ...state.editorScenario.deployments],state.editorGameId),
+  getWeapon: () => unitPreviewWeapon,
+  getUnit: () => selectedEditorRow('unit')?.recordIndex,
+  getPilot:()=>unitWeaponEditor.dialoguePilot(),
+  onSelection:s=>{if(s.weapon===unitPreviewWeapon&&s.unit===selectedEditorRow('unit')?.recordIndex)unitWeaponEditor.setDialoguePilot(s.pilot);},
+  getSource:requestPreviewResources,
+  getRevision:()=>state.editorEditRevision,
+});
+
+function aliceRequiresNativeRuntime() {
+  const row=state.editorAliceRows[0];
+  return Boolean(row&&row.enabled===1&&row.crewEnabled===1);
+}
+const ALICE_NATIVE_RUNTIME_NOTICE='ALICE 지원 웹 실행 코드를 확인하지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요. 현재 편집 내용은 유지됩니다.';
+async function requireAliceWebRuntime(kind='preview'){
+  if(!aliceRequiresNativeRuntime())return;
+  const response=await fetch(kind==='web-port'?'./web-port/runtime/current.json':'./weapon-preview/runtime/current.json',{cache:'no-cache'});
+  if(!response.ok)throw Error(ALICE_NATIVE_RUNTIME_NOTICE);
+  const manifest=await response.json();
+  if(!/^[a-f0-9]{20}$/.test(manifest?.version)||manifest.aliceCrew!==true)throw Error(ALICE_NATIVE_RUNTIME_NOTICE);
+}
+function requestAnimationSource() {
+  if(!validateEditorForms({report:false}))return Promise.reject(Error(editorValidationIssue||'입력한 편집값을 확인해 주세요.'));
+  if(!aliceRequiresNativeRuntime())return requestEditorOutputSource();
+  return requireAliceWebRuntime().then(()=>requestEditorOutputSource());
+}
+// Data validation can inspect the authored ALICE overlay without executing it.
+// Actual game/weapon execution retains the native-host gate above.
+function requestEditorOutputSource({signal,includeSaveCatalog=false}={}) {
+  signal?.throwIfAborted();
+  if(!state.editorSessionToken)return Promise.reject(Error('검증한 ROM 세션이 없습니다.'));
+  const worker = getEditorWorker(), sessionToken = state.editorSessionToken;
+  // Campaign/runtime sessions retain a canonical source; their executable
+  // output must also be rebuilt when no data field has changed.
+  const revision=state.editorEditRevision,request=countEditorChanges()||state.editorBattleComponentsPending||state.editorFCampaign||state.editorIngame?buildEditorExportRequest():null;
+  const previewId = `animation-${++state.editorPreviewSequence}`;
+  return new Promise((resolve, reject) => {
+    let settled=false;
+    const timer = setTimeout(() => finish(Error("ROM 연결 시간이 초과됐습니다.")), includeSaveCatalog?120000:30000);
+    const abort=()=>finish(signal.reason??new DOMException('검사를 취소했습니다.','AbortError'));
+    const receive = ({ data }) => {
+      if (data?.previewId !== previewId) return;
+      if(worker!==state.editorWorker)return finish(Error('ROM 작업 스레드가 바뀌었습니다. 다시 열어 주세요.'));
+      if (sessionToken !== state.editorSessionToken) return finish(Error("ROM 세션이 바뀌었습니다. 다시 열어 주세요."));
+      if(revision!==state.editorEditRevision)return finish(Error('준비 중 편집값이 바뀌었습니다. 미리보기를 다시 여세요.'));
+      if(data.type==='ANIMATION_SOURCE_ERROR'){
+        const message=data.errorCode==='EDITOR_BATTLE_COMPONENT_INVALID'&&data.details?.component==='hand-points'
+          ?friendlyEditorError(data.errorCode,'',data.details).message
+          :data.error||'미리보기 ROM을 준비하지 못했습니다.';
+        return finish(Error(message));
+      }
+      if(data.type!=='ANIMATION_SOURCE_COMPLETE')return finish(Error('미리보기 ROM 응답을 확인하지 못했습니다.'));
+      const descriptor=data.descriptor;
+      if(!(data.blob instanceof Blob)||!descriptor||descriptor.gameId!==state.editorGameId
+       ||descriptor.baseTargetSha256!==state.editorBaseTargetHash||descriptor.targetSize!==data.blob.size
+       ||!/^[a-f0-9]{64}$/.test(descriptor.targetSha256??'')
+       ||(!request&&(descriptor.targetSha256!==state.editorTargetHash||data.blob.size!==state.editorInputSize)))
+        return finish(Error('미리보기 ROM 검증 정보를 확인하지 못했습니다.'));
+      if(includeSaveCatalog&&(data.saveCatalog?.targetHash!==descriptor.targetSha256||!Array.isArray(data.saveCatalog?.units)))
+        return finish(Error('저장할 BIN의 기체 정보를 확인하지 못했습니다.'));
+      finish(null,data);
+    };
+    function finish(error, value) {
+      if(settled)return;settled=true;
+      clearTimeout(timer); worker.removeEventListener("message", receive);
+      signal?.removeEventListener('abort',abort);
+      if(error){
+        // Exact preview identity cannot cancel a newer foreground operation.
+        try{worker.postMessage({type:'CANCEL',jobId:previewId});}catch{}
+        reject(error);return;
+      }
+      try{
+        const source=Object.freeze({blob:value.blob,descriptor:Object.freeze({...value.descriptor})});
+        const verified=currentPreviewResources().rememberVerifiedSource(source);
+        resolve(includeSaveCatalog?Object.freeze({...verified,saveCatalog:value.saveCatalog}):verified);
+      }catch(error){reject(error);}
+    }
+    worker.addEventListener("message", receive);
+    signal?.addEventListener('abort',abort,{once:true});
+    if(signal?.aborted){abort();return;}
+    try{worker.postMessage({ type: "ANIMATION_SOURCE", previewId, sessionToken,...request?{request}:{},...includeSaveCatalog?{includeSaveCatalog:true}:{} });}
+    catch(error){finish(error);}
+  });
+}
 elements.setupToggle.addEventListener("click", toggleEditorSetup);
 EDITOR_SOURCE.button.addEventListener("click", () => chooseSource());
 elements.editorCancelButton.addEventListener("click", cancelEditorOperation);
@@ -678,6 +973,7 @@ elements.weaponTabButton.addEventListener("click", () => selectEditorTab("weapon
 elements.terrainTabButton.addEventListener("click", () => selectEditorTab("terrain"));
 elements.rewardTabButton.addEventListener("click", () => selectEditorTab("reward"));
 elements.scenarioTabButton.addEventListener("click", () => selectEditorTab("scenario"));
+elements.miscTabButton.addEventListener("click", () => selectEditorTab("misc"));
 elements.pilotSkillDialog.addEventListener("click", handleSkillDialogClick);
 elements.pilotSkillSchedule.addEventListener("input", handleSkillLevelInput);
 elements.pilotSkillSchedule.addEventListener("change", handleSkillRankChange);
@@ -702,6 +998,7 @@ const pilotSkillPagination = createSkillPagination({
   position: elements.pilotSkillPagePosition,
 });
 const editorLayouts = new Map();
+const unitWeaponScroller = createUnitWeaponScroller({ list: elements.unitWeaponList });
 for (const type of EDITOR_TYPES) {
   const ui = EDITOR_UI[type];
   if (typeof window.matchMedia === "function") editorLayouts.set(type, createEditorLayout(type, ui.panel, ui.form, page => setEditorPage(type, page)));
@@ -722,6 +1019,21 @@ for (const type of EDITOR_TYPES) {
   ui.form.addEventListener("change", (event) => handleEditorFormChange(type, event));
   ui.form.addEventListener("click", (event) => restoreEditorField(type, event));
 }
+// The secondary editors keep invalid drafts separately from committed rows.
+// Invalidate cached output/preview on both rejection and correction, including
+// errors such as a reward total where a different input carries the marker.
+const invalidDraftOwners=new WeakSet();
+function trackSecondaryDraft(event){
+  if(!state.editorSessionToken||anyJobBusy())return;
+  const target=event.target;
+  const owner=['#rewardEditorPanel','#terrainEditorPanel','#scenarioEditorPanel','.editor-cost-dialog'].map(selector=>target?.closest?.(selector)).find(Boolean);
+  if(!owner)return;
+  const invalid=Boolean(owner.querySelector('[aria-invalid="true"]'))||target.validity?.valid===false;
+  if(invalid){invalidDraftOwners.add(owner);invalidateEditorDraft();}
+  else if(invalidDraftOwners.has(owner)){invalidDraftOwners.delete(owner);invalidateEditorDraft();}
+}
+document.addEventListener('input',trackSecondaryDraft);
+document.addEventListener('change',trackSecondaryDraft);
 elements.unitFlagToggle.addEventListener("click", () => {
   state.unitFlagsOpen = !state.unitFlagsOpen;
   renderUnitSpecialAbilities(selectedEditorRow("unit"));
@@ -731,28 +1043,29 @@ elements.unitSpecialAbilities.addEventListener("click", (event) => {
   const button = event.target.closest?.("[data-unit-ability-remove]");
   if (button && !button.disabled) removeSelectedUnitAbility(Number(button.dataset.unitAbilityRemove));
 });
-elements.unitWeaponList.addEventListener("click", (event) => handleJumpClick(event));
+elements.unitWeaponList.addEventListener('click', event => {
+  const button=event.target.closest?.('[data-unit-weapon-select]');
+  if(button&&!button.disabled)unitWeaponEditor.open(Number(button.dataset.unitWeaponSelect));
+});
+elements.unitWeaponList.addEventListener('keydown', event => {
+  if (['ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].includes(event.key)
+    && !event.target.closest('select, input, textarea')) event.stopPropagation();
+});
+elements.unitWeaponSearch.addEventListener('input', () => renderUnitWeapons(selectedEditorRow('unit')));
+elements.unitWeaponAddButton.addEventListener('click', addSelectedUnitWeapon);
+byId('unitConstructionChoice').addEventListener('change', changeUnitConstruction);
+byId('weaponCloneButton').addEventListener('click',cloneSelectedWeapon);
+byId('weaponCloneCancel').addEventListener('click',cancelSelectedWeaponClone);
 elements.weaponOwnerList.addEventListener("click", (event) => handleJumpClick(event));
 elements.pilotHeroTargets.addEventListener("click", handleHeroEditorLink);
 elements.pilotHeroReturnButton.addEventListener("click", handleHeroEditorLink);
 document.addEventListener("keydown", handleEditorNavigationKey);
 elements.editorExportButton.addEventListener("click", () => navigateWorkflow("save"));
-// Save edits use only the ROM the editor has verified. Name bytes stay locked unless the editor worker proved a Korean ROM.
-saveEditor = createSaveEditor(() => ({
-  verified: Boolean(state.editorSessionToken) && !anyJobBusy(),
-  gameId: state.editorGameId,
-  pilots: state.editorPilots,
-  units: state.editorUnits,
-  weapons: state.editorWeapons,
-  partNames: state.editorPartNames,
-  saveTitles: [],
-  sessionToken: state.editorSessionToken,
-  saveNameSupport: state.editorSaveNameSupport,
-  preview: requestSaveEditorPreview,
-}), { prepare: () => prepareWorkflow("save-editor") });
 elements.workflowOpenEditor.addEventListener("click", () => prepareWorkflow("editor"));
 elements.workflowSkipEditor.addEventListener("click", () => prepareWorkflow("save"));
 elements.workflowSaveButton.addEventListener("click", exportEditorImage);
+const editorStorageUI=createEditorStorageUI({root:elements.editorStorageBudget,status:byId('editorStorageStatus'),list:byId('editorStorageRows'),note:byId('editorStorageNote')});
+elements.editorStorageCheck.addEventListener('click',checkEditorStorage);
 elements.workflowFolderSave.addEventListener("click", saveWorkflowFolder);
 elements.workflowCopyHash.addEventListener("click", async () => {
   const output = state.workflowOutput;
@@ -774,9 +1087,17 @@ byId("workflowSaveFeedback").append(elements.editorProgressPanel, elements.edito
 // 아래줄의 변경 수 단추는 바뀐 값 목록을 열고, 편집값 저장·불러오기는 바로 실행한다. 판단은 editor-preset.mjs가 한다.
 const editorChanges = createEditorChanges({
   hasSession: () => Boolean(state.editorSessionToken),
+  sessionToken: () => state.editorSessionToken,
   canEdit: () => Boolean(state.editorSessionToken) && !anyJobBusy(),
+  beforeSave: () => validateEditorForms(),
+  beforeApply: () => validateEditorForms({report:false}),
   gameId: () => state.editorGameId,
   objectiveContext: () => state.editorScenario.objectiveContext,
+  validateText:validateEditorText,validateTextBatch:validateEditorTextBatch,
+  dialogueSpeakerOptions:()=>state.editorScenario.dialogueSpeakerOptions??[],
+  dialogueSpeakerGroup:row=>state.editorScenario.dialogueSpeakerGroup(row),
+  setAfterDialogue:(row,json)=>state.editorScenario.setAfterDialogue(row,json),
+  setDialogueSpeaker:(row,id)=>state.editorScenario.setDialogueSpeaker(row,id),
   releaseId: () => state.editorBaseReleaseId,
   releaseLabel: (releaseId) => state.releaseRows?.some((row) => row.id === releaseId && row.gameId === state.editorGameId) ? releaseTag(releaseId) : null,
   rows: (kind) => editorRowsFor(kind),
@@ -786,20 +1107,123 @@ const editorChanges = createEditorChanges({
   rowName: (row) => editorRowName(row),
   abilityName: (id) => (id === 0 ? "없음" : normaliseGameAbilityName(state.editorUnitAbilityNames[id]) || `#${id}`),
   changeCount: () => countEditorChanges(),
+  extraChanges:()=>Boolean(state.editorFCampaign)!==state.editorFCampaignOriginal
+    ?[{kind:'campaign',name:'F 시나리오 연결',detail:state.editorFCampaign?'F부터 시작 추가 · BIN에 보관 (JSON 제외)':'F 연결 제거 · 기존 편집 유지'}]:[],
   jumpTo: (kind, recordIndex, fields) => focusEditorChange(kind, recordIndex, fields),
-  afterApply: () => refreshEditorAfterPreset(),
+  afterApply: records => refreshEditorAfterPreset(records),
+  validatePreset:preset=>requireMigrationIdentities(preset,state.editorBaseReleaseId),
   preparePreset: preset => state.editorScenario.preparePreset(preset),
   announce: (text) => announce(text),
 });
+async function prepareSaveMigrationTarget({signal}={}){
+  const sessionToken=state.editorSessionToken,saveNameSupport=state.editorSaveNameSupport,baseTargetSha256=state.editorBaseTargetHash;
+  if(!validateEditorForms())throw Error('입력한 편집값을 확인해 주세요.');
+  // The owning worker authenticates its actual output with the matching public
+  // or review profile. Re-inspecting a review BIN through the public-only core
+  // rejects a valid target and repeats a full-disc read on the main thread.
+  const source=await requestEditorOutputSource({signal,includeSaveCatalog:true});
+  const view=source.saveCatalog;
+  if(view.targetHash!==source.descriptor.targetSha256)throw Error('확정한 대상 ROM과 호환 검사 결과가 다릅니다.');
+  if(state.editorSessionToken!==sessionToken||view.baseTargetSha256!==baseTargetSha256)throw Error('대상 ROM이 바뀌었습니다. 다시 검사해 주세요.');
+  return {...view,sessionToken,saveNameSupport};
+}
+async function prepareSaveEditorCatalog({signal}={}){
+  signal?.throwIfAborted();
+  if(!validateEditorForms())throw Error('ROM 편집값을 확인한 뒤 세이브를 열어 주세요.');
+  const token=state.editorSessionToken,revision=state.editorEditRevision;
+  if(saveCatalogPreparation?.token===token&&saveCatalogPreparation.revision===revision)return saveCatalogPreparation.promise;
+  if(!token||anyJobBusy())throw Error('ROM 작업이 끝난 뒤 세이브를 열어 주세요.');
+  if(saveCatalogSnapshot?.token===token&&saveCatalogSnapshot.revision===revision)return saveCatalogSnapshot.view;
+  const pending={token,revision};
+  state.editorSaveCatalogPreparing=true;
+  pending.promise=(async()=>{
+    const source=await requestEditorOutputSource({signal,includeSaveCatalog:true});
+    if(token!==state.editorSessionToken||revision!==state.editorEditRevision)throw Error('ROM 편집 내용이 바뀌었습니다. 세이브를 다시 열어 주세요.');
+    saveCatalogSnapshot={token,revision,view:source.saveCatalog};
+    return source.saveCatalog;
+  })().finally(()=>{if(saveCatalogPreparation===pending){saveCatalogPreparation=null;state.editorSaveCatalogPreparing=false;updateControls();}});
+  saveCatalogPreparation=pending;updateControls();return pending.promise;
+}
+function openSaveEditor(){
+  return saveEditor.openPrepared(prepareSaveEditorCatalog);
+}
+function prepareMigrationNameGlyphs(names,{signal,token,revision}={}){
+  signal?.throwIfAborted();
+  if(!state.editorSessionToken||anyJobBusy())throw Error('ROM 작업이 끝난 뒤 이름 글자를 준비해 주세요.');
+  if(token!==state.editorSessionToken||revision!==state.editorEditRevision)throw Error('대상 ROM 또는 편집 내용이 바뀌었습니다. 다시 준비해 주세요.');
+  if(!validateEditorForms())throw Error('입력한 편집값을 확인해 주세요.');
+  if(!Array.isArray(names)||names.length>32768)throw Error('세이브 이름 목록을 확인할 수 없습니다.');
+  if(!state.editorGlyphSource||!state.editorGlyphRows.length)throw Error('현재 ROM에는 확인된 추가 글자 공간이 없습니다. 이 이름을 자동으로 준비할 수 없습니다.');
+  const overrides=names.map(entry=>{
+    if(!entry||typeof entry.text!=='string'||entry.text.length>64||!['string','number'].includes(typeof entry.key)||typeof entry.field!=='string'||!/^\w{1,32}$/.test(entry.field))throw Error('세이브 이름 항목을 확인할 수 없습니다.');
+    return {kind:'save',owner:`save:migration:${entry.key}:${entry.field}`,text:entry.text};
+  });
+  // Plan the whole batch first. Pool exhaustion never leaves a partial mapping.
+  const plan=editorGlyphPlan(overrides),before=new Set(state.editorGlyphEntries.map(entry=>entry.unicode));
+  const added=plan.entries.filter(entry=>!before.has(entry.unicode)).map(entry=>entry.unicode);
+  signal?.throwIfAborted();
+  for(const item of overrides)state.editorSaveNameTexts.set(item.owner,item.text);
+  commitEditorGlyphPlan(plan);updateEditorStatus('glyph',state.editorGlyphRows[0]);
+  return {token:state.editorSessionToken,revision:state.editorEditRevision,added,total:plan.entries.length};
+}
+const unitUpgradeUI=createUnitUpgradeUI({session:()=>({gameId:state.editorGameId,sessionToken:state.editorSessionToken,units:state.editorUnits,weapons:state.editorWeapons}),
+ canEdit:()=>Boolean(state.editorSessionToken)&&!anyJobBusy(),beforeOpen:()=>validateEditorForms(),beforeApply:()=>validateEditorForms({report:false}),label:editorFieldLabel,
+ abilityName:id=>normaliseGameAbilityName(state.editorUnitAbilityNames[id])||`#${id}`,afterApply:()=>refreshEditorAfterPreset(),announce});
 const editorPartName = id => {
     const name = normaliseGameAbilityName(state.editorPartNames[id]);
     // Both authenticated stock tables name id 21 リペアキットＳ. The accepted Final translation
     // points this label at a UI sentence; correct the editor label without rewriting accepted bytes.
     return id === 21 && name === "변경할 수 있습니다." ? "리페어 키트 S" : name || `파츠 #${id}`;
 };
+const costEditor = createCostEditor({
+  rows: () => state.editorUpgradeCosts,
+  weaponClass: () => selectedEditorRow("weapon")?.upgradeCostClass,
+  uses: row => row.type === "unit" ? `모든 기체의 ${row.group} 개조에 적용됩니다.`
+    : state.editorWeapons.filter(w => w.upgradeCostClass === row.category && w.editable && w.defaultVisible !== false)
+      .slice(0, 2).map(w => editorRowName(w)).join(" · "),
+  canEdit: () => Boolean(state.editorSessionToken) && !anyJobBusy(),
+  onChange: row => updateEditorStatus("upgrade", row),
+});
+const weaponNameControl=createWeaponNameControl({encodeText:encodeEditorInput,textOptions:()=>({glyphMap:state.editorGlyphMap}),container:byId('weaponNameControl'),row:()=>selectedEditorRow('weapon'),gameId:()=>state.editorGameId,
+  canEdit:()=>Boolean(state.editorSessionToken)&&!anyJobBusy(),onInvalid:invalidateEditorDraft,
+  onChange:row=>{refreshRecordOption('weapon',row);EDITOR_UI.weapon.heading.textContent=`${editorRowName(row)} · #${row.recordIndex}`;updateEditorStatus('weapon',row);},
+});
+const weaponDialogueSource=createWeaponDialogueSource({container:byId('weaponDialogueSource'),row:()=>selectedEditorRow('weapon'),rows:()=>state.editorWeapons,
+  canEdit:()=>Boolean(state.editorSessionToken)&&!anyJobBusy(),
+  pilotContext:current=>battleDialogueContext(current),readDialogue:requestBattleDialogue,sessionKey:()=>state.editorSessionToken,onPilotChange:()=>animationPreview.select(),
+  onChange:row=>{EDITOR_UI.weapon.form.querySelector('[data-editor-field="voiceType"]').value=String(row.voiceType);renderEditorDiff('weapon',row);updateEditorStatus('weapon',row);},
+});
+const unitWeaponEditor=createUnitWeaponEditor({encodeText:encodeEditorInput,textOptions:()=>({glyphMap:state.editorGlyphMap}),weapons:()=>state.editorWeapons,
+  dialoguePilotContext:battleDialogueContext,readDialogue:requestBattleDialogue,sessionKey:()=>state.editorSessionToken,onPilotChange:()=>unitAnimationPreview.select(),
+  gameId:()=>state.editorGameId,criticalFixEnabled:criticalFixEnabled,onInvalid:invalidateEditorDraft,
+  panel:byId('unitWeaponDetail'),workarea:byId('unitWeaponWorkarea'),
+  row:id=>rowIndexMaps.weapon.get(id),name:editorRowName,
+  canEdit:()=>Boolean(state.editorSessionToken)&&!anyJobBusy(),help:fieldHelp,
+  choices:(field,row)=>field==='requiredSkill'
+    ?[...new Set([...(WEAPON_REQUIRED_SKILL_EDIT_IDS[state.editorGameId]??[]),row.original?.requiredSkill].filter(Number.isSafeInteger))].sort((a,b)=>a-b).map(value=>({value,label:requiredSkillLabel(value)}))
+    :[...EDITOR_UI.weapon.form.querySelector('[data-editor-field="voiceType"]').options].map(option=>({value:Number(option.value),label:option.textContent})),
+  onSelect:row=>{
+    if(selectEditorRecord('weapon',row.recordIndex,{scroll:false})===false)return false;
+    unitPreviewWeapon=row.recordIndex;unitAnimationPreview.select();return true;
+  },
+  onChange:row=>{
+    if(selectedEditorRow('weapon')?.recordIndex===row.recordIndex)renderEditorRecord('weapon',row);
+    refreshRecordOption('weapon',row);updateEditorStatus('weapon',row);
+  },
+  highlight:id=>highlightUnitWeapon(id),
+  openCost:row=>costEditor.focus(50+(row.upgradeCostClass??0)*11),
+  reveal:input=>{selectEditorTab('unit',{render:false});setEditorPage('unit','extra');editorLayouts.get('unit')?.reveal(input);},
+});
+const entityArtwork = createEntityArtwork({
+  model: () => state.editorScenario,
+  session: () => state.editorSessionToken,
+  pilot: id => editorAllRows('pilot').find(row => row.recordIndex === id),
+  portrait: id => state.editorWorker ? requestSaveEditorPreview('pilot', id) : null,
+});
 const rewardEditor = createRewardEditor({
   rows: () => state.editorRewards,
   model: () => state.editorScenario,
+  appendArtwork: (...args) => entityArtwork.append(...args),
   partName: editorPartName,
   canEdit: () => Boolean(state.editorSessionToken) && !anyJobBusy(),
   onChange: (row) => updateEditorStatus("reward", row),
@@ -819,13 +1243,29 @@ const terrainEditor = createTerrainEditor({
   openMap: target => { selectEditorTab("scenario", { render: false }); scenarioEditor.openCell(target); },
 });
 const scenarioEditor = createScenarioEditor({
+  validateDialogueText:(row,text)=>{invalidateEditorDownloads();return acceptEditorDialogue(row,text);},
+  validateDialoguePages:(row,json)=>{invalidateEditorDownloads();return acceptEditorDialogue(row,json,'pagesJson');},
+  validateDialogueAfter:(row,json)=>{invalidateEditorDownloads();return acceptEditorDialogue(row,json,'afterDialogueJson');},
+  setAfterDialogue:(row,json)=>state.editorScenario.setAfterDialogue(row,json),
+  dialogueSpeakerOptions:()=>state.editorScenario.dialogueSpeakerOptions??[],
+  validateDialogueSpeaker:(row,id)=>validateScenarioDialogueSpeaker(row,id,{speakerOptions:state.editorScenario.dialogueSpeakerOptions??[]}),
+  setDialogueSpeaker:(row,id)=>state.editorScenario.setDialogueSpeaker(row,id),
   model: () => state.editorScenario,
+  appendArtwork: (...args) => entityArtwork.append(...args),
+  combatRows: kind => kind === 'unit' ? state.editorUnits : state.editorPilots,
+  pilotAliases: () => state.editorPilotAliases,
   rewardRows: () => state.editorRewards,
   partName: editorPartName,
   openReward: id => { const target=state.editorRewards.find(row=>row.aliases.includes(id));if(target){selectEditorTab("reward",{render:false});rewardEditor.focus(target.recordIndex);} },
   terrainName: id => normaliseGameAbilityName(state.editorTerrains.find(row => row.recordIndex === id)?.name ?? '') || `지형 #${id}`,
   canEdit: () => Boolean(state.editorSessionToken) && !anyJobBusy(),
-  onChange: (kind, row) => updateEditorStatus(kind, row),
+  onChange: (kind, row) => {
+    if (EDITOR_TYPES.includes(kind)) {
+      refreshRecordOption(kind, row);
+      if (selectedEditorRow(kind)?.recordIndex === row.recordIndex) renderEditorRecord(kind, row);
+    }
+    updateEditorStatus(kind, row);
+  },
   open: () => selectEditorTab("scenario", { render: false }),
   openTerrain: id => { selectEditorTab("terrain", { render: false }); terrainEditor.focus(id); },
 });
@@ -847,6 +1287,7 @@ const editorSearchTools = createEditorSearchTools({
     return [...found.values()].sort((a, b) => a.id - b.id);
   },
   beforeOpen: () => closeGameplayHelp(),
+  beforeApply: options => validateEditorForms(options),
   refresh: (kind) => renderRecordList(kind),
   afterApply: () => refreshEditorAfterPreset(),
   announce: (text) => announce(text),
@@ -1334,7 +1775,7 @@ async function activateGame(gameId) {
   state.selectedGameId = game.id;
   elements.gameSelect.value = game.id;
   state.visibleReleaseRows = sortReleasesNewestFirst(
-    state.releaseRows.filter((row) => row.gameId === game.id),
+    [...state.releaseRows,...(localEditorSupport?.isCompatible(game,state.stockProfiles)?localEditorSupport.rows:[])].filter((row) => row.gameId === game.id),
   );
   resetFileWorkflow();
   if (game.status === NO_ACCEPTED_RELEASE) {
@@ -1385,7 +1826,7 @@ async function loadSelectedRelease(row) {
   state.availability = "ready";
   elements.releaseSelect.value = fontReleaseIdentity(row).groupId;
   replaceFontOptions(row);
-  elements.releaseState.textContent = "ACCEPTED";
+  elements.releaseState.textContent = release.review ? "검수본" : "ACCEPTED";
   elements.releaseState.classList.add("is-ready");
   elements.sourceProfile.textContent = state.stockProfiles.get(release.source.profileId)?.label ?? "검증된 정품 원본";
   elements.targetName.textContent = release.target.filename;
@@ -1408,14 +1849,15 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
     ["schema", "id", "state", "version", "title", "publishedAt", "source", "target", "patch", "provenance"],
     "release manifest",
   );
-  if (manifest.schema !== RELEASE_SCHEMA) {
+  const review = localEditorSupport?.isReviewRow(row) === true;
+  if (manifest.schema !== (review ? "srwf-kor.review-release.v1" : RELEASE_SCHEMA)) {
     throw new PatcherError("RELEASE_SCHEMA_MISMATCH", "Unsupported release manifest schema");
   }
   if (
     typeof manifest.id !== "string"
     || !/^[a-z0-9][a-z0-9._-]{0,63}$/.test(manifest.id)
     || manifest.id !== row.id
-    || manifest.state !== ACCEPTED
+    || manifest.state !== (review ? "REVIEW" : ACCEPTED)
   ) {
     throw new PatcherError("RELEASE_IDENTITY_MISMATCH", "Release identity or state does not match its index row");
   }
@@ -1437,7 +1879,7 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
   );
   requireExactOwnKeys(
     manifest.provenance,
-    ["v5Commit", "buildReceiptSha256", "acceptanceReceiptSha256"],
+    (review ? ["buildReceiptSha256"] : ["v5Commit", "buildReceiptSha256", "acceptanceReceiptSha256"]),
     "release provenance",
   );
 
@@ -1474,7 +1916,7 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
     throw new PatcherError("PATCH_FORMAT_UNSUPPORTED", "Unsupported patch format");
   }
   requireRelativeReference(manifest.patch.url, "patch URL");
-  if (manifest.patch.url !== expectedPatchReference(row.id)) {
+  if (manifest.patch.url !== (review ? `editor-review/${row.id}.srwfp` : expectedPatchReference(row.id))) {
     throw new PatcherError("MANIFEST_INVALID", "Patch URL is not canonical");
   }
   requireIntegerInRange(manifest.patch.size, formatRules.minPatchBytes, MAX_PATCH_BYTES, "patch size");
@@ -1489,16 +1931,17 @@ function normalizeReleaseManifest(manifest, row, _manifestUrl, stockProfiles = s
   if (manifest.patch.bodyUncompressedSize < manifest.patch.recordCount * formatRules.minRecordBodyBytes) {
     throw new PatcherError("MANIFEST_INVALID", "Patch body is too small for its declared non-empty records");
   }
-  if (typeof manifest.provenance.v5Commit !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(manifest.provenance.v5Commit)) {
+  if (!review && (typeof manifest.provenance.v5Commit !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(manifest.provenance.v5Commit))) {
     throw new PatcherError("PROVENANCE_INVALID", "Build commit provenance is missing or invalid");
   }
   requireSha256(manifest.provenance.buildReceiptSha256, "build receipt SHA-256");
-  requireSha256(manifest.provenance.acceptanceReceiptSha256, "acceptance receipt SHA-256");
+  if (!review) requireSha256(manifest.provenance.acceptanceReceiptSha256, "acceptance receipt SHA-256");
 
   const patchUrl = resolveLocalReference(manifest.patch.url, SITE_ROOT_URL);
   return Object.freeze({
     gameId: row.gameId,
     id: manifest.id,
+    ...(review ? {review:true} : {}),
     version: manifest.version,
     title: manifest.title,
     publishedAt: manifest.publishedAt,
@@ -1692,7 +2135,7 @@ function editorSideBusy() {
 }
 
 function anyJobBusy() {
-  return patchSideBusy() || editorSideBusy() || state.workflowSaving;
+  return patchSideBusy() || editorSideBusy() || state.workflowSaving || state.editorSaveCatalogPreparing===true;
 }
 
 function setMode(mode) {
@@ -1736,7 +2179,9 @@ function editorLatestRow() {
 }
 
 async function resolveEditorRelease() {
-  if (state.release) return state.release;
+  // Folder recognition stays independent of the patch dropdown. Unknown
+  // personal v0.3 files still need the accepted engine after choosing v0.4.
+  if (state.release && !state.release.review) return state.release;
   const row = editorLatestRow();
   if (!row) {
     throw new PatcherError("INDEX_STATE_CONFLICT", "The latest public release is unavailable");
@@ -1769,6 +2214,7 @@ function markModeBusy(button, busy, name) {
 // 열려 있는 편집 세션의 출처를 한 줄로 말한다. 몇 번째 수정본인지는 알 수 없으므로 차수는 말하지 않는다.
 function editorOriginText() {
   if (!state.editorSessionToken || !state.editorOrigin) return null;
+  if(reviewSession())return `${localEditorSupport.label(state.editorBaseTargetHash)} · 검수본`;
   if (state.workflowBaseKind === "stock") return state.editorProvenance === "stock"
     ? "정품 원본 · 원본 언어 유지" : "원본 언어 편집본 · 기존 변경값 유지";
   const parts = releaseVersionParts(state.editorBaseReleaseId);
@@ -1779,10 +2225,54 @@ function editorOriginText() {
   return `수치가 조정된 BIN(기반 ${base}) → 이어서 편집`;
 }
 
+// Describe the authenticated session/output, never a filename's apparent version
+// or a patch setting that has not actually been applied yet.
+function editorOutputBaseText() {
+  const base = releaseVersionParts(state.workflowDirectOutput ? state.release?.id : state.editorBaseReleaseId);
+  return !state.workflowDirectOutput && state.workflowBaseKind === "stock" ? "원본 언어"
+    : `${base ? `${base.version}${base.font ? ` ${base.font}` : ""}` : releaseTag(state.editorBaseReleaseId)} 한글 패치`;
+}
+
+function renderEditorFallbackNotice() {
+  const fallback = state.editorSessionToken && state.editorSourceFallback;
+  const text = fallback
+    ? `열지 않은 파일: ${fallback.rejectedName} · ${fallback.reason}\n선택된 ${fallback.selectedKind}: ${fallback.selectedName}\n현재 출력 기반: ${editorGameLabel(state.editorGameId)} · ${editorOutputBaseText()}. 열지 않은 BIN의 변경 내용은 이 출력에 포함되지 않습니다.`
+    : "";
+  for (const id of ["editorSourceFallback", "workflowSaveFallback"]) {
+    const notice = byId(id);
+    notice.hidden = !fallback;
+    notice.textContent = text;
+  }
+}
+
 const detectedGameName = (gameId) => (gameId === "srwf-final" ? "완결편" : "F");
 let editorScreenShown = false;
 const editorScrollSaved = new Map();
 let releaseChipBackup = null;
+let editorNavigationSession = null;
+
+function editorPreparationChoice() {
+  return state.workflowStockSelection
+    ? JSON.stringify([elements.languageKorean.checked, state.release?.id, state.release?.target?.sha256])
+    : 'loaded-image';
+}
+
+function rememberEditorNavigationSession() {
+  editorNavigationSession = {
+    token: state.editorSessionToken,
+    worker: state.editorWorker,
+    units: state.editorUnits,
+    choice: editorPreparationChoice(),
+  };
+}
+
+function canResumeEditorNavigationSession() {
+  return Boolean(state.editorSessionToken && editorNavigationSession
+    && editorNavigationSession.token === state.editorSessionToken
+    && editorNavigationSession.worker === state.editorWorker
+    && editorNavigationSession.units === state.editorUnits
+    && editorNavigationSession.choice === editorPreparationChoice());
+}
 
 // 편집 화면이 숨겨지기 직전(다른 모드·설정 화면)에 스크롤한 칸(목록 등)의 위치를 적어 두었다가 다시 보일 때 되돌린다.
 function saveEditorScroll() {
@@ -1812,7 +2302,9 @@ function renderReleaseDetected(detected) {
     const parts = releaseVersionParts(state.editorBaseReleaseId);
     const version = parts ? ` ${parts.version}` : "";
     const font = parts?.font ? ` · 폰트 ${parts.font}` : "";
-    elements.detectedValue.textContent = `감지됨 · ${detectedGameName(state.editorGameId)}${version}${font}`;
+    elements.detectedValue.textContent = reviewSession()
+      ? `감지됨 · ${localEditorSupport.label(state.editorBaseTargetHash)}`
+      : `감지됨 · ${detectedGameName(state.editorGameId)}${version}${font}`;
     elements.detectedLabel.textContent = "파일에서 감지한 값";
     elements.detectedNote.textContent = state.workflowBaseKind === "stock" ? "원본 언어와 기존 편집값을 유지합니다." : "현재 한글 패치와 기존 편집값을 유지합니다. 폰트를 바꾸려면 정품 원본에서 시작하세요.";
     // 선택한 공개 릴리스의 "ACCEPTED" 표시를 개인 수정본 옆에 둘 수 없다.
@@ -1832,21 +2324,31 @@ function renderReleaseDetected(detected) {
 // 모드·화면에 따라 같은 DOM을 다시 배치한다. 보이는 영역은 CSS가 body 의 data 속성으로 고른다.
 function navigateWorkflow(stage) {
   if (anyJobBusy()) return;
-  if (stage !== "setup" && !state.editorSessionToken) return;
-  if (stage === "save-editor") { saveEditor.open(); return; }
+  if (stage !== "setup" && (!state.editorSessionToken || elements.editorWorkspace.hidden)) return;
+  if (stage === 'save-editor') { void openSaveEditor(); return; }
+  if (stage === 'setup' && ['editor', 'save'].includes(state.workflowStage)) rememberEditorNavigationSession();
   state.workflowStage = stage;
   state.editorSetupOpen = stage !== "editor";
+  if (stage === 'editor') rememberEditorNavigationSession();
   updateControls();
   if (stage === "editor") editorLayouts.get(state.editorTab)?.schedule();
   if (stage === "save") elements.workflowSaveRegion.scrollIntoView?.({block: "start", behavior: "smooth"});
 }
 
 function selectedReleaseEditable() {
-  return state.release?.id.replace(/-[abc]$/, "") === state.games.get(state.release?.gameId)?.defaultReleaseId?.replace(/-[abc]$/, "");
+  return state.release?.review === true || state.release?.id.replace(/-[abc]$/, "") === state.games.get(state.release?.gameId)?.defaultReleaseId?.replace(/-[abc]$/, "");
 }
 
-function prepareWorkflow(destination) {
-  if (anyJobBusy() || !state.editorSessionToken || !state.release || state.availability !== "ready") return;
+async function prepareWorkflow(destination) {
+  if (anyJobBusy() || !state.editorSessionToken || elements.editorWorkspace.hidden || !state.release || state.availability !== "ready") return;
+  if (destination === 'editor' && !await requestEditorNotice()) return;
+  if (anyJobBusy() || !state.editorSessionToken) return;
+  // Returning from the main page resumes the authenticated worker and its
+  // pending imports/edits. Only an explicit settings change prepares a new base.
+  if (canResumeEditorNavigationSession()) {
+    navigateWorkflow(destination);
+    return;
+  }
   const selection = state.workflowStockSelection;
   if (selection) {
     const korean = elements.languageKorean.checked;
@@ -1866,7 +2368,9 @@ function prepareWorkflow(destination) {
 }
 
 function syncModeUi() {
-  const loaded = Boolean(state.editorSessionToken);
+  // INSPECT installs rows before revealing the workspace. A failed install
+  // must not expose navigation merely because its token was already assigned.
+  const loaded = Boolean(state.editorSessionToken) && !elements.editorWorkspace.hidden;
   const stock = Boolean(state.workflowStockSelection);
   // Folder structure identifies an original-image candidate before its whole
   // hash and editor tables are ready. Show the settings now; only the language
@@ -1889,7 +2393,7 @@ function syncModeUi() {
   EDITOR_ENTRY.region.hidden = screenShown || stage === "save";
   elements.editorRegion.hidden = !screenShown;
   elements.workflowSaveRegion.hidden = stage !== "save";
-  const errorHost = screenShown ? elements.editorFeedback : byId("workflowSaveFeedback");
+  const errorHost = screenShown ? elements.editorFeedback : stage === 'save' ? byId("workflowSaveFeedback") : byId("workflowSetupFeedback");
   if (elements.editorError.parentNode !== errorHost) errorHost.append(elements.editorError);
   elements.releaseRegion.hidden = screenShown || stage === "save" || skipPatchSettings;
   elements.workflowPatchHeading.textContent = setupGameId
@@ -1900,7 +2404,7 @@ function syncModeUi() {
   elements.workflowDetectedSummary.hidden = !skipPatchSettings;
   if (skipPatchSettings) {
     const base = releaseVersionParts(state.editorBaseReleaseId);
-    elements.workflowDetectedSummary.textContent = state.workflowBaseKind === "stock" ? "원본 언어 편집본 · 기존 변경값 유지"
+    elements.workflowDetectedSummary.textContent = reviewSession() ? `${localEditorSupport.label(state.editorBaseTargetHash)} · 검수본` : state.workflowBaseKind === "stock" ? "원본 언어 편집본 · 기존 변경값 유지"
       : `${base?.version ?? releaseTag(state.editorBaseReleaseId)}${base?.font ? ` · 폰트 ${base.font}` : ""} · ${state.editorProvenance === "accepted" ? "한글 패치본" : "개인 편집본"}`;
     elements.workflowDetectedSummary.title = editorOriginText() ?? "";
   }
@@ -1909,14 +2413,14 @@ function syncModeUi() {
   if (loaded) {
     const base = releaseVersionParts(state.workflowDirectOutput ? state.release.id : state.editorBaseReleaseId);
     const version = base ? `${base.version}${base.font ? ` ${base.font}` : ""}` : "";
-    const language = state.workflowDirectOutput ? "한글 패치"
+    const language = reviewSession() ? localEditorSupport.label(state.editorBaseTargetHash) : state.workflowDirectOutput ? "한글 패치"
       : state.workflowBaseKind === "stock" ? state.editorProvenance === "stock" ? "원본 언어" : "원본 언어 · 편집본"
         : `${version} · ${state.editorProvenance === "accepted" ? "한글 패치" : "개인 편집본"}`;
     elements.originLine.textContent = `${detectedGameName(state.editorGameId)} · ${language}`;
     elements.originLine.title = editorOriginText() ?? "";
     elements.setupToggle.setAttribute("aria-expanded", String(stage === "setup"));
-    elements.setupToggleText.textContent = stage === "setup" ? "편집 화면으로" : "게임·파일 설정";
-    elements.setupToggleShort.textContent = stage === "setup" ? "편집" : "설정";
+    elements.setupToggleText.textContent = stage === "setup" ? "편집 화면으로" : "메인페이지로";
+    elements.setupToggleShort.textContent = stage === "setup" ? "편집" : "메인페이지로";
   }
   const busy = anyJobBusy();
   const korean = elements.languageKorean.checked;
@@ -1941,21 +2445,24 @@ function syncModeUi() {
   elements.workflowOpenEditor.textContent = setupGameId === "srwf-final" ? "F완결편 롬 에디터 열기" : "F 롬 에디터 열기";
   elements.workflowOpenEditor.disabled = !loaded || busy || !editable;
   const saveEntry = byId("saveEditorOpen");
-  saveEntry.textContent = setupGameId === "srwf-final" ? "F완결편 세이브 데이터 열기" : "F 세이브 데이터 열기";
-  saveEntry.hidden = !loaded || pendingStock;
-  saveEntry.disabled = !loaded || busy;
+  if (saveEntry) {
+    saveEntry.textContent = setupGameId === "srwf-final" ? "F완결편 세이브 데이터 열기" : "F 세이브 데이터 열기";
+    saveEntry.hidden = !loaded || pendingStock;
+    saveEntry.disabled = !loaded || busy;
+  }
   elements.workflowSkipEditor.disabled = !loaded || busy;
   elements.workflowSaveButton.disabled = !loaded || busy || state.editorDownloadUrls.length > 0;
   elements.workflowSaveButton.hidden = state.editorDownloadUrls.length > 0;
+  elements.editorStorageBudget.hidden=!loaded||state.workflowDirectOutput;
+  elements.editorStorageCheck.disabled=!loaded||busy;
   elements.workflowFolderSave.hidden = !state.workflowOutput;
   elements.workflowFolderSave.disabled = busy;
   elements.workflowBackEditor.disabled = busy || state.workflowDirectOutput;
   elements.workflowBackSetup.disabled = busy;
-  const saveBase = releaseVersionParts(state.workflowDirectOutput ? state.release?.id : state.editorBaseReleaseId);
-  const saveLanguage = !state.workflowDirectOutput && state.workflowBaseKind === "stock" ? "원본 언어"
-    : `${saveBase ? `${saveBase.version}${saveBase.font ? ` ${saveBase.font}` : ""}` : releaseTag(state.editorBaseReleaseId)} 한글 패치`;
+  const saveLanguage = editorOutputBaseText();
   elements.workflowSaveSummary.textContent = loaded ? `${saveLanguage} · 변경 ${state.editorChangeCount.toLocaleString()}건` : "파일 대기";
   elements.workflowSaveSummary.title = loaded ? `${editorGameLabel(state.editorGameId)} · ${saveLanguage} · 이번 변경 ${state.editorChangeCount.toLocaleString()}건` : "";
+  renderEditorFallbackNotice();
   renderReleaseDetected(loaded && !stock);
   renderEditorSource();
   renderWaitNotes();
@@ -1975,6 +2482,7 @@ function showIdleSourceCopy() {
 // 개인 수정본은 어떤 공개 버전에서 파생됐는지만 알려 준다.
 function editorDiscDescription(disc = state.editorDisc) {
   if (!disc) return null;
+  if(reviewSession())return {chip:localEditorSupport.label(state.editorBaseTargetHash),chipClass:'zone-state is-personal',check:'i',checkClass:'file-check is-personal',meta:state.editorProvenance==='private-candidate'?'검수본 원본 해시 확인':'검수본 기반 편집 BIN 확인'};
   if (disc.kind === "native") return {chip: state.editorProvenance === "stock" ? "정품 원본 확인" : "원본 언어 편집본", chipClass: "zone-state is-complete", check: "✓", checkClass: "file-check", meta: "원본 언어 유지 · 기존 변경값 유지"};
   const tag = releaseTag(disc.baseReleaseId);
   const parts = releaseVersionParts(disc.baseReleaseId);
@@ -2007,6 +2515,8 @@ function editorDiscDescription(disc = state.editorDisc) {
 }
 
 function setEditorStatus(text) {
+  const glyph=state.editorGlyphRows[0];
+  if(glyph&&glyph.characters!==glyph.original.characters)text+=` · 추가 글자 ${[...glyph.characters].length}개 · 새 글자: 갈무리11`;
   elements.editorState.textContent = text;
   // 상태 줄은 바뀐 값 목록을 여는 단추 안에 있으므로, 낭독은 따로 둔 상태 영역이 맡는다.
   const live = document.getElementById("editorStateLive");
@@ -2070,6 +2580,7 @@ function renderEditorSource() {
   // 세 번째 카드: 열려 있는 파일이 있으면 그 출처를, 없으면 안내를 보인다.
   const entry = EDITOR_ENTRY;
   const opened = Boolean(state.editorSessionToken);
+  entry.region.dataset.sessionReady = String(opened);
   entry.state.textContent = opened ? "준비됨" : card.status === "working" ? "확인 중" : "파일 대기";
   entry.state.className = opened ? "zone-state is-complete" : card.status === "working" ? "zone-state is-working" : "zone-state";
   entry.note.textContent = opened
@@ -2150,6 +2661,8 @@ const EDITOR_STAGES = Object.freeze({
 
 // 폴더를 고른 뒤 시작하는 확인·준비 작업의 처음과 끝. 시작하면 에디터 폴더 카드가 "확인 중"이 된다.
 function startEditorJob(stage) {
+  pendingTailReference = null;
+  EDITOR_TAIL_REFERENCE.picker.hidden = true;
   state.editorActive = true;
   state.editorScan = new AbortController();
   setEditorSource({ ...idleEditorSource(), status: "working", chip: "확인 중", chipClass: "zone-state is-working" });
@@ -2178,6 +2691,7 @@ function endEditorJob() {
 }
 
 function failEditorSource(title, message) {
+  state.workflowDestination = null;
   endEditorJob();
   setEditorSource({
     status: "error",
@@ -2193,6 +2707,7 @@ function failEditorSource(title, message) {
 
 // 사용자가 중단했거나 확인이 끝나기 전에 멈췄다. 이미 열려 있는 편집 세션은 그대로다.
 function cancelEditorSource() {
+  state.workflowDestination = null;
   endEditorJob();
   setEditorSource({ ...idleEditorSource(), chip: "중단함", chipClass: "zone-state" });
   updateControls();
@@ -2234,13 +2749,19 @@ function discardNeedsConfirmation({ hasSession, changeCount, editRevision, expor
 }
 
 function sessionHasUnsavedEdits() {
-  if (saveEditor?.hasUnsavedEdits()) return true;
+  if (saveEditor.hasUnsavedEdits()) return true;
+  if (state.editorSessionToken && hasUnappliedEditorDraft()) return true;
   return discardNeedsConfirmation({
     hasSession: Boolean(state.editorSessionToken),
     changeCount: countEditorChanges(),
     editRevision: state.editorEditRevision,
     exportedRevision: state.editorExportedRevision,
   });
+}
+
+function hasUnappliedEditorDraft() {
+  return costEditor.hasInvalidDraft() || terrainEditor.hasInvalidDraft() || rewardEditor.hasInvalidDraft()
+    || Boolean(document.querySelector('[aria-invalid="true"]'));
 }
 
 function askToDiscard() {
@@ -2586,6 +3107,25 @@ async function openEditorFromFolder(directoryHandle) {
   }
   startEditorJob("scan");
   const controller = state.editorScan;
+  if(localEditorSupport?.findReviewFolder&&state.selectedGameId==='srwf-final'){
+    try{
+      const onProgress=progress=>showEditorProgress({...EDITOR_STAGES.scan,percent:progress.total?progress.processed/progress.total*100:null});
+      const review=await localEditorSupport.findReviewFolder(directoryHandle,{signal:controller.signal,onProgress});
+      if(review){
+        try{
+          const opened=await openLocalEditorFile({...review,signal:controller.signal,onProgress});
+          if(opened){state.workflowSourceHandles=sourceHandles;return;}
+          endEditorJob();state.editorSource=previous;updateControls();return;
+        }catch(error){
+          if(!review.probeOnly||error.name==='AbortError')throw error;
+          console.error('검수 BIN 세션을 열지 못했습니다.',error);
+        }
+      }
+    }catch(error){
+      if(error.name==='AbortError'){cancelEditorSource();return;}
+      failEditorSource('폴더를 확인하지 못했습니다',error.message);return;
+    }
+  }
   let release;
   try {
     release = await resolveEditorRelease();
@@ -2615,6 +3155,15 @@ async function openEditorFromFolder(directoryHandle) {
     const failure = editorFolderFailure(folder, release);
     failEditorSource(failure.title, failure.message);
     return;
+  }
+  // Returning from a review image must also restore the public editor engine.
+  if(patched&&localEditorSupport&&reviewSession()){
+    try{
+      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261104-part1',import.meta.url).href,signal:controller.signal,
+        onProgress:progress=>showEditorProgress({...EDITOR_STAGES.inspect,percent:progress.total?progress.processed/progress.total*100:null})});
+      if(opened){state.workflowSourceHandles=sourceHandles;return;}
+      endEditorJob();state.editorSource=previous;updateControls();return;
+    }catch(error){if(error.name==='AbortError'){cancelEditorSource();return;}if(!stock){failEditorSource('BIN을 열 수 없습니다',error.message);return;}}
   }
   // A usable file was found, so it would replace the open session: only now, and only if there are unsaved edits, is it asked.
   // (A folder that is refused never touches the session, so it is never asked about.) Declining leaves the card as it was.
@@ -2665,6 +3214,11 @@ function runEditorAttempt(plan) {
 function continueEditorPlan(plan, note) {
   if (!plan || plan.next >= plan.order.length) return false;
   plan.note = note;
+  // Pending evidence belongs to this attempt only. Commit it to the open
+  // session after the selected stock image passes INSPECT_COMPLETE checks.
+  if (note && plan.order[plan.next] === "stock" && plan.patched?.file?.name) {
+    plan.fallback = { rejectedName: plan.patched.file.name, reason: note };
+  }
   endEditorJob();
   state.editorActive = true;
   state.editorScan = null;
@@ -3336,6 +3890,14 @@ function clearEditorDownloads() {
 // 에디터 쪽 상태를 처음으로 되돌린다: 열린 세션, 폴더 카드, 진행 중인 확인 작업. 게임·버전·폰트를 바꾸거나 페이지가 막혔을 때만 쓴다
 // (모드 전환은 지우지 않는다).
 function clearEditorState() {
+  editorNavigationSession = null;
+  clearEditorOwnedDraftMarkers();
+  weaponNameControl.reset();unitWeaponEditor.reset();
+  previewResources.clear();
+  aliceCrewEditor.reset();
+  state.editorGlyphSource=null;state.editorGlyphBaseHash=null;state.editorGlyphSeed=[];state.editorGlyphEntries=[];state.editorGlyphMap=new Map();state.editorGlyphRows=[];state.editorGlyphExplicit='';state.editorGlyphReserved=new Set();state.editorSaveNameTexts=new Map();state.editorGlyphNotice='';
+  animationPreview.close();
+  unitAnimationPreview.close();
   editorSearchTools.reset();
   state.workflowStage = "setup";
   state.workflowStockSelection = null;
@@ -3344,6 +3906,7 @@ function clearEditorState() {
   state.workflowBaseKind = "korean";
   if (state.editorActive) endEditorJob();
   state.workflowSourceHandles = [];
+  state.editorSourceFallback = null;
   state.editorSource = idleEditorSource();
   state.editorOrigin = null;
   state.editorProvenance = null;
@@ -3373,13 +3936,20 @@ function clearEditorState() {
   state.editorPreviewRequests = { unit: null, pilot: null };
   state.editorGameId = null;
   state.editorTargetHash = null;
+  state.webPortInput = null;
   state.editorUnits = [];
   state.editorPilots = [];
   state.editorWeapons = [];
   state.editorRewards = [];
+  state.editorUpgradeCosts = [];
   state.editorTerrains = [];
+  state.editorCriticalRows = [];
+  state.editorBeamRows = [];state.editorBeamSupported=false;state.editorBeamExplicit=false;state.editorBeamSeenFresh=[];
+  syncExSBeamPoseControls();
+  syncCriticalFixControls();
   state.editorScenario = createScenarioModel();
   state.editorPartNames = [];
+  state.editorSaveTitles = [];
   state.editorPilotAliases = [];
   state.showUnused = { unit: false, pilot: false, weapon: false };
   state.editorUnitAbilityNames = [];
@@ -3941,16 +4511,17 @@ function handleWorkerMessage(event) {
   }
 }
 
-function getEditorWorker() {
+function getEditorWorker(release = null) {
+  const profile=release ? (localEditorSupport?.isTarget(release.target.sha256) ? 'review' : 'public') : state.editorWorkerProfile??'public';
+  if(state.editorWorker&&state.editorWorkerProfile&&state.editorWorkerProfile!==profile){state.editorWorker.terminate();state.editorWorker=null;}
   if (state.editorWorker) return state.editorWorker;
+  state.editorWorkerProfile=profile;
   const worker = new Worker(
-    new URL(`./editor-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url),
+    profile==='review'?localEditorSupport.workerUrl:new URL(`./editor-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url),
     { type: "module", name: "srwf-local-data-editor" },
   );
-  // The name authority must observe each message before the app handles it.
-  // Only a native worker can grant name edits; any other message source leaves save names locked.
-  try { saveNameAuthority?.dispose(); } catch {}
-  try { saveNameAuthority = createSaveNameAuthority(worker); } catch { saveNameAuthority = null; }
+  saveNameAuthority?.dispose();
+  saveNameAuthority=createSaveNameAuthority(worker);
   worker.addEventListener("message", handleEditorWorkerMessage);
   worker.addEventListener("error", handleEditorWorkerCrash);
   worker.addEventListener("messageerror", handleEditorWorkerCrash);
@@ -3975,6 +4546,96 @@ function rememberEditorOutputReceipt(receipt) {
 }
 // 편집용으로 읽을 BIN 하나를 편집 작업 스레드에 맡긴다. 지금 열려 있는 세션(있다면)은 새 BIN이 열릴 때까지 그대로이고,
 // 새 BIN이 거부되면 그대로 남는다. origin: "stock"(정품 원본에 한글패치를 적용한 결과) | "patched"(폴더에서 찾은 패치본).
+function connectEditorFCampaignSource(sourceBlob){
+ if(!state.editorSessionToken||anyJobBusy())return Promise.reject(Error('ROM을 먼저 열고 진행 중인 작업을 마쳐 주세요.'));
+ if(!validateEditorForms({report:false}))return Promise.reject(Error(`${editorValidationIssue} 편집값을 확인한 뒤 다시 연결해 주세요.`));
+ const type=sourceBlob?'F_CAMPAIGN_CONNECT':'F_CAMPAIGN_DISCONNECT',jobId=`f-campaign-${Date.now()}-${++state.editorSequence}`;
+ state.editorJobId=jobId;state.editorOperation=type;state.editorBusy=true;
+ return new Promise((resolve,reject)=>{
+  fCampaignSourceJob={resolve:catalog=>{state.editorFCampaign=catalog;updateEditorStatus('campaign');resolve(catalog);},reject};
+  updateControls();
+  try{getEditorWorker().postMessage({type,jobId,sessionToken:state.editorSessionToken,sourceBlob});}
+  catch(error){fCampaignSourceJob=null;finishEditorOperation();reject(error);}
+ });
+}
+
+function connectEditorSrw4Source(sourceBlob) {
+  if(!state.editorSessionToken||anyJobBusy())return Promise.reject(new Error('ROM을 먼저 열고 진행 중인 작업을 마쳐 주세요.'));
+  if(sourceBlob&&!validateEditorForms({report:false}))return Promise.reject(new Error(`${editorValidationIssue} 편집 화면에서 수정하거나 복원한 뒤 다시 연결해 주세요.`));
+  let importPlan=null;try{if(sourceBlob)importPlan=planSrw4UnusedImport(state.editorUnits,state.editorWeapons,state.editorGameId);}catch(error){return Promise.reject(error);}
+  const undo=sourceBlob&&!srw4ImportUndo&&importPlan.units.some(row=>row.srw4Native&&!state.editorUnits.find(u=>u.recordIndex===row.recordIndex)?.srw4Native)
+    ?{transaction:captureSrw4Import({units:state.editorUnits,weapons:state.editorWeapons},importPlan),mapIcons:state.editorScenario.mapIcons,pending:state.editorBattleComponentsPending,beamBefore:state.editorBeamRows[0]?.enabled,beamExplicitBefore:state.editorBeamExplicit}:null;
+  const revision=state.editorEditRevision;
+  const type=sourceBlob?'SRW4_CONNECT':'SRW4_DISCONNECT';
+  const jobId=`srw4-${Date.now()}-${++state.editorSequence}`;
+  state.editorJobId=jobId;state.editorOperation=type;state.editorBusy=true;
+  return new Promise((resolve,reject)=>{
+    srw4SourceJob={resolve:catalog=>{try{if(importPlan){if(state.editorEditRevision!==revision||!catalog?.importReady)throw Error('검증 중 편집값이 바뀌어 기체 추가를 적용하지 않았습니다.');if(undo)srw4ImportUndo=undo;commitSrw4UnusedImport(importPlan,catalog);}state.editorSrw4Connected=Boolean(sourceBlob&&catalog?.importReady);resolve(catalog);}catch(error){reject(error);}},reject};updateControls();
+    const restorations=importPlan?.units.flatMap(row=>{const preset=row.pendingConstruction??row.construction?.preset;return preset?[{recordIndex:row.recordIndex,preset}]:[];});
+    try{getEditorWorker().postMessage({type,jobId,sessionToken:state.editorSessionToken,sourceBlob,...importPlan?{restorations}:{}});}
+    catch(error){srw4SourceJob=null;finishEditorOperation();reject(error);}
+  });
+}
+
+function applySrw4EditorRows(plan,mapIcons,pending){
+  for(const next of plan.units){const row=state.editorUnits.find(u=>u.recordIndex===next.recordIndex);searchTextCache.delete(row);replaceUnitRow(row,next);}
+  for(const next of plan.weapons){const row=state.editorWeapons.find(w=>w.recordIndex===next.recordIndex);searchTextCache.delete(row);replaceUnitRow(row,next);}
+  state.editorScenario=Object.freeze({...state.editorScenario,mapIcons});
+  state.editorBattleComponentsPending=pending;
+  optionNodes.unit.clear();optionNodes.weapon.clear();listNeedsBuild.unit=true;listNeedsBuild.weapon=true;rebuildEditorRowIndex();refreshUnitWeaponOwnership();
+  const target=state.editorUnits.find(u=>u.recordIndex===plan.added?.[0])??selectedEditorRow('unit');
+  if(selectedEditorRow('unit')?.editable===false)state.editorSelected.unit=state.editorUnits.find(u=>u.construction)?.recordIndex??state.editorUnits.find(u=>u.editable&&u.defaultVisible)?.recordIndex??null;
+  // A linked existing unit may gain locked transformation fields. Refresh
+  // its controls before validation reads them back into the changed row.
+  renderEditorRecord('unit',selectedEditorRow('unit'));
+  renderEditorRecord('weapon',selectedEditorRow('weapon'));
+  updateEditorStatus('unit',target);animationPreview.refreshChoices();unitAnimationPreview.refreshChoices();
+}
+function commitSrw4UnusedImport(plan,catalog){
+  applySrw4EditorRows(plan,catalog.targetMapIcons,true);
+  // The verified fourth-game import owns the Ex-S beam setup; no separate
+  // user-facing switch is needed. Never enable it for a shared/missing cannon.
+  syncExSBeamPoseControls();
+  const beam=state.editorBeamRows[0];
+  if(beam?.canEnable){beam.enabled=1;state.editorBeamExplicit=false;syncExSBeamPoseControls();updateEditorStatus('beam',beam);}
+  catalog.beamApplied=beam?.canEnable===true&&beam.enabled===1;
+  catalog.addedUnitCount=plan.added.length;
+  const roots=state.editorUnits.filter(row=>row.constructionGroup==='ex-s-cruiser'&&row.constructionGroupRoot===row.recordIndex);
+  const pairPresent=roots.length===1&&state.editorUnits.some(row=>row.constructionGroup==='ex-s-cruiser'&&row.constructionGroupRoot===roots[0].recordIndex&&row.recordIndex!==roots[0].recordIndex);
+  if(pairPresent||state.editorUnits.some(u=>u.construction?.preset==='s-gundam')){
+    const marker=connectDefaultAlice(state.editorAliceRows[0],roots[0]?.recordIndex??state.editorUnits.find(u=>u.construction?.preset==='s-gundam').recordIndex,{explicitChoice:state.editorAliceCrewExplicit});
+    if(marker&&!state.editorAliceConstructionDefault)state.editorAliceConstructionDefault=marker;
+    syncAlicePilotView();optionNodes.pilot.clear();listNeedsBuild.pilot=true;
+  }
+  catalog.aliceRegistered=state.editorAliceRows[0]?.enabled===1;
+  catalog.aliceHint=catalog.aliceRegistered?'ALICE 연결됨':state.editorAliceRows.length?'ALICE 동승 설정을 확인해 주세요.':'ALICE 자동 연결은 이 게임·기반 이미지에서 지원하지 않습니다.';
+  announce(`제4차 Rev 1 검증 완료 · 미사용 기체 ${plan.added.length}기 추가 · 블러드템플 F 아이콘 #62 연결. BIN 저장 시 적용됩니다.`);
+}
+function canUndoSrw4Import(){
+  if(srw4ImportUndo)return true;
+  const forms=state.editorUnits.filter(row=>row.srw4Native);
+  return forms.length>=5&&forms.every(row=>row.pendingConstruction&&row.constructionSource&&!row.constructionSource.construction);
+}
+async function undoEditorSrw4Import(){
+  if(!validateEditorForms({report:false}))throw Error(`${editorValidationIssue} 편집 화면에서 수정하거나 복원한 뒤 가져오기를 취소해 주세요.`);
+  const undo=srw4ImportUndo??{transaction:pendingSrw4Import(state.editorUnits,state.editorWeapons),mapIcons:srw4BaseMapIcons,pending:srw4BasePending};
+  if(!undo.transaction)throw Error('현재 세션에서 가져온 구성만 취소할 수 있습니다. 이미 저장된 BIN의 구성은 그대로 유지됩니다.');
+  const plan=rollbackSrw4Import(undo.transaction,{units:state.editorUnits,weapons:state.editorWeapons});
+  await connectEditorSrw4Source(null);
+  applySrw4EditorRows(plan,undo.mapIcons,undo.pending||plan.units.some(row=>row.pendingConstruction));
+  const marker=state.editorAliceConstructionDefault;
+  if(marker){
+    const hasPair=state.editorUnits.some(row=>row.constructionGroup==='ex-s-cruiser'&&row.constructionGroupRoot===row.recordIndex);
+    cancelDefaultAlice(state.editorAliceRows[0],marker,{hasPair});
+    if(!hasPair)state.editorAliceConstructionDefault=null;
+    syncAlicePilotView();optionNodes.pilot.clear();listNeedsBuild.pilot=true;
+  }
+  if(undo.beamBefore!==undefined&&state.editorBeamRows[0]?.enabled===1){state.editorBeamRows[0].enabled=undo.beamBefore;state.editorBeamExplicit=undo.beamExplicitBefore===true;syncExSBeamPoseControls();updateEditorStatus('beam',state.editorBeamRows[0]);}
+  srw4ImportUndo=null;srw4SourcePanel.refresh();
+  announce(`제4차 가져오기 취소 · 이번에 추가한 ${plan.removed}형태 제거 · 기존 기체와 개인 편집 유지${plan.keptWeapons.length?' · 다른 기체가 사용하는 추가 무장은 유지':''}.`);
+  return null;
+}
+
 function beginEditorInspection(imageBlob, {
   verifiedTargetSha256 = null,
   localImage = false,
@@ -3982,16 +4643,20 @@ function beginEditorInspection(imageBlob, {
   release = state.editorRelease ?? state.release,
   cueTracks = null,
   plan = null,
+  tailReferenceBlob = null,
 } = {}) {
   if (!release || !(imageBlob instanceof Blob) || state.editorBusy) return;
   const defaultId = state.games.get(release.gameId)?.defaultReleaseId;
-  if (origin !== "native" && !localImage && release.id.replace(/-[abc]$/, "") !== defaultId?.replace(/-[abc]$/, "")) {
+  if (origin !== "native" && !localImage && !release.review && release.id.replace(/-[abc]$/, "") !== defaultId?.replace(/-[abc]$/, "")) {
     failEditorSource("이전 버전은 편집할 수 없습니다", "정품 원본 폴더를 고르면 최신 공개 패치를 적용해 에디터를 엽니다.");
     return;
   }
   const canReusePatchVerification = verifiedTargetSha256 === release.target.sha256
     && imageBlob.size === release.target.size;
-  state.editorInspectContext = { origin, release, localImage, cueTracks, plan, inputSize: imageBlob.size };
+  pendingTailReference = null;
+  EDITOR_TAIL_REFERENCE.picker.hidden = true;
+  state.editorInspectContext = { origin, release, localImage, cueTracks, plan, inputSize: imageBlob.size, webPortInput:imageBlob, tailReferenceBlob,
+    retryOptions: {verifiedTargetSha256, localImage, origin, release, cueTracks, plan} };
   state.editorActive = true;
   elements.editorError.hidden = true;
   state.editorSequence += 1;
@@ -4002,7 +4667,7 @@ function beginEditorInspection(imageBlob, {
   showEditorProgress(canReusePatchVerification ? EDITOR_STAGES.inspect : INSPECT_STAGES["target-hash"]);
   updateControls();
   try {
-    getEditorWorker().postMessage({
+    getEditorWorker(release).postMessage({
       type: "INSPECT",
       jobId,
       imageBlob,
@@ -4013,6 +4678,7 @@ function beginEditorInspection(imageBlob, {
         ...(localImage ? { imageKind: "local", customOutputReceipts: readEditorOutputReceipts() } : {}),
         ...(canReusePatchVerification ? { verifiedPatchTargetSha256: verifiedTargetSha256 } : {}),
       }),
+      tailReferenceBlob,
     });
   } catch (error) {
     finishEditorOperation();
@@ -4022,19 +4688,39 @@ function beginEditorInspection(imageBlob, {
 
 // 편집 세션이 사라졌을 때(오류·작업 스레드 종료) 화면에 남은 편집 데이터를 모두 치운다.
 function dropEditorSession() {
+  editorNavigationSession = null;
+  saveCatalogSnapshot=null;saveCatalogPreparation=null;state.editorSaveCatalogPreparing=false;
+  if(fCampaignSourceJob){fCampaignSourceJob.reject(new DOMException('ROM 세션이 닫혔습니다.','AbortError'));fCampaignSourceJob=null;}
+  state.editorFCampaign=null;state.editorFCampaignOriginal=false;state.editorCanonicalSize=null;state.editorIngame=null;fCampaignSourcePanel.reset();
+  if(srw4SourceJob){srw4SourceJob.reject(new DOMException('ROM 세션이 닫혔습니다.','AbortError'));srw4SourceJob=null;}
+  srw4SourcePanel.reset();state.editorSrw4Connected=false;
+  srw4ImportUndo=null;srw4BaseMapIcons=null;
+  state.editorTailReferenceBlob = null;
+  previewResources.clear();
+  localPreviewResources?.clear();
+  animationPreview.close();
+  unitAnimationPreview.close();
   state.editorSessionToken = null;
+  state.editorSourceFallback = null;
   state.editorSaveNameSupport = null;
   saveNameAuthority?.clear();
   state.editorPreviewRequests = { unit: null, pilot: null };
   state.editorGameId = null;
   state.editorTargetHash = null;
+  state.webPortInput = null;
   state.editorUnits = [];
   state.editorPilots = [];
   state.editorWeapons = [];
   state.editorRewards = [];
+  state.editorUpgradeCosts = [];
   state.editorTerrains = [];
+  state.editorCriticalRows = [];
+  state.editorBeamRows = [];state.editorBeamSupported=false;state.editorBeamExplicit=false;state.editorBeamSeenFresh=[];
+  syncExSBeamPoseControls();
+  syncCriticalFixControls();
   state.editorScenario = createScenarioModel();
   state.editorPartNames = [];
+  state.editorSaveTitles = [];
   state.editorPilotAliases = [];
   state.editorDisc = null;
   state.editorOrigin = null;
@@ -4081,12 +4767,45 @@ function handleEditorWorkerMessage(event) {
     return;
   }
   if (message.jobId !== state.editorJobId) return;
+  if(state.editorOperation?.startsWith('F_CAMPAIGN_')&&fCampaignSourceJob){
+    if(message.type==='PROGRESS'){fCampaignSourcePanel.progress(message);return;}
+    if(['F_CAMPAIGN_SOURCE_COMPLETE','ERROR','CANCELLED'].includes(message.type)){
+      const job=fCampaignSourceJob;fCampaignSourceJob=null;finishEditorOperation();
+      if(message.type==='F_CAMPAIGN_SOURCE_COMPLETE')job.resolve(message.catalog);
+      else job.reject(message.type==='CANCELLED'?new DOMException('F 연결을 중단했습니다.','AbortError'):Object.assign(Error(friendlyEditorError(message.error?.code,'',message.error?.details).message),{code:message.error?.code,details:message.error?.details}));
+      updateControls();return;
+    }
+  }
+  if (state.editorOperation?.startsWith('SRW4_') && srw4SourceJob) {
+    if(message.type==='PROGRESS'){srw4SourcePanel.progress(message);return;}
+    if(['SRW4_SOURCE_COMPLETE','ERROR','CANCELLED'].includes(message.type)){
+      const job=srw4SourceJob;srw4SourceJob=null;finishEditorOperation();
+      if(message.type==='SRW4_SOURCE_COMPLETE')job.resolve(message.catalog);
+      else {
+        const error=message.error;
+        const capacity=error?.code==='EDITOR_BATTLE_COMPONENT_INVALID'&&error.details?.component==='hand-points'&&error.details?.reason==='capacity';
+        const text=capacity?`${friendlyEditorError(error.code,'',error.details).message} 제4차 기체를 추가하지 않았습니다. 기존에 추가한 기체 구성을 확인해 주세요.`:error?.message??'제4차 원본을 확인하지 못했습니다.';
+        job.reject(message.type==='CANCELLED'?new DOMException('자료 확인을 중단했습니다.','AbortError'):Object.assign(new Error(text),{code:error?.code}));
+      }
+      return;
+    }
+  }
   if (message.type === "PROGRESS") {
     updateEditorProgress(message);
     return;
   }
+  if(message.type==='STORAGE_BUDGET'){
+    try{editorStorageUI.show(message.budget,state.editorEditRevision);}catch{editorStorageUI.failed();}
+    return;
+  }
+  if(message.type==='PREFLIGHT_COMPLETE'){
+    finishEditorOperation();elements.editorProgressPanel.hidden=true;
+    try{editorStorageUI.show(message.budget,state.editorEditRevision);}catch(error){editorStorageUI.failed();showEditorError('공간 결과를 읽지 못했습니다',error.message);}
+    updateControls();return;
+  }
   if (message.type === "CANCELLED") {
     const operation = state.editorOperation;
+    if(operation==='PREFLIGHT')editorStorageUI.cancelled();
     finishEditorOperation();
     elements.editorProgressPanel.hidden = true;
     if (operation === "INSPECT" && state.editorInspectContext) {
@@ -4099,6 +4818,7 @@ function handleEditorWorkerMessage(event) {
   }
   if (message.type === "ERROR") {
     const operation = state.editorOperation;
+    if(operation==='PREFLIGHT')editorStorageUI.failed();
     const context = state.editorInspectContext;
     finishEditorOperation();
     elements.editorProgressPanel.hidden = true;
@@ -4107,6 +4827,13 @@ function handleEditorWorkerMessage(event) {
     }
     const friendly = editorErrorCopy(message);
     if (operation === "INSPECT" && context) {
+      if (["EDITOR_TSR_REFERENCE_REQUIRED", "EDITOR_TSR_REFERENCE_MISMATCH"].includes(message.error?.code)) {
+        const pending = {imageBlob: context.webPortInput, options: context.retryOptions};
+        failEditorSource(friendly.title, friendly.message);
+        pendingTailReference = pending;
+        EDITOR_TAIL_REFERENCE.picker.hidden = false;
+        return;
+      }
       // 폴더에 정품 원본도 함께 있으면, 열 수 없는 패치본(이전 버전·확인되지 않은 수정 등) 대신 정품 원본으로 시작한다.
       if (context.origin === "native" && continueEditorPlan(context.plan, "")) return;
       if (context.origin === "patched"
@@ -4132,6 +4859,7 @@ function handleEditorWorkerMessage(event) {
     // "공개 패치 일치"는 편집 코어가 공개 해시와 같다고 확인한 이미지에만 붙인다. 정품 원본에서 만든 결과는 고른 릴리스의 해시와
     // 같아야 하고, 패치본 폴더의 BIN은 이 페이지가 가진 공개 BIN 표(CUE 구성 표)에도 있어야 한다.
     const isPublic = view?.provenanceMode === "accepted";
+    const isReview = localEditorSupport?.isTarget(view?.baseTargetSha256) && view?.provenanceMode === "private-candidate";
     if (!view
       || typeof view.sessionToken !== "string"
       || !Array.isArray(view.units)
@@ -4148,19 +4876,30 @@ function handleEditorWorkerMessage(event) {
       || typeof view.acceptedReleaseMatch !== "boolean"
       || (isPublic && view.targetHash !== view.baseTargetSha256)
       || (view.acceptedReleaseMatch && view.targetHash !== release?.target.sha256)
-      || (fromStock && (!isPublic || view.targetHash !== release?.target.sha256))
+      || (fromStock && ((!isPublic && !isReview) || view.targetHash !== release?.target.sha256))
       || (!fromStock && isPublic && !PATCHED_IMAGE_CUE_TRACKS.has(view.targetHash))
       || view.gameId !== release?.gameId) {
       failEditorSource("데이터 목록이 올바르지 않습니다", "검증 결과가 선택한 릴리스와 맞지 않아 에디터를 잠갔습니다.");
       return;
     }
+    // Validate the output geometry before replacing the active session's
+    // identity. A rejected layout must leave the previous editor usable.
+    let cueTracks;
+    try { cueTracks = resolveEditorCueTracks(view, context.cueTracks ?? null); }
+    catch (error) {
+      failEditorSource("BIN/CUE 구성을 확인하지 못했습니다", koreanMessage(error, "검증된 트랙 구성이 아니어서 에디터를 열지 않았습니다."));
+      return;
+    }
     clearEditorDownloads();
     state.editorLocalImage = Boolean(context.localImage);
     state.editorInputSize = context.inputSize;
-    state.editorSessionToken = view.sessionToken;
+    state.editorTailReferenceBlob = context.tailReferenceBlob ?? null;
+    state.editorCanonicalSize=view.campaignCanonicalSize??view.ingameCanonicalSize??context.inputSize;
     state.editorSaveNameSupport = saveNameAuthority?.accept(event) ?? null;
+    state.editorSessionToken = view.sessionToken;
     state.editorGameId = view.gameId;
     state.editorTargetHash = view.targetHash;
+    state.webPortInput = context.webPortInput;
     state.editorBaseTargetHash = view.baseTargetSha256;
     state.editorBaseReleaseId = view.baseReleaseId;
     state.editorOrigin = fromStock ? "stock" : native ? "native" : "patched";
@@ -4169,11 +4908,16 @@ function handleEditorWorkerMessage(event) {
     const exactStockSelection = context.plan?.stock ?? (rawStock ? {blob: rawStock, displayName: rawStock.name, format: "raw", fileCount: 1} : null);
     state.workflowStockSelection = fromStock ? state.workflowStockSelection : view.provenanceMode === "stock" ? exactStockSelection : null;
     state.workflowDirectOutput = false;
+    if (Array.isArray(context.plan?.order)) {
+      state.editorSourceFallback = context.plan.fallback
+        ? Object.freeze({ ...context.plan.fallback, selectedName: state.editorSource.name,
+          selectedKind: view.provenanceMode === "stock" ? "정품 원본" : native ? "원본 언어 편집본" : isPublic ? "공개 한글 패치본" : "개인 편집본" }) : null;
+    }
     if (context.plan?.sourceHandles) state.workflowSourceHandles = context.plan.sourceHandles;
     state.editorProvenance = view.provenanceMode;
     // 이 세션의 CUE 트랙 구성. 폴더에서 읽은 사용자의 CUE가 있으면 그것을, 없으면 기반 공개
     // 버전에 고정된 구성을 쓴다. 고정 표(PATCHED_IMAGE_CUE_TRACKS)는 절대 바꾸지 않는다.
-    state.editorCueTracks = resolveEditorCueTracks(view, context.cueTracks ?? null);
+    state.editorCueTracks = cueTracks;
     state.editorDisc = {
       kind: native ? "native" : fromStock ? "stock" : isPublic ? "accepted" : "personal",
       baseReleaseId: view.baseReleaseId,
@@ -4186,20 +4930,21 @@ function handleEditorWorkerMessage(event) {
       typeLabel: state.editorSource.typeLabel,
       note,
     });
-    const openSaveEditor = state.workflowDestination === "save-editor";
-    state.workflowStage = openSaveEditor ? "setup" : state.workflowDestination ?? "setup";
+    const openSaveEditor = state.workflowDestination === 'save-editor';
+    state.workflowStage = openSaveEditor ? 'setup' : state.workflowDestination ?? "setup";
     state.editorSetupOpen = state.workflowStage !== "editor";
     state.workflowDestination = null;
-    if (openSaveEditor) queueMicrotask(() => saveEditor.open());
+    if (state.workflowStage === 'editor' || openSaveEditor) rememberEditorNavigationSession();
     elements.editorWorkspace.hidden = false;
     elements.editorWorkspace.dataset.provenance = view.provenanceMode;
     elements.editorWorkspace.dataset.baseReleaseId = view.baseReleaseId;
     elements.editorError.hidden = true;
     // 전체 개수는 목록마다 아래 줄이 말해 주므로 되풀이하지 않는다(좁은 화면의 아래 줄에 잘리지 않고 들어가게).
-    setEditorStatus(`${editorGameLabel(view.gameId)} · ${native ? "원본 언어 유지" : isPublic ? "공개 패치 해시 일치" : `개인 BIN · ${releaseTag(view.baseReleaseId)} 기반`}`);
+    setEditorStatus(`${editorGameLabel(view.gameId)} · ${reviewSession() ? localEditorSupport.label(state.editorBaseTargetHash) : native ? "원본 언어 유지" : isPublic ? "공개 패치 해시 일치" : `개인 BIN · ${releaseTag(view.baseReleaseId)} 기반`}`);
     selectEditorTab("unit", { render: false });
     updateControls();
     announce(`에디터를 열었습니다. ${editorOriginText() ?? ""}`);
+    if (openSaveEditor) void saveEditor.openPrepared(prepareSaveEditorCatalog);
     return;
   }
   if (message.type === "EXPORT_COMPLETE") {
@@ -4207,7 +4952,6 @@ function handleEditorWorkerMessage(event) {
     elements.editorProgressPanel.hidden = true;
     try {
       installEditorDownload(message.result);
-      state.editorExportedRevision = state.editorEditRevision;
       setEditorStatus("수치가 조정된 BIN 준비 완료 · 공개 릴리스가 아닙니다");
     } catch (error) {
       showEditorError("수정본 다운로드를 준비하지 못했습니다", koreanMessage(error, "결과 파일을 확인하지 못했습니다."));
@@ -4218,28 +4962,238 @@ function handleEditorWorkerMessage(event) {
 
 // 폴더에 패치본과 정품 원본이 함께 있을 때 패치본을 열 수 없는 이유(이전 버전이거나 어느 쪽도 아닌 수정 파일)가 이것이면 정품 원본으로 넘어간다.
 const PATCHED_FALLBACK_NOTES = Object.freeze({
-  EDITOR_REVISION_OUTDATED: "폴더의 패치본은 이전 버전이라 열 수 없어 정품 원본으로 시작했습니다",
-  EDITOR_CUSTOM_PROVENANCE: "폴더의 패치본은 확인되지 않은 수정 파일이라 열지 않고 정품 원본으로 시작했습니다",
+  EDITOR_REVISION_OUTDATED: "지원하는 편집 기반보다 이전 버전으로 확인됐습니다.",
+  EDITOR_CUSTOM_PROVENANCE: "지원하는 편집 기반으로 확인되지 않은 수정 파일입니다.",
 });
 
 // 검사를 마친 보기(view)의 표를 화면 상태에 넣고 세 목록을 그린다. 테스트도 같은 길로 행을 넣는다.
+function glyphCharacters(entries){return [...new Set(entries.map(entry=>entry.unicode))].sort().join('');}
+function installEditorGlyphs(view){
+ state.editorGlyphSource=view.glyphSource??null;state.editorGlyphBaseHash=view.baseTargetSha256??null;
+ state.editorGlyphSeed=(view.glyphEntries??[]).map(entry=>({...entry}));state.editorGlyphEntries=[...state.editorGlyphSeed];
+ state.editorGlyphMap=new Map(state.editorGlyphSeed.map(entry=>[entry.code,entry.unicode]));
+ state.editorGlyphExplicit='';state.editorGlyphReserved=new Set();state.editorSaveNameTexts=new Map();state.editorGlyphRows=[];
+ if(!state.editorGlyphSource)return;
+ try{const pool=editorReviewSupport.glyphTools(state.editorGlyphBaseHash).glyphPool(state.editorGlyphSource,{gameId:state.editorGameId,baseSha256:state.editorGlyphBaseHash});
+  const characters=glyphCharacters(state.editorGlyphSeed),identity='glyph:1:'+new Sha256().update(new TextEncoder().encode(JSON.stringify([state.editorGlyphBaseHash,pool]))).hex();
+  state.editorGlyphRows=[{recordIndex:1,name:'추가 글자 · 갈무리11',identity,editable:true,characters,original:Object.freeze({characters}),capacity:pool.length}];
+ }catch{/* Original-language images have no approved Hangul allocation pool. */}
+}
+function editorGlyphPlan(overrides=[]){
+ const records=new Map();
+ for(const row of state.editorWeapons)if(row.name!==row.original?.name)records.set(`weapon:${row.recordIndex}`,row.name);
+ for(const row of state.editorScenario.dialogues??[])if(row.pagesJson||row.text!==row.original?.text)records.set(`dialogue:${row.recordIndex}`,row.pagesJson?JSON.parse(row.pagesJson).join(''):row.text);
+ for(const row of state.editorScenario.dialogues??[])if(row.afterDialogueJson)records.set(`dialogue:${row.recordIndex}:after`,afterDialogueText(row.afterDialogueJson));
+ for(const [owner,text]of state.editorSaveNameTexts)records.set(owner,text);
+ let explicit=state.editorGlyphExplicit;
+ for(const item of overrides){if(item.kind==='dialogue'&&item.field==='speakerId')continue;if(item.kind==='glyph')explicit=item.text;else if(item.kind==='dialogue'&&item.field==='afterDialogueJson'){const group=state.editorScenario.dialogueSpeakerGroup(item.row);for(const member of group.length?group:[item.row])records.set(`dialogue:${member?.recordIndex}:after`,afterDialogueText(item.text));}else records.set(item.owner??`${item.kind}:${item.row?.recordIndex}`,item.field==='pagesJson'?(item.text?JSON.parse(item.text).join(''):item.row?.text??''):item.text);}
+ const texts=[...records.values(),explicit].filter(Boolean);
+ if(!state.editorGlyphSource||!state.editorGlyphRows.length)return {entries:state.editorGlyphSeed,glyphMap:new Map(state.editorGlyphMap),fontNotice:''};
+ const fixedCharacters=new Set([...explicit]);
+ for(const [owner,text]of records)if(owner.startsWith('save:'))for(const ch of text)fixedCharacters.add(ch);
+ const fixed=new Map(state.editorGlyphSeed.map(entry=>[entry.code,entry]));
+ for(const entry of state.editorGlyphEntries)if(fixedCharacters.has(entry.unicode))fixed.set(entry.code,entry);
+ return editorReviewSupport.glyphTools(state.editorGlyphBaseHash).planGlyphAdditions(state.editorGlyphSource,texts,{gameId:state.editorGameId,baseSha256:state.editorGlyphBaseHash,glyphMap:nameMap(state.editorGameId),reservedCodes:state.editorGlyphReserved,existingEntries:[...fixed.values()]});
+}
+function commitEditorGlyphPlan(plan){
+ state.editorGlyphEntries=plan.entries;state.editorGlyphMap.clear();for(const [code,text]of plan.glyphMap)state.editorGlyphMap.set(code,text);
+ state.editorGlyphNotice=plan.fontNotice??'';if(state.editorGlyphRows[0])state.editorGlyphRows[0].characters=glyphCharacters(plan.entries);
+}
+function validateEditorText(kind,row,text,field){
+ if(kind==='dialogue'&&field==='speakerId')return validateScenarioDialogueSpeaker(row,text,{speakerOptions:state.editorScenario.dialogueSpeakerOptions??[]});
+ try{const plan=editorGlyphPlan([{kind,row,text,field}]);
+  if(kind==='dialogue'){
+   const options={gameId:state.editorGameId,glyphMap:plan.glyphMap,speakerOptions:state.editorScenario.dialogueSpeakerOptions??[]};
+   if(field==='afterDialogueJson'){const group=state.editorScenario.dialogueSpeakerGroup(row);if(!group.length)return {valid:false,message:'대사를 찾을 수 없습니다.'};for(const member of group){const result=validateScenarioAfterDialogue(member,text,options);if(!result.valid)return result;}return validateScenarioAfterDialogue(row,text,options);}
+   return (field==='pagesJson'?validateScenarioDialoguePages:validateScenarioDialogueText)(row,text,options);
+  }
+  if(kind==='glyph')return {valid:true,message:'',bytes:0};
+  if(row?.nameEditable!==true)return {valid:false,message:'이 이름은 읽기 전용입니다.'};
+  return {valid:true,message:'',bytes:encodeEditorText(text,{gameId:state.editorGameId,maxBytes:32,glyphMap:plan.glyphMap}).length};
+ }catch(error){return {valid:false,message:error.message,bytes:null};}
+}
+function validateEditorTextBatch(texts){try{editorGlyphPlan(texts);return {valid:true};}catch(error){return {valid:false,message:error.message};}}
+function acceptEditorDialogue(row,text,field){
+ const result=validateEditorText('dialogue',row,text,field);if(!result.valid)return result;
+ const plan=editorGlyphPlan([{kind:'dialogue',row,text,field}]);commitEditorGlyphPlan(plan);return {...result,addedGlyphs:plan.entries.length};
+}
+function encodeEditorInput(text,{kind='weapon',maxBytes=32,owner}={}){
+ const metrics=editorTextMetrics(text,{gameId:state.editorGameId,kind,glyphMap:state.editorGlyphMap});
+ if(metrics.byteLength+1>maxBytes)throw Error(`종료 문자를 포함해 ${maxBytes}바이트까지 입력하세요.`);
+ const plan=editorGlyphPlan([{kind,owner,text}]);
+ const bytes=encodeEditorText(text,{gameId:state.editorGameId,kind,maxBytes,glyphMap:plan.glyphMap});
+ if(owner?.startsWith('save:'))state.editorSaveNameTexts.set(owner,text);
+ commitEditorGlyphPlan(plan);
+ if(owner?.startsWith('save:'))updateEditorStatus('glyph',state.editorGlyphRows[0]);
+ return bytes;
+}
+
+function syncAlicePilotView() {
+  const enabled=state.editorAliceRows[0]?.enabled===1,source=state.editorAliceSource;
+  if(!enabled)aliceCrewEditor.reset();
+  const row=state.editorPilots.find(item=>item.recordIndex===399);
+  if(source&&row){const next=decorateAlicePilot(source,enabled);for(const key of Object.keys(row))delete row[key];Object.assign(row,next,{aliceCrewEnabled:state.editorAliceRows[0]?.crewEnabled===1});searchTextCache.delete(row);}
+  const button=byId('alicePilotToggle');button.hidden=!state.editorAliceRows.length;
+  button.textContent=enabled?'ALICE 등록 취소':'ALICE 추가';button.disabled=state.editorBusy;
+}
+function toggleAlicePilot(){
+  if(!state.editorSessionToken||state.editorBusy||!state.editorAliceRows.length)return;
+  if(!validateEditorForms())return;
+  const row=state.editorAliceRows[0];row.enabled=1-row.enabled;
+  if(!row.enabled)state.editorAliceCrewExplicit=true;
+  refreshEditorAfterPreset();
+  if(row.enabled===1){EDITOR_UI.pilot.search.value='ALICE';state.editorSelected.pilot=399;listNeedsBuild.pilot=true;selectEditorTab('pilot');}
+}
+byId('alicePilotToggle').addEventListener('click',toggleAlicePilot);
+const aliceCrewEditor=createAliceCrewEditor({root:byId('aliceCrewSettings'),getRow:()=>state.editorAliceRows[0],isBusy:()=>state.editorBusy,
+ canConnect:()=>state.editorUnits.some(u=>['s-gundam','s-g-cruiser','ex-s-gundam','g-cruiser'].includes(u.construction?.preset)),
+ getChoices:()=>[...new Map(state.editorPilots.flatMap(row=>spiritCatalog(row)).filter(e=>e.id>=1&&e.id<=30).map(e=>[e.id,e])).values()].sort((a,b)=>a.id-b.id),
+ onInvalid:invalidateEditorDraft,
+ onReveal:()=>{selectEditorTab('pilot',{render:false});selectEditorRecord('pilot',399);setEditorPage('pilot','main');editorLayouts.get('pilot')?.schedule();},
+ onChange:(row,field)=>{if(field==='crewEnabled')state.editorAliceCrewExplicit=true;syncAlicePilotView();updateEditorStatus('alice',row);}});
+
+function syncExSBeamPoseControls() {
+ const row=state.editorBeamRows[0],supported=state.editorBeamSupported&&['srwf-f','srwf-final'].includes(state.editorGameId);
+ const eligible=Boolean(row)&&supported&&exSBeamCloneIds(state.editorUnits,state.editorWeapons).length>0;
+ const fresh=freshExSBeamCloneIds(state.editorUnits,state.editorWeapons);
+ if(row){
+  row.editable=eligible||supported&&row.original.enabled===1;row.sourceAvailable=supported;row.canEnable=eligible;row.forcePreset=eligible&&fresh.length>0;
+  if(!eligible&&row.original.enabled===1)row.enabled=0;
+  if(eligible&&fresh.some(id=>!state.editorBeamSeenFresh.includes(id))&&!state.editorBeamExplicit)row.enabled=1;
+  if(!eligible&&row.original.enabled===0){row.enabled=0;state.editorBeamExplicit=false;}
+ }
+ state.editorBeamSeenFresh=fresh;
+ const editable=Boolean(state.editorSessionToken)&&!anyJobBusy()&&row?.editable===true;
+ byId('exsBeamPoseToggle').checked=row?.enabled===1;
+ byId('exsBeamPoseToggle').disabled=!editable;byId('exsBeamPoseReset').disabled=!editable||!eligible;
+ byId('exsBeamPoseStatus').textContent=row?.enabled===1?'ON':'OFF';
+ byId('exsBeamPoseStatus').classList.toggle('is-enabled',row?.enabled===1);
+ byId('exsBeamPoseUnsupported').hidden=eligible;
+ byId('exsBeamPoseUnsupported').textContent=!eligible&&row?.original.enabled===1?'무장 연결이 없어 연출 보정을 OFF로 저장합니다. Ex-S에 4연장빔캐논을 다시 연결하면 켤 수 있습니다.':'Ex-S건담에 독립 4연장빔캐논을 추가하면 사용할 수 있습니다.';
+}
+
+function syncCriticalFixControls() {
+  const row=state.editorCriticalRows[0];
+  const editable=Boolean(state.editorSessionToken)&&!anyJobBusy()&&row?.editable===true&&['srwf-f','srwf-final'].includes(state.editorGameId);
+  byId('criticalFixToggle').checked=row?.enabled===1;
+  byId('criticalFixToggle').disabled=!editable;
+  byId('criticalFixReset').disabled=!editable;
+  byId('criticalFixStatus').textContent=row?.enabled===1?'ON':'OFF';
+  byId('criticalFixStatus').classList.toggle('is-enabled',row?.enabled===1);
+  byId('criticalFixUnsupported').hidden=Boolean(row);
+  renderWeaponCriticalApplied(selectedEditorRow('weapon'));
+}
+
+function criticalFixEnabled(){
+ const row=state.editorCriticalRows[0];
+ return ['srwf-f','srwf-final'].includes(state.editorGameId)&&[0,1].includes(row?.enabled)?row.enabled===1:null;
+}
+
+function renderWeaponCriticalApplied(record){
+ const output=byId('weaponCriticalActual');
+ if(!output)return;
+ const stateValue=criticalFixEnabled(),code=record?.statsValid===false?null:record?.critical;
+ output.textContent=criticalAppliedText(code,stateValue);
+ const values=criticalValues(code,stateValue);
+ output.classList.toggle('is-different',values?.actual!==null&&values?.actual!==undefined&&values.display!==values.actual);
+ output.dataset.criticalFixState=stateValue===null?'unknown':stateValue?'on':'off';
+ output.title=`오류 수정 ${stateValue===null?'상태 미확인':stateValue?'ON':'OFF'} · 무기 보정값이며 최종 크리티컬 발생률이 아닙니다.`;
+ output.setAttribute('aria-label',`${output.textContent}. ${output.title}`);
+}
+
+function renderWeaponCriticalControl(control,record,value,locked){
+ const choices=criticalChoices(value,record?.original?.critical),signature=JSON.stringify(choices);
+ if(control.dataset.criticalChoices!==signature){
+  control.replaceChildren(...choices.map(choice=>{const option=document.createElement('option');option.value=String(choice.value);option.textContent=choice.label;return option;}));
+  control.dataset.criticalChoices=signature;
+ }
+ control.value=value===null?'':String(value);
+ control.disabled=locked||!criticalValues(value);
+ renderWeaponCriticalApplied(record);
+}
+
+function validCriticalControl(type,control,value,row){
+ return type!=='weapon'||control.dataset.editorField!=='critical'
+  ||criticalChoices(row?.critical,row?.original?.critical).some(choice=>choice.value===value);
+}
+
 function installEditorRows(view) {
+  editorNavigationSession = null;
+  saveCatalogSnapshot=null;saveCatalogPreparation=null;state.editorSaveCatalogPreparing=false;
+  state.editorFCampaign=view.fCampaign??null;state.editorFCampaignOriginal=Boolean(view.fCampaign);
+  state.editorIngame=view.ingame??null;
+  fCampaignSourcePanel.restore(state.editorFCampaign);
+  clearEditorOwnedDraftMarkers();
+  weaponNameControl.reset();
+  srw4SourcePanel.reset();state.editorSrw4Connected=false;
+  aliceCrewEditor.reset();
+  srw4ImportUndo=null;
+  state.editorAliceConstructionDefault=null;
+  state.editorAliceCrewExplicit=false;
+  editorStorageUI.reset(view.storageRecovery?.message);
+  state.editorBattleComponentsPending=view.battleComponents?.pending===true||view.aliceFaceRepairPending===true;
+  state.editorBattleComponentsAvailable=!!view.battleComponents;
+  state.editorCollectionUnlock=state.editorCollectionUnlockOriginal=view.collectionUnlock===true;
+  state.editorCollectionRows=view.gameId==='srwf-final'?(view.collections??[collectionEditorRow(state.editorCollectionUnlock)]).map(row=>({...row,original:{...row.original}})):[];
+  byId('collectionUnlock').checked=state.editorCollectionUnlock;
+  byId('collectionUnlockSettings').hidden=view.gameId!=='srwf-final';
+  for(const key of OUTPUT_SWITCH_KEYS){
+   const source=view.gameId==='srwf-final'&&view[key]?.available===true?view[key]:null;
+   state.editorOutputSwitches[key]=source?{enabled:source.enabled===true,original:source.enabled===true}:null;
+  }
+  syncOutputSwitchControls();
+  state.editorDebugRows=view.gameId==='srwf-final'&&view.debugEntry?.available===true
+    ? (view.debugEntries??[]).map(row=>({...row,original:{...row.original}})) : [];
+  state.editorCriticalRows=['srwf-f','srwf-final'].includes(view.gameId)&&view.criticalFix?.available===true
+    ? (view.criticalFixes??[]).map(row=>({...row,original:{...row.original}})) : [];
+  state.editorBeamRows=['srwf-f','srwf-final'].includes(view.gameId)
+    ? (view.exsBeamPoses??[]).map(row=>({...row,original:{...row.original}})) : [];
+  state.editorBeamSupported=view.exsBeamPose?.supported===true||view.exsBeamPose?.available===true;
+  state.editorBeamExplicit=false;state.editorBeamSeenFresh=[];
+  syncCriticalFixControls();
+  byId('debugEntrySettings').hidden=state.editorDebugRows.length!==1;
+  byId('debugEntry').checked=state.editorDebugRows[0]?.enabled===1;
+  byId('debugEntry').disabled=!state.editorSessionToken||state.editorBusy||!state.editorDebugRows.length;
+  byId('debugEntryReset').disabled=!state.editorSessionToken||state.editorBusy||!state.editorDebugRows.length;
+  elements.miscTabButton.hidden=false;
+
+  unitWeaponEditor.reset();
   state.editorHeroOrigin = null;
   editorSearchTools.reset();
   state.editorUnitAbilityNames = Array.isArray(view.unitAbilityNames) ? view.unitAbilityNames : [];
   state.editorPilotAbilityNames = Array.isArray(view.pilotAbilityNames) ? view.pilotAbilityNames : [];
   state.editorUnits = prepareEditorRows(view.units, "unit");
+  const constructionSlots=new Set(view.unitRestorationSlots??[]);
+  for(const row of state.editorUnits)row.restorationEligible=constructionSlots.has(row.recordIndex);
   state.editorPilots = prepareEditorRows(view.pilots, "pilot");
+  state.editorAliceRows=view.alice?.available?[aliceEditorRow(view.alice)]:[];
+  const sourceAlice=state.editorPilots.find(row=>row.recordIndex===399);
+  state.editorAliceSource=sourceAlice?{...sourceAlice,aliceIdentity:false}:null;
+  if(view.alice?.enabled&&state.editorAliceSource)Object.assign(state.editorAliceSource,{name:'',shortName:'',statsValid:true,recordKind:'unused-filler',defaultVisible:false,readOnlyReason:'unused-filler',nameStatus:'empty',imageIndex:null,faceId:0});
+  if(view.alice?.version<3&&!view.alice?.enabled){const targets=state.editorUnits.filter(u=>['s-gundam','s-g-cruiser','ex-s-gundam','g-cruiser'].includes(u.construction?.preset));if(targets.length)state.editorAliceConstructionDefault=connectDefaultAlice(state.editorAliceRows[0],targets[0].recordIndex,{explicitChoice:false});}
+  syncAlicePilotView();
   syncPilotExpansionBudget(state.editorPilots);
   state.editorWeapons = prepareEditorRows(view.weapons, "weapon");
+  syncExSBeamPoseControls();
+  const voiceSelect=EDITOR_UI.weapon.form.querySelector('[data-editor-field="voiceType"]');
+  if(voiceSelect){voiceSelect.replaceChildren(...Array.from({length:64},(_,id)=>{
+    const option=document.createElement('option'),names=[...new Set(state.editorWeapons.filter(row=>row.voiceType===id&&row.name).map(row=>row.name))];
+    option.value=String(id);option.textContent=`#${id}${names.length?' · '+names.slice(0,2).join(' / '):' · 참고 무기 없음'}`;
+    option.title=`대사 유형 ${id}${names.length?' · '+names.join(' / '):''}`;return option;
+  }));}
+  state.editorUpgradeCosts = prepareEditorRows(view.upgradeCosts ?? [], "upgrade");
+  costEditor.reset();
   state.editorTerrains = prepareEditorRows(view.terrains ?? [], "terrain");
   state.editorRewards = prepareEditorRows(view.rewards ?? [], "reward");
   state.editorPartNames = view.partNames ?? [];
+  state.editorSaveTitles = view.saveTitles ?? [];
+  state.editorPilotAliases = Array.isArray(view.pilotAliases) ? view.pilotAliases : [];
   state.editorScenario = createScenarioModel(view);
+  srw4BaseMapIcons=state.editorScenario.mapIcons;srw4BasePending=state.editorBattleComponentsPending;
+  installEditorGlyphs(view);
   terrainEditor.reset();
   rewardEditor.reset();
   scenarioEditor.reset();
-  state.editorPilotAliases = Array.isArray(view.pilotAliases) ? view.pilotAliases : [];
   state.showUnused = { unit: false, pilot: false, weapon: false };
   state.editorEditRevision = 0;
   state.editorExportedRevision = 0;
@@ -4279,11 +5233,14 @@ function stockEditorCueTracks(gameId) {
 }
 
 function resolveEditorCueTracks(view, folderTracks) {
+  if(view.ingame)return ingameCanonicalTracks(view);
+  if(view.fCampaign)return campaignCanonicalTracks(view);
   if (view.baseImageKind === "stock" || view.provenanceMode === "stock") return stockEditorCueTracks(view.gameId);
   if (folderTracks) return Object.freeze([...folderTracks]);
   const pinned = PATCHED_IMAGE_CUE_TRACKS.get(view.baseTargetSha256)
     ?? PATCHED_IMAGE_CUE_TRACKS.get(view.targetHash)
-    ?? PATCHED_IMAGE_CUE_TRACKS.get(state.release?.target.sha256);
+    ?? PATCHED_IMAGE_CUE_TRACKS.get(state.release?.target.sha256)
+    ?? (localEditorSupport?.isTarget(view.baseTargetSha256)?PATCHED_IMAGE_CUE_TRACKS.get("0fb10cbf4332f94c865c0e8d0a0c7234f8f6083bdbbb5a06198cebff871d195d"):null);
   return pinned ? Object.freeze([...pinned]) : null;
 }
 
@@ -4371,6 +5328,22 @@ function editorErrorCopy(message) {
 // 편집 코어와 워커가 내는 모든 EDITOR_* 코드의 안내문. 영어 원문은 화면에 내지 않는다. 새 코드를 추가하면
 // 계약 테스트(코드 목록을 소스에서 읽어 이 표와 맞춰 본다)가 이 표에 문구가 없다고 알려 준다.
 const EDITOR_ERROR_COPY = Object.freeze({
+  EDITOR_CAMPAIGN_TARGET_INVALID: ["이 완결편 기반에는 F를 연결할 수 없습니다", "현재 완결편 파일의 글꼴·대본·실행 코드가 지원하는 기반과 맞지 않습니다. 지원하는 기반에서 편집 내용을 가져와 주세요."],
+  EDITOR_SAVE_CATALOG_INVALID: ["세이브에 연결할 게임 정보가 맞지 않습니다", "현재 편집 결과와 세이브용 기체·파일럿 목록이 일치하지 않습니다. 진행 중인 작업을 마친 뒤 다시 연결해 주세요."],
+  EDITOR_COLLECTION_UNSUPPORTED: ["도감 해금을 적용할 수 없습니다", "도감 해금 코드가 지원하는 완결편 실행 파일과 다릅니다. 지원하는 최신 한글 패치 기반 BIN을 다시 선택해 주세요."],
+  EDITOR_MIGRATION_IDENTITY: ["이전 편집의 항목을 식별할 수 없습니다", "변경 내용 파일에 버전 간 식별 정보가 없습니다. 이전 편집 BIN과 해당 버전의 편집 전 기준 BIN을 함께 선택해 가져와 주세요."],
+  EDITOR_ROSTER_LEVEL_INVALID: ["로스터 초기 레벨을 저장할 수 없습니다", "초기 구성·인계를 포함해 확인된 로스터 생성 지점의 초기 레벨만 1~99로 입력할 수 있습니다. 대상 BIN과 로스터 정보를 확인해 주세요."],
+  EDITOR_ROSTER_CATALOG_INVALID: ["합류 정보를 해석할 수 없습니다", "시나리오 명령과 원본 참조를 확인하지 못했습니다."],
+  EDITOR_DIALOGUE_INVALID: ["대사를 저장할 수 없습니다", "본문의 바이트 한도와 보호 토큰을 확인해 주세요."],
+  EDITOR_DIALOGUE_SPEAKERS_INVALID: ["대사 화자를 저장할 수 없습니다", "현재 롬에서 확인된 파일럿 중 원래 표정을 표시할 수 있는 초상화를 선택해 주세요."],
+  EDITOR_GLYPH_INVALID: ["추가 글자를 저장할 수 없습니다", "글꼴 데이터가 현재 게임과 맞지 않거나 지원하지 않는 글자입니다."],
+  EDITOR_TITLE_LOGO_INVALID: ["타이틀 로고를 적용할 수 없습니다", "로고 데이터가 확인된 원본이나 보정본과 다릅니다. 편집 파일을 보존하고 기반 버전을 확인해 주세요."],
+  EDITOR_DICTIONARY_PORTRAIT_INVALID: ["인물사전 초상화를 적용할 수 없습니다", "사전 데이터와 초상화 연결이 확인된 원본이나 보정본과 다릅니다. 편집 파일을 보존하고 기반 버전을 확인해 주세요."],
+  EDITOR_DICTIONARY_ADDITIONS_INVALID: ["추가 도감을 적용할 수 없습니다", "추가 기체 또는 인공지능 파일럿의 연결과 도감 데이터가 일치하지 않습니다. 편집 파일을 보존하고 원본 연결 상태를 확인해 주세요."],
+  EDITOR_GLYPH_BASE_UNSUPPORTED: ["이 게임 파일은 글자 추가를 지원하지 않습니다", "최신 한글 패치 기반 파일을 선택해 주세요."],
+  EDITOR_GLYPH_POOL_EXHAUSTED: ["추가 글자 공간이 부족합니다", "추가한 서로 다른 글자 수를 줄여 주세요. 사용 중인 글자 칸은 덮어쓰지 않습니다."],
+  EDITOR_WEAPON_CLONE_INVALID: ["무기를 복제할 수 없습니다", "빈 무기 레코드나 복제 원본이 현재 롬과 맞지 않습니다. 복제한 무기의 이름도 확인해 주세요."],
+  EDITOR_CONSTRUCTION_WEAPON_FULL: ["독립 무기 자리가 부족합니다", "스마트건과 인컴을 따로 구성할 빈 무기 레코드가 부족합니다. 기존 무기는 덮어쓰지 않았습니다."],
   EDITOR_BUSY: ["이미 다른 작업이 진행 중입니다", "진행 중인 확인이나 저장이 끝난 뒤 다시 시도해 주세요."],
   EDITOR_JOB_INVALID: ["작업을 시작하지 못했습니다", "페이지를 새로 고친 뒤 처음부터 다시 시도해 주세요."],
   EDITOR_FAILED: ["에디터 작업을 완료하지 못했습니다", "원인을 알 수 없는 오류입니다. 디스크를 다시 골라 처음부터 시도해 주세요."],
@@ -4381,6 +5354,7 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_TARGET_HASH_MISMATCH: ["공개 패치 BIN이 아닙니다", "선택한 게임·버전의 공개 패치 결과와 전체 SHA-256이 일치하지 않습니다. 원본 게임은 폴더를 고르면 최신 패치를 적용한 뒤 편집할 수 있습니다."],
   EDITOR_REVISION_OUTDATED: ["이전 버전은 편집할 수 없습니다", "원본 게임 또는 최신 공개 패치 기반 BIN/CUE만 사용할 수 있습니다. 원본 폴더를 선택하면 최신 패치를 적용해 에디터를 엽니다."],
   EDITOR_CUSTOM_PROVENANCE: ["확인되지 않은 수정 BIN입니다", "이 브라우저의 에디터 출력 기록 또는 공개 패치와 비교한 편집 영역 검사가 필요합니다. 원본에서 패치를 만들거나, 이 에디터로 만든 BIN/CUE가 든 폴더를 선택해 주세요."],
+  EDITOR_SRW4_MAP_INVALID: ["추가 기체 아이콘을 확인하지 못했습니다", "원본 아이콘이나 저장된 복원 기록이 맞지 않아 편집을 멈췄습니다. 검증된 원본에서 다시 편집해 주세요."],
   EDITOR_IMAGE_READ_FAILED: ["BIN을 끝까지 읽지 못했습니다", "파일 접근을 허용하고 다른 앱에서 사용 중이지 않은지 확인해 주세요."],
   EDITOR_ISO_NOT_FOUND: ["디스크의 파일 목록을 찾지 못했습니다", "지원하는 공개 패치 BIN인지 확인해 주세요."],
   EDITOR_ISO_MALFORMED: ["디스크 구조가 올바르지 않습니다", "디스크의 파일 목록이 규칙과 맞지 않아 편집을 멈췄습니다. 공개 패치 BIN이거나 이 에디터로 만든 BIN인지 확인해 주세요."],
@@ -4395,6 +5369,22 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_TSR_COMPRESS_FAILED: ["수정 데이터를 압축하지 못했습니다", "수정한 게임 데이터의 크기가 지원 범위를 벗어났습니다. 수정본은 만들지 않았습니다."],
   EDITOR_TSR_ROUNDTRIP_FAILED: ["수정 데이터 압축 확인에 실패했습니다", "결과를 저장하지 않았습니다. 다른 값으로 다시 시도해 주세요."],
   EDITOR_TSR_GROWTH_UNSUPPORTED: ["수정 데이터가 원래 공간보다 큽니다", null],
+  EDITOR_TSR_REFERENCE_REQUIRED: ["편집 전 기준 BIN이 필요합니다", "이 편집본의 기존 데이터와 시나리오 배치를 확인하려면 같은 게임·버전·글꼴의 편집 전 BIN을 선택해 주세요. 파일은 기기 안에서만 확인합니다."],
+  EDITOR_TSR_REFERENCE_MISMATCH: ["기준 BIN이 일치하지 않습니다", "이 편집본과 같은 게임·버전·글꼴의 편집 전 BIN을 다시 선택해 주세요."],
+  EDITOR_PRIVATE_VARIANT_MISMATCH: ["검수 글꼴과 BIN이 다릅니다", "선택한 a·b·c 글꼴에 해당하는 v0.4 검수 BIN을 선택해 주세요."],
+  EDITOR_LOADOUT_INVALID: ["기체 무장 교체를 적용할 수 없습니다", "기존 무장 칸과 무기 번호를 확인해 주세요. 읽을 수 없는 무장 목록은 변경할 수 없습니다."],
+  EDITOR_WEAPON_NAME_INVALID: ["무기 이름을 저장할 수 없습니다", "편집 가능한 무기와 현재 글꼴에 있는 글자인지 확인해 주세요. 이름이 허용 길이를 넘거나 확장 데이터가 손상되면 저장할 수 없습니다."],
+  EDITOR_UI_LABEL_INVALID: ["전투 표시 문구가 원본과 다릅니다", "전투 표시 문구가 확인된 공개 패치와 달라 수정본을 만들지 않았습니다. 원본에서 최신 패치를 다시 만든 뒤 편집 내용을 가져와 주세요."],
+  EDITOR_UNIT_RESTORATION_INVALID: ["미사용 기체를 추가할 수 없습니다", "추가할 기체의 빈 슬롯과 무장 구성을 확인해 주세요. 현재 이미지와 맞지 않거나 손상된 복원 데이터는 적용할 수 없습니다."],
+  EDITOR_UNIT_UPGRADE_INVALID: ["추가 기체를 갱신할 수 없습니다", "비교 창을 다시 열어 갱신할 항목과 기존 무장 수를 확인해 주세요. 변경 전 값이 맞는 항목만 적용할 수 있습니다."],
+  EDITOR_BATTLE_COMPONENT_INVALID: ["전투 데이터를 확인하지 못했습니다", "기체 그림·무기 부착 좌표·연출 데이터 검사에 실패했습니다. 파일에는 변경을 적용하지 않았습니다."],
+  EDITOR_CRITICAL_FIX_UNSUPPORTED: ["크리티컬 보정 오류 수정을 적용할 수 없습니다", "이 이미지의 크리티컬 판정 코드를 확인하지 못했습니다. 지원하는 원본이나 최신 공개 패치에서 다시 편집해 주세요."],
+  EDITOR_DEBUG_ENTRY_UNSUPPORTED: ["디버그 메뉴를 적용할 수 없습니다", "이 기반 이미지의 디버그 메뉴 실행 코드를 확인하지 못했습니다. 지원하는 원본이나 최신 공개 패치에서 다시 편집해 주세요."],
+  EDITOR_MAP_ICON_PACKED_INVALID: ["기체 아이콘 압축을 확인하지 못했습니다", "아이콘 압축 데이터의 원본 복원이나 저장 공간 확인에 실패했습니다. 기존 파일은 변경하지 않았습니다."],
+  EDITOR_MAP_ICON_PATCH_INVALID: ["기체 아이콘을 적용할 수 없습니다", "검증한 원본 자료와 아이콘·기체 연결이 맞는지 확인해 주세요. 사용 중인 그림이나 팔레트를 덮어쓰는 변경은 저장하지 않습니다."],
+  EDITOR_MAP_ICON_UNIT_INVALID: ["기체 아이콘 연결이 맞지 않습니다", "선택한 기체의 현재 아이콘 번호와 독립된 데이터 자리인지 확인해 주세요. 다른 기체까지 함께 바뀌는 연결은 적용하지 않습니다."],
+  EDITOR_AIRCRAFT_GRAPHIC_COLLISION: ["기체 그림 자리가 겹칩니다", "추가하려는 두 기체가 같은 전투 그림 자리를 사용합니다. 겹치는 구성을 하나 취소한 뒤 다시 적용해 주세요."],
+  EDITOR_ALICE_INVALID: ["인공지능 파일럿을 등록할 수 없습니다", "지원하는 완결편 기반 이미지와 빈 파일럿 자리·초상 데이터를 확인해 주세요. 이름·초상 등록 정보가 맞지 않으면 수정본을 만들지 않습니다."],
   EDITOR_TSR_TAIL_FOREIGN: ["게임 데이터 뒤의 여백이 원본과 다릅니다", "수정본의 게임 데이터 뒤 공간에 0도 아니고 공개 패치에서 남은 값도 아닌 바이트가 있어 열지 않았습니다. 원본에서 최신 패치를 다시 만들어 주세요."],
   EDITOR_SECTOR_CHECKSUM: ["디스크 섹터 검증에 실패했습니다", "원본 이미지의 섹터 무결성을 확인할 수 없어 수정본을 만들지 않았습니다."],
   EDITOR_SECTOR_UNSUPPORTED: ["지원하지 않는 섹터 형식입니다", "게임 데이터가 지원하는 데이터 섹터 형식인지 확인하지 못했습니다. 지원하는 원본 또는 최신 공개 패치 BIN인지 확인해 주세요."],
@@ -4404,8 +5394,10 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_VALUE_OUT_OF_RANGE: ["허용 범위를 벗어난 값이 있습니다", "저장할 수 없는 크기의 값이 있어 수정본을 만들지 않았습니다. 지형 적응도는 A~E에 해당하는 0~4만 저장할 수 있고, 게임 화면에 숫자로 나오는 칸은 그 칸 폭을 넘을 수 없습니다(EN·운동성·한계반응·소비 EN 999, 공격력 9999, 명중 보정 −99~99). 넘으면 게임이 멈추고 세이브가 지워질 수 있습니다. 다른 칸도 칸마다 정해진 범위 안이어야 합니다. 값을 확인한 뒤 다시 시도해 주세요."],
   EDITOR_PREVIEW_INVALID: ["그림을 불러오지 못했습니다", "선택한 항목의 그림 정보를 확인할 수 없습니다. 다른 항목을 골랐다가 다시 선택해 주세요."],
   EDITOR_OUTPUT_INTERNAL: ["만든 이미지 확인에 실패했습니다", "수정본을 다시 읽어 확인하는 단계에서 문제가 생겨 결과를 제공하지 않았습니다. 디스크를 다시 열어 처음부터 시도해 주세요."],
+  EDITOR_STORAGE_INVALID: ["편집 데이터를 안전하게 저장할 수 없습니다", "추가한 무장·기체·이름·글자가 게임의 데이터 한도를 넘거나 이설 참조가 맞지 않습니다. 추가 내용을 줄인 뒤 다시 저장해 주세요."],
   EDITOR_SESSION_MISSING: ["에디터 세션이 만료되었습니다", "디스크를 다시 열어 주세요."],
-  EDITOR_TERRAIN_INVALID: ["지형 효과를 반영할 수 없습니다", "회피·방어 보정과 HP·EN 회복은 0~100 범위의 정수여야 합니다. 지원하는 지형 표의 구조인지도 확인해주세요."],
+  EDITOR_COST_INVALID: ["개조 비용을 저장할 수 없습니다", "금액 범위와 입력 단위를 확인하세요."],
+  EDITOR_TERRAIN_INVALID: ["지형 효과를 반영할 수 없습니다", "명중·방어 보정은 -100~100, HP·EN 회복은 0~100의 정수여야 합니다. 지형 표의 구조도 확인해주세요."],
   EDITOR_REWARD_INVALID: ["격추 보상을 반영할 수 없습니다", "파츠와 확률을 확인해주세요. 확률 합계는 100% 이하여야 하며, 보상 표의 항목 수는 유지해야 합니다."],
   EDITOR_REQUEST_INVALID: ["시나리오 수정 요청이 올바르지 않습니다", "현재 열린 맵과 기체 배치에 맞는 수정값인지 확인해주세요."],
   EDITOR_SCENARIO_INVALID: ["시나리오 데이터를 해석하지 못했습니다", "지원하는 원본 또는 최신 공개 패치 기반 BIN인지 확인해주세요. 시나리오의 구조와 공유 관계는 유지해야 합니다."],
@@ -4413,7 +5405,11 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_EVENT_CRITERIA_INVALID: ["사건 조건을 반영할 수 없습니다", "확인된 사건에 턴 조건을 1~99로 입력해주세요. 조건은 최대 3개이며 모두 충족 또는 하나라도 충족으로 조합합니다."],
   EDITOR_EVENT_PHASE_INVALID: ["사건의 페이즈를 바꿀 수 없습니다", "확인된 완결편 사건에서 아군 시작 또는 적군 시작을 선택해주세요. 아군 시작은 2~99턴의 같음 조건 한 개만 지원합니다."],
   EDITOR_OBJECTIVE_INVALID: ["작전 목적 조건을 반영할 수 없습니다", "지원하는 목적 구조와 0~98의 추가 턴 제한인지 확인해주세요. 저장된 목적 코드나 문구가 달라진 BIN은 열 수 없습니다."],
-  EDITOR_REINFORCEMENT_INVALID: ["새 증원을 반영할 수 없습니다", "지원하는 증원 기체와 턴·맵 좌표인지 확인해주세요. 저장된 생성 코드나 행동 참조가 달라진 이미지는 열 수 없습니다."],
+  EDITOR_REINFORCEMENT_INVALID: ["새 증원을 반영할 수 없습니다", "지원하는 파일럿·기체·레벨과 발동·등장 좌표인지 확인해주세요. 저장된 생성 코드나 행동 참조가 달라진 이미지는 열 수 없습니다."],
+  EDITOR_REINFORCEMENT_OBJECTIVE_CONFLICT: ["증원과 승패 조건이 충돌합니다", "현재는 같은 시나리오에서 새 증원과 승패 조건·제한 턴 변경을 함께 저장할 수 없습니다. 둘 중 하나를 원복해주세요."],
+  EDITOR_REINFORCEMENT_PAIR_INVALID: ["증원 대상을 사용할 수 없습니다", "선택한 파일럿과 기체가 이 시나리오에서 지원되는지 확인해주세요. 사용 불가 대상은 선택 목록의 안내를 확인해주세요."],
+  EDITOR_SPAWN_CAPACITY_INVALID: ["증원 실행 코드를 확인할 수 없습니다", "증원 실행 코드가 지원하는 원본과 다르거나 일부만 적용되어 있습니다. 지원하는 롬을 다시 열어 편집해주세요."],
+  EDITOR_UNIT_REWARD_INVALID: ["기체 입수 설정을 반영할 수 없습니다", "선택한 기체와 입수 조건이 지원되는지 확인해주세요. 원래 사건 구조가 다른 시나리오에는 적용할 수 없습니다."],
   EDITOR_MAP_INVALID: ["맵 타일을 반영할 수 없습니다", "해당 맵의 범위와 그래픽 묶음에 맞는 타일인지 확인해주세요."],
   EDITOR_SCENARIO_GROWTH_UNSUPPORTED: ["시나리오가 원래 공간에 들어가지 않습니다", "압축한 수정 내용이 해당 시나리오의 공간보다 큽니다. 변경을 줄여 다시 저장해주세요."],
   EDITOR_MAP_GROWTH_UNSUPPORTED: ["맵이 원래 공간에 들어가지 않습니다", "압축한 수정 타일이 해당 맵의 공간보다 큽니다. 변경을 줄여 다시 저장해주세요."],
@@ -4427,9 +5423,24 @@ function friendlyEditorError(code, _fallback = "", details = null) {
   const specific = code === "EDITOR_EDIT_INVALID" || code === "EDITOR_VALUE_OUT_OF_RANGE"
     ? editorDetailMessage(details)
     : null;
+  const attachment=code==='EDITOR_BATTLE_COMPONENT_INVALID'&&details?.component==='hand-points'
+    ?details.reason==='capacity'
+      ?Number.isSafeInteger(details.usedBytes)&&Number.isSafeInteger(details.limitBytes)&&details.usedBytes>details.limitBytes&&details.limitBytes>=0
+        ?`무기 부착 좌표가 ${details.usedBytes.toLocaleString('ko-KR')}바이트를 사용해 허용량 ${details.limitBytes.toLocaleString('ko-KR')}바이트를 ${(details.usedBytes-details.limitBytes).toLocaleString('ko-KR')}바이트 넘습니다. 파일에는 변경을 적용하지 않았습니다.`
+        :'무기 부착 좌표를 저장할 공간이 부족합니다. 파일에는 변경을 적용하지 않았습니다.'
+      :details.reason==='source-mismatch'
+        ?'무기 부착 좌표의 기준 데이터를 지원하는 원본과 대조하지 못했습니다. 파일에는 변경을 적용하지 않았습니다.'
+        :'무기 부착 좌표의 표·연결·복원 기록이 지원하는 구조와 일치하지 않습니다. 파일에는 변경을 적용하지 않았습니다.'
+    :null;
+  const capacity=code==='EDITOR_STORAGE_INVALID'&&['unit-region-capacity','f-unit-inline-capacity','f-inline-aux-capacity','final-inline-aux-capacity'].includes(details?.reason)
+    &&Number.isSafeInteger(details.usedBytes)&&Number.isSafeInteger(details.limitBytes)&&details.limitBytes>=0&&details.usedBytes>details.limitBytes
+    ?`${details.reason==='f-inline-aux-capacity'?'F의 이름·글자·복원 기록이':details.reason==='final-inline-aux-capacity'?'완결편의 이름·글자·복원 기록이':'기체 표가'} ${details.usedBytes.toLocaleString()} B를 사용해 허용량 ${details.limitBytes.toLocaleString()} B보다 ${(details.usedBytes-details.limitBytes).toLocaleString()} B 큽니다. 추가 무장·이름·글자나 복원 기체를 줄여 주세요. 결과 파일은 만들지 않았습니다.`:null;
+  const fStorage=['EDITOR_STORAGE_INVALID','EDITOR_GLYPH_INVALID'].includes(code)&&details?.reason==='f-cd-transient-tail'
+    ?'F의 CD 작업 영역에는 새 데이터를 둘 수 없습니다. 원래 설치기 영역은 그대로 보존합니다. 추가한 이름·글자 기록이나 복원 기체를 줄이고 저장 공간을 다시 확인해 주세요.':code==='EDITOR_STORAGE_INVALID'&&details?.reason==='f-installer-overwrite'
+    ?'F 설치기가 부팅 때 다시 쓰는 항목입니다. 이 변경은 저장할 수 없습니다.':null;
   return Object.freeze({
     title,
-    message: code === "EDITOR_TSR_GROWTH_UNSUPPORTED" ? editorGrowthMessage(details) : specific ?? message,
+    message: code === "EDITOR_TSR_GROWTH_UNSUPPORTED" ? editorGrowthMessage(details) : attachment ?? fStorage ?? capacity ?? specific ?? message,
   });
 }
 
@@ -4555,7 +5566,7 @@ function friendlyDirectoryError(error) {
   }
 }
 
-function showEditorError(title, message) {
+function showEditorError(title, message, action = null) {
   // 안내문과 닫기 버튼. 편집 화면에서는 이 영역이 화면 위에 겹쳐 뜨므로 직접 닫을 수 있어야 한다.
   const text = document.createElement("span");
   text.className = "editor-error-text";
@@ -4569,7 +5580,14 @@ function showEditorError(title, message) {
     elements.editorError.hidden = true;
     updateControls();
   });
-  elements.editorError.replaceChildren(text, close);
+  if (action) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "editor-error-close";
+    button.textContent = action.label;
+    button.addEventListener("click", action.run);
+    elements.editorError.replaceChildren(text, button, close);
+  } else elements.editorError.replaceChildren(text, close);
   elements.editorError.hidden = false;
   setEditorStatus(title);
 }
@@ -4579,9 +5597,16 @@ function editorGameLabel(gameId) {
 }
 
 function editorRowsFor(type) {
-  if (["deployment", "event", "objective", "reinforcement", "map"].includes(type)) return state.editorScenario.rows(type);
+  if(type==='beam')return state.editorBeamRows;
+  if(type==='critical')return state.editorCriticalRows;
+  if(type==='debug')return state.editorDebugRows;
+  if(type==='alice')return state.editorAliceRows;
+  if(type==='collection')return state.editorCollectionRows;
+  if(type==='glyph')return state.editorGlyphRows;
+  if (["deployment", "event", "objective", "reinforcement", "roster", "dialogue", "map"].includes(type)) return state.editorScenario.rows(type);
   if (type === "unit") return state.editorUnits;
   if (type === "pilot") return state.editorPilots;
+  if (type === "upgrade") return state.editorUpgradeCosts;
   if (type === "terrain") return state.editorTerrains;
   if (type === "reward") return state.editorRewards;
   return state.editorWeapons;
@@ -4594,19 +5619,29 @@ function selectedEditorRow(type) {
 }
 
 function editorFieldsFor(type) {
+  if(type==='beam')return ['enabled'];
+  if(type==='critical')return ['enabled'];
+  if(type==='debug')return ['enabled'];
+  if(type==='alice')return ALICE_EDITOR_FIELDS;
+  if(type==='collection')return ['enabled'];
+  if(type==='glyph')return ['characters'];
+  if(type==='roster')return ['initialLevel'];
+  if(type==='dialogue')return ['text','pagesJson','speakerId','afterDialogueJson'];
   if (type === "event") return ["turn",...EVENT_PHASE_FIELDS];
   if (type === "objective") return ["deadline",...CRITERIA_FIELDS];
-  if (type === "reinforcement") return ["enabled","templateOffset","turn","x","y","rewardSelector"];
+  if (type === "reinforcement") return ["enabled","pilotId","unitId","level","triggerX","triggerY","x","y"];
   if (type === "deployment") return ["x", "y", "rewardSelector"];
   if (type === "map") return ["tileId"];
+  if (type === "upgrade") return ["cost"];
   if (type === "terrain") return MAP_TERRAIN_FIELDS;
   if (type === "reward") return REWARD_FIELDS;
   if (type === "unit") {
     return [
-      "hp", "en", "armor", "move", "speed", "limit", "ground", "sea", "air", "space",
+      "hp", "en", "armor", "move", "speed", "limit", "killMoney", "killExp", "partSlots", "ground", "sea", "air", "space",
       "ability1", "ability2", "ability3", "ability4",
       "abilityValue1", "abilityValue2", "abilityValue3", "abilityValue4",
       "shield", "parry",
+      ...UNIT_WEAPON_FIELDS,
     ];
   }
   if (type === "pilot") {
@@ -4616,19 +5651,24 @@ function editorFieldsFor(type) {
       "mindGrowth", "syncGrowth", "ground", "sea", "air", "space",
     ];
   }
-  return ["attack", "hit", "critical", "minRange", "maxRange", "terrain", "energy", "ammo", "requiredMorale", "requiredSkill"];
+  return ["name", "attack", "hit", "critical", "minRange", "maxRange", "terrain", "energy", "ammo", "requiredMorale", "requiredSkill",'voiceType'];
 }
 
 function prepareEditorRows(rows, type) {
   const fields = editorFieldsFor(type);
   return rows.map((row) => {
+    if (type === 'unit') row = { ...unitWeaponFields(row.weaponList), ...row };
+    if(type==='weapon')row={voiceType:0,...row};
     // 정신커맨드 여섯 칸: 고치는 목록은 row.spirits, 열었을 때의 목록은 row.original.spirits(바뀐 내용은 둘을 비교한다).
     const spirits = type === "pilot" && Array.isArray(row.spirits) ? row.spirits : null;
     return {
       ...row,
+      ...(type==='unit'?{weaponAdditions:[]}:{}),
       original: Object.freeze({
         ...Object.fromEntries(fields.map((field) => [field, row[field]])),
         ...(spirits ? { spirits: Object.freeze(spirits.map((entry) => Object.freeze({ ...entry }))) } : {}),
+        ...(type==='unit'?{weaponAdditions:Object.freeze([])}:{}),
+        ...(type==='unit'&&row.srw4Native===true?{srw4Native:true}:{}),
       }),
       ...(type === "pilot" ? {
         specialAbilities: (row.specialAbilities ?? []).map((ability) => ({ ...ability })),
@@ -4644,19 +5684,21 @@ function prepareEditorRows(rows, type) {
   });
 }
 function editorFieldLabel(field) {
+  if (isUnitWeaponField(field)) return `무장 ${Number(field.slice(6))}`;
   const labels = {
+    name:"무기명",text:"대사",characters:"추가 글자",
     ...MAP_TERRAIN_LABELS,
     part1: "파츠 1", chance1: "확률 1", part2: "파츠 2", chance2: "확률 2",
     x: "X 좌표", y: "Y 좌표", rewardSelector: "격추 보상 표", turn: "발동 턴", deadline: "추가 턴 제한", objectivePriority:"동시 판정 우선",victoryJoin:"승리 조건 조합",defeatJoin:"패배 조건 조합",
     eventPhase:"사건 검사 페이즈",eventJoin:"사건 조건 조합",eventRule1:"사건 조건 1",eventRule2:"사건 조건 2",eventRule3:"사건 조건 3",
     victoryRule1:"승리 조건 1",victoryRule2:"승리 조건 2",victoryRule3:"승리 조건 3",defeatRule1:"패배 조건 1",defeatRule2:"패배 조건 2",defeatRule3:"패배 조건 3", enabled: "증원 사용", templateOffset: "증원 기체", tileId: "타일 번호",
-    hp: "HP", en: "EN", armor: "장갑", move: "이동력", speed: "운동성", limit: "한계 반응",
+    cost: "개조 비용", killMoney: "격추 자금", killExp: "기체 기본 EXP", partSlots: "파츠 칸", hp: "HP", en: "EN", armor: "장갑", move: "이동력", speed: "운동성", limit: "한계 반응",
     ground: "지상", sea: "바다", air: "공중", space: "우주",
-    attack: "공격력", hit: "명중 보정", critical: "크리티컬", minRange: "최소 사거리",
+    attack: "공격력", hit: "명중 보정", critical: "크리티컬 보정", minRange: "최소 사거리",
     maxRange: "최대 사거리", terrain: "지형", energy: "소비 EN",
-    ammo: "탄수", requiredMorale: "필요 기력", requiredSkill: "필요 기능", shield: "실드", parry: "베어내기 가능",
+    ammo: "탄수", requiredMorale: "필요 기력", requiredSkill: "필요 기능",voiceType:'공격 대사 유형', shield: "실드", parry: "베어내기 가능",
     atk: "격투", shot: "사격", agi: "회피", tech: "기량", cnt: "반응", mp: "정신 포인트",
-    exp: "초기 경험치", attackGrowth: "격투 성장 보정", shotGrowth: "사격 성장 보정",
+    exp: "파일럿 기본 EXP", attackGrowth: "격투 성장 보정", shotGrowth: "사격 성장 보정",
     hitGrowth: "명중 성장 보정", techGrowth: "기량 성장 보정", agiGrowth: "회피 성장 보정",
     cntGrowth: "반응 성장 보정", mindGrowth: "정신 성장 보정", syncGrowth: "동조 성장 보정",
     ability1: "특수능력 1", ability2: "특수능력 2", ability3: "특수능력 3", ability4: "특수능력 4",
@@ -4705,7 +5747,7 @@ function isLockedRecord(record) {
 
 // 목록과 머리글에 쓰는 이름. 이름이 없는 행은 막연히 미지정이라 하지 않고 행의 종류로 구분한다.
 function editorRowName(row) {
-  if (row.role === "hero-head") return `${row.recordIndex % 2 ? "격투형" : "사격형"} 능력치`;
+  if (row.role === "hero-head") return `기본 능력치 ${row.recordIndex - 303}`;
   if (row.recordKind === "hero-list-template") return `${row.recordIndex % 2 ? "저력" : "뉴타입·실드"} 습득표`;
   if (row.recordKind === "unused-filler") return "미사용 레코드";
   if (row.recordKind === "nonstandard-tail") return "비표준 레코드 (머리부 없음)";
@@ -4725,13 +5767,14 @@ function pilotAliasDisplayRows() {
     if (!owner) return [];
     return [Object.freeze({
       ...owner,
+      ...alias,
       recordIndex: alias.recordIndex,
       name: alias.name,
       nameStatus: alias.nameStatus,
       aliasView: true,
       aliasOf: alias.aliasOf,
       aliasGroupIds: alias.aliasGroupIds,
-      previewIndex: owner.recordIndex,
+      previewIndex: alias.heroIdentity ? alias.recordIndex : owner.recordIndex,
       editable: false,
       readOnlyReason: "alias-group",
       recordKind: "alias-group",
@@ -4758,7 +5801,7 @@ function editorListRows(type) {
 
 function syncUnusedToggle() {
   const type = state.editorTab;
-  if (["reward", "terrain", "scenario"].includes(type)) { elements.unusedToggleLabel.hidden = true; elements.editorRecordNotice.hidden = true; return; }
+  if (["reward", "terrain", "scenario", "misc"].includes(type)) { elements.unusedToggleLabel.hidden = true; elements.editorRecordNotice.hidden = true; return; }
   const unused = editorAllRows(type).filter((row) => row.defaultVisible === false).length;
   elements.unusedToggleLabel.hidden = unused === 0;
   elements.unusedToggle.checked = state.showUnused[type];
@@ -4773,9 +5816,18 @@ function handleUnusedToggle() {
 // 레코드 위에 놓는 안내. 읽기 전용 이유, 미완성 레코드, 게임이 읽지 않는 값을 짧은 한 줄과 자세히 보기로 나눈다.
 function editorRecordNotes(type, row) {
   if (!row) return [];
+  if(row.aliceIdentity)return [{tone:'info',title:'ALICE 서브파일럿',body:row.aliceCrewEnabled?'기존 주파일럿을 유지하며 Ex-S·G크루저에 동승합니다. 정신기와 SP는 별도 설정을 사용합니다.':'초상은 글자 없이 유지합니다. 아래에서 변형 기체 동승과 정신기를 설정할 수 있습니다.'}];
   const notes = [];
+  if(type==='unit'&&row.construction){
+    const p=unitConstructionPreset(row.construction.preset);
+    const donor=state.editorUnits.find(unit=>unit.recordIndex===p?.donor);
+    const version=row.construction.loadoutVersion??0,researched=version>=1;
+    notes.push({tone:'info',title:version===2?'설정 응용 구성 · 기체별 능력치·무장':`남은 그래픽으로 구성 · 능력치 ${donor?.name||`기체 #${p?.donor}`} / 무장 ${researched?'설정 응용':'기존 복제'}`,body:(row.srw4Native?(['g-cruiser','s-g-cruiser'].includes(p.id)?'전투 본체와 맵 아이콘은 검증한 제4차 Rev 1 원본을 사용합니다. ':'전투 본체는 F 원본, 맵 아이콘은 '+(p.id==='blood-temple'?'F 원본 #62':'검증한 제4차 Rev 1 원본')+'을 사용합니다. '):'')+'원래 완성된 기체 스펙을 복구한 것이 아닙니다. '+(version===2?UNIT_CONCEPTS[p.id].note:researched?p.loadout.note:'기존 개인 편집본의 무장 구성을 유지합니다. 새 제안 구성은 추가한 기체 구성 갱신에서 선택 적용할 수 있습니다.')+(state.editorBattleComponentsAvailable?(row.srw4Native?' 기존 F 무장 연출과 부품 연결을 미리보기·BIN 저장에 함께 적용합니다.':' 총·검 부품과 손 위치, S/Ex-S의 총구·허리 포구·인컴 발사 위치 보정도 미리보기·BIN 저장에 함께 적용합니다.'):'')+' 수치와 무장을 수정할 수 있으며, 수정 BIN을 다시 열면 세이브의 보유 기체 추가에도 사용할 수 있습니다.'});
+  }
   if (isLockedRecord(row)) {
-    if (row.recordKind === "alias-group") {
+    if(row.heroIdentity){
+      notes.push({tone:'readonly',title:'주인공 이름·초상화',body:'이 항목은 이름과 참고 초상화만 보여 줍니다. 능력치·정신기·특수능력은 주인공 원본 편집에서 고칩니다.'});
+    } else if (row.recordKind === "alias-group") {
       const ids = row.aliasGroupIds?.length ? row.aliasGroupIds : [row.aliasOf ?? row.recordIndex, ...(row.aliasIds ?? [])];
       const names = state.editorPilotAliases
         .filter((alias) => ids.includes(alias.recordIndex))
@@ -4805,6 +5857,7 @@ function editorRecordNotes(type, row) {
       body: "원본에서 능력치가 채워지지 않은 기본값 상태의 레코드입니다. 이름이 있어 목록에 두었고 수정할 수 있습니다.",
     });
   }
+  if(type==='weapon'&&row.weaponClone)notes.push({tone:'info',title:'독립 복제 무기',body:`무기 #${row.weaponClone.sourceRecordIndex}의 연출·개조 분류를 복제했습니다. 이 무기 번호의 이름·수치·공격 대사는 원본과 별도로 적용됩니다.`});
   if (type === "pilot" && row.extraSpirits?.length) {
     const extra = row.extraSpirits
       .map((entry) => `${entry.name} Lv ${entry.level}`)
@@ -4880,6 +5933,8 @@ function recordRowIsModified(type, row) {
   const original = row.original;
   if (!original) return false;
   if (editorFieldsFor(type).some((field) => row[field] !== original[field])) return true;
+  if(type==='weapon'&&row.pendingWeaponClone)return true;
+  if(type==='unit'&&((row.weaponAdditions?.length??0)>0||row.pendingConstruction))return true;
   return type === "pilot" && (pilotSkillsChanged(row) || pilotSpiritsChanged(row));
 }
 
@@ -4903,14 +5958,14 @@ function buildRecordOption(type, row, selected) {
   const metaCell = document.createElement("span");
   metaCell.className = "record-option-meta";
   const meta = [`#${row.recordIndex}`];
-  if (row.aliasView) meta.push("공유");
+  if (row.aliasView && !row.heroIdentity) meta.push("공유");
   if (type === "weapon") {
     const owners = weaponOwnerSummary(row);
     if (owners) meta.push(owners);
     spoken.push(owners, `공격 ${row.attack}`, `사정거리 ${row.minRange}에서 ${row.maxRange}`, `명중 보정 ${row.hit}`);
   }
   if (locked) {
-    meta.push("읽기 전용");
+    if(!row.heroIdentity)meta.push("읽기 전용");
     spoken.push("읽기 전용");
   }
   metaCell.textContent = meta.join(" · ");
@@ -4987,7 +6042,10 @@ function renderRecordList(type, { build = true, retainSelection = false } = {}) 
     return;
   }
   if (!state.editorVisible[type].includes(selected) && !retainSelection) {
-    selectEditorRecord(type, rows[0].recordIndex);
+    if (selectEditorRecord(type, rows[0].recordIndex, {report:false}) === false) {
+      ui.list.removeAttribute("aria-activedescendant");
+      refreshRecordBar(type);
+    }
     return;
   }
   const option = optionNodes[type].get(selected);
@@ -5008,6 +6066,7 @@ function refreshRecordOption(type, row) {
 
 function revealSelectedOption(type) {
   const ui = EDITOR_UI[type];
+  if (!ui || !optionNodes[type]) return;
   const option = optionNodes[type].get(state.editorSelected[type]);
   if (!option || !ui.list.clientHeight) return;
   ui.list.scrollTop = scrollTopToReveal(ui.list.scrollTop, ui.list.clientHeight, option.offsetTop, option.offsetHeight);
@@ -5023,11 +6082,20 @@ function refreshRecordBar(type) {
   ui.next.disabled = !canStep(visible.length, position, 1);
 }
 
-function selectEditorRecord(type, recordIndex = state.editorSelected[type], { scroll = true } = {}) {
+function selectEditorRecord(type, recordIndex = state.editorSelected[type], { scroll = true, report = true } = {}) {
+  if(type==='weapon'&&recordIndex!==state.editorSelected.weapon&&!weaponNameControl.validate({report:false})){
+    if(report){if(state.editorTab!=='weapon')selectEditorTab('weapon',{render:false});editorLayouts.get('weapon')?.reveal(weaponNameControl.input);weaponNameControl.validate({report:true});}
+    return false;
+  }
+  if(type==='unit'&&recordIndex!==state.editorSelected.unit&&!unitWeaponEditor.validate({report}))return false;
+  const invalid = editorOwnedInvalidControl(type);
+  if (invalid) {
+    if (recordIndex !== state.editorSelected[type]) { if (report) reportEditorOwnedInvalid(type, invalid); return false; }
+    return true; // Re-entering the tab must not redraw and discard its draft.
+  }
   closeGameplayHelp();
   const record = Number.isSafeInteger(recordIndex) ? findEditorDisplayRow(type, recordIndex) : null;
   const previous = state.editorSelected[type];
-  if (previous !== record?.recordIndex) clearInvalidEditorControls(type);
   state.editorSelected[type] = record ? record.recordIndex : null;
   const ui = EDITOR_UI[type];
   if (previous !== state.editorSelected[type]) {
@@ -5044,6 +6112,8 @@ function selectEditorRecord(type, recordIndex = state.editorSelected[type], { sc
   }
   refreshRecordBar(type);
   renderEditorRecord(type, record);
+  if (type === "weapon" && previous !== record?.recordIndex) animationPreview.select();
+  return true;
 }
 
 function recordListPageSize(type) {
@@ -5065,7 +6135,7 @@ function moveEditorSelection(type, move, pageSize = recordListPageSize(type)) {
     }
     return false;
   }
-  selectEditorRecord(type, visible[target]);
+  if (selectEditorRecord(type, visible[target]) === false) return false;
   const row = findEditorDisplayRow(type, visible[target]);
   if (row) announce(`${editorRowName(row)}, 번호 ${row.recordIndex}, ${visible.length}개 중 ${target + 1}번째`);
   return true;
@@ -5085,7 +6155,7 @@ function handleEditorNavigationKey(event) {
 function handleRecordListClick(type, event) {
   const option = event.target.closest?.("[data-record-index]");
   if (!option) return;
-  selectEditorRecord(type, Number(option.dataset.recordIndex), { scroll: false });
+  if (selectEditorRecord(type, Number(option.dataset.recordIndex), { scroll: false }) === false) return;
   EDITOR_UI[type].list.focus?.({ preventScroll: true });
   setEditorPage(type, "main");
 }
@@ -5114,15 +6184,14 @@ function jumpToEditorRecord(type, recordIndex) {
   const row = findEditorDisplayRow(type, recordIndex);
   if (!row) return false;
   if (state.editorTab !== type) selectEditorTab(type, { render: false });
+  if (selectEditorRecord(type, recordIndex, {scroll:false}) === false) return false;
   if (row.defaultVisible === false && !state.showUnused[type]) {
     state.showUnused[type] = true;
     syncUnusedToggle();
   }
   const ui = EDITOR_UI[type];
   if (!visibleRecordRows(type).some((candidate) => candidate.recordIndex === recordIndex)) { ui.search.value = ""; editorSearchTools.clear(type); }
-  state.editorSelected[type] = recordIndex;
   renderRecordList(type);
-  selectEditorRecord(type, recordIndex);
   setEditorPage(type, "main");
   announce(`${editorRowName(row)}, 번호 ${row.recordIndex}로 이동했습니다.`);
   return true;
@@ -5142,28 +6211,35 @@ function heroSourceSlot(record) {
 
 function renderPilotHeroNavigation(record) {
   const slot = record?.recordKind === "hero-slot";
+  const identity = record?.heroIdentity === true;
   const source = heroSourceSlot(record);
   const panel = EDITOR_UI.pilot.panel, form = EDITOR_UI.pilot.form;
-  elements.pilotHeroLinks.hidden = !slot && source === null;
-  if (source !== null) elements.pilotHeroLinks.dataset.source = record.role === "hero-head" ? "head" : "list";
+  const combatHeading=byId('pilotCombatHeading');
+  if(combatHeading){combatHeading.textContent=record?.role==='hero-head'?'기본 능력치 · ROM 기준값':'능력';
+    combatHeading.title=record?.role==='hero-head'?'이 ROM 원본의 수치입니다. 현재 세이브 레벨에서 계산된 능력치와 구분하세요.':'';}
+  elements.pilotHeroLinks.hidden = !slot && !identity && source === null;
+  if(identity)elements.pilotHeroLinks.dataset.source='identity';
+  else if (source !== null) elements.pilotHeroLinks.dataset.source = record.role === "hero-head" ? "head" : "list";
   else delete elements.pilotHeroLinks.dataset.source;
   form.hidden = Boolean(slot);
   if (slot) panel.dataset.heroView = "slot";
   else delete panel.dataset.heroView;
-  if (source !== null) form.dataset.heroSource = record.role === "hero-head" ? "head" : "list";
+  if(identity)form.dataset.heroSource='identity';
+  else if (source !== null) form.dataset.heroSource = record.role === "hero-head" ? "head" : "list";
   else delete form.dataset.heroSource;
   elements.pilotHeroTargets.replaceChildren();
   elements.pilotHeroLinksNote.textContent = "";
   elements.pilotHeroLinksNote.removeAttribute("title");
   elements.pilotHeroReturnButton.hidden = !source;
-  if (!slot && source === null) return;
+  if (!slot && !identity && source === null) return;
   // The selected game's name tables use other pilots' placeholder names here.
   elements.pilotHeroLinksTitle.textContent = slot ? "실제 주인공 편집" : "주인공 원본";
-  const makeButton = (recordIndex, label, section, detail) => {
+  const makeButton = (recordIndex, label, section, detail, values) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "pilot-hero-target";
     button.textContent = label;
+    if(values){const meta=document.createElement('small');meta.className='pilot-hero-target-values';meta.textContent=values;button.append(meta);}
     button.dataset.heroTarget = String(recordIndex);
     button.dataset.heroSection = section;
     button.title = detail ?? label;
@@ -5181,11 +6257,20 @@ function renderPilotHeroNavigation(record) {
     section.append(heading, choices);
     elements.pilotHeroTargets.append(section);
   };
+  if(identity){
+    elements.pilotHeroLinksTitle.textContent='주인공 이름·초상화 참고';
+    elements.pilotHeroTargets.append(makeButton(303,'주인공 원본 편집','sources'),makeButton(302,'302번 슬롯 원본','sources'));
+    elements.pilotHeroLinksNote.textContent='독립된 능력치 레코드가 아닙니다.';
+    return;
+  }
   if (slot) {
     if (record.recordIndex === 303) {
-      group("능력치 원본", [304, 305, 306, 307].map(id => makeButton(id,
-        `${id % 2 ? "격투형" : "사격형"} #${id}`, "stats",
-        `#303이 선택 정보에 따라 가져오는 능력치 원본 #${id}. 정신기·특수능력은 별도 원본에서 가져옵니다.`)));
+      group("기본 능력치", [304, 305, 306, 307].map(id => {
+        const row=findEditorDisplayRow('pilot',id);
+        return makeButton(id,`기본 능력치 ${id-303}`,"stats",
+          `선택 정보에 따라 가져오는 ROM 원본 #${id}. 정신기·특수능력은 별도 원본입니다.`,
+          row?`격투 ${row.atk} · 사격 ${row.shot}`:null);
+      }));
     } else {
       group("능력치 연결 미확인", [makeButton(303, "#303 능력치 원본", "sources",
         "#302의 능력치 공급원은 아직 확인하지 못했습니다. 확인된 다른 주인공 자리 #303의 능력치 원본을 볼 수 있습니다.")]);
@@ -5456,34 +6541,224 @@ function textSpan(className, text) {
   return span;
 }
 
+const CRUISER_PRESETS=Object.freeze(['g-cruiser','s-g-cruiser']);
+const SRW4_CRUISER_REQUIRED='G크루저 변형은 제4차 일본판 Rev 1 원본의 그림만 사용합니다. 기타 → 제4차에서 원본을 연결해 주세요.';
+function hasSrw4CruiserSource(){return state.editorSrw4Connected===true||state.editorUnits.some(row=>row.srw4Native===true);}
+function renderUnitConstructionChoice() {
+  const select=byId('unitConstructionChoice');
+  const canCreate=state.editorUnits.some(row=>row.restorationEligible&&!row.construction&&row.recordKind==='unused-filler');
+  const current=selectedEditorRow('unit');
+  const canUpgrade=state.editorUnits.some(row=>row.construction&&row.editable!==false);
+  // G-Cruiser art comes only from the connected 4th SRW Rev 1 source (기타 → 제4차); no drawn art is shipped.
+  const rev1=hasSrw4CruiserSource();
+  const disabled=!state.editorSessionToken||anyJobBusy()||!canCreate&&!canUpgrade&&!current?.pendingConstruction;
+  const signature=`${canCreate}:${canUpgrade}:${Boolean(current?.pendingConstruction)}:${current?.pendingConstructionUpgrade}:${disabled}:${rev1}`;
+  if(select.dataset.constructionState===signature)return;
+  select.dataset.constructionState=signature;
+  select.replaceChildren(...[['',canUpgrade?'＋ 추가 / 갱신':'＋ 기체 추가'],
+    ...UNIT_CONSTRUCTION_VISIBLE_PRESETS.map(p=>[p.id,(p.id==='g-cruiser'?'Ex-S / G크루저 변형':p.id==='s-g-cruiser'?'S건담 / G크루저 변형':p.name)+(CRUISER_PRESETS.includes(p.id)&&!rev1?' · 제4차 Rev 1 연결 필요':'')]),...(canUpgrade?[['upgrade','추가한 기체 구성 갱신…']]:[]),...(current?.pendingConstruction?[['cancel',current.pendingConstructionUpgrade!==undefined?'현재 갱신 취소':'현재 추가 취소']]:[])].map(([value,text])=>{
+      const option=document.createElement('option');option.value=value;option.textContent=text;
+      option.disabled=value!==''&&value!=='cancel'&&value!=='upgrade'&&(!canCreate||CRUISER_PRESETS.includes(value)&&!rev1);return option;
+    }));
+  select.value='';select.disabled=disabled;
+  select.title=canUpgrade?'미사용 기체 추가 · 이미 추가한 기체의 능력치·무장 비교 후 선택 갱신':canCreate?'남은 그래픽으로 빈 자리에 기체 구성 · 기체별 능력치·무장과 독립 스마트건·인컴 적용':'구성할 빈 자리가 없습니다.';
+}
+function changeUnitConstruction() {
+  const select=byId('unitConstructionChoice'),value=select.value;select.value='';
+  if(!state.editorSessionToken||anyJobBusy()||!value)return;
+  if(!validateEditorForms())return;
+  if(value==='upgrade'){unitUpgradeUI.open();return;}
+  let target;
+  if(value==='cancel'){
+    target=selectedEditorRow('unit');
+    if(state.editorUnits.some(row=>row.srw4Native===true)&&SRW4_UNUSED_PRESETS.includes(target?.construction?.preset??target?.pendingConstruction)){
+      announce('제4차 7형태는 묶음으로 취소해야 합니다. 기타 → 제4차 → 가져오기 취소를 사용해 주세요.');return;
+    }
+    const group=target?.constructionGroup,rootId=target?.constructionGroupRoot,cancelledPreset=target?.construction?.preset??target?.pendingConstruction;
+    const pair=['ex-s-cruiser','s-cruiser'].includes(group)?state.editorUnits.filter(u=>u.constructionGroup===group&&u.pendingConstruction&&u.constructionGroupRoot===rootId):[];
+    if(!cancelUnitConstruction(target))return;
+    for(const row of pair)if(row!==target)cancelUnitConstruction(row);
+    if(['ex-s-cruiser','s-cruiser'].includes(group)||['s-gundam','ex-s-gundam'].includes(cancelledPreset)){
+      const hasPair=state.editorUnits.some(u=>['s-gundam','s-g-cruiser','ex-s-gundam','g-cruiser'].includes(u.construction?.preset));
+      const marker=state.editorAliceConstructionDefault;
+      cancelDefaultAlice(state.editorAliceRows[0],marker,{hasPair});if(!hasPair)state.editorAliceConstructionDefault=null;syncAlicePilotView();
+    }
+    pruneConstructionWeaponClones(state.editorUnits,state.editorWeapons);
+  }else{
+    target=state.editorUnits.find(row=>row.restorationEligible&&!row.construction&&row.recordKind==='unused-filler');
+    const p=unitConstructionPreset(value),donor=state.editorUnits.find(row=>row.recordIndex===p?.donor);
+    if(!target||!p||!UNIT_CONSTRUCTION_VISIBLE_PRESETS.some(item=>item.id===value))return;
+    if(CRUISER_PRESETS.includes(value)&&!hasSrw4CruiserSource()){announce(SRW4_CRUISER_REQUIRED);return;}
+    try{
+      if(['g-cruiser','s-g-cruiser'].includes(value)&&!state.editorBattleComponentsAvailable)throw new RangeError('새 전투 그림 원본을 확인할 수 없습니다.');
+      const plan=value==='s-g-cruiser'?planSCruiserConstruction(state.editorUnits,state.editorWeapons,state.editorGameId):value==='g-cruiser'?planExSCruiserConstruction(state.editorUnits,state.editorWeapons,state.editorGameId):planConceptUnitConstruction(target,state.editorUnits,state.editorWeapons,value,state.editorGameId);
+      for(const update of plan.weaponUpdates)replaceUnitRow(update.target,update.row);
+      if(plan.units){for(const row of plan.units)replaceUnitRow(state.editorUnits.find(u=>u.recordIndex===row.recordIndex),row);target=state.editorUnits.find(u=>u.recordIndex===plan.units[1].recordIndex);}
+      else replaceUnitRow(target,plan.unit);
+      if(['s-gundam','ex-s-gundam','g-cruiser','s-g-cruiser'].includes(value)){
+        const marker=connectDefaultAlice(state.editorAliceRows[0],plan.units?.[0]?.recordIndex??target.recordIndex,{explicitChoice:state.editorAliceCrewExplicit});if(marker&&!state.editorAliceConstructionDefault)state.editorAliceConstructionDefault=marker;syncAlicePilotView();
+      }
+    }catch(error){announce(error.code==='EDITOR_CONSTRUCTION_WEAPON_FULL'?error.message:'이 파일에서는 해당 기체를 구성할 수 없습니다.');return;}
+  }
+  searchTextCache.delete(target);optionNodes.unit.clear();optionNodes.weapon.clear();
+  if(value==='g-cruiser'||value==='cancel'){optionNodes.pilot.clear();listNeedsBuild.pilot=true;}
+  rebuildEditorRowIndex();
+  refreshUnitWeaponOwnership();
+  if(value==='cancel'){
+    state.editorSelected.unit=null;renderRecordList('unit');renderEditorRecord('unit',selectedEditorRow('unit'));
+  }else jumpToEditorRecord('unit',target.recordIndex);
+  updateEditorStatus('unit',target);
+  animationPreview.refreshChoices();unitAnimationPreview.select();
+  announce(value==='cancel'?'새 기체 추가를 취소했습니다.':`${target.name} #${target.recordIndex} 구성 · 수치와 무장을 수정할 수 있습니다.${value==='g-cruiser'&&state.editorAliceConstructionDefault?' ALICE가 기본 서브파일럿으로 연결됐습니다. 파일럿 탭에서 변경할 수 있습니다.':''}`);
+}
+
+function renderWeaponCloneControls(){
+ const row=selectedEditorRow('weapon'),free=state.editorWeapons.filter(r=>r.cloneEligible&&!r.weaponClone),busy=anyJobBusy(),button=byId('weaponCloneButton'),cancel=byId('weaponCloneCancel');
+ button.disabled=busy||!state.editorSessionToken||!row?.editable||Boolean(row.weaponClone)||!free.length;
+ button.title=free.length?`선택한 무기를 별도 번호에 복제 · 남은 빈 레코드 ${free.length}개`:'확인된 빈 무기 레코드가 없습니다.';
+ cancel.hidden=!row?.pendingWeaponClone;cancel.disabled=busy;
+}
+// Same dialog as the editor notice (editor-notice.mjs): asked before every clone.
+function confirmWeaponClone(source){
+ return new Promise(resolve=>{
+  const dialog=document.createElement('dialog');dialog.className='editor-notice';
+  dialog.setAttribute('aria-labelledby','weaponCloneNoticeTitle');dialog.setAttribute('aria-describedby','weaponCloneNoticeText');
+  const title=document.createElement('h2');title.id='weaponCloneNoticeTitle';title.textContent='무기 독립 복제';
+  const text=document.createElement('p');text.id='weaponCloneNoticeText';
+  text.textContent=`선택한 무기(${editorRowName(source)} #${source.recordIndex})를 빈 무기 번호에 복제합니다. 복제한 번호는 BIN으로 저장한 뒤에는 지울 수 없습니다. 저장하기 전에는 「복제 취소」로 되돌릴 수 있습니다.`;
+  const actions=document.createElement('div');actions.className='editor-notice-actions';
+  const cancel=document.createElement('button'),accept=document.createElement('button');
+  cancel.type=accept.type='button';cancel.textContent='취소';accept.textContent='복제';accept.className='is-primary';
+  const finish=agreed=>{dialog.close();dialog.remove();resolve(agreed);};
+  cancel.addEventListener('click',()=>finish(false));accept.addEventListener('click',()=>finish(true));
+  dialog.addEventListener('cancel',event=>{event.preventDefault();finish(false);});
+  actions.append(cancel,accept);dialog.append(title,text,actions);document.body.append(dialog);dialog.showModal();cancel.focus();
+ });
+}
+async function cloneSelectedWeapon(){
+ const source=selectedEditorRow('weapon');let target=state.editorWeapons.find(r=>r.cloneEligible&&!r.weaponClone);
+ if(byId('weaponCloneButton').disabled||!source||!target||!weaponNameControl.validate({report:true}))return;
+ if(!validateEditorForms())return;
+ if(!await confirmWeaponClone(source))return;
+ // The session may have changed while the dialog was open.
+ if(selectedEditorRow('weapon')!==source)return;target=state.editorWeapons.find(r=>r.cloneEligible&&!r.weaponClone);
+ if(byId('weaponCloneButton').disabled||!target)return;
+ try{replaceUnitRow(target,createWeaponCloneRow(target,source,state.editorGameId));}
+ catch(error){showEditorError('무기를 복제할 수 없습니다',error.message);return;}
+ searchTextCache.delete(target);optionNodes.weapon.clear();rebuildEditorRowIndex();refreshUnitWeaponOwnership();
+ jumpToEditorRecord('weapon',target.recordIndex);updateEditorStatus('weapon',target);unitAnimationPreview.refreshChoices();announce(`무기 #${source.recordIndex} → #${target.recordIndex} 독립 복제. 이름과 수치를 바꾼 뒤 기체 무장에 추가할 수 있습니다.`);
+}
+function cancelSelectedWeaponClone(){
+ const row=selectedEditorRow('weapon');if(byId('weaponCloneCancel').disabled||!row?.pendingWeaponClone)return;
+ if(!validateEditorForms())return;
+ const used=[...planUnitLoadouts(state.editorUnits,state.editorWeapons).values()].some(list=>list.entries.some(e=>e.weaponIndex===row.recordIndex));
+ if(used){announce('이 복제 무기를 쓰는 기체 무장을 먼저 다른 무기로 바꾸거나 추가를 취소해 주세요.');return;}
+ const source=row.weaponClone.sourceRecordIndex;if(!cancelWeaponClone(row))return;
+ searchTextCache.delete(row);optionNodes.weapon.clear();rebuildEditorRowIndex();refreshUnitWeaponOwnership();jumpToEditorRecord('weapon',source);updateEditorStatus('weapon',row);unitAnimationPreview.refreshChoices();
+}
+
 function renderUnitWeapons(record) {
-  const list = record?.weaponList ?? null;
+  const list = record ? pendingUnitWeapons(record, state.editorWeapons,state.editorUnits) : null;
   const container = elements.unitWeaponList;
   container.setAttribute("aria-label", record ? `${editorRowName(record)} 기체 무장` : "기체 무장");
   const entries = list && list.status !== "unknown" && !list.placeholder ? list.entries : [];
+  if(!entries.some(entry=>entry.weaponIndex===unitPreviewWeapon))unitPreviewWeapon=entries[0]?.weaponIndex??null;
+  unitWeaponEditor.context(record?.recordIndex??null,entries.map(entry=>entry.weaponIndex));
+  elements.unitWeaponSearch.hidden = !record || record.editable === false || list?.status !== 'known' || list.placeholder;
+  elements.unitWeaponToolbar.hidden=elements.unitWeaponSearch.hidden;
+  const query = normalizeSearch(elements.unitWeaponSearch.value).replace(/^#/, '');
+  const previousAdd=elements.unitWeaponAddChoice.value;
+  elements.unitWeaponAddChoice.replaceChildren(...state.editorWeapons.filter(candidate=>!query||normalizeSearch(`${editorRowName(candidate)} ${candidate.recordIndex}`).includes(query)).map(candidate=>{
+    const option=document.createElement('option');option.value=String(candidate.recordIndex);option.textContent=`#${candidate.recordIndex} ${editorRowName(candidate)}${candidate.ownership==='unowned'?' · 미연결':''}`;return option;
+  }));
+  if([...elements.unitWeaponAddChoice.options].some(option=>option.value===previousAdd))elements.unitWeaponAddChoice.value=previousAdd;
+  const canAdd=(record?.weaponAdditionLimit??0)>(record?.weaponAdditions?.length??0)&&!elements.unitWeaponSearch.hidden;
+  elements.unitWeaponAddChoice.disabled=!canAdd;
+  elements.unitWeaponAddButton.disabled=!canAdd||!elements.unitWeaponAddChoice.options.length;
+  elements.unitWeaponAddButton.title=canAdd?'선택한 무기를 새 개조 슬롯에 추가합니다.':'한 기체의 무장은 최대 16개입니다. 원래 목록이 불명확한 기체는 추가할 수 없습니다.';
+  if (!entries.some(entry => entry.weaponIndex === unitPreviewWeapon)) unitPreviewWeapon = entries[0]?.weaponIndex ?? null;
+  byId('unitAnimationButton').disabled = !entries.length || state.editorBusy;
   const items = entries.map((entry) => {
     const weapon = rowIndexMaps.weapon.get(entry.weaponIndex) ?? null;
     const name = weapon ? editorRowName(weapon) : `무기 #${entry.weaponIndex}`;
     const { wrapper, button } = jumpButton("weapon", entry.weaponIndex, "unit-weapon-entry");
+    delete button.dataset.jumpType;delete button.dataset.jumpIndex;
+    button.dataset.unitWeaponSelect=String(entry.weaponIndex);
+    wrapper.classList.add('unit-weapon-row');
     if (!weapon) button.disabled = true;
     const flags = [];
     if (entry.requiresInvestment) flags.push("추가 투자 필요");
     if (entry.requiresFlag) flags.push(`조건 플래그 ${entry.flagNumber}`);
     const stats = weapon ? `공격 ${formatEditorValue(weapon.attack)} · 사정 ${weapon.minRange}–${weapon.maxRange}` : "무기 표에서 찾을 수 없음";
-    button.title = `슬롯 ${entry.slot}은 같은 번호의 무기끼리 개조를 나누어 쓰는 칸입니다. 누르면 무기 항목으로 이동합니다.`;
+    button.title = `무장 ${entry.entryIndex + 1} · 개조 슬롯 ${entry.slot} · 누르면 이 무장 영역에서 무기 수치를 수정합니다. 같은 무기 번호를 쓰는 모든 기체에 적용됩니다.`;
     button.setAttribute(
       "aria-label",
-      `슬롯 ${entry.slot}, ${name}, ${stats}${flags.length ? `, ${flags.join(", ")}` : ""}. 누르면 무기 항목으로 이동합니다.`,
+      `무장 ${entry.entryIndex + 1}, 개조 슬롯 ${entry.slot}, ${name}, ${stats}${flags.length ? `, ${flags.join(", ")}` : ""}. 이곳에서 무기 수치 수정.`,
     );
     button.append(
-      textSpan("weapon-entry-slot", `슬롯 ${entry.slot}`),
+      textSpan("weapon-entry-slot", `무장 ${entry.entryIndex + 1} · 개조 슬롯 ${entry.slot}`),
       textSpan("weapon-entry-name", name),
       textSpan("weapon-entry-stats", stats),
     );
     if (flags.length) button.append(textSpan("weapon-entry-flags", flags.join(" · ")));
+    if (record?.editable !== false && list?.status === 'known' && !list.placeholder) {
+      const field = entry.added ? `addition${entry.additionIndex+1}` : UNIT_WEAPON_FIELDS[entry.entryIndex];
+      const controls = document.createElement('div');
+      controls.className = 'unit-weapon-edit';
+      const choice = document.createElement('select');
+      choice.setAttribute('aria-label', `무장 ${entry.entryIndex + 1} 교체 · 개조 슬롯 ${entry.slot}`);
+      choice.dataset.unitWeaponField = field;
+      for (const candidate of state.editorWeapons) {
+        if (candidate.recordIndex !== entry.weaponIndex && query && !normalizeSearch(`${editorRowName(candidate)} ${candidate.recordIndex}`).includes(query)) continue;
+        const option = document.createElement('option');
+        option.value = String(candidate.recordIndex);
+        option.textContent = `#${candidate.recordIndex} ${editorRowName(candidate)}${candidate.ownership === 'unowned' ? ' · 미연결' : ''}`;
+        choice.append(option);
+      }
+      choice.value = String(entry.weaponIndex);
+      const reset = document.createElement('button');
+      reset.type = 'button'; reset.textContent = entry.added?'×':'↶';
+      reset.setAttribute('aria-label',entry.added?`추가 무장 ${entry.additionIndex+1} 삭제`:`무장 ${entry.entryIndex + 1} 원래 무기로 되돌리기`);
+      reset.disabled = !entry.added&&record[field] === record.original?.[field];
+      const apply = value => {
+        if(!unitWeaponEditor.validate({report:true})){choice.value=String(entry.weaponIndex);return;}
+        const candidate={...record,weaponAdditions:[...(record.weaponAdditions??[])]};
+        if(entry.added){if(value===null)candidate.weaponAdditions.splice(entry.additionIndex,1);else candidate.weaponAdditions[entry.additionIndex]=value;}else candidate[field]=value;
+        try{pendingUnitWeapons(candidate,state.editorWeapons,state.editorUnits);}catch{choice.value=String(entry.weaponIndex);announce('변형·합체 기체와 공유하는 개조 또는 잔탄 칸이 부족합니다.');return;}
+        if(entry.added){if(value===null)record.weaponAdditions.splice(entry.additionIndex,1);else record.weaponAdditions[entry.additionIndex]=value;}
+        else record[field] = value;
+        refreshUnitWeaponOwnership();
+        renderUnitWeapons(record);
+        refreshRecordOption('unit',record);
+        unitWeaponScroller.refresh({ focusField: field });
+        updateEditorStatus('unit', record);
+        container.querySelector(`[data-unit-weapon-field="${field}"]`)?.focus({ preventScroll: true });
+      };
+      choice.addEventListener('change', () => {
+        const id = Number(choice.value);
+        if (!state.editorWeapons.some(row => row.recordIndex === id)) return;
+        apply(id);
+      });
+      reset.addEventListener('click', () => apply(entry.added?null:record.original[field]));
+      controls.append(choice, reset);
+      wrapper.append(controls);
+      wrapper.classList.toggle('is-modified', entry.added||record[field] !== record.original?.[field]);
+    }
+    if (!PUBLIC_EDITOR_FEATURES.runtimePreview) return wrapper;
+    const preview = document.createElement('button');
+    preview.type = 'button'; preview.className = 'unit-slot-preview'; preview.textContent = '▶';
+    preview.setAttribute('aria-label', `${name} 연출 미리보기`);
+    preview.title = `${name} 연출 미리보기`;
+    preview.disabled = !weapon || state.editorBusy;
+    preview.addEventListener('click', () => {
+      unitPreviewWeapon = entry.weaponIndex;
+      unitAnimationPreview.select(); unitAnimationPreview.show();
+    });
+    wrapper.append(preview);
     return wrapper;
   });
   container.replaceChildren(...items);
+  highlightUnitWeapon(unitWeaponEditor.selected());
   const note = elements.unitWeaponNote;
   note.classList.remove("is-caution");
   if (!record) {
@@ -5496,7 +6771,7 @@ function renderUnitWeapons(record) {
   } else if (list.status === "known") {
     note.textContent = entries.length === 0
       ? "등록된 무기가 없습니다."
-      : "저장된 순서와 슬롯 번호 그대로 보여 줍니다. 게임 화면에서 이 순서로 보이는지는 확인하지 못했습니다.";
+      : "선택해 편집 · 개조 슬롯·조건 유지 · 최대 16개";
   } else if (list.status === "inconsistent") {
     note.textContent = `주의: 기록된 무기 수(${list.declaredCount}개)와 목록에 실제로 있는 항목 수(${list.terminatedCount}개)가 달라 어느 쪽이 맞는지 확인하지 못했습니다. 목록 끝 표시 앞의 항목만 보여 줍니다.`;
     note.classList.add("is-caution");
@@ -5505,9 +6780,46 @@ function renderUnitWeapons(record) {
     note.textContent = `주의: 기체 무장을 안전하게 읽지 못해 보여 주지 않습니다${reasons.length ? ` (${reasons.join(", ")})` : ""}.`;
     note.classList.add("is-caution");
   }
+  note.title = note.textContent;
   const count = list && list.status !== "unknown" && !list.placeholder ? String(entries.length) : "";
   elements.unitWeaponTotal.textContent = count ? `${count}개` : "";
   elements.unitWeaponPageCount.textContent = count;
+  unitWeaponScroller.refresh({ recordKey: record?.recordIndex ?? null });
+  unitAnimationPreview.select();
+}
+
+function highlightUnitWeapon(id) {
+  for(const button of elements.unitWeaponList.querySelectorAll('[data-unit-weapon-select]')) {
+    const selected=id!==null&&Number(button.dataset.unitWeaponSelect)===id;
+    button.setAttribute('aria-pressed',String(selected));button.closest('.unit-weapon-row').classList.toggle('is-selected',selected);
+    const weapon=rowIndexMaps.weapon.get(Number(button.dataset.unitWeaponSelect));
+    const stats=button.querySelector('.weapon-entry-stats');
+    if(stats&&weapon)stats.textContent=`공격 ${formatEditorValue(weapon.attack)} · 사정 ${weapon.minRange}–${weapon.maxRange}`;
+  }
+}
+
+function addSelectedUnitWeapon(){
+  const row=selectedEditorRow('unit'),id=Number(elements.unitWeaponAddChoice.value);
+  if(!row||row.editable===false||elements.unitWeaponAddButton.disabled||state.editorBusy)return;
+  if(!unitWeaponEditor.validate({report:true}))return;
+  const wanted=[...(row.weaponAdditions??[]),id];
+  if(wanted.length>(row.weaponAdditionLimit??0))return;
+  try{pendingUnitWeapons({...row,weaponAdditions:wanted},state.editorWeapons,state.editorUnits);}catch{announce('변형·합체 기체와 공유하는 개조 또는 잔탄 칸이 부족합니다.');return;}
+  row.weaponAdditions=wanted;refreshUnitWeaponOwnership();renderUnitWeapons(row);refreshRecordOption('unit',row);updateEditorStatus('unit',row);
+  const field=`addition${wanted.length}`;unitWeaponScroller.refresh({focusField:field});
+  elements.unitWeaponList.querySelector(`[data-unit-weapon-field="${field}"]`)?.focus({preventScroll:true});
+}
+
+function refreshUnitWeaponOwnership() {
+  const plans=planUnitLoadouts(state.editorUnits,state.editorWeapons);
+  const linkage = unitsOfWeapon(state.editorUnits.map(row => ({ ...row, weaponList:plans.get(row.recordIndex) })));
+  for (const row of state.editorWeapons) {
+    const next=weaponOwnership(row.recordIndex, linkage);
+    const changed=row.ownership!==next.ownership||JSON.stringify(row.owners)!==JSON.stringify(next.owners)||JSON.stringify(row.unverifiedOwnerUnits)!==JSON.stringify(next.unverifiedOwnerUnits);
+    Object.assign(row,next);
+    if(changed){searchTextCache.delete(row);refreshRecordOption('weapon',row);}
+  }
+  listNeedsBuild.weapon = true;
 }
 
 function renderWeaponOwners(record) {
@@ -5534,9 +6846,10 @@ function renderWeaponOwners(record) {
   ].map((chip) => {
     const { wrapper, button } = jumpButton("unit", chip.unit, `owner-chip${chip.unverified ? " is-unverified" : ""}`);
     const name = unitNameForOwner(chip.unit);
-    const detail = chip.unverified ? "확인 불가" : `슬롯 ${chip.slots.join(", ")}`;
+    const detail = chip.unverified ? "확인 불가" : `개조 슬롯 ${chip.slots.join(", ")}`;
     button.setAttribute("aria-label", `${name}, 번호 ${chip.unit}, ${detail}. 누르면 이 기체로 이동합니다.`);
     button.title = "누르면 이 기체로 이동합니다.";
+    entityArtwork.append(button, { unitId: chip.unit }, { pilot: false });
     button.append(textSpan("owner-chip-name", name), textSpan("owner-chip-meta", `#${chip.unit} · ${detail}`));
     return wrapper;
   });
@@ -5560,7 +6873,7 @@ function renderWeaponOwners(record) {
 // 편집 코어가 행에 싣는 값을 그대로 쓴다. 실드·베어내기 가능은 참·거짓이고 선택칸에서는 "1"(있음)과 "0"(없음)이다.
 // 행에 값이 없으면(이 칸을 모르는 코어) 칸을 잠근다.
 const EDITOR_FLAG_FIELDS = new Set(["shield", "parry"]);
-const OPTIONAL_EDITOR_FIELDS = new Set(["shield", "parry", "ammo", "requiredMorale", "requiredSkill"]);
+const OPTIONAL_EDITOR_FIELDS = new Set(["killMoney", "partSlots", "shield", "parry", "ammo", "requiredMorale", "requiredSkill"]);
 const FIELD_RULE_FACTS = Object.freeze({
   ammo: "weaponAmmo", requiredMorale: "weaponRequiredMorale", requiredSkill: "weaponRequiredSkill", shield: "unitShield", parry: "unitParry",
 });
@@ -5585,6 +6898,7 @@ function editorControlText(field, value) {
 
 function formatEditorFieldValue(field, value) {
   if (typeof value === "boolean") return value ? "있음" : "없음";
+  if (field === 'critical') return criticalPercentLabel(criticalValues(value)?.display);
   if (field === "requiredSkill" && Number.isSafeInteger(value)) return requiredSkillLabel(value);
   if (field === "requiredMorale" && value === 0) return "없음";
   return formatEditorValue(value);
@@ -5694,11 +7008,14 @@ function renderEditorRecord(type, record) {
   const showStats = Boolean(record) && record.statsValid !== false;
   for (const control of ui.form.querySelectorAll("[data-editor-field]")) {
     const field = control.dataset.editorField;
+    if (record?.recordIndex === state.editorSelected[type] && control.getAttribute('aria-invalid') === 'true') continue;
     control.setCustomValidity?.("");
     const value = showStats && isEditorValue(record[field]) ? record[field] : null;
     if (control.dataset.gradeKind) {
       setGradeSelectValue(control, value);
       control.disabled = locked || !showStats || (value !== null && !isEditableGradeValue(value));
+    } else if (type==='weapon'&&field==='critical') {
+      renderWeaponCriticalControl(control,record,value,locked);
     } else if (OPTIONAL_EDITOR_FIELDS.has(field)) {
       renderUseConditionControl(control, record, value, locked);
     } else {
@@ -5712,17 +7029,22 @@ function renderEditorRecord(type, record) {
   renderEditorRecordNotice(type, record);
   ensureTerrainHelp(type);
   if (type === "unit") {
+    renderUnitConstructionChoice();
     renderUnitSpecialAbilities(record);
     renderUnitWeapons(record);
   }
   if (type === "pilot") {
     renderPilotHeroNavigation(record);
-    renderPilotMentalCommands(record);
+    if (!elements.pilotMentalCommands.querySelector('[data-spirit-level][aria-invalid="true"]')) renderPilotMentalCommands(record);
     renderPilotRuntimeSkills(record);
-    renderPilotSkillSchedule(record);
+    if (!elements.pilotSkillSchedule.querySelector('[data-skill-level][aria-invalid="true"]')) renderPilotSkillSchedule(record);
     renderPilotSkillButton(record);
   }
   if (type === "weapon") {
+    renderWeaponCloneControls();
+    weaponDialogueSource.refresh();
+    battleTimeline.select(record?.recordIndex);
+    weaponNameControl.refresh();
     renderWeaponTerrain(record);
     renderWeaponOwners(record);
   }
@@ -6085,7 +7407,7 @@ function renderUnitSpecialAbilities(record) {
     select.setAttribute("aria-label", `특수능력 ${slot} 종류`);
     const emptyOption = document.createElement("option");
     emptyOption.value = "0";
-    emptyOption.textContent = id === 0 ? "＋ 능력 추가" : "없음 (삭제)";
+    emptyOption.textContent = id === 0 ? "＋ 추가" : "없음 (삭제)";
     emptyOption.disabled = index > 0 && record?.abilityLocks?.slots?.some((position) => position > index);
     select.append(emptyOption);
     state.editorUnitAbilityNames.forEach((name, nameIndex) => {
@@ -6543,6 +7865,12 @@ function handleSpiritSelect(event) {
   if (select?.tagName !== "SELECT") return;
   const record = selectedEditorRow("pilot");
   if (!record || !Array.isArray(record.spirits)) return;
+  const invalid = pilotListInvalidControl();
+  if (invalid) {
+    if (select.dataset.spiritSlot !== undefined) select.value = String(record.spirits[Number(select.dataset.spiritSlot)]?.id ?? '');
+    else if (select.dataset.spiritAdd !== undefined) select.value = '';
+    reportEditorOwnedInvalid('pilot', invalid); return;
+  }
   if (select.dataset?.spiritAdd !== undefined) {
     if (select.value === "") return;
     const next = addSpirit(record, record.spirits, Number(select.value));
@@ -6572,6 +7900,7 @@ function handleSpiritLevelInput(event) {
   const index = Number(input.dataset.spiritLevel);
   if (!record || !Array.isArray(record.spirits) || !Number.isSafeInteger(index) || !record.spirits[index]) return;
   const value = input.value === "" ? Number.NaN : Number(input.value);
+  const wasInvalid=input.getAttribute('aria-invalid')==='true';
   input.setCustomValidity("");
   const next = setSpiritLevel(record, record.spirits, index, value, record.original?.spirits ?? []);
   if (next === record.spirits) {
@@ -6579,8 +7908,9 @@ function handleSpiritLevelInput(event) {
       const message = `습득 레벨은 ${SPIRIT_LEVEL_MIN}~${SPIRIT_LEVEL_MAX}까지 입력할 수 있습니다. ${input.value === "" ? "빈 값" : input.value}은 적용되지 않았습니다.`;
       input.setCustomValidity(message);
       input.setAttribute("aria-invalid", "true");
+      invalidateEditorDraft();
       setEditorStatus(`정신커맨드 ${message}`);
-    }
+    } else if(wasInvalid){input.removeAttribute('aria-invalid');invalidateEditorDraft();setEditorStatus('정신커맨드 습득 레벨을 확인했습니다.');}
     return;
   }
   input.removeAttribute("aria-invalid");
@@ -6597,6 +7927,8 @@ function handleSpiritLevelInput(event) {
 function handleSpiritClick(event) {
   const button = event.target.closest?.("button");
   if (!button || button.dataset?.spiritRemove === undefined) return;
+  const invalid = pilotListInvalidControl();
+  if (invalid) { reportEditorOwnedInvalid('pilot', invalid); return; }
   const record = selectedEditorRow("pilot");
   if (!record || !Array.isArray(record.spirits)) return;
   const index = Number(button.dataset.spiritRemove);
@@ -6610,6 +7942,10 @@ function handleSpiritClick(event) {
 function handleSkillDialogClick(event) {
   const target = event.target.closest?.("button");
   if (!target) return;
+  if (target.dataset.skillRemove !== undefined || target.dataset.skillAdd !== undefined || target.dataset.skillRevert !== undefined) {
+    const invalid = pilotListInvalidControl();
+    if (invalid) { reportEditorOwnedInvalid('pilot', invalid); return; }
+  }
   if (target.dataset.skillRemove !== undefined) removePilotSkillAt(Number(target.dataset.skillRemove));
   else if (target.dataset.skillReplace !== undefined) beginPilotSkillReplace(Number(target.dataset.skillReplace));
   else if (target.dataset.skillReplaceCancel !== undefined) {
@@ -6644,6 +7980,11 @@ function handleSkillRankChange(event) {
   if (select.dataset?.skillRank === undefined) return;
   const record = pilotRowForSkills();
   const index = Number(select.dataset.skillRank);
+  const invalid = pilotListInvalidControl();
+  if (invalid) {
+    if (record?.specialAbilities[index]) select.value = String(record.specialAbilities[index].id);
+    reportEditorOwnedInvalid('pilot', invalid); return;
+  }
   const id = Number(select.value);
   if (!record || skillReplaceBlock(record, state.editorGameId, index, id) !== null) {
     if (record?.specialAbilities[index]) select.value = String(record.specialAbilities[index].id);
@@ -6673,6 +8014,8 @@ function removePilotSkillAt(index) {
 }
 
 function addPilotSkillFromDialog() {
+  const invalid = pilotListInvalidControl();
+  if (invalid) { reportEditorOwnedInvalid('pilot', invalid); return; }
   const record = selectedEditorRow("pilot");
   if (!record) return;
   const choice = selectedSkillChoice();
@@ -6716,6 +8059,7 @@ function handleSkillLevelInput(event) {
   const index = Number(input.dataset.skillLevel);
   if (!record || !Number.isSafeInteger(index)) return;
   const value = input.value === "" ? Number.NaN : Number(input.value);
+  const wasInvalid=input.getAttribute('aria-invalid')==='true';
   input.setCustomValidity("");
   const next = setLevel(record.specialAbilities, index, value, record.originalSkillEntries ?? []);
   if (next === record.specialAbilities) {
@@ -6723,8 +8067,9 @@ function handleSkillLevelInput(event) {
     if (!Number.isInteger(value) || (record.specialAbilities[index] && value !== record.specialAbilities[index].level)) {
       input.setCustomValidity(`습득 레벨은 ${SKILL_LEVEL_MIN}부터 ${SKILL_LEVEL_MAX} 사이의 정수여야 합니다.`);
       input.setAttribute("aria-invalid", "true");
+      invalidateEditorDraft();
       setEditorStatus("특수능력 습득 레벨의 범위를 확인해 주세요.");
-    }
+    } else if(wasInvalid){input.removeAttribute('aria-invalid');invalidateEditorDraft();setEditorStatus('특수능력 습득 레벨을 확인했습니다.');}
     return;
   }
   input.removeAttribute("aria-invalid");
@@ -6762,9 +8107,11 @@ function openPilotSkillDialog() {
   skillReplaceIndex = null;
   elements.pilotSkillAddSelect.value = "";
   elements.pilotSkillAddLevel.value = String(SKILL_LEVEL_MIN);
-  renderPilotSkillSchedule(record);
+  const invalid = elements.pilotSkillSchedule.querySelector('[data-skill-level][aria-invalid="true"]');
+  if (!invalid) renderPilotSkillSchedule(record);
   elements.pilotSkillDialog.showModal();
-  pilotSkillPagination.refresh({ reset: true });
+  if (invalid) pilotSkillPagination.refresh({ focusIndex: Number(invalid.dataset.skillLevel) }).then(() => invalid.focus({preventScroll:true}));
+  else pilotSkillPagination.refresh({ reset: true });
 }
 
 // ---- 정신커맨드 여섯 칸 ----------------------------------------------------------------------------------------
@@ -6819,9 +8166,15 @@ function spiritRoomHelp(summary, room) {
 
 // 제목줄 오른쪽: 고칠 수 있으면 함께 쓰는 남은 자리, 아니면 짧은 이유. 자세한 설명은 옆의 정보 단추에 있다.
 function renderSpiritRoom(record) {
+  aliceCrewEditor.render(record);
   const target = elements.pilotSpiritRoom;
   if (!target) return;
   target.parentNode?.querySelector?.(".pilot-spirit-room-help")?.remove?.();
+  if(record?.aliceIdentity){
+    target.textContent=record.aliceCrewEnabled?'서브파일럿 설정':'동승 선택 가능';
+    const button=gameplayHelpButton(()=>({title:'인공지능 서브파일럿',text:'별도 설정에서 동승 여부, 기본 정신 포인트와 정신커맨드를 정합니다.'}));
+    button.classList.add('pilot-spirit-room-help');target.parentNode?.append(button);return;
+  }
   if (!record || !hasSpiritEditing(record)) {
     target.textContent = "";
     return;
@@ -7014,6 +8367,10 @@ function renderEditorDiff(type, record) {
     const field = control.dataset.editorField;
     const label = control.closest("label");
     if (!label) continue;
+    // Help/reset buttons precede the input. Without an explicit association,
+    // the label's first labelable control can be a disabled reset button.
+    if(!control.id)control.id=`editor-${type}-${field}`;
+    label.setAttribute('for',control.id);
     let fieldName = label.querySelector(".editor-field-name");
     if (!fieldName) {
       const labelText = [...label.childNodes].find(
@@ -7058,8 +8415,10 @@ function renderEditorDiff(type, record) {
       reset.textContent = "↶";
       label.insertBefore(reset, control);
     }
-    applyResetButtonState(reset, editorFieldLabel(field), original, current, changed,
+    const invalid = control.getAttribute('aria-invalid') === 'true';
+    applyResetButtonState(reset, editorFieldLabel(field), original, current, changed || invalid,
       control.dataset.gradeKind ? (value) => gradeText(control.dataset.gradeKind, value) : (value) => formatEditorFieldValue(field, value));
+    if (invalid) { reset.setAttribute('aria-label', `${editorFieldLabel(field)} 입력을 불러온 값으로 복원`); reset.title = '입력을 불러온 값으로 복원'; }
   }
 }
 
@@ -7086,14 +8445,21 @@ function restoreEditorField(type, event) {
     if (input.dataset.gradeKind) setGradeSelectValue(input, row[field]);
     else input.value = editorControlText(field, row[field]);
     input.setCustomValidity("");
+    input.removeAttribute('aria-invalid');
+    if (input.getAttribute('aria-describedby')?.startsWith('range-')) input.removeAttribute('aria-describedby');
+    input.closest('label')?.querySelector('.editor-range-error')?.remove();
   }
   if (type === "unit") renderUnitSpecialAbilities(row);
   if (type === "pilot") {
     renderPilotRuntimeSkills(row);
-    renderPilotSkillSchedule(row);
+    if (!elements.pilotSkillSchedule.querySelector('[data-skill-level][aria-invalid="true"]')) renderPilotSkillSchedule(row);
   }
   renderEditorDiff(type, row);
-  if (type === "weapon") renderWeaponTerrain(row);
+  if (type === "weapon") {
+    renderWeaponTerrain(row);
+    const criticalControl=EDITOR_UI.weapon.form.querySelector('[data-editor-field="critical"]');
+    if(criticalControl)renderWeaponCriticalControl(criticalControl,row,row.critical,isLockedRecord(row));
+  }
   refreshRecordOption(type, row);
   updateEditorStatus(type, row);
 }
@@ -7104,6 +8470,26 @@ function isCurrentEditorPreview(requests, message) {
     && requests[message.kind] === message.previewId;
 }
 
+function battleDialogueContext(row,unitId=null){
+ const choices=animationChoices([],state.editorUnits,state.editorPilots,[...state.editorScenario.pilotAssignments,...state.editorScenario.deployments],state.editorGameId);
+ const unit=unitId??row?.ownerUnits?.[0]??row?.owners?.[0]?.unit;
+ return {key:`${state.editorSessionToken}:${unit??''}`,pilots:choices.pilots,defaultPilot:animationDefaultPilot(unit,choices)};
+}
+let dialogueReadToken=null;
+const dialogueReadCache=new Map();
+function requestBattleDialogue(pilot){
+ const token=state.editorSessionToken,worker=state.editorWorker;if(!token||typeof worker?.addEventListener!=='function'||typeof worker?.postMessage!=='function')return Promise.reject(Error('ROM 세션이 없습니다.'));
+ if(dialogueReadToken!==token){dialogueReadToken=token;dialogueReadCache.clear();}
+ if(dialogueReadCache.has(pilot))return dialogueReadCache.get(pilot);
+ const previewId=`battle-dialogue-${++state.editorPreviewSequence}`;
+ const promise=new Promise((resolve,reject)=>{
+  const timer=setTimeout(()=>{worker.removeEventListener('message',receive);dialogueReadCache.delete(pilot);reject(Error('기존 대사를 읽는 시간이 초과됐습니다.'));},15000);
+  function receive(event){const m=event.data;if(m?.previewId!==previewId)return;clearTimeout(timer);worker.removeEventListener('message',receive);
+   if(token!==state.editorSessionToken||m.type!=='BATTLE_DIALOGUE_COMPLETE'){dialogueReadCache.delete(pilot);reject(Error(m.error||'대사를 읽지 못했습니다.'));return;}resolve(m.catalog);
+  }
+  worker.addEventListener('message',receive);worker.postMessage({type:'BATTLE_DIALOGUE',previewId,sessionToken:token,pilot});
+ });dialogueReadCache.set(pilot,promise);return promise;
+}
 let savePreviewToken=null;
 const savePreviewCache=new Map();
 function requestSaveEditorPreview(kind,recordIndex,{heroFaceId}={}){
@@ -7125,6 +8511,16 @@ function requestSaveEditorPreview(kind,recordIndex,{heroFaceId}={}){
 
 function requestEditorPreview(type, record) {
   if (type === "weapon") return;
+  if (type === "unit") {
+    const icon = byId('unitPreviewMapIcon');
+    const pixels = icon && decodeMapIcon(state.editorScenario?.mapIcons, record?.mapIcon, 'player');
+    if (icon) {
+      const context = icon.getContext('2d');
+      context.clearRect(0, 0, 16, 16);
+      icon.hidden = !pixels;
+      if (pixels) context.putImageData(new ImageData(pixels, 16, 16), 0, 0);
+    }
+  }
   const image = type === "unit" ? elements.unitPreviewImage : elements.pilotPreviewImage;
   const caption = type === "unit" ? elements.unitPreviewCaption : elements.pilotPreviewCaption;
   const label = type === "unit" ? "기체" : "파일럿";
@@ -7141,7 +8537,7 @@ function requestEditorPreview(type, record) {
     caption.title = "주인공 자리의 얼굴은 게임에서 주인공을 선택할 때 결정됩니다. 디스크의 초기 얼굴 번호는 실제 주인공 초상화를 뜻하지 않습니다.";
     return;
   }
-  if (record?.statsValid === false) {
+  if (record?.statsValid === false && !record?.heroIdentity&&!record?.aliceIdentity) {
     caption.textContent = `${editorRowName(record)} · 공용 습득표 (고정 얼굴 미지정)`;
     return;
   }
@@ -7158,13 +8554,15 @@ function requestEditorPreview(type, record) {
     sessionToken: state.editorSessionToken,
     kind: type,
     recordIndex: record.previewIndex ?? record.recordIndex,
+    ...(type==='unit'&&record.pendingConstruction?{unitPreset:record.pendingConstruction}:{}),
+    ...(type==='pilot'&&record.aliceIdentity?{alicePilot:true}:{}),
   });
 }
 
 function renderEditorPreview(message) {
   const image = message.kind === "unit" ? elements.unitPreviewImage : elements.pilotPreviewImage;
   const caption = message.kind === "unit" ? elements.unitPreviewCaption : elements.pilotPreviewCaption;
-  const record = editorRowsFor(message.kind).find((row) => row.recordIndex === message.recordIndex);
+  const record = findEditorDisplayRow(message.kind,message.recordIndex);
   const label = record ? editorRowName(record) : `${message.kind === "unit" ? "기체" : "파일럿"} #${message.recordIndex}`;
   const context = image.getContext("2d");
   context.clearRect(0, 0, image.width, image.height);
@@ -7181,9 +8579,11 @@ function renderEditorPreview(message) {
     image.hidden = false;
     const reference = message.imageSource === "reference";
     caption.hidden = !reference;
-    image.setAttribute("aria-label", `${label} ${reference ? "참고 초상화 (원본 얼굴 미지정)" : "실제 게임 이미지"}`);
+    image.setAttribute("aria-label", `${label} ${reference ? record?.heroIdentity ? '주인공 참고 초상화' : "참고 초상화 (원본 얼굴 미지정)" : "실제 게임 이미지"}`);
     caption.textContent = reference ? "참고 초상화" : label;
-    if (reference) caption.title = "원본 얼굴 번호는 미지정입니다. 같은 게임 파일 안에서 확인한 참고 초상화를 표시합니다.";
+    if (reference) caption.title = record?.heroIdentity
+      ? '이 이름 항목에는 독립된 능력치·얼굴 필드가 없습니다. 같은 ROM의 주인공 얼굴을 참고용으로 표시합니다.'
+      : "원본 얼굴 번호는 미지정입니다. 같은 게임 파일 안에서 확인한 참고 초상화를 표시합니다.";
   } else {
     image.hidden = true;
     caption.hidden = false;
@@ -7231,26 +8631,50 @@ function sizeEditorGameImage(image, sourceWidth, sourceHeight) {
   image.style.height = `${(sourceHeight * scale).toFixed(2)}px`;
 }
 
-function clearInvalidEditorControls(type) {
-  const row = selectedEditorRow(type);
-  if (!row) return;
-  let restored = false;
-  for (const input of EDITOR_UI[type].form.querySelectorAll('[aria-invalid="true"]')) {
-    const field = input.dataset.editorField;
-    const spirit = input.dataset.spiritLevel;
-    if (field && Object.hasOwn(row, field)) input.value = editorControlText(field, row[field]);
-    else if (spirit !== undefined && row.spirits?.[Number(spirit)]) input.value = String(row.spirits[Number(spirit)].level);
-    input.setCustomValidity(""); input.removeAttribute("aria-invalid");
-    if (input.getAttribute("aria-describedby")?.startsWith("range-")) input.removeAttribute("aria-describedby");
-    input.closest("label")?.querySelector(".editor-range-error")?.remove();
-    restored = true;
+function editorOwnedInvalidControl(type) {
+  const form = EDITOR_UI[type]?.form;
+  if (!form) return null;
+  const input = [...form.querySelectorAll('[aria-invalid="true"]')].find(control =>
+    !control.closest('.unit-weapon-detail') && (control.dataset.editorField !== undefined || control.dataset.spiritLevel !== undefined));
+  return input ?? (type === 'pilot' ? elements.pilotSkillSchedule.querySelector('[data-skill-level][aria-invalid="true"]') : null);
+}
+
+function pilotListInvalidControl() {
+  return elements.pilotMentalCommands.querySelector('[data-spirit-level][aria-invalid="true"]')
+    ?? elements.pilotSkillSchedule.querySelector('[data-skill-level][aria-invalid="true"]');
+}
+
+function clearEditorOwnedDraftMarkers() {
+  for (const type of EDITOR_TYPES) for (const input of EDITOR_UI[type].form.querySelectorAll('[aria-invalid="true"]')) {
+    if (input.closest('.unit-weapon-detail') || (input.dataset.editorField === undefined && input.dataset.spiritLevel === undefined)) continue;
+    input.setCustomValidity(''); input.removeAttribute('aria-invalid');
+    if (input.getAttribute('aria-describedby')?.startsWith('range-')) input.removeAttribute('aria-describedby');
+    input.closest('label')?.querySelector('.editor-range-error')?.remove();
   }
-  if (restored) setEditorStatus("적용되지 않은 입력을 마지막 유효한 값으로 되돌렸습니다.");
+  for (const input of elements.pilotSkillSchedule.querySelectorAll('[data-skill-level][aria-invalid="true"]')) {
+    input.setCustomValidity(''); input.removeAttribute('aria-invalid');
+  }
+}
+
+function reportEditorOwnedInvalid(type, input) {
+  if (state.editorTab !== type) selectEditorTab(type, {render:false});
+  if (input.dataset.spiritLevel !== undefined && elements.pilotSkillDialog.open) elements.pilotSkillDialog.close();
+  setEditorStatus('적용되지 않은 입력을 수정하거나 복원한 뒤 다른 항목을 선택해 주세요.');
+  if (input.dataset.skillLevel !== undefined) {
+    if (!elements.pilotSkillDialog.open) elements.pilotSkillDialog.showModal();
+    pilotSkillPagination.refresh({focusIndex:Number(input.dataset.skillLevel)}).then(() => {
+      input.focus?.({preventScroll:true}); input.reportValidity?.();
+    });
+    return;
+  }
+  editorLayouts.get(type)?.reveal(input);
+  input.focus?.({preventScroll:true}); input.reportValidity?.();
 }
 
 function setEditorRangeError(control) {
   const field = control.dataset.editorField;
-  const message = `${editorFieldLabel(field)}은 ${control.min}~${control.max}까지 입력할 수 있습니다. ${control.value || "빈 값"}은 적용되지 않았습니다.`;
+  const message = field==='critical'?'크리티컬 보정은 목록에서 선택해 주세요. 선택하지 않은 값은 적용되지 않았습니다.'
+    : `${editorFieldLabel(field)} 항목은 ${control.min}~${control.max}까지 입력할 수 있습니다. ${control.value || "빈 값"}은 적용되지 않았습니다.`;
   control.setCustomValidity(message); control.setAttribute("aria-invalid", "true");
   const label = control.closest("label");
   if (label) {
@@ -7259,31 +8683,33 @@ function setEditorRangeError(control) {
     note.textContent = message; control.setAttribute("aria-describedby", note.id);
   }
   setEditorStatus(message);
+  return message;
 }
 
 function updateEditorRowFromForm(type) {
   const row = selectedEditorRow(type);
   if (!row || isLockedRecord(row) || row.statsValid === false) return;
-  let valid = true;
+  let valid = true, changed = false, lastError = '';
   for (const control of EDITOR_UI[type].form.querySelectorAll("[data-editor-field]")) {
     // 읽기 전용 레코드의 칸은 고치지 않는다.
     if (control.disabled) continue;
     const field = control.dataset.editorField;
     const value = readEditorControl(control);
     control.setCustomValidity("");
-    if (!isEditorValue(value) || !control.validity.valid) {
-      setEditorRangeError(control);
+    if (!isEditorValue(value) || !control.validity.valid || !validCriticalControl(type,control,value,row)) {
+      lastError = setEditorRangeError(control);
       valid = false;
       continue;
     }
     control.removeAttribute("aria-invalid");
     if (control.getAttribute("aria-describedby")?.startsWith("range-")) control.removeAttribute("aria-describedby");
     control.closest("label")?.querySelector(".editor-range-error")?.remove();
+    if(row[field]!==value)changed=true;
     row[field] = value;
   }
   if (!valid) {
-    invalidateEditorDownloads();
-    // The field error already states that the value was not applied.
+    if(changed){renderEditorDiff(type,row);refreshRecordOption(type,row);updateEditorStatus(type,row);setEditorStatus(lastError);}
+    else {renderEditorDiff(type,row);invalidateEditorDraft();}
   } else {
     renderEditorDiff(type, row);
     refreshRecordOption(type, row);
@@ -7298,22 +8724,46 @@ function invalidateEditorDownloads() {
   updateControls();
 }
 
+// A rejected draft is not written to the row, but it must still invalidate a
+// cached preview and output so the visible input is never mistaken for either.
+function invalidateEditorDraft() {
+  invalidateEditorDownloads();
+  state.editorEditRevision += 1;
+  editorStorageUI.invalidate();
+  animationPreview.invalidate();unitAnimationPreview.invalidate();
+}
+
 // 지금 세션에서 원래 값과 달라진 칸(기체·파일럿·무기 수치와 습득표, 정신커맨드)의 수.
 function countEditorChanges() {
-  return ["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"].reduce((count, kind) => {
+  return ["unit", "pilot", "weapon", "upgrade", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "roster", "dialogue", "glyph", "map", "collection", "alice", "debug", "critical", "beam"].reduce((count, kind) => {
     const fields = editorFieldsFor(kind);
     return count + editorRowsFor(kind).reduce((rowCount, candidate) => {
       const changedFields = fields.filter((field) => candidate[field] !== candidate.original?.[field]).length;
       const changedAbilities = kind === "pilot" && pilotSkillsChanged(candidate) ? skillChangeCount(candidate) : 0;
       const changedSpirits = kind === "pilot" && pilotSpiritsChanged(candidate) ? spiritChangeCount(candidate.spirits, candidate.original.spirits) : 0;
-      return rowCount + changedFields + changedAbilities + changedSpirits;
+      const addedWeapons=kind==='unit'&&(candidate.weaponAdditions?.length??0)>0?1:0;
+      return rowCount + changedFields + changedAbilities + changedSpirits + addedWeapons + (kind==='unit'&&candidate.pendingConstruction||kind==='weapon'&&candidate.pendingWeaponClone?1:0);
     }, 0);
-  }, 0);
+  }, (Boolean(state.editorFCampaign)!==state.editorFCampaignOriginal?1:0)+outputSwitchChangeCount());
 }
 
 function updateEditorStatus(type, row = null) {
+  syncExSBeamPoseControls();
+  if(type==='weapon'||type==='dialogue'){try{commitEditorGlyphPlan(editorGlyphPlan());}catch(error){showEditorError(error);return;}}
+  if(type==='weapon'){
+    renderWeaponCriticalApplied(selectedEditorRow('weapon'));
+    weaponDialogueSource.refresh();
+    unitWeaponEditor.refresh();
+    highlightUnitWeapon(unitWeaponEditor.selected());
+  }
+  if(type==='critical'){
+    renderWeaponCriticalApplied(selectedEditorRow('weapon'));
+    unitWeaponEditor.sync();
+  }
   invalidateEditorDownloads();
   state.editorEditRevision += 1;
+  editorStorageUI.invalidate();
+  animationPreview.invalidate();unitAnimationPreview.invalidate();
   const changedCount = countEditorChanges();
   state.editorChangeCount = changedCount;
   renderEditorModeLabel();
@@ -7331,7 +8781,19 @@ function updateEditorStatus(type, row = null) {
 
 // 바뀐 값 목록에서 고른 레코드로 가서 바뀐 칸을 표시하고 첫 칸에 초점을 둔다. 좁은 화면은 그 칸이 있는 구역으로 넘긴다.
 function focusEditorChange(kind, recordIndex, fields = []) {
-  if (["deployment", "event", "objective", "reinforcement", "map"].includes(kind)) { selectEditorTab("scenario", { render: false }); return scenarioEditor.focus(kind, recordIndex, fields); }
+  if(kind==='campaign'){selectEditorTab('misc',{render:false});byId('fCampaignSourceOpen')?.focus();return true;}
+  if(kind==='beam'){selectEditorTab('misc',{render:false});byId('srw4SourceOpen')?.focus();return true;}
+  if(kind==='critical'){selectEditorTab('misc',{render:false});byId('criticalFixToggle').focus();return true;}
+  if(kind==='debug'){selectEditorTab('misc',{render:false});byId('debugEntry').focus();return true;}
+  if(kind==='alice'){selectEditorTab('pilot');byId('alicePilotToggle').focus();return true;}
+  if(kind==='collection'){selectEditorTab('misc',{render:false});byId('collectionUnlock').focus();return true;}
+  if(kind==='glyph'){elements.editorChangesButton.focus();announce(`추가 글자 ${state.editorGlyphRows[0]?.characters||'없음'} · 새 글자는 갈무리11로 표시됩니다.`);return true;}
+  if (kind === 'unit' && fields.includes('killExp')) {
+    const placement = state.editorScenario.deployments.find(row => row.unitId === recordIndex && state.editorScenario.mapFor(row.mapIndex));
+    if (placement) { selectEditorTab('scenario', { render: false }); return scenarioEditor.focus('deployment', placement.recordIndex, ['killExp']); }
+  }
+  if (["deployment", "event", "objective", "reinforcement", "roster", "dialogue", "map"].includes(kind)) { selectEditorTab("scenario", { render: false }); return scenarioEditor.focus(kind, recordIndex, fields); }
+  if (kind === "upgrade") return costEditor.focus(recordIndex);
   if (kind === "terrain") { selectEditorTab("terrain", { render: false }); return terrainEditor.focus(recordIndex, fields); }
   if (kind === "reward") { selectEditorTab("reward", { render: false }); return rewardEditor.focus(recordIndex, fields); }
   if (!EDITOR_TYPES.includes(kind) || !jumpToEditorRecord(kind, recordIndex)) return false;
@@ -7341,8 +8803,13 @@ function focusEditorChange(kind, recordIndex, fields = []) {
   }
   const form = EDITOR_UI[kind].form;
   const targets = fields.flatMap((field) => {
+    if(kind==='unit'&&field==='construction')return [byId('unitConstructionChoice')];
+    if(kind==='weapon'&&field==='construction')return [byId('weaponCloneButton')];
+    if(kind==='unit'&&field==='weaponAdditions')return [elements.unitWeaponAddChoice];
+    if (kind === 'unit' && isUnitWeaponField(field)) return [...form.querySelectorAll(`[data-unit-weapon-field="${field}"]`)];
     if (field === "skills") return kind === "pilot" ? [elements.pilotSkillScheduleButton] : [];
     if (field === "spirits") return kind === "pilot" ? [...form.querySelectorAll(".pilot-mental-slot select")] : [];
+    if(kind==='weapon'&&field==='name')return [weaponNameControl.input];
     if (kind === "weapon" && field === "terrain") return [...form.querySelectorAll("select[data-weapon-terrain]")];
     return editorFieldsFor(kind).includes(field) ? [...form.querySelectorAll(`[data-editor-field="${field}"]`)] : [];
   });
@@ -7351,6 +8818,7 @@ function focusEditorChange(kind, recordIndex, fields = []) {
     for (const target of targets) target.classList.remove("is-change-target");
   }, 2400)?.unref?.();
   const section = targets[0]?.closest?.("[data-editor-section]")?.dataset.editorSection;
+  if(kind==='unit'&&fields.includes('construction'))setEditorPage(kind,'list');
   if (section && section !== "list") setEditorPage(kind, section);
   editorLayouts.get(kind)?.reveal(targets[0]);
   targets[0]?.focus?.();
@@ -7359,57 +8827,80 @@ function focusEditorChange(kind, recordIndex, fields = []) {
 
 // 불러온 변경 내용을 적용한 뒤: 목록의 수정 표시와 세 탭의 입력칸을 새 값으로 다시 그리고(만들기 단추는 입력칸의 값을 다시 읽는다)
 // 변경 수를 센다. 직접 고친 것과 같은 상태가 된다.
-function refreshEditorAfterPreset() {
+function refreshEditorAfterPreset(records=[]) {
+  if(records.some(row=>row.kind==='beam'))state.editorBeamExplicit=true;
+  syncExSBeamPoseControls();
+  syncAlicePilotView();
+  byId('collectionUnlock').checked=state.editorCollectionRows[0]?.enabled===1;
+  byId('debugEntry').checked=state.editorDebugRows[0]?.enabled===1;
+  syncCriticalFixControls();
+  if(records.some(row=>row.kind==='glyph'))state.editorGlyphExplicit=state.editorGlyphRows[0]?.characters??'';
+  try{commitEditorGlyphPlan(editorGlyphPlan());}catch(error){showEditorError('추가 글자를 적용할 수 없습니다',error.message);}
+
   syncPilotExpansionBudget(state.editorPilots);
+  refreshUnitWeaponOwnership();
+  for(const row of state.editorUnits)searchTextCache.delete(row);
+  rebuildEditorRowIndex();
   for (const type of EDITOR_TYPES) {
     optionNodes[type].clear();
     renderRecordList(type, { build: type === state.editorTab || !listNeedsBuild[type] });
     renderEditorRecord(type, findEditorDisplayRow(type, state.editorSelected[type]));
   }
+  costEditor.refresh();
   rewardEditor.refresh();
   terrainEditor.refresh();
   scenarioEditor.refresh();
   updateEditorStatus(state.editorTab);
 }
 
-function validateEditorForms() {
+let editorValidationIssue = "";
+function validateEditorForms({report=true}={}) {
+  editorValidationIssue = "";
+  if(!unitWeaponEditor.validate({report})){editorValidationIssue='기체 무장의 입력을 확인해 주세요.';return false;}
+  if(!weaponNameControl.validate({report:false})){
+    editorValidationIssue='무기 이름 입력을 확인해 주세요.';
+    if(report){selectEditorTab('weapon',{render:false});editorLayouts.get('weapon')?.reveal(weaponNameControl.input);weaponNameControl.validate({report:true});}
+    return false;
+  }
+  if(!aliceCrewEditor.validate({report})){editorValidationIssue='ALICE 동승 설정의 입력을 확인해 주세요.';return false;}
   for (const type of EDITOR_TYPES) {
-    if (selectedEditorRow(type)?.statsValid === false) continue;
+    if (!selectedEditorRow(type) || selectedEditorRow(type).statsValid === false) continue;
     const form = EDITOR_UI[type].form;
     for (const input of form.querySelectorAll("[data-editor-field]")) {
       // 읽기 전용 레코드의 칸은 편집하지 않으므로 검사하지 않는다(저장 요청은 원래 값을 그대로 싣는다).
       if (input.disabled) continue;
       const value = readEditorControl(input);
       input.setCustomValidity("");
-      if (!isEditorValue(value) || !input.validity.valid) {
+      if (!isEditorValue(value) || !input.validity.valid || !validCriticalControl(type,input,value,selectedEditorRow(type))) {
         setEditorRangeError(input);
-        selectEditorTab(type, { render: false });
-        input.reportValidity();
+        editorValidationIssue = input.validationMessage || `${editorFieldLabel(input.dataset.editorField)} 입력을 확인해 주세요.`;
+        if(report){selectEditorTab(type, { render: false });editorLayouts.get(type)?.reveal(input);input.reportValidity();}
         return false;
       }
-      const row = selectedEditorRow(type);
-      if (row) row[input.dataset.editorField] = value;
     }
   }
   for (const input of elements.pilotSkillSchedule.querySelectorAll("input[data-skill-level]")) {
     if (input.disabled || input.validity.valid) continue;
-    selectEditorTab("pilot");
-    if (!elements.pilotSkillDialog.open) elements.pilotSkillDialog.showModal();
-    input.reportValidity();
+    editorValidationIssue = input.validationMessage || '파일럿 특수능력 레벨을 확인해 주세요.';
+    if(report)reportEditorOwnedInvalid("pilot", input);
     return false;
   }
   for (const input of elements.pilotMentalCommands.querySelectorAll("input[data-spirit-level]")) {
     if (input.disabled || input.validity.valid) continue;
     // 다시 그리면 이 칸이 사라지므로 탭만 바꾼다.
-    if (state.editorTab !== "pilot") selectEditorTab("pilot", { render: false });
-    input.reportValidity();
+    editorValidationIssue = input.validationMessage || '파일럿 정신기 레벨을 확인해 주세요.';
+    if(report){if (state.editorTab !== "pilot") selectEditorTab("pilot", { render: false });editorLayouts.get('pilot')?.reveal(input);input.reportValidity();}
     return false;
   }
-  return rewardEditor.validate() && terrainEditor.validate() && scenarioEditor.validate();
+  for(const [editor,label] of [[costEditor,'개조 비용'],[rewardEditor,'보상'],[terrainEditor,'지형'],[scenarioEditor,'맵']]){
+    if(!editor.validate({report})){editorValidationIssue=`${label}의 입력을 확인해 주세요.`;return false;}
+  }
+  return true;
 }
 
 function selectEditorTab(type, { render = true } = {}) {
-  if (type !== state.editorTab && EDITOR_TYPES.includes(state.editorTab)) clearInvalidEditorControls(state.editorTab);
+  if (type !== "weapon") animationPreview.hide();
+  if (type !== "unit") unitAnimationPreview.hide();
   const tabs = [
     ["unit", elements.unitTabButton, elements.unitEditorPanel],
     ["pilot", elements.pilotTabButton, elements.pilotEditorPanel],
@@ -7417,6 +8908,7 @@ function selectEditorTab(type, { render = true } = {}) {
     ["reward", elements.rewardTabButton, elements.rewardEditorPanel],
     ["terrain", elements.terrainTabButton, elements.terrainEditorPanel],
     ["scenario", elements.scenarioTabButton, elements.scenarioEditorPanel],
+    ["misc", elements.miscTabButton, elements.miscEditorPanel],
   ];
   for (const [name, button, panel] of tabs) {
     const selected = name === type;
@@ -7425,9 +8917,14 @@ function selectEditorTab(type, { render = true } = {}) {
   }
   state.editorTab = type;
   syncUnusedToggle();
+  if (type === "misc") return;
   if (type === "reward") { if (render) rewardEditor.refresh(); return; }
   if (type === "terrain") { if (render) terrainEditor.refresh(); return; }
-  if (type === "scenario") { if (render) scenarioEditor.refresh(); return; }
+  if (type === "scenario") {
+    if (render && scenarioEditor.validate({report:false})) scenarioEditor.refresh();
+    else scenarioEditor.measure();
+    return;
+  }
   if (listNeedsBuild[type]) renderRecordList(type);
   if (render) selectEditorRecord(type);
   revealSelectedOption(type);
@@ -7445,40 +8942,72 @@ function buildEditorExportRequest() {
     deadlineEdits: state.editorScenario.exportDeadlines(),
     reinforcementEdits: state.editorScenario.exportReinforcements(),
     mapEdits: state.editorScenario.exportMap(),
+    dialogueEdits: state.editorScenario.exportDialogues(),
+    rosterLevelEdits: state.editorScenario.exportRosterLevels(),
+    glyphEntries:state.editorGlyphEntries.map(entry=>({...entry})),
     unitEdits: state.editorUnits.map((row) => ({
       recordIndex: row.recordIndex,
-      fields: Object.fromEntries(unitFields.map((field) => [field, row[field]])),
+      fields: Object.fromEntries(unitFields.filter(field => !isUnitWeaponField(field) || Number.isInteger(row[field])).map((field) => [field, row[field]])),
     })),
+    srw4Native:state.editorUnits.some(row=>row.srw4Native===true),
+    unitRestorations: state.editorUnits.filter(row=>row.pendingConstruction).map(row=>({recordIndex:row.recordIndex,preset:row.pendingConstruction,loadoutVersion:row.construction?.loadoutVersion??0,...(row.pendingConstructionUpgrade!==undefined?{previousVersion:row.pendingConstructionUpgrade}:{})})),
+    unitWeaponAdditions: state.editorUnits.filter(row=>(row.weaponAdditions?.length??0)>0).map(row=>({recordIndex:row.recordIndex,weapons:[...row.weaponAdditions]})),
     pilotEdits: state.editorPilots.map((row) => ({
       recordIndex: row.recordIndex,
       fields: Object.fromEntries(pilotFields.map((field) => [field, row[field]])),
       specialAbilities: skillRequest(row.specialAbilities ?? []),
       ...(Array.isArray(row.spirits) ? { spirits: spiritRequest(row.spirits) } : {}),
     })),
+    collectionUnlock: state.editorCollectionRows[0]?.enabled===1,
+    ...Object.fromEntries(OUTPUT_SWITCH_KEYS.filter(key=>state.editorOutputSwitches[key]).map(key=>[key,state.editorOutputSwitches[key].enabled])),
+    ...(state.editorDebugRows.length?{debugEntry:state.editorDebugRows[0].enabled===1}:{}),
+    ...(state.editorCriticalRows.length?{criticalFix:state.editorCriticalRows[0].enabled===1}:{}),
+    ...(state.editorBeamRows[0]?.editable?{exsBeamPose:state.editorBeamRows[0].enabled===1}:{}),
+    alicePilot:state.editorAliceRows[0]?.enabled===1,
+    ...(state.editorAliceRows.length?{aliceCrew:aliceCrewRequest(state.editorAliceRows[0])}:{}),
+    upgradeCostEdits: state.editorUpgradeCosts.filter(row => row.cost !== row.original.cost).map(row => ({ recordIndex: row.recordIndex, fields: { cost: row.cost } })),
     terrainEdits: state.editorTerrains.map(row => ({ recordIndex: row.recordIndex, fields: Object.fromEntries(MAP_TERRAIN_FIELDS.map(field => [field, row[field]])) })),
     rewardEdits: state.editorRewards.filter(row => row.editable).map(row => ({
       recordIndex: row.recordIndex,
       fields: Object.fromEntries(REWARD_FIELDS.slice(0, row.capacity * 2).map(field => [field, row[field]])),
     })),
+    weaponClones:state.editorWeapons.filter(row=>row.pendingWeaponClone).map(row=>({recordIndex:row.recordIndex,sourceRecordIndex:row.weaponClone.sourceRecordIndex})),
+    weaponNameEdits:state.editorWeapons.filter(row=>row.pendingWeaponClone||row.name!==row.original.name).map(row=>({recordIndex:row.recordIndex,text:row.name})),
     weaponEdits: state.editorWeapons.map((row) => ({
       recordIndex: row.recordIndex,
-      fields: Object.fromEntries(weaponFields.map((field) => [field, row[field]])),
+      fields: Object.fromEntries(weaponFields.filter(field=>field!=='name').map((field) => [field, row[field]])),
     })),
   });
 }
 
-async function exportEditorImage() {
+function checkEditorStorage(){return startEditorOutputJob('PREFLIGHT');}
+function exportEditorImage(){return startEditorOutputJob('EXPORT');}
+function showEditorValidationError(title){
+  showEditorError(title, editorValidationIssue, {
+    label: "입력 확인하기",
+    run: () => {
+      elements.editorError.hidden = true;
+      navigateWorkflow("editor");
+      validateEditorForms({report:true});
+    },
+  });
+}
+async function startEditorOutputJob(type) {
   if (!state.editorSessionToken || !state.release || state.editorBusy) return;
-  if (!validateEditorForms()) { navigateWorkflow("editor"); return; }
-  clearEditorDownloads();
+  if (!validateEditorForms({report:false})) {
+    showEditorValidationError(type==='PREFLIGHT'?'저장 공간을 확인할 수 없습니다':'저장할 수 없습니다');
+    return;
+  }
+  if(type==='EXPORT')clearEditorDownloads();
   const request = buildEditorExportRequest();
   const jobId = `editor-${Date.now()}-${++state.editorSequence}-${Math.random().toString(16).slice(2, 10)}`;
   state.editorJobId = jobId;
-  state.editorOperation = "EXPORT";
+  state.editorOperation = type;
   state.editorBusy = true;
   elements.editorError.hidden = true;
-  setEditorStatus("개인 수정 BIN/CUE를 만들고 있습니다.");
-  elements.editorProgressTitle.textContent = "수정 데이터를 반영하고 있습니다";
+  if(type==='PREFLIGHT')editorStorageUI.pending();
+  setEditorStatus(type==='PREFLIGHT'?'저장 공간을 계산하고 있습니다.':"개인 수정 BIN/CUE를 만들고 있습니다.");
+  elements.editorProgressTitle.textContent = type==='PREFLIGHT'?'저장 공간을 계산하고 있습니다':"수정 데이터를 반영하고 있습니다";
   elements.editorProgressDetail.textContent = "압축·디스크 무결성 확인 중";
   elements.editorProgressPercent.textContent = "0%";
   elements.editorProgressBar.value = 0;
@@ -7489,12 +9018,13 @@ async function exportEditorImage() {
   updateControls();
   try {
     getEditorWorker().postMessage({
-      type: "EXPORT",
+      type,
       jobId,
       request,
     });
   } catch (error) {
     finishEditorOperation();
+    if(type==='PREFLIGHT')editorStorageUI.failed();
     elements.editorProgressPanel.hidden = true;
     showEditorError("수정본을 만들지 못했습니다", koreanMessage(error, "편집 데이터를 워커에 전달하지 못했습니다."));
   }
@@ -7503,7 +9033,7 @@ async function exportEditorImage() {
 function installEditorDownload(result) {
   if (!result
     || !(result.outputBlob instanceof Blob)
-    || result.outputBlob.size !== state.editorInputSize
+    || (!state.editorFCampaign&&!state.editorIngame&&result.outputBlob.size !== (state.editorCanonicalSize??state.editorInputSize))
     || result.size !== result.outputBlob.size
     || !Number.isSafeInteger(result.bytesChanged)
     || result.bytesChanged < 0
@@ -7524,7 +9054,11 @@ function installEditorDownload(result) {
   const prefix = state.editorGameId === "srwf-final" ? "SRWFIN" : "SRWF";
   const imageName = `${prefix}-${state.workflowBaseKind === "stock" ? "JP" : "KOR"}-CUSTOM-${timestamp}-${suffix}.bin`;
   const cueName = imageName.slice(0, -4) + ".cue";
-  const cueText = buildPatchedImageCue(imageName, state.editorTargetHash, state.editorCueTracks);
+  const cueText = state.editorIngame
+    ?ingameDownloadCue(result,{gameId:state.editorGameId,canonicalSize:state.editorCanonicalSize,enabled:true},imageName)
+    :state.editorFCampaign
+    ?campaignDownloadCue(result,{gameId:state.editorGameId,canonicalSize:state.editorCanonicalSize,canonicalTracks:state.editorCueTracks,enabled:true},imageName)
+    :buildPatchedImageCue(imageName, state.editorTargetHash, state.editorCueTracks);
   const cueBlob = new Blob([cueText], { type: "application/x-cue;charset=utf-8" });
 
   clearEditorDownloads();
@@ -8389,10 +9923,16 @@ function sourceSelectionMeta(source, suffix) {
 }
 
 function updateControls() {
+  fCampaignSourcePanel.refresh();
+  srw4SourcePanel.refresh();
+  miscExamples.update(state.editorGameId);
   const releaseReady = state.availability === "ready" && Boolean(state.release);
   const interactionBusy = state.busy || state.cueSaving;
   // 어느 모드의 작업이든 하나라도 돌고 있으면 게임·버전·폰트와 모든 폴더 줄을 잠근다(작업은 하나씩 한다).
   const controlsLocked = anyJobBusy();
+  byId("weaponAnimationButton").disabled = !state.editorSessionToken || controlsLocked;
+  renderUnitConstructionChoice();
+  renderWeaponCloneControls();
   const fileControls = deriveFileControlState({
     releaseReady,
     fileSystemSupported: state.fileSystemSupported,
@@ -8428,14 +9968,21 @@ function updateControls() {
       : "패치 실행";
   updateFolderSafeDownloadOffer(interactionBusy);
   elements.editorExportButton.disabled = !state.editorSessionToken || controlsLocked;
-  byId("saveEditorOpen").disabled = !state.editorSessionToken || controlsLocked;
   // 받을 수 있는 결과가 있는 동안에는 그 결과가 현재 편집 내용이다. 값을 고치면 결과를 치우고 버튼이 돌아온다.
   elements.editorExportButton.hidden = false;
   elements.editorExportButton.textContent = state.editorDownloadUrls.length > 0 ? "BIN/CUE 결과" : "BIN/CUE 저장";
   elements.editorCancelButton.disabled = !state.editorBusy;
+  byId('debugEntry').disabled=!state.editorSessionToken||controlsLocked||!state.editorDebugRows.length;
+  byId('debugEntryReset').disabled=!state.editorSessionToken||controlsLocked||!state.editorDebugRows.length;
+  syncOutputSwitchControls(controlsLocked);
+  syncCriticalFixControls();
+  syncExSBeamPoseControls();
   editorChanges.refresh();
   syncModeUi();
   for (const kind of EDITOR_TYPES) editorSearchTools.sync(kind);
+  costEditor.sync();
+  unitWeaponEditor.sync();
+  weaponDialogueSource.sync();
   rewardEditor.sync();
   terrainEditor.sync();
   scenarioEditor.sync();
@@ -9033,7 +10580,7 @@ function handlePageHide(event) {
 }
 
 function warnWhileBusy(event) {
-  if (!state.busy && !state.cueSaving && !editorSideBusy() && !saveEditor?.isBusy() && !saveEditor?.hasUnsavedEdits()) {
+  if (!state.busy && !state.cueSaving && !editorSideBusy() && !saveEditor.isBusy() && !sessionHasUnsavedEdits()) {
     return;
   }
   event.preventDefault();
@@ -9049,18 +10596,28 @@ class PatcherError extends Error {
 }
 
 export const __testHooks = Object.freeze({
+  requestAnimationSource,
+  prepareSaveMigrationTarget,
+  prepareMigrationNameGlyphs,
+  getPreviewResources:requestPreviewResources,
+  clearPreviewResources:()=>previewResources.clear(),
   state,
-  saveEditor,
-  sessionHasUnsavedEdits,
-  warnWhileBusy,
   EDITOR_UI,
+  saveEditor,
   editorChanges,
   editorSearchTools,
   focusEditorChange,
   refreshEditorAfterPreset,
   buildEditorExportRequest,
+  validateEditorForms,
   countEditorChanges,
+  sessionHasUnsavedEdits,
+  warnWhileBusy,
   installEditorRows,
+  changeUnitConstruction,
+  toggleAlicePilot,
+  unitUpgradeUI,
+  renderUnitConstructionChoice,
   handleEditorWorkerMessage,
   beginEditorInspection,
   updateEditorProgress,
@@ -9082,6 +10639,9 @@ export const __testHooks = Object.freeze({
   visibleRecordRows,
   weaponOwnerSummary,
   renderUnitWeapons,
+  commitSrw4UnusedImport,
+  connectEditorSrw4Source,
+  unitWeaponEditor,
   renderWeaponOwners,
   buildTerrainGrid,
   setGradeSelectValue,
@@ -9219,4 +10779,74 @@ showBrowserCompatibility();
 setWorkflowPhase("release");
 setZoneState("release", "busy", { busy: true });
 updateControls();
-loadReleaseIndex().catch(handleIndexFailure);
+// Metadata loading has its own error path; do not make module evaluation wait
+// for the request after the optional top-level isolation setup.
+if(editorReviewSupport.rows.length)registerLocalEditorSupport(editorReviewSupport);
+if(document.documentElement)document.documentElement.dataset.localEditorAuto='ready';
+void loadReleaseIndex().catch(handleIndexFailure);
+
+byId('collectionUnlock').addEventListener('change',event=>{
+ if(!state.editorSessionToken||state.editorBusy){event.target.checked=state.editorCollectionUnlock;return;}
+ state.editorCollectionUnlock=event.target.checked;if(state.editorCollectionRows[0])state.editorCollectionRows[0].enabled=Number(event.target.checked);updateEditorStatus('collection');
+});
+byId('collectionUnlockReset').addEventListener('click',()=>{
+ if(!state.editorSessionToken||state.editorBusy)return;
+ state.editorCollectionUnlock=state.editorCollectionUnlockOriginal;if(state.editorCollectionRows[0])state.editorCollectionRows[0].enabled=Number(state.editorCollectionUnlock);byId('collectionUnlock').checked=state.editorCollectionUnlock;updateEditorStatus('collection');
+});
+// Hidden-hero dictionary portraits and the title logo: default OFF, the
+// loaded image's state is the original value, and presets never set them.
+function outputSwitchChangeCount(){return OUTPUT_SWITCH_KEYS.filter(key=>{const row=state.editorOutputSwitches[key];return row&&row.enabled!==row.original;}).length;}
+function syncOutputSwitchControls(locked=state.editorBusy){
+ for(const key of OUTPUT_SWITCH_KEYS){
+  const row=state.editorOutputSwitches[key],id=OUTPUT_SWITCH_IDS[key];
+  byId(`${id}Settings`).hidden=!row;
+  byId(`${id}Toggle`).checked=row?.enabled===true;
+  byId(`${id}Toggle`).disabled=!state.editorSessionToken||locked||!row;
+  byId(`${id}Reset`).disabled=!state.editorSessionToken||locked||!row;
+ }
+}
+for(const key of OUTPUT_SWITCH_KEYS){
+ const id=OUTPUT_SWITCH_IDS[key];
+ byId(`${id}Toggle`).addEventListener('change',event=>{
+  const row=state.editorOutputSwitches[key];
+  if(!state.editorSessionToken||state.editorBusy||!row){event.target.checked=row?.enabled===true;return;}
+  row.enabled=event.target.checked;updateEditorStatus('output-switch');
+ });
+ byId(`${id}Reset`).addEventListener('click',()=>{
+  const row=state.editorOutputSwitches[key];
+  if(!state.editorSessionToken||state.editorBusy||!row)return;
+  row.enabled=row.original;byId(`${id}Toggle`).checked=row.enabled;updateEditorStatus('output-switch');
+ });
+}
+byId('debugEntry').addEventListener('change',event=>{
+ const row=state.editorDebugRows[0];
+ if(!state.editorSessionToken||state.editorBusy||!row||row.editable!==true){event.target.checked=row?.enabled===1;return;}
+ row.enabled=Number(event.target.checked);updateEditorStatus('debug',row);
+});
+byId('debugEntryReset').addEventListener('click',()=>{
+ const row=state.editorDebugRows[0];
+ if(!state.editorSessionToken||state.editorBusy||!row||row.editable!==true)return;
+ row.enabled=row.original.enabled;byId('debugEntry').checked=row.enabled===1;updateEditorStatus('debug',row);
+});
+
+byId('exsBeamPoseToggle').addEventListener('change',event=>{
+ const row=state.editorBeamRows[0];
+ if(!state.editorSessionToken||anyJobBusy()||row?.editable!==true||event.target.checked&&row.canEnable!==true){syncExSBeamPoseControls();return;}
+ state.editorBeamExplicit=true;row.enabled=Number(event.target.checked);syncExSBeamPoseControls();updateEditorStatus('beam',row);
+});
+byId('exsBeamPoseReset').addEventListener('click',()=>{
+ const row=state.editorBeamRows[0];
+ if(!state.editorSessionToken||anyJobBusy()||row?.editable!==true||row.canEnable!==true)return;
+ state.editorBeamExplicit=true;row.enabled=row.original.enabled;syncExSBeamPoseControls();updateEditorStatus('beam',row);
+});
+
+byId('criticalFixToggle').addEventListener('change',event=>{
+ const row=state.editorCriticalRows[0];
+ if(!state.editorSessionToken||anyJobBusy()||!row||row.editable!==true||!['srwf-f','srwf-final'].includes(state.editorGameId)){syncCriticalFixControls();return;}
+ row.enabled=Number(event.target.checked);syncCriticalFixControls();updateEditorStatus('critical',row);
+});
+byId('criticalFixReset').addEventListener('click',()=>{
+ const row=state.editorCriticalRows[0];
+ if(!state.editorSessionToken||anyJobBusy()||!row||row.editable!==true||!['srwf-f','srwf-final'].includes(state.editorGameId))return;
+ row.enabled=row.original.enabled;syncCriticalFixControls();updateEditorStatus('critical',row);
+});

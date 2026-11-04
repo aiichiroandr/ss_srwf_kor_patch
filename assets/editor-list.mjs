@@ -103,6 +103,7 @@ export function isTypingTarget(target) {
   const role = typeof target.getAttribute === "function" ? target.getAttribute("role") : null;
   if (role && OWN_ARROW_ROLES.has(role)) return true;
   if (typeof target.closest === "function" && target.closest("dialog[open], [role='dialog']")) return true;
+  if (typeof target.closest === "function" && target.closest("[data-editor-numeric-row]")) return true;
   return false;
 }
 

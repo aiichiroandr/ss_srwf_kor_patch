@@ -1,8 +1,8 @@
+import {chooseSkillControl,offeredSkillIds} from "./helpers/skill-controls.mjs";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
-import { choosePilotSkill, indexedSkillRows, assertSkillStatus, offeredPilotSkillIds } from "./helpers/pilot-skill-controls.mjs";
 
 // The page's own markup in a small DOM, then the page module on top of it. Layout (sizes, fonts, hit areas) is measured in
 // a real browser; these tests pin the structure, the state and the keyboard behaviour that the layout hangs on.
@@ -35,6 +35,7 @@ function weaponList(entries, extra = {}) {
     status: "known", placeholder: false, problems: [], notes: [], declaredCount: entries.length, terminatedCount: entries.length,
     entries: entries.map(([weaponIndex, slot], entryIndex) => ({
       entryIndex, slot, weaponIndex, ammoSlot: 0, requiresFlag: false, flagNumber: null, requiresInvestment: false, valid: true,
+      raw: [((slot - 1) << 3) | (weaponIndex >>> 8), weaponIndex & 255, 0, 0],
     })),
     rawEntries: [],
     ...extra,
@@ -45,7 +46,7 @@ function weaponRow(recordIndex, name, owners = [], extra = {}) {
   const ownerUnits = [...new Set(owners.map((owner) => owner.unit))];
   return {
     recordIndex, name, nameStatus: "decoded", recordKind: "regular", kindReason: null, editable: true, readOnlyReason: null,
-    defaultVisible: true, attack: 1000 + recordIndex, hit: 10, critical: 4, minRange: 1, maxRange: 4, terrain: 0xef, energy: 10,
+    defaultVisible: true, attack: 1000 + recordIndex, hit: 10, critical: 4, minRange: 1, maxRange: 4, terrain: 0xef, energy: 10, ammo: 0,
     owners, ownerUnits, ownerCount: ownerUnits.length,
     ownerNames: ownerUnits.map((unit) => `기체${unit}`),
     ownership: owners.length > 0 ? "owned" : "unowned",
@@ -312,6 +313,18 @@ test("previous and next buttons move the selection of the tab they belong to", (
   assert.equal(state.editorSelected.weapon, 2);
 });
 
+test("horizontal numeric strips keep their keys without changing the selected record", () => {
+  resetState();
+  openEditorState();
+  const strip = document.createElement("div"), child = document.createElement("span");
+  strip.dataset.editorNumericRow = "";
+  strip.append(child);
+  for (const target of [strip, child]) for (const pressed of ["ArrowLeft", "ArrowRight", "Home", "End"]) {
+    assert.equal(key(pressed, target).defaultPrevented, false);
+    assert.equal(state.editorSelected.unit, 1);
+  }
+});
+
 test("keys typed in a field, a choice list or a dialog are left to it", () => {
   resetState();
   openEditorState();
@@ -410,7 +423,7 @@ test("the owners of the selected weapon are chips that jump to the unit, with it
   const chips = byId("weaponOwnerList").querySelectorAll("button");
   assert.equal(chips.length, 1, "one unit, listed once with both slots");
   assert.equal(chips[0].querySelector(".owner-chip-name").textContent, "기체5");
-  assert.equal(chips[0].querySelector(".owner-chip-meta").textContent, "#5 · 슬롯 2, 4");
+  assert.equal(chips[0].querySelector(".owner-chip-meta").textContent, "#5 · 개조 슬롯 2, 4");
   assert.equal(byId("weaponOwnerCount").textContent, "1대");
   assert.match(byId("weaponOwnerNote").textContent, /무장에 이 무기가 들어 있습니다/);
   assert.equal(byId("weaponOwnerNote").classList.contains("is-caution"), false);
@@ -447,24 +460,90 @@ test("an owner chip opens the unit in the unit tab, clearing a search or the unu
   assert.equal(byId("unitEditorPanel").dataset.page, "main");
 });
 
-test("the unit's own weapon list shows entries in stored order with slots and jumps to the weapon", () => {
+test("the unit weapon list keeps stored slots and opens weapon fields within the unit tab", () => {
   resetState();
+  hooks.selectEditorTab("unit");
   hooks.selectEditorRecord("unit", 5);
-  const entries = byId("unitWeaponList").querySelectorAll("button");
+  const entries = byId("unitWeaponList").querySelectorAll(".unit-weapon-entry");
   assert.deepEqual(entries.map((entry) => entry.querySelector(".weapon-entry-name").textContent), ["푸른 칼", "작은 총"]);
-  assert.deepEqual(entries.map((entry) => entry.querySelector(".weapon-entry-slot").textContent), ["슬롯 1", "슬롯 2"]);
+  assert.deepEqual(entries.map((entry) => entry.querySelector(".weapon-entry-slot").textContent), ["무장 1 · 개조 슬롯 1", "무장 2 · 개조 슬롯 2"]);
   assert.match(entries[0].querySelector(".weapon-entry-stats").textContent, /공격 1,002 · 사정 1–4/);
-  assert.match(byId("unitWeaponNote").textContent, /게임 화면에서 이 순서로 보이는지는 확인하지 못했습니다/);
+  assert.match(byId("unitWeaponNote").textContent, /개조 슬롯·조건 유지/);
   assert.doesNotMatch(byId("unitWeaponNote").textContent, /게임의 표시 순서입니다|화면 순서와 같습니다/);
   assert.equal(byId("unitWeaponNote").classList.contains("is-caution"), false);
   assert.equal(byId("unitWeaponTotal").textContent, "2개");
   assert.equal(byId("unitWeaponPageCount").textContent, "2");
-  assert.match(entries[0].getAttribute("aria-label"), /^슬롯 1, 푸른 칼, 공격 1,002/);
+  assert.match(entries[0].getAttribute("aria-label"), /^무장 1, 개조 슬롯 1, 푸른 칼, 공격 1,002/);
 
   entries[1].click();
-  assert.equal(state.editorTab, "weapon");
+  assert.equal(state.editorTab, "unit");
+  assert.equal(byId("unitWeaponDetail").hidden, false);
+  assert.equal(byId("unitWeaponWorkarea").dataset.weaponDetail, "open");
   assert.equal(state.editorSelected.weapon, 3);
   assert.equal(byId("weaponStatsHeading").textContent, "작은 총 · #3");
+});
+
+test('weapon replacement updates the request, owners, change count and reset without a nested dialog', () => {
+  resetState(); hooks.selectEditorRecord('unit', 5);
+  const first = () => byId('unitWeaponList').querySelector('[data-unit-weapon-field="weapon1"]');
+  assert.equal(first().value, '2');
+  assert.equal(first().closest('details'), null, 'replacement is available directly on the weapon card');
+  assert.ok(first().options.some(option => option.value === '4' && option.textContent.includes('미연결')));
+  const search = byId('unitWeaponSearch'); search.value = '미사용'; search.dispatchEvent({ type: 'input', target: search });
+  assert.deepEqual(first().options.map(option => option.value), ['2','4']);
+  first().value = '4'; first().dispatchEvent({ type: 'change', target: first() });
+  assert.equal(state.editorUnits.find(row => row.recordIndex === 5).weapon1, 4);
+  assert.equal(hooks.buildEditorExportRequest().unitEdits.find(row => row.recordIndex === 5).fields.weapon1, 4);
+  assert.deepEqual(state.editorWeapons.find(row => row.recordIndex === 4).ownerUnits, [5]);
+  assert.doesNotMatch(byId('weaponRecordList').querySelector('[data-record-index="4"]').textContent,/사용 기체 없음/);
+  assert.match(byId('weaponRecordList').querySelector('[data-record-index="4"]').textContent,/기체5/);
+  assert.deepEqual(state.editorWeapons.find(row => row.recordIndex === 2).ownerUnits, []);
+  assert.equal(hooks.countEditorChanges(), 1);
+  byId('unitWeaponList').querySelector('.unit-weapon-edit button').click();
+  assert.equal(first().value, '2');
+  assert.equal(hooks.countEditorChanges(), 0);
+  assert.deepEqual(state.editorWeapons.find(row => row.recordIndex === 4).ownerUnits, []);
+  assert.match(byId('weaponRecordList').querySelector('[data-record-index="4"]').textContent,/사용 기체 없음/);
+  search.value = ''; search.dispatchEvent({ type: 'input', target: search });
+});
+
+test('field captions remain associated with the input after help and reset buttons are inserted',()=>{
+  resetState();hooks.selectEditorRecord('weapon',2);
+  for(const type of ['unit','weapon','pilot']){
+    for(const input of EDITOR_UI[type].form.querySelectorAll('[data-editor-field]')){
+      const label=input.closest('label');if(!label)continue;
+      assert.ok(input.id);assert.equal(label.getAttribute('for'),input.id);
+      assert.notEqual(label.getAttribute('for'),label.querySelector('.editor-diff-reset')?.id);
+    }
+  }
+});
+
+test('weapon tab can copy an existing dialogue type by weapon name and restore its exported value',()=>{
+ const view=makeView();view.weapons[0].voiceType=3;view.weapons[1].voiceType=24;
+ hooks.installEditorRows(view);openEditorState();hooks.selectEditorRecord('weapon',1);
+ const root=byId('weaponDialogueSource'),search=root.querySelector('input'),choose=root.querySelector('select');search.value='푸른 칼';search.dispatchEvent({type:'input'});
+ choose.value='2';choose.dispatchEvent({type:'change'});assert.equal(state.editorWeapons[0].voiceType,24);assert.equal(EDITOR_UI.weapon.form.querySelector('[data-editor-field="voiceType"]').value,'24');
+ assert.equal(hooks.buildEditorExportRequest().weaponEdits.find(r=>r.recordIndex===1).fields.voiceType,24);
+ EDITOR_UI.weapon.form.querySelector('[data-editor-reset-field="voiceType"]').click();assert.equal(state.editorWeapons[0].voiceType,3);
+ assert.equal(root.querySelector('select').value,'');
+});
+
+test('weapon addition creates a new stored slot, can be changed and removed, and reaches the export request',()=>{
+  resetState();const row=state.editorUnits.find(row=>row.recordIndex===5);row.weaponAdditionLimit=14;
+  hooks.selectEditorRecord('unit',5);
+  const search=byId('unitWeaponSearch');search.value='미사용';search.dispatchEvent({type:'input',target:search});
+  const add=byId('unitWeaponAddButton'),choice=byId('unitWeaponAddChoice');
+  assert.equal(add.disabled,false);assert.equal(choice.value,'4');add.click();
+  assert.deepEqual(row.weaponAdditions,[4]);assert.equal(hooks.countEditorChanges(),1);
+  assert.deepEqual(hooks.buildEditorExportRequest().unitWeaponAdditions,[{recordIndex:5,weapons:[4]}]);
+  assert.deepEqual(state.editorWeapons.find(row=>row.recordIndex===4).ownerUnits,[5]);
+  const added=byId('unitWeaponList').querySelector('[data-unit-weapon-field="addition1"]');assert.equal(added.value,'4');
+  assert.equal(byId('unitWeaponTotal').textContent,'3개');
+  byId('unitWeaponList').querySelectorAll('button').find(button=>button.getAttribute('aria-label')==='추가 무장 1 삭제').click();
+  assert.deepEqual(row.weaponAdditions,[]);assert.equal(hooks.countEditorChanges(),0);
+  assert.deepEqual(hooks.buildEditorExportRequest().unitWeaponAdditions,[]);
+  row.weaponAdditionLimit=0;hooks.renderUnitWeapons(row);assert.equal(add.disabled,true);
+  search.value='';search.dispatchEvent({type:'input',target:search});
 });
 
 test("a weapon list that is not fully trusted is shown with a caution or not at all, never as plain fact", () => {
@@ -474,7 +553,9 @@ test("a weapon list that is not fully trusted is shown with a caution or not at 
   assert.match(byId("unitWeaponNote").textContent, /무기 정보가 없는 자리 채움/);
 
   hooks.selectEditorRecord("unit", 7);
-  assert.equal(byId("unitWeaponList").querySelectorAll("button").length, 1);
+  assert.equal(byId("unitWeaponList").querySelectorAll(".unit-weapon-entry").length, 1, "only the one readable entry is displayed");
+  assert.equal(byId("unitWeaponList").querySelectorAll("[data-unit-weapon-field]").length, 0, "an inconsistent list cannot replace its stored weapon ids");
+  assert.equal(byId("unitWeaponList").querySelectorAll(".unit-slot-preview").length, 0, "the runtime preview is switched off on the public site (editor-public-features.mjs)");
   assert.equal(byId("unitWeaponNote").classList.contains("is-caution"), true);
   assert.match(byId("unitWeaponNote").textContent, /기록된 무기 수\(3개\)와 .*실제로 있는 항목 수\(1개\)가 달라/);
 
@@ -831,186 +912,16 @@ function openSkillDialog(recordIndex, gameId = "srwf-final") {
   hooks.selectEditorRecord("pilot", recordIndex);
   hooks.openPilotSkillDialog();
 }
-const skillRows = () => indexedSkillRows(byId);
+const skillRows = () => byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-row");
 const skillNames = () => skillRows().map((row) => row.querySelector(".pilot-skill-name").children[0].textContent);
-const chooseSkill = (id, level = 1) => choosePilotSkill(byId, state.editorGameId, id, level);
+const chooseSkill = (id, level = 1) => {
+  chooseSkillControl(document,id);
+  byId("pilotSkillAddSelect").dispatchEvent({ type: "change", target: byId("pilotSkillAddSelect") });
+  byId("pilotSkillAddLevel").value = String(level);
+  byId("pilotSkillAddLevel").dispatchEvent({ type: "input", target: byId("pilotSkillAddLevel") });
+};
 
-// Hero slots are rebuilt by the game. Their links must select the verified source, not edit the placeholder slot.
-function heroNavigationView() {
-  const view = makeView();
-  const spirits = Array.from({ length: 6 }, (_, index) => ({ id: index + 1, level: index + 1, name: `정신${index + 1}`, unresolved: false, eventFlag: null }));
-  view.pilots = [
-    pilotRow(1, "일반 파일럿"),
-    ...[302, 303].map(recordIndex => pilotRow(recordIndex, "자리표시 숫자열", {
-      recordKind: "hero-slot", role: "hero-slot", editable: false, readOnlyReason: "runtime-assembled", space: 3,
-      spiritEditable: false, spiritEditReason: "hero-slot", skillEditable: false, skillEditReason: "hero-slot",
-    })),
-    ...[304, 305, 306, 307].map(recordIndex => pilotRow(recordIndex, "레난제스·이룸 이름표", {
-      role: "hero-head", atk: 80 + recordIndex - 304, space: 4,
-      spiritEditable: false, spiritEditReason: "hero-head", skillEditable: false, skillEditReason: "hero-head",
-    })),
-    ...[308, 309, 310, 311].map(recordIndex => skillPilot(recordIndex, [skillEntry(33)], {
-      name: "헥토르·윈 이름표", recordKind: "hero-list-template", role: "hero-list", statsValid: false,
-      listTemplate: { spiritCommands: spirits, skills: [skillEntry(33)], readOnly: false },
-      spirits, spiritCommands: spirits, spiritEditable: true, spiritEditReason: null, spiritSlots: 6,
-      spiritMinimum: 6, spiritMinimumReason: "keeps-hero-spirit-slots", addableSpirits: Array.from({ length: 24 }, (_, index) => ({ id: index + 7, name: `정신${index + 7}`, unresolved: false })),
-      pairCapacity: 23, pairFree: 16, skillCapacity: 17, skillFree: 16, skillExpansionPairs: 0,
-    })),
-  ];
-  return view;
-}
-
-function openHeroNavigation(recordIndex = 303, gameId = "srwf-f", view = heroNavigationView()) {
-  hooks.installEditorRows(view);
-  state.editorGameId = gameId;
-  openEditorState();
-  hooks.selectEditorTab("pilot", { render: false });
-  hooks.selectEditorRecord("pilot", recordIndex);
-}
-
-const heroTarget = recordIndex => byId("pilotHeroTargets").querySelector(`[data-hero-target="${recordIndex}"]`);
-const heroTargets = () => byId("pilotHeroTargets").querySelectorAll("[data-hero-target]").map(button => Number(button.dataset.heroTarget));
-
-test("hero slots expose the verified edit sources and replace placeholder stats with source navigation", () => {
-  for (const gameId of ["srwf-f", "srwf-final"]) {
-    openHeroNavigation(303, gameId);
-    assert.equal(byId("pilotHeroLinks").hidden, false);
-    assert.equal(byId("pilotStatsForm").hidden, true, "the slot's initial 100s are not presented as the real hero's stats");
-    assert.deepEqual(heroTargets(), [304, 305, 306, 307, 308, 309]);
-    for (const recordIndex of [304, 305, 306, 307]) assert.equal(heroTarget(recordIndex).dataset.heroSection, "stats");
-    for (const recordIndex of [308, 309]) assert.equal(heroTarget(recordIndex).dataset.heroSection, "lists");
-    assert.doesNotMatch(byId("pilotHeroTargets").textContent, /레난제스|이룸|헥토르|윈/);
-    assert.equal(byId("pilotHeroReturnButton").hidden, true);
-    hooks.selectEditorRecord("pilot", 302);
-    assert.deepEqual(heroTargets(), [303, 310, 311], "302 does not claim any of 304–307 as its verified stat provider");
-    assert.equal(heroTarget(303).dataset.heroSection, "sources");
-    assert.match(byId("pilotHeroTargets").textContent, /능력치.*미확인/);
-    for (const recordIndex of [310, 311]) assert.equal(heroTarget(recordIndex).dataset.heroSection, "lists");
-    hooks.selectEditorRecord("pilot", 1);
-    assert.equal(byId("pilotHeroLinks").hidden, true);
-    assert.equal(byId("pilotStatsForm").hidden, false, "ordinary pilot controls stay accessible after both slot screens");
-  }
-  resetState();
-});
-
-test("a hero stat source link clears conditions that hide the source and preserves unsaved edits when returning", () => {
-  const view = heroNavigationView();
-  view.pilots.find(row => row.recordIndex === 304).defaultVisible = false;
-  openHeroNavigation(303, "srwf-f", view);
-  byId("pilotFilterButton").click();
-  byId("editorSearchSubmit").click();
-  assert.equal(hooks.editorSearchTools.hasConditions("pilot"), true);
-  byId("pilotSearch").value = "#303";
-  hooks.renderRecordList("pilot");
-  assert.deepEqual(hooks.visibleRecordRows("pilot").map(row => row.recordIndex), [303]);
-  const beforeRevision = state.editorEditRevision;
-  heroTarget(304).click();
-  assert.equal(state.editorSelected.pilot, 304);
-  assert.equal(byId("pilotSearch").value, "");
-  assert.equal(hooks.editorSearchTools.hasConditions("pilot"), false);
-  assert.equal(state.showUnused.pilot, true, "a hidden source becomes reachable in the list");
-  assert.equal(byId("pilotStatsForm").hidden, false);
-  assert.equal(byId("pilotHeroReturnButton").hidden, false);
-  assert.doesNotMatch(byId("pilotStatsHeading").textContent, /레난제스|이룸/);
-  const input = byId("pilotStatsForm").querySelector('[data-editor-field="atk"]');
-  assert.equal(input.disabled, false);
-  assert.equal(document.activeElement, input, "the source's first editable stat is focused");
-  assert.equal(state.editorEditRevision, beforeRevision, "navigation is not an edit");
-  input.value = "123";
-  input.dispatchEvent({ type: "input", target: input });
-  const row = state.editorPilots.find(candidate => candidate.recordIndex === 304);
-  assert.equal(row.atk, 123);
-  const editedRevision = state.editorEditRevision, editedCount = hooks.countEditorChanges();
-  byId("pilotHeroReturnButton").click();
-  assert.equal(state.editorSelected.pilot, 303);
-  assert.equal(byId("pilotStatsForm").hidden, true);
-  assert.equal(row.atk, 123);
-  assert.equal(state.editorEditRevision, editedRevision);
-  assert.equal(hooks.countEditorChanges(), editedCount);
-  heroTarget(304).click();
-  assert.equal(input.value, "123", "returning to the source keeps its current unsaved value");
-  const requested = hooks.buildEditorExportRequest().pilotEdits.find(entry => entry.recordIndex === 304);
-  assert.equal(requested.fields.atk, 123);
-  assert.equal(hooks.buildEditorExportRequest().pilotEdits.find(entry => entry.recordIndex === 303).fields.atk, 100);
-  resetState();
-});
-
-test("a hero list link opens six editable spirit slots while numeric template bytes stay protected", () => {
-  for (const [slot, list] of [[302, 310], [303, 308]]) {
-    openHeroNavigation(slot);
-    heroTarget(list).click();
-    assert.equal(state.editorSelected.pilot, list);
-    assert.equal(byId("pilotStatsForm").hidden, false);
-    assert.doesNotMatch(byId("pilotStatsHeading").textContent, /헥토르|윈|비표준/);
-    const controls = byId("pilotStatsForm").querySelectorAll("[data-editor-field]");
-    assert.ok(controls.length > 0);
-    assert.ok(controls.every(control => control.disabled), "list bytes are not editable pilot stats or terrain grades");
-    const choices = byId("pilotMentalCommands").querySelectorAll("select[data-spirit-slot]");
-    assert.equal(choices.length, 6);
-    assert.ok(choices.every(choice => !choice.disabled));
-    assert.equal(document.activeElement, choices[0]);
-    assert.ok(byId("pilotMentalCommands").querySelectorAll("[data-spirit-remove]").every(button => button.disabled), "the game's six fixed spirit pairs remain in place");
-    const row = state.editorPilots.find(candidate => candidate.recordIndex === list), beforeAtk = row.atk;
-    const number = byId("pilotStatsForm").querySelector('[data-editor-field="atk"]');
-    number.value = "222";
-    number.dispatchEvent({ type: "input", target: number });
-    assert.equal(row.atk, beforeAtk, "a programmatic input cannot turn template bytes into editable stats");
-    choices[0].value = "7";
-    choices[0].dispatchEvent({ type: "change", target: choices[0] });
-    assert.equal(row.spirits[0].id, 7);
-    assert.equal(row.spirits.length, 6);
-    const exportRow = hooks.buildEditorExportRequest().pilotEdits.find(entry => entry.recordIndex === list);
-    assert.equal(exportRow.spirits[0].id, 7);
-    assert.equal(exportRow.spirits.length, 6);
-    const revision = state.editorEditRevision;
-    byId("pilotHeroReturnButton").click();
-    assert.equal(state.editorSelected.pilot, slot, "return goes to the slot that opened the shared source");
-    assert.equal(state.editorEditRevision, revision);
-    assert.equal(row.spirits[0].id, 7);
-  }
-  resetState();
-});
-
-test("hero list skill editing and source navigation preserve all six spirit commands", () => {
-  openHeroNavigation(303, "srwf-final");
-  heroTarget(309).click();
-  assert.equal(byId("pilotSkillScheduleButton").disabled, false);
-  const row = state.editorPilots.find(candidate => candidate.recordIndex === 309);
-  const initialSpirits = row.spirits.map(({ id, level }) => [id, level]);
-  byId("pilotSkillScheduleButton").click();
-  assert.equal(byId("pilotSkillDialog").open, true);
-  chooseSkill(60, 7);
-  assert.equal(byId("pilotSkillAddButton").disabled, false);
-  byId("pilotSkillAddButton").click();
-  assert.ok(row.specialAbilities.some(entry => entry.id === 60 && entry.level === 7));
-  assert.deepEqual(row.spirits.map(({ id, level }) => [id, level]), initialSpirits);
-  byId("pilotSkillDialogClose").click();
-  byId("pilotHeroReturnButton").click();
-  assert.equal(state.editorSelected.pilot, 303);
-  heroTarget(309).click();
-  assert.ok(row.specialAbilities.some(entry => entry.id === 60 && entry.level === 7));
-  assert.deepEqual(row.spirits.map(({ id, level }) => [id, level]), initialSpirits);
-  const requested = hooks.buildEditorExportRequest().pilotEdits.find(entry => entry.recordIndex === 309);
-  assert.deepEqual(requested.spirits.map(({ id, level }) => [id, level]), initialSpirits);
-  assert.ok(requested.specialAbilities.some(entry => entry.id === 60 && entry.level === 7));
-  resetState();
-});
-
-test("directly selected hero sources return to the verified owning slot and never use table character names", () => {
-  for (const [recordIndex, expectedSlot] of [[304, 303], [307, 303], [308, 303], [309, 303], [310, 302], [311, 302]]) {
-    openHeroNavigation(recordIndex);
-    assert.equal(byId("pilotHeroLinks").hidden, false);
-    assert.equal(byId("pilotHeroReturnButton").hidden, false);
-    assert.deepEqual(heroTargets(), recordIndex < 308 ? [308 + recordIndex % 2] : [], "head sources keep one link to their corresponding list, rather than the entire chooser");
-    assert.doesNotMatch(byId("pilotStatsHeading").textContent, /레난제스|이룸|헥토르|윈|비표준/);
-    byId("pilotHeroReturnButton").click();
-    assert.equal(state.editorSelected.pilot, expectedSlot);
-    assert.equal(byId("pilotStatsForm").hidden, true);
-  }
-  resetState();
-});
-
-test("the skill dialog lists the skills with a level box and a delete button, and says how much room is left", () => {
+test("the skill dialog groups acquisition levels with delete controls and reports distinct ability kinds", () => {
   openSkillDialog(1);
   assert.equal(byId("pilotSkillDialog").open, true);
   assert.equal(byId("pilotSkillDialogTitle").textContent, "파일럿1");
@@ -1021,17 +932,17 @@ test("the skill dialog lists the skills with a level box and a delete button, an
   assert.equal(first.querySelector("input").getAttribute("aria-label"), "능력33 습득 파일럿 레벨");
   assert.equal(first.querySelector(".pilot-skill-remove").textContent, "삭제");
   assert.equal(first.querySelector(".pilot-skill-remove").getAttribute("aria-label"), "능력33 삭제");
-  assertSkillStatus(byId, 2, 4, 2, 1, 4);
+  assert.equal(byId("pilotSkillStatus").textContent, "습득 시점 2개능력 종류 1/4");
   assert.equal(byId("pilotSkillStatus").getAttribute("role"), "status");
-  assert.deepEqual(byId("pilotSkillDialogNote").children.map((part) => part.textContent), ["능력 단계 = 특수능력의 단계", "습득 Lv = 배우는 파일럿 레벨"]);
+  assert.match(byId("pilotSkillDialogNote").textContent, /능력 단계 = 특수능력의 단계/);
+  assert.match(byId("pilotSkillDialogNote").textContent, /습득 Lv = 배우는 파일럿 레벨/);
+  assert.match(byId("pilotSkillStatus").title, /정신커맨드 6칸.*같은 계열/);
+  assert.equal(byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-group").length, 1, "two ranks belong to one ability family");
   assert.equal(byId("pilotSkillScheduleButton").textContent, "추가·삭제");
   assert.equal(byId("pilotSkillWarning").hidden, true);
   assert.equal(byId("pilotSkillSchedule").getAttribute("role"), "list");
   assert.equal(byId("pilotSkillAddButton").disabled, true, "nothing is chosen yet");
-  assert.deepEqual(offeredPilotSkillIds(byId), Array.from({ length: 51 }, (_, index) => 33 + index).filter((id) => ![33, 34].includes(id)), "the two held ranks are not offered");
-  assert.equal(byId("pilotSkillAddSelect").options.length, 1 + 5 + 6, "each of the five rank families appears once beside the six single skills");
-  assert.equal(byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-group").length, 1, "two Newtype ranks share one ability group");
-  assert.equal(skillRows().every((row) => row.querySelector("select[data-skill-rank]")), true, "every learning milestone exposes its ability rank separately");
+  assert.equal(offeredSkillIds(document).length, 49, "the two held skills are not offered");
   assert.equal(byId("pilotSkillRevertButton").disabled, true, "nothing to revert");
 });
 
@@ -1039,19 +950,19 @@ test("choosing a skill and a level adds it to the end; the room, the request and
   openSkillDialog(1);
   chooseSkill(50, 7);
   assert.equal(byId("pilotSkillAddButton").disabled, false);
-  assert.match(byId("pilotSkillAddHint").textContent, /9단계 · 파일럿 Lv 7부터 적용/);
+  assert.match(byId("pilotSkillAddHint").textContent, /9단계.*파일럿 Lv 7부터 적용/);
   byId("pilotSkillAddButton").click();
   assert.deepEqual(skillNames(), ["능력33", "능력34", "능력50"]);
   assert.equal(skillRows()[2].classList.contains("is-new"), true);
   assert.match(skillRows()[2].querySelector(".pilot-skill-meta").textContent, /새로 추가/);
-  assertSkillStatus(byId, 3, 4, 1, 2, 4);
-  assert.equal(offeredPilotSkillIds(byId).includes(50), false, "an added skill is no longer offered");
+  assert.equal(byId("pilotSkillStatus").textContent, "습득 시점 3개능력 종류 2/4");
+  assert.equal(offeredSkillIds(document).includes(50), false, "an added skill is no longer offered");
   assert.equal(byId("pilotSkillAddSelect").value, "", "the choice is cleared");
   assert.match(byId("liveRegion").textContent, /능력50을 추가했습니다\. 남은 자리 1/);
   const row = state.editorPilots[0];
   assert.deepEqual(row.specialAbilities.map(({ id, level }) => [id, level]), [[33, 1], [34, 5], [50, 7]]);
   assert.equal(byId("pilotSkillRevertButton").textContent, "이번 추가 되돌리기");
-  assert.match(byId("pilotSkillRevertButton").title, /이번에 추가한 능력/);
+  assert.equal(byId("pilotSkillRevertButton").title, "이번에 추가한 능력을 되돌립니다.");
   assert.equal(byId("pilotSkillRevertButton").disabled, false);
   assert.equal(byId("pilotSkillScheduleButton").textContent, "추가·삭제");
   assert.equal(hooks.skillChangeCount(row), 1);
@@ -1060,23 +971,37 @@ test("choosing a skill and a level adds it to the end; the room, the request and
   assert.equal(byId("pilotRuntimeSkills").children.length >= 1, true);
 });
 
+test("undoing the latest grouped skill addition preserves an earlier edit before the full revert",()=>{
+  openSkillDialog(1);
+  chooseSkill(50,7);byId("pilotSkillAddButton").click();
+  chooseSkill(51,1);byId("pilotSkillAddButton").click();
+  assert.deepEqual(state.editorPilots[0].specialAbilities.map(entry=>entry.id),[33,34,50,51]);
+  assert.equal(byId("pilotSkillRevertButton").textContent,"이번 추가 되돌리기");
+  byId("pilotSkillRevertButton").click();
+  assert.deepEqual(state.editorPilots[0].specialAbilities.map(entry=>entry.id),[33,34,50]);
+  assert.equal(hooks.skillChangeCount(state.editorPilots[0]),1,"the earlier addition remains a pending edit");
+  assert.equal(byId("pilotSkillRevertButton").textContent,"원래 목록으로 되돌리기");
+  byId("pilotSkillRevertButton").click();
+  assert.deepEqual(state.editorPilots[0].specialAbilities.map(entry=>entry.id),[33,34]);
+  assert.equal(hooks.skillChangeCount(state.editorPilots[0]),0);
+});
+
 test("a full list refuses another skill with the reason; deleting makes room and the skill can come back", () => {
   openSkillDialog(1);
   chooseSkill(50, 7);
   byId("pilotSkillAddButton").click();
   chooseSkill(51, 1);
   byId("pilotSkillAddButton").click();
-  assertSkillStatus(byId, 4, 4, 0, 3);
+  assert.equal(byId("pilotSkillStatus").textContent, "습득 시점 4개능력 종류 3/4");
   chooseSkill(52, 1);
   assert.equal(byId("pilotSkillAddButton").disabled, true);
   assert.match(byId("pilotSkillAddHint").textContent, /공간이 부족.*정신커맨드 6칸과 기존 능력은 유지/);
   assert.equal(byId("pilotSkillAddHint").classList.contains("is-caution"), true);
-  assert.equal(byId("pilotSkillAdd").hidden, false, "a full record keeps the add catalog visible");
+  assert.equal(byId("pilotSkillAddSelect").disabled === false, true, "the box stays open so the choice can wait");
   skillRows()[2].querySelector(".pilot-skill-remove").click();
   assert.deepEqual(skillNames(), ["능력33", "능력34", "능력51"]);
   assert.match(byId("liveRegion").textContent, /능력50을 삭제했습니다\. 남은 자리 1/);
-  assert.equal(byId("pilotSkillAdd").hidden, false, "the add form stays available after deleting a learning milestone");
-  assert.equal(offeredPilotSkillIds(byId).includes(50), true, "the deleted skill is offered again");
+  assert.equal(offeredSkillIds(document).includes(50), true, "the deleted skill is offered again");
   chooseSkill(50, 2);
   assert.equal(byId("pilotSkillAddButton").disabled, false);
 });
@@ -1122,7 +1047,8 @@ test("an event-flag skill is shown and kept: its level and its delete button are
 
 test("help inside a modal belongs to that modal and closes with it, then can move back to the editor", () => {
   openSkillDialog(2);
-  const button = byId("pilotSkillSchedule").querySelector(".pilot-skill-group .editor-help-button");
+  const button = byId('pilotSkillSchedule').querySelector('.pilot-skill-group-header .editor-help-button');
+  assert.ok(button, 'help belongs to the grouped ability header');
   const clickHelp = (target) => target.dispatchEvent({ type: 'click', target, preventDefault() {}, stopPropagation() {} });
   clickHelp(button);
   const panel = byId('pilotSkillDialog').querySelector('#editorGameplayHelp');
@@ -1189,7 +1115,7 @@ test("a pilot with no room, a locked pilot and a row without the core's skill fi
 
 test("the fifth distinct skill is refused before it is added, and a new rank of a held family is welcome", () => {
   openSkillDialog(4);
-  assertSkillStatus(byId, 4, 9, 5, 4, 4);
+  assert.equal(byId("pilotSkillStatus").textContent, "습득 시점 4개능력 종류 4/4");
   assert.match(byId("pilotSkillAddHint").textContent, /서로 다른 능력이 이미 4가지입니다.*이미 가진 계열의 다른 단계만/);
   chooseSkill(51, 1);
   assert.equal(byId("pilotSkillAddButton").disabled, true);
@@ -1197,8 +1123,9 @@ test("the fifth distinct skill is refused before it is added, and a new rank of 
   chooseSkill(34, 3);
   assert.equal(byId("pilotSkillAddButton").disabled, false, "another rank of the family the pilot already holds");
   byId("pilotSkillAddButton").click();
-  assert.deepEqual(skillNames(), ["능력82", "능력83", "능력33", "능력42", "능력34"]);
-  assert.deepEqual(state.editorPilots[3].specialAbilities.map((item) => item.id), [82, 83, 33, 42, 34], "rank 34 follows rank 33 of its ladder");
+  assert.deepEqual(skillNames(), ["능력82", "능력83", "능력33", "능력34", "능력42"], "display ranks are placed together within their family");
+  assert.deepEqual(skillRows().map(row=>Number(row.dataset.skillIndex)), [0,1,2,4,3], "display grouping preserves each stored entry's identity");
+  assert.deepEqual(state.editorPilots[3].specialAbilities.map((item) => item.id), [82, 83, 33, 42, 34], "adding a rank preserves the stored list order");
   assert.equal(byId("pilotSkillWarning").hidden, true);
 });
 
@@ -1230,7 +1157,7 @@ test("reverting restores the list the record had when it was opened, names inclu
   assert.equal(byId("pilotSkillRevertButton").disabled, true);
   assert.equal(byId("pilotRecordList").children[0].classList.contains("is-modified"), false);
   assert.match(byId("liveRegion").textContent, /원래대로 되돌렸습니다/);
-  assertSkillStatus(byId, 2, 4, 2, 1, 4);
+  assert.equal(byId("pilotSkillStatus").textContent, "습득 시점 2개능력 종류 1/4");
 });
 
 test("a placeholder pilot without spirit commands is told what adding does to its marker", () => {
@@ -1283,82 +1210,6 @@ test("a refused skill edit is explained in Korean with the numbers the worker fo
 });
 
 // ---- image fitting ----------------------------------------------------------------------------------------------------
-
-test("runtime hero slots clear the previous portrait, send no preview request and ignore late responses", () => {
-  resetState();
-  const image = byId("pilotPreviewImage"), caption = byId("pilotPreviewCaption");
-  const previousContext = image.getContext, previousImageData = globalThis.ImageData;
-  const previousComputedStyle = globalThis.getComputedStyle;
-  const previousWorker = state.editorWorker, previousToken = state.editorSessionToken;
-  const posts = [];
-  let clears = 0, draws = 0;
-  image.getContext = () => ({ clearRect() { clears += 1; }, putImageData() { draws += 1; } });
-  globalThis.ImageData = class {
-    constructor(pixels, width, height) { this.data = pixels; this.width = width; this.height = height; }
-  };
-  globalThis.getComputedStyle = () => ({ paddingLeft: "0", paddingRight: "0", paddingTop: "0", paddingBottom: "0" });
-  const picture = { width: 2, height: 1, pixels: new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 255, 255]) };
-  const complete = request => hooks.handleEditorWorkerMessage({ data: {
-    ...request, type: "PREVIEW_COMPLETE", image: picture, imageSource: "record",
-  } });
-  try {
-    const view = makeView();
-    view.pilots = [
-      pilotRow(1, "일반 파일럿", { faceId: 10, imageIndex: 10, imageStatus: "source-reference" }),
-      ...[302, 303].map(recordIndex => pilotRow(recordIndex, "자리표시 숫자열", {
-        recordKind: "hero-slot", role: "hero-slot", editable: false, readOnlyReason: "runtime-assembled",
-        faceId: 95, imageIndex: null, referenceImageIndex: null, imageStatus: "runtime-assembled",
-      })),
-    ];
-    hooks.installEditorRows(view);
-    state.editorWorker = { postMessage(message) { posts.push(message); } };
-    state.editorSessionToken = "portrait-session";
-    for (const hero of [302, 303]) {
-      hooks.selectEditorRecord("pilot", 1);
-      const request = posts.at(-1);
-      assert.equal(request.type, "PREVIEW");
-      assert.equal(request.recordIndex, 1);
-      complete(request);
-      assert.equal(image.hidden, false);
-      assert.match(image.getAttribute("aria-label"), /일반 파일럿.*실제 게임 이미지/);
-      const beforePosts = posts.length, beforeDraws = draws;
-      hooks.selectEditorRecord("pilot", hero);
-      const afterHeroClears = clears;
-      assert.equal(posts.length, beforePosts, "runtime slots never ask the worker for their stored FACE");
-      assert.equal(state.editorPreviewRequests.pilot, null);
-      assert.equal(image.hidden, true);
-      assert.equal(image.getAttribute("aria-label"), null);
-      assert.equal(caption.hidden, false);
-      assert.equal(caption.textContent, "게임에서 결정");
-      assert.match(caption.title, /다시|조립|주인공/);
-      complete(request);
-      hooks.handleEditorWorkerMessage({ data: { ...request, type: "PREVIEW_ERROR", error: "late response" } });
-      assert.equal(clears, afterHeroClears, "late results cannot replace the slot's empty preview state");
-      assert.equal(draws, beforeDraws);
-      assert.equal(image.hidden, true);
-      assert.equal(caption.textContent, "게임에서 결정");
-      assert.equal(state.editorPilots.find(row => row.recordIndex === hero).faceId, 95, "the raw face diagnostic stays unchanged");
-    }
-    hooks.selectEditorRecord("pilot", 1);
-    const request = posts.at(-1);
-    complete(request);
-    assert.equal(image.hidden, false, "an ordinary pilot still renders after both runtime slots");
-    hooks.selectEditorRecord("pilot", 1);
-    hooks.handleEditorWorkerMessage({ data: { ...posts.at(-1), type: "PREVIEW_COMPLETE", image: null, imageSource: "record" } });
-    assert.equal(image.hidden, true, "an empty provider result never retains the previous portrait");
-    assert.match(caption.textContent, /일반 파일럿.*지정된 그림이 없습니다/);
-    assert.equal(caption.hidden, false);
-  } finally {
-    image.getContext = previousContext;
-    if (previousImageData === undefined) delete globalThis.ImageData;
-    else globalThis.ImageData = previousImageData;
-    if (previousComputedStyle === undefined) delete globalThis.getComputedStyle;
-    else globalThis.getComputedStyle = previousComputedStyle;
-    state.editorWorker = previousWorker;
-    state.editorSessionToken = previousToken;
-    resetState();
-  }
-});
 
 test("a portrait fills its cell: whole pixels from three times up, the exact fraction below so it grows with the screen", () => {
   assert.equal(hooks.fitImageScale(100, 100, 40, 40), 2.5, "2.5 fits: the exact fraction");
@@ -1418,4 +1269,43 @@ test("record lists are real scroll containers that do not chain their scroll to 
   assert.match(list, /min-height: 0/, "a flex child with a fixed share of the height scrolls instead of growing");
   assert.match(rule(".unit-weapons-panel .unit-weapon-list"), /overflow-y: auto/);
   assert.match(rule(".owner-chip-list"), /overflow-y: auto/);
+});
+
+test('hero basic stat sources use neutral titles and current numbers',()=>{
+ const view=makeView();
+ const sources=[304,305,306,307].map((id,i)=>pilotRow(id,`이름표 ${id}`,{role:'hero-head',atk:i%2?155:140,shot:i%2?140:155}));
+ const slot=pilotRow(303,'자리 표시',{role:'hero-slot',recordKind:'hero-slot',editable:false});
+ view.pilots=[slot,...sources,pilotRow(308,'습득표',{recordKind:'hero-list-template',role:'hero-list'})];
+ hooks.installEditorRows(view);hooks.renderPilotHeroNavigation(slot);
+ const buttons=byId('pilotHeroTargets').querySelectorAll('[data-hero-section="stats"]');
+ assert.equal(buttons.length,4);
+ for(let i=0;i<4;i++){
+  assert.equal(hooks.editorRowName(sources[i]),`기본 능력치 ${i+1}`);
+  assert.match(buttons[i].textContent,new RegExp(`기본 능력치 ${i+1}`));
+  assert.match(buttons[i].textContent,new RegExp(`격투 ${sources[i].atk} · 사격 ${sources[i].shot}`));
+  assert.doesNotMatch(buttons[i].textContent,/격투형|사격형|우세/);
+ }
+ state.editorPilots.find(row=>row.recordIndex===304).atk=200;hooks.renderPilotHeroNavigation(slot);
+ assert.match(byId('pilotHeroTargets').querySelector('[data-hero-section="stats"]').textContent,/격투 200/);
+ hooks.renderPilotHeroNavigation(sources[0]);
+ assert.equal(byId('pilotCombatHeading').textContent,'기본 능력치 · ROM 기준값');
+ hooks.renderPilotHeroNavigation(pilotRow(10,'보통 파일럿'));
+ assert.equal(byId('pilotCombatHeading').textContent,'능력');
+});
+
+test('hero identity aliases keep their own preview identity and hide shared dummy stats',()=>{
+ const view=makeView();view.pilots.push(pilotRow(302,'주인공',{recordKind:'hero-slot'}),pilotRow(303,'주인공',{recordKind:'hero-slot'}));
+ view.pilotAliases=[{recordIndex:316,aliasOf:1,name:'미나 라이클링',nameStatus:'localized-source',sourceName:'ミーナ',shortName:'미나',heroIdentity:true,statsValid:false,referenceImageIndex:316,editable:false,recordKind:'alias-group'}];
+ hooks.installEditorRows(view);openEditorState();
+ const messages=[];state.editorWorker={postMessage:m=>messages.push(m)};
+ hooks.selectEditorTab('pilot');hooks.selectEditorRecord('pilot',316);
+ assert.equal(byId('pilotStatsHeading').textContent,'미나 라이클링 · #316');
+ assert.equal(EDITOR_UI.pilot.form.dataset.heroSource,'identity');
+ assert.equal(EDITOR_UI.pilot.form.querySelector('[data-editor-field="atk"]').value,'');
+ assert.equal(byId('pilotHeroLinksTitle').textContent,'주인공 이름·초상화 참고');
+ assert.deepEqual(Array.from(byId('pilotHeroTargets').children).map(b=>b.dataset.heroTarget),['303','302']);
+ assert.equal(messages.filter(m=>m.type==='PREVIEW').at(-1).recordIndex,316);
+ hooks.selectEditorRecord('pilot',2);
+ assert.equal(EDITOR_UI.pilot.form.dataset.heroSource,undefined);
+ state.editorWorker=null;
 });

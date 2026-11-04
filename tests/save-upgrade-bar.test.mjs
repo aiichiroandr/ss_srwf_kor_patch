@@ -37,7 +37,7 @@ test('opening an existing value above the current limit preserves it',()=>{
   assert.equal(bar.classList.contains('is-over-limit'),true);assert.deepEqual(values,[]);
 });
 test('scalar validation rejects empty, fractional and out-of-storage values',()=>{
-  for(const [field,max,min] of [['level',99,1],['experience',65535,0],['money',0xffffff,0]]){
+  for(const [field,max,min] of [['level',99,1],['experience',65535,0],['money',9999999,0]]){
     assert.doesNotThrow(()=>requireSaveScalar(field,min));assert.doesNotThrow(()=>requireSaveScalar(field,max));
     for(const invalid of [NaN,Infinity,min-1,max+1,1.5,'7'])assert.throws(()=>requireSaveScalar(field,invalid));
   }

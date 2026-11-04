@@ -6,6 +6,19 @@ const condition = (field, value, op = "eq") => ({ field, value, op });
 const unit = (recordIndex, values = {}) => { const row = { recordIndex, editable: true, hp: 1000, space: 3, air: 4, sea: 1, ground: 2, ...values }; return { ...row, original: { ...row } }; };
 const session = (units = [], weapons = [], pilots = []) => ({ gameId: "srwf-final", units, weapons, pilots });
 
+test("pilot EXP filters and bulk edits identify the base reward component without changing its byte domain", () => {
+  const filtered=filterFields('pilot').find(field=>field.key==='exp');
+  const editable=filterFields('pilot',{editableOnly:true}).find(field=>field.key==='exp');
+  assert.equal(filtered.label,'파일럿 기본 EXP');assert.equal(editable.label,filtered.label);
+  assert.deepEqual(editable.bounds,[0,255]);
+  const row={recordIndex:1,editable:true,statsValid:true,exp:40,level:9,original:{exp:40}},model=session([],[],[row]);
+  assert.equal(matchesConditions('pilot',row,[condition('exp',40)]),true);
+  for(const value of [-1,256])assert.equal(isValidBulkValue('pilot','exp',value),false);
+  for(const value of [0,255])assert.equal(isValidBulkValue('pilot','exp',value),true);
+  const tx=applyBulkEdit(planBulkEdit(model,'pilot',[row],'exp',255),model);
+  assert.equal(row.exp,255);assert.equal(row.level,9);undoBulkEdit(tx,model);assert.equal(row.exp,40);
+});
+
 test("unit/pilot B and weapon B use distinct encodings; unknown grades never match a ranked condition", () => {
   assert.equal(matchesConditions("unit", unit(1), [condition("space", 3)]), true);
   assert.equal(matchesConditions("pilot", { space: 3 }, [condition("space", 3)]), true);
@@ -53,8 +66,8 @@ test("malformed filters fail closed and bulk choices expose scalar fields only",
   assert.equal(filterFields("pilot", { editableOnly: true }).some(field => ["ability", "spirit"].includes(field.key)), false);
   assert.equal(isValidBulkValue("weapon", "ammo", 0), false);
   assert.equal(isValidBulkValue("weapon", "requiredMorale", 151), false);
-  assert.equal(isValidBulkValue("weapon", "hit", -99), true);
-  assert.equal(isValidBulkValue("weapon", "hit", -100), false);
+  for(const value of [-99,0,99])assert.equal(isValidBulkValue("weapon", "hit", value), true);
+  for(const value of [-128,-100,100,127])assert.equal(isValidBulkValue("weapon", "hit", value), false);
 });
 test("a batch snapshots all targets, skips read-only and equal values, and undo returns to pre-edited values", () => {
   const rows = [unit(1), unit(2, { space: 2 }), unit(3, { editable: false }), unit(4, { space: 4 })];

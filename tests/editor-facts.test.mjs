@@ -942,6 +942,10 @@ for (const [lane, gameId] of Object.entries(TSR_LANES)) {
     const pilotCount = {};
     const flagged = [];
     for (const pilot of pilots) {
+      // Hero ability-list templates are not independent pilot records. The
+      // parser now exposes them for editing, but the carrier census counts
+      // actual pilot headers, as it did before those templates were exposed.
+      if (pilot.recordKind === 'hero-list-template') continue;
       const ids = new Set(pilot.specialAbilities.map((skill) => skill.id));
       for (const id of ids) pilotCount[id] = (pilotCount[id] ?? 0) + 1;
       for (const skill of pilot.specialAbilities) if (skill.eventFlag !== null) flagged.push([pilot.recordIndex, skill.id, skill.eventFlag]);

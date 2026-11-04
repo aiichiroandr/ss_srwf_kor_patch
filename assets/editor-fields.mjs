@@ -4,7 +4,8 @@
 //
 // Unit and pilot terrain grades are nibbles here (0..15, what the record can hold); the narrower rule for a CHANGED
 // grade (0..4) is isGradeEditAllowed in editor-grades.mjs, which the writers and the preset check share as well.
-import {isRegionRuleWireValue,decodeRegionRule} from './editor-scenario-region-context.mjs?v=20261104-save3';
+import {isRegionRuleWireValue,decodeRegionRule} from './editor-scenario-region-context.mjs?v=20261104-part1';
+import {readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261104-part1';
 const range = (minimum, maximum) => Object.freeze([minimum, maximum]);
 const BYTE = range(0, 0xff);
 const WORD = range(0, 0xffff);
@@ -52,9 +53,16 @@ export function isEventRuleValueInBounds(value){return Number.isSafeInteger(valu
 const OBJECTIVE_RULE = range(0,0x837f);
 
 export const EDITOR_FIELD_BOUNDS = Object.freeze({
+  beam: Object.freeze({ enabled: range(0,1) }),
+  critical: Object.freeze({ enabled: range(0,1) }),
+  debug: Object.freeze({ enabled: range(0,1) }),
+  alice: Object.freeze({enabled:range(0,1),crewEnabled:range(0,1),spBase:range(0,999),
+    ...Object.fromEntries(Array.from({length:6},(_,i)=>[[`spirit${i+1}`,range(1,30)],[`spiritLevel${i+1}`,range(1,99)]]).flat())}),
+  collection: Object.freeze({ enabled: range(0,1) }),
   unit: Object.freeze({
+    ...Object.fromEntries(Array.from({ length: 16 }, (_, i) => [`weapon${i + 1}`, range(1, 2047)])),
     hp: WORD, en: WORD, armor: WORD, speed: WORD, limit: WORD,
-    move: BYTE, ground: NIBBLE, sea: NIBBLE, air: NIBBLE, space: NIBBLE,
+    killMoney: WORD, killExp: BYTE, partSlots: range(1, 4), move: BYTE, ground: NIBBLE, sea: NIBBLE, air: NIBBLE, space: NIBBLE,
     ability1: BYTE, ability2: BYTE, ability3: BYTE, ability4: BYTE,
     abilityValue1: BYTE, abilityValue2: BYTE, abilityValue3: BYTE, abilityValue4: BYTE,
     shield: "boolean", parry: "boolean",
@@ -67,17 +75,24 @@ export const EDITOR_FIELD_BOUNDS = Object.freeze({
     agiGrowth: NIBBLE, cntGrowth: NIBBLE, mindGrowth: NIBBLE, syncGrowth: NIBBLE,
   }),
   weapon: Object.freeze({
-    attack: WORD, hit: range(-128, 127), critical: NIBBLE,
+    voiceType: range(0,63),
+    // Three-digit signed modifiers spill into the next weapon-list row in
+    // the game. Keep edits inside the display's two-digit magnitude.
+    attack: WORD, hit: range(-99, 99), critical: NIBBLE,
     minRange: BYTE, maxRange: BYTE, terrain: BYTE, energy: WORD,
     ammo: BYTE, requiredMorale: BYTE, requiredSkill: BYTE,
   }),
-  terrain: Object.freeze({ avoidanceBonus: range(0, 100), defenseBonus: range(0, 100), hpRecovery: range(0, 100), enRecovery: range(0, 100) }),
+  upgrade: Object.freeze({ cost: range(0, 655350) }),
+  terrain: Object.freeze({ avoidanceBonus: range(-100, 100), defenseBonus: range(-100, 100), hpRecovery: range(0, 100), enRecovery: range(0, 100) }),
   reward: Object.freeze({ part1: range(1, 22), chance1: range(0, 100), part2: range(1, 22), chance2: range(0, 100) }),
   deployment: Object.freeze({ x: range(0, 63), y: range(0, 63), rewardSelector: BYTE }),
   event: Object.freeze({ turn: range(1,99),eventPhase:range(0,1),eventJoin:range(0,1),eventRule1:range(19,1599),eventRule2:range(0,1599),eventRule3:range(0,1599) }),
   objective: Object.freeze({ deadline: range(0,98),objectivePriority:range(0,1),victoryJoin:range(0,1),defeatJoin:range(0,1),
     victoryRule1:OBJECTIVE_RULE,victoryRule2:OBJECTIVE_RULE,victoryRule3:OBJECTIVE_RULE,defeatRule1:OBJECTIVE_RULE,defeatRule2:OBJECTIVE_RULE,defeatRule3:OBJECTIVE_RULE }),
-  reinforcement: Object.freeze({enabled:range(0,1),templateOffset:range(56,262143),turn:range(2,99),x:range(0,63),y:range(0,63),rewardSelector:BYTE}),
+  reinforcement: Object.freeze({enabled:range(0,1),pilotId:range(1,511),unitId:range(1,511),level:range(1,99),triggerX:range(0,63),triggerY:range(0,63),x:range(0,63),y:range(0,63)}),
+  glyph: Object.freeze({}),
+  roster: Object.freeze({initialLevel:range(1,99)}),
+  dialogue: Object.freeze({speakerId:range(1,511)}),
   map: Object.freeze({ tileId: range(0, 1023) }),
 });
 
@@ -104,6 +119,11 @@ export function isScreenFieldEditAllowed(kind, field, next, stored) {
 
 // Whether `value` may stand in `field` of a record of `kind` at all (an own entry of the table, an integer in range).
 export function isFieldValueInBounds(kind, field, value) {
+  if(kind==='dialogue'&&field==='afterDialogueJson'){try{readAfterDialogueJson(value);return true;}catch{return false;}}
+  if(kind==='glyph'&&field==='characters')return typeof value==='string'&&[...value].length<=64&&[...value].every(ch=>/[가-힣]/u.test(ch))&&new Set(value).size===[...value].length;
+  if(kind==='dialogue'&&field==='pagesJson'){if(value==='')return true;if(typeof value!=='string'||value.length>8192)return false;try{const pages=JSON.parse(value);return Array.isArray(pages)&&pages.length>=2&&pages.length<=4&&pages.every(text=>typeof text==='string'&&text.length<=4096&&!/[\u0000-\u001f\u007f]/.test(text));}catch{return false;}}
+  if(kind==='dialogue'&&field==='text')return typeof value==='string'&&value.length<=4096&&!/[\u0000-\u001f\u007f]/.test(value);
+  if(kind==='weapon'&&field==='name')return typeof value==='string'&&value.trim()===value&&value.length>0&&[...value].length<=80&&!/[\u0000-\u001f\u007f]/.test(value);
   const table = Object.hasOwn(EDITOR_FIELD_BOUNDS, kind) ? EDITOR_FIELD_BOUNDS[kind] : null;
   if (!table || typeof field !== "string" || !Object.hasOwn(table, field)) return false;
   if(kind==='event'&&/^eventRule[123]$/.test(field))return isEventRuleValueInBounds(value)&&(field!=='eventRule1'||value!==0);
@@ -111,4 +131,13 @@ export function isFieldValueInBounds(kind, field, value) {
   if (table[field] === "boolean") return typeof value === "boolean";
   const [minimum, maximum] = table[field];
   return Number.isSafeInteger(value) && value >= minimum && value <= maximum;
+}
+
+// Old personal BINs can already contain the full signed-byte range. Reading
+// and comparing their baseline must still allow a correction to the new range;
+// this is never permission to submit a new out-of-range value.
+export function isStoredFieldValueInBounds(kind, field, value) {
+  return kind === 'weapon' && field === 'hit'
+    ? Number.isSafeInteger(value) && value >= -128 && value <= 127
+    : isFieldValueInBounds(kind, field, value);
 }

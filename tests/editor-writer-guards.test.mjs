@@ -139,7 +139,7 @@ const weaponEdits = (rows, change = () => {}) => rows.map((row) => {
   return { recordIndex: row.recordIndex, fields };
 });
 
-test('weapon writer: the hit modifier is a signed byte, a changed one stays -99..99 (its screen field), everything else keeps its own range', () => {
+test('weapon writer: new hit modifiers stay within -99..99, everything else keeps its own range', () => {
   const { rows, bytes } = weaponFixture();
   const start = rows.find((row) => row.recordIndex === 1).byteOffset;
   for (const [value, stored] of [[99, 0x63], [-99, 0x9d], [0, 0], [-1, 0xff]]) {
@@ -155,6 +155,22 @@ test('weapon writer: the hit modifier is a signed byte, a changed one stays -99.
     updateWeaponRecords(bytes(), weaponEdits(rows, (id, fields) => { if (id === 1) fields[field] = maximum; }));
     assert.throws(() => updateWeaponRecords(bytes(), weaponEdits(rows, (id, fields) => { if (id === 1) fields[field] = maximum + 1; })),
       code('EDITOR_VALUE_OUT_OF_RANGE'), field);
+  }
+});
+
+test('old signed-byte hit modifiers may be preserved or corrected but never used to widen new edits', () => {
+  const { rows, bytes } = weaponFixture();
+  const start=rows.find(row=>row.recordIndex===1).byteOffset;
+  for(const legacy of [-128,-100,100,127]){
+    const before=bytes();before[start+7]=legacy&255;
+    const legacyRows=rows.map(row=>row.recordIndex===1?{...row,hit:legacy}:row);
+    const echoed=before.slice();updateWeaponRecords(echoed,weaponEdits(legacyRows));
+    assert.deepEqual(echoed,before);
+    const corrected=before.slice();updateWeaponRecords(corrected,weaponEdits(legacyRows,(id,fields)=>{if(id===1)fields.hit=legacy<0?-99:99;}));
+    assert.equal(corrected[start+7],legacy<0?0x9d:0x63);
+    const rejected=before.slice();
+    assert.throws(()=>updateWeaponRecords(rejected,weaponEdits(legacyRows,(id,fields)=>{if(id===1)fields.hit=legacy===100?127:100;})),code('EDITOR_VALUE_OUT_OF_RANGE'));
+    assert.deepEqual(rejected,before,'rejection leaves the entire segment unchanged');
   }
 });
 
@@ -194,7 +210,7 @@ test('a refused value carries the kind of record, its number, the field and its 
   assert.deepEqual(refused(() => updateWeaponRecords(weaponBytes(), weaponEdits(weaponList, (id, fields) => { if (id === 2) fields.critical = 16; }))).details,
     { kind: 'weapon', recordIndex: 2, field: 'critical', minimum: 0, maximum: 15 });
   assert.deepEqual(refused(() => updateWeaponRecords(weaponBytes(), weaponEdits(weaponList, (id, fields) => { if (id === 1) fields.hit = -129; }))).details,
-    { kind: 'weapon', recordIndex: 1, field: 'hit', minimum: -128, maximum: 127 });
+    { kind: 'weapon', recordIndex: 1, field: 'hit', minimum: -99, maximum: 99 });
   assert.deepEqual(refused(() => updateWeaponRecords(weaponBytes(), weaponEdits(weaponList, (id, fields) => { if (id === 1) fields.attack += 1; }), new Map([[1, 'unused-filler']]))).details,
     { kind: 'weapon', recordIndex: 1, reason: 'read-only', cause: 'unused-filler' });
 

@@ -15,7 +15,6 @@ import { isLockedUnitAbility } from "../assets/editor-locks.mjs";
 import { addBlock, isFlagGated } from "../assets/editor-skill-list.mjs";
 import { parsePreset } from "../assets/editor-preset.mjs";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
-import { choosePilotSkill, indexedSkillRows } from "./helpers/pilot-skill-controls.mjs";
 
 const IMAGE_DIR = process.env.SRWF_GOLDEN_IMAGE_DIR;
 const LANES = [
@@ -134,7 +133,8 @@ function makeEdits(gameId) {
   setControl(field("pilot", "atk"), (adder.atk + 7) % 256);
   const choice = adder.addableSkills.find((entry) => addBlock(adder, gameId, entry.id, 12) === null);
   hooks.openPilotSkillDialog();
-  choosePilotSkill(byId, gameId, choice.id, 12);
+  byId("pilotSkillAddSelect").value = String(choice.id);
+  byId("pilotSkillAddLevel").value = "12";
   hooks.addPilotSkillFromDialog();
   byId("pilotSkillDialog").close();
 
@@ -144,7 +144,7 @@ function makeEdits(gameId) {
   select("pilot", remover.recordIndex);
   hooks.openPilotSkillDialog();
   const index = remover.specialAbilities.findIndex((entry) => !isFlagGated(entry));
-  indexedSkillRows(byId)[index].querySelector(".pilot-skill-remove").click();
+  byId("pilotSkillSchedule").querySelectorAll(".pilot-skill-row")[index].querySelector(".pilot-skill-remove").click();
   byId("pilotSkillDialog").close();
 
   const weapon = state.editorWeapons.find((row) => regular(row) && row.attack < 60000 && row.ownership === "owned");

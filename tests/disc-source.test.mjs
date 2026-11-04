@@ -669,6 +669,15 @@ test("directory discovery ignores fixed and legacy generated patch BINs beside o
   }
 });
 
+test('campaign folder discovery can include an accepted patch filename without changing stock discovery defaults', async () => {
+  const file=new File([new Uint8Array(32)],'SRWF-KOR-20260928-v0.5.bin');
+  const directory=directoryHandle([fileHandle(file)]);
+  await expectDiscError(normalizeSourceDirectory(directory,32),'SOURCE_SET_NOT_FOUND');
+  const found=await normalizeSourceDirectory(directory,32,undefined,{includeGeneratedOutputs:true});
+  assert.equal(found.blob,file);
+  await expectDiscError(normalizeSourceDirectory(directoryHandle([fileHandle(file),fileHandle(new File([new Uint8Array(32)],'other.bin'))]),32,undefined,{includeGeneratedOutputs:true}),'SOURCE_SET_AMBIGUOUS');
+});
+
 test("directory discovery rejects ambiguous full-size raw candidates without a pinned CUE set", async () => {
   const first = new File([new Uint8Array(32)], "first.img");
   const second = new File([new Uint8Array(32)], "second.bin");

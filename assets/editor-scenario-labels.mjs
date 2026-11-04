@@ -1,4 +1,5 @@
-import { bindCompletionScenarioTitleHints, completionTitleHintText } from './editor-scenario-completion-title-hints.mjs?v=20261104-save3';
+import { bindCompletionScenarioTitleHints, completionTitleHintText } from './editor-scenario-completion-title-hints.mjs?v=20261104-part1';
+import {rosterLevelSourceBodyPin} from './editor-scenario-roster-level-pins.mjs?v=20261104-part1';
 // Read-only labels. Selector numbers, physical bodies and displayed episode
 // numbers are different coordinates; this module never derives an episode.
 const TITLE_CELLS = Object.freeze({ 'srwf-f': 74, 'srwf-final': 192 });
@@ -26,7 +27,7 @@ export function bindVerifiedScenarioTitles(gameId, scenes, scope, titleTable) {
     const binding = VERIFIED_TITLE_BINDINGS.find(item => item.gameId === gameId
       && item.physicalIndex === scene.physicalIndex && scene.scenarioSlots?.length === 1
       && scene.scenarioSlots[0] === item.scenarioSlot);
-    const body = binding && scope?.scenario?.bodies?.[binding.physicalIndex];
+    const body = binding && rosterLevelSourceBodyPin(gameId,binding.physicalIndex,scope?.scenario?.bodies?.[binding.physicalIndex]);
     const title = binding && titleTable?.[binding.titleIndex];
     if (!body || body.decodedLength !== binding.decodedLength
       || body.maskSha256 !== binding.maskSha256

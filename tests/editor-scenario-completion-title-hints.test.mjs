@@ -85,7 +85,7 @@ test('native binding name and object remain distinct; source hints never turn in
  assert.equal(bind(native.gameId,[result],f.scope,f.titles)[0],result);
  const source=fixture(),hinted=bindVerifiedScenarioTitles(source.binding.gameId,[source.scene],source.scope,source.titles)[0];assert.ok(hinted.completionTitleHint);assert.equal(hinted.verifiedTitle,undefined);assert.equal(scenarioSelectionLabel(hinted),`자료 #${source.binding.scenarioSlot}`);
 });
-test('private DOM reuses existing popup paragraph; no title added toselect or mapcaption text',async()=>{
+test('private DOM reuses the existing popup paragraph and the verified scenario selection labels',async()=>{
  const html=await readFile(new URL('../index.html',import.meta.url),'utf8'),ui=await readFile(new URL('../assets/editor-scenario-ui.mjs',import.meta.url),'utf8'),css=await readFile(new URL('../assets/editor-runtime.css',import.meta.url),'utf8');
  assert.equal((html.match(/id="scenarioSelectionDescription"/g)??[]).length,1);assert.match(html,/<div class="reward-explanation">\s*<p id="scenarioSelectionDescription">/);
  assert.match(ui,/if \(ui\.scenarioSelectionDescription\) ui\.scenarioSelectionDescription\.textContent = `\$\{scenarioSelectionDescription\(scene\(\)\)\}/);

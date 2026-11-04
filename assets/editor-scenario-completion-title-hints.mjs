@@ -1,5 +1,6 @@
-import { ownData, readDenseList } from './editor-own.mjs?v=20261104-save3';
-import { COMPLETION_TITLE_HINT_BINDINGS } from './editor-scenario-completion-title-bindings.mjs?v=20261104-save3';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261104-part1';
+import { COMPLETION_TITLE_HINT_BINDINGS } from './editor-scenario-completion-title-bindings.mjs?v=20261104-part1';
+import {rosterLevelSourceBodyPin} from './editor-scenario-roster-level-pins.mjs?v=20261104-part1';
 const freeze = Object.freeze;
 const SOURCE = 'source-local-completion-title';
 const KNOWN_GAMES = freeze(['srwf-f', 'srwf-final']);
@@ -46,7 +47,7 @@ export function bindCompletionScenarioTitleHints(gameId, scenes, scope, titleTab
         const binding = bindingFor(gameId, scene);
         if (!binding) return scene;
         const bodies = ownData(ownData(scope, 'scenario'), 'bodies');
-        const body = Array.isArray(bodies) ? ownData(bodies, binding.physicalIndex) : undefined;
+        const body = rosterLevelSourceBodyPin(gameId,binding.physicalIndex,Array.isArray(bodies) ? ownData(bodies, binding.physicalIndex) : undefined);
         const title = Array.isArray(titleTable) ? ownData(titleTable, binding.titleIndex) : undefined;
         if (!dataRecord(body) || !dataRecord(title)
           || ownData(body, 'decodedLength') !== binding.decodedLength

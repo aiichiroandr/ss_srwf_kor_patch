@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>F 완결편 v0.1 · 로컬 패치노트 미리보기</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <style>
+    html { height: auto; overflow: auto; }
+    body { display: block; height: auto; margin: 0; min-height: 100vh; overflow: visible; padding: 24px 12px; }
+    main { max-width: 720px; margin: 0 auto; overflow: visible; }
+    .preview-label { margin: 0 0 12px; font-size: 13px; }
+    .preview-card { border-radius: 16px; overflow: hidden; background: var(--paper, #f4f2eb); }
+    .preview-card .patch-note-summary { padding: 20px; font-size: 14px; line-height: 1.8; }
+    @media (max-width: 480px) {
+      body { padding: 12px 8px; }
+      .preview-card .patch-note-summary { padding: 16px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="preview-label">로컬 문안 미리보기 · 원격 미반영</p>
+    <section class="preview-card" aria-labelledby="notes-heading">
+      <header class="patch-note-dialog-header">
+        <div><span>F 완결편</span><h2 id="notes-heading">v0.1 패치노트</h2></div>
+      </header>
+      <p class="patch-note-summary" id="notes"></p>
+    </section>
+  </main>
+  <script type="module">
+    import { FIN_R109_V01_NOTES } from '../assets/release-notes.mjs';
+    document.getElementById('notes').replaceChildren(...FIN_R109_V01_NOTES.summary.split('\n').map((line, index) => {
+      const node = document.createElement(/^\d+\. /.test(line) ? 'strong' : 'span');
+      node.textContent = `${index ? '\n' : ''}${line}`;
+      return node;
+    }));
+  </script>
+</body>
+</html>

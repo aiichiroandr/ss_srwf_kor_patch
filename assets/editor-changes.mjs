@@ -1,5 +1,8 @@
-import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261104-save3';
-import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-save3';
+import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261104-part1';
+import {readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261104-part1';
+import {unitConstructionPreset} from './editor-unit-construction.mjs?v=20261104-part1';
+import {criticalPercentLabel, criticalValues} from './editor-critical-values.mjs?v=20261104-part1';
+import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-part1';
 // The change list of the editor and its preset file: the button at the bottom of the editor (the change count) opens a
 // dialog that lists every changed record grouped by unit, pilot and weapon; an entry jumps to that record and field. The
 // footer saves the changes as a preset file (.json) and loads one: a loaded file is checked, judged against the open
@@ -12,8 +15,8 @@ import {
   gradeLabel,
   splitWeaponTerrain,
   weaponGradeLabel,
-} from "./editor-grades.mjs?v=20261104-save3";
-import { skillDiff } from "./editor-skill-list.mjs?v=20261104-save3";
+} from "./editor-grades.mjs?v=20261104-part1";
+import { skillDiff } from "./editor-skill-list.mjs?v=20261104-part1";
 import {
   PresetError,
   applyPreset,
@@ -25,10 +28,10 @@ import {
   presetChangeCount,
   presetFileName,
   serializePreset,
-} from "./editor-preset.mjs?v=20261104-save3";
+} from "./editor-preset.mjs?v=20261104-part1";
 
-export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "map"]);
-const KIND_HEADINGS = Object.freeze({ unit: "기체", pilot: "파일럿", weapon: "무기", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 증원", map: "맵 타일" });
+export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "upgrade", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "roster", "dialogue", "glyph", "map", "collection", "alice", "debug", "critical", "beam"]);
+const KIND_HEADINGS = Object.freeze({beam:"Ex-S 빔포 연출 보정",critical:"크리티컬 보정 오류 수정",debug:"디버그 메뉴",alice:"ALICE 등록",collection:"도감·영상 해금", unit: "기체", pilot: "파일럿", weapon: "무기", upgrade: "개조 비용", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 아군 증원", roster: "로스터 초기 레벨", dialogue: "시나리오 대사", glyph: "추가 글자", map: "맵 타일" });
 const GAME_LABELS = Object.freeze({ "srwf-f": "슈퍼로봇대전 F", "srwf-final": "F 완결편" });
 
 // Why a file was refused, in one short sentence each. Every code of editor-preset.mjs has one (a test checks it).
@@ -52,6 +55,8 @@ export const PRESET_ERROR_COPY = Object.freeze({
 
 // Why one loaded change is skipped in this session.
 export const SKIP_REASON_COPY = Object.freeze({
+  "construction-domain": "기체·무기를 추가할 빈 자리 또는 복제 원본 불일치",
+  "cost-domain": "이 비용표의 금액 범위·단위 불일치",
   "identity-missing": "같은 구조의 레코드를 찾지 못함",
   "identity-ambiguous": "같은 구조의 레코드가 여러 개 있음",
   missing: "지금 열린 데이터에 없는 레코드",
@@ -59,10 +64,14 @@ export const SKIP_REASON_COPY = Object.freeze({
   "read-only": "수정할 수 없는 레코드",
   "reward-total": "보상 확률 합계가 100%를 넘음",
   "scenario-domain": "맵 좌표·보상·작전 목적 조건이 적용 범위를 벗어남",
+  "text-domain": "대사 길이·보호 토큰 또는 추가 글리프 공간 불일치",
+  "speaker-domain": "공유 대사의 화자가 충돌하거나 원래 표정에 맞는 초상화가 없음",
+  "dialogue-sequence-domain": "공유 대사 뒤의 추가 발화가 충돌하거나 추가할 경계·화자가 없음",
+  "reinforcement-domain": "검증되지 않은 증원 후보이거나 지도 밖 좌표·원래 값 충돌이 있음",
   "map-capacity": "기존 변경과 합쳐 타일 20,000칸을 넘음",
   locked: "게임 구조와 묶인 능력",
   grade: "지형 값이 범위를 벗어남",
-  "weapon-domain": "무기의 사용 조건 범위를 벗어남",
+  "weapon-domain": "무기 번호·무장 칸 수·사용 조건 범위 불일치",
   "screen-width": "게임 화면 숫자 칸보다 큰 값",
   "spirits-locked": "정신커맨드를 바꿀 수 없는 파일럿",
   "spirit-value": "정신커맨드 번호·레벨·최소 개수 불일치",
@@ -79,8 +88,24 @@ export const SKIP_REASON_COPY = Object.freeze({
 const ABILITY_ID_FIELD = /^ability([1-4])$/;
 
 // A stored value as the screen shows it: a terrain grade as its letter, the weapon terrain byte as four letters in screen
-// order, a unit ability by its name, every other value as its number.
+// order, a unit ability by its name, weapon critical as its displayed percentage,
+// and every other value as its number.
 export function formatFieldValue(kind, field, value, { abilityName = (id) => `#${id}`, objectiveContext=null,gameId=null,rows=null,rowName=null,recordIndex=null,physicalIndex=null } = {}) {
+  if(kind==='dialogue'&&field==='afterDialogueJson'){try{return readAfterDialogueJson(value).map(entry=>{const pilot=typeof rows==='function'?rows('pilot').find(row=>row.recordIndex===entry.speakerId):null;return `${pilot?(typeof rowName==='function'?rowName(pilot):pilot.name):'#'+entry.speakerId}「${entry.text}」`;}).join(' → ')||'추가 발화 없음';}catch{return '추가 발화 형식 오류';}}
+  if(kind==='dialogue'&&field==='speakerId'){
+    const pilot=typeof rows==='function'?rows('pilot').find(row=>row.recordIndex===value):null;
+    return pilot?`${typeof rowName==='function'?rowName(pilot):pilot.name||'파일럿'} (#${value})`:`#${value}`;
+  }
+  if(kind==='unit'&&field==='construction')return value===null?'빈 자리':unitConstructionPreset(value)?.name??'알 수 없음';
+  if(kind==='weapon'&&field==='construction')return value===null?'빈 자리':`무기 #${value}에서 독립 복제`;
+  if(kind==='unit'&&field==='weaponAdditions')return value.length?value.map(id=>{
+    const weapon=typeof rows==='function'?rows('weapon').find(row=>row.recordIndex===id):null;
+    return weapon?`${typeof rowName==='function'?rowName(weapon):weapon.name} (#${id})`:`#${id}`;
+  }).join(', '):'없음';
+  if (kind === 'unit' && /^weapon(?:[1-9]|1[0-6])$/.test(field)) {
+    const weapon = typeof rows === 'function' ? rows('weapon').find(row => row.recordIndex === value) : null;
+    return weapon ? `${typeof rowName === 'function' ? rowName(weapon) : weapon.name} (#${value})` : `#${value}`;
+  }
   if(kind==='event'){
     if(field==='eventPhase')return value?'아군 시작':'적군 시작';
     if(/^eventRule[1-3]$/.test(field))return objectiveRuleLabel(value);
@@ -102,7 +127,11 @@ export function formatFieldValue(kind, field, value, { abilityName = (id) => `#$
     if(field==='objectivePriority')return value?'패배':'승리';
     if(['victoryJoin','defeatJoin'].includes(field))return value?'하나라도':'모두';
   }
-  if(kind==='reinforcement'&&field==='enabled')return value?'추가됨':'없음';
+  if(['beam','critical'].includes(kind)&&field==='enabled')return value?'ON':'OFF';
+  if(kind==='weapon'&&field==='critical')return criticalPercentLabel(criticalValues(value)?.display);
+  if(kind==='debug'&&field==='enabled')return value?'켜짐':'꺼짐';
+  if(kind==='reinforcement'&&field==='enabled')return value?'사용':'꺼짐';
+  if(kind==='reinforcement'&&['pilotId','unitId'].includes(field)){const record=typeof rows==='function'?rows(field==='pilotId'?'pilot':'unit').find(row=>row.recordIndex===value):null;return record?`${typeof rowName==='function'?rowName(record):record.name||'#'+value} (#${value})`:`#${value}`;}
   if (kind !== "weapon" && TERRAIN_DATA_ORDER.includes(field)) return gradeLabel(value);
   if (kind === "weapon" && field === "terrain") {
     const parts = splitWeaponTerrain(value);
@@ -114,6 +143,25 @@ export function formatFieldValue(kind, field, value, { abilityName = (id) => `#$
 }
 
 export function fieldTitle(kind, field, { fieldLabel = (_, name) => name } = {}) {
+  if(kind==='beam'&&field==='enabled')return 'Ex-S 빔포 연출 보정';
+  if(kind==='critical'&&field==='enabled')return '크리티컬 보정 오류 수정';
+  if(kind==='debug'&&field==='enabled')return '디버그 메뉴';
+  if(kind==='reinforcement')return ({enabled:'아군 증원',pilotId:'증원 파일럿',unitId:'증원 기체',level:'증원 레벨',triggerX:'발동 X',triggerY:'발동 Y',x:'등장 희망 X',y:'등장 희망 Y'})[field]??fieldLabel(kind,field);
+  if(kind==='roster'&&field==='initialLevel')return '로스터 초기 레벨';
+  if(kind==='dialogue'&&field==='pagesJson')return '대사 페이지';
+  if(kind==='dialogue'&&field==='afterDialogueJson')return '뒤에 추가할 발화';
+  if(kind==='dialogue'&&field==='text')return '대사';
+  if(kind==='dialogue'&&field==='speakerId')return '대사 화자';
+  if(kind==='alice'&&field==='enabled')return '이름·초상 등록';
+  if(kind==='alice'&&field==='crewEnabled')return '서브파일럿 동승';
+  if(kind==='alice'&&field==='spBase')return '기본 정신 포인트';
+  if(kind==='alice'&&/^spiritLevel[1-6]$/.test(field))return `정신기 ${field.at(-1)} 습득 레벨`;
+  if(kind==='alice'&&/^spirit[1-6]$/.test(field))return `정신커맨드 ${field.at(-1)}`;
+  if(kind==='glyph'&&field==='characters')return '추가 글자';
+  if(kind==='unit'&&field==='construction')return '기체 구성';
+  if(kind==='weapon'&&field==='construction')return '독립 무기 복제';
+  if(kind==='unit'&&field==='weaponAdditions')return '추가 무장';
+  if (kind === 'unit' && /^weapon(?:[1-9]|1[0-6])$/.test(field)) return `무장 ${Number(field.slice(6))}`;
   if (kind !== "weapon" && TERRAIN_DATA_ORDER.includes(field)) return `지형 ${TERRAIN_LABELS[field]}`;
   if (kind === "weapon" && field === "terrain") return "지형";
   const slot = kind === "unit" ? ABILITY_ID_FIELD.exec(field) : null;
@@ -171,7 +219,7 @@ export function createEditorChanges(host) {
     cancel: byId("editorPresetCancel"),
   };
   // A loaded and checked file that waits for the user's choice: { preset, plan, fileName }.
-  let pending = null;
+  let pending = null, loadGeneration = 0;
   // Set while the dialog closes because an entry was chosen: the focus goes to that field, not back to the button.
   let navigating = false;
   let returnFocus = ui.button;
@@ -189,10 +237,24 @@ export function createEditorChanges(host) {
     objectives: host.rows("objective"),
     reinforcements: host.rows("reinforcement"),
     mapCells: host.rows("map"),
+    dialogues: host.rows("dialogue"),
+    rosterLevels: host.rows("roster"),
+    glyphs: host.rows("glyph"),
+    collections: host.rows("collection"),
+    aiPilots:host.rows("alice"),
+    debugEntries:host.rows("debug"),
+    criticalFixes:host.rows("critical"),
+    exsBeamPoses:host.rows("beam"),
+    validateText: host.validateText,
+    validateTextBatch: host.validateTextBatch,
+    dialogueSpeakerOptions:host.dialogueSpeakerOptions?.()??[],
+    dialogueSpeakerGroup:host.dialogueSpeakerGroup,
+    setAfterDialogue:host.setAfterDialogue,
+    setDialogueSpeaker:host.setDialogueSpeaker,
     pilotAliases: host.aliases(),
   });
 
-  const changes = () => Object.fromEntries(CHANGE_KINDS.map((kind) => [kind, diffEditorRows(kind, (host.rows(kind) ?? []), { fields: host.fields(kind) })]));
+  const changes = () => Object.fromEntries(CHANGE_KINDS.map((kind) => [kind, diffEditorRows(kind, (host.rows(kind) ?? []), { fields: host.fields(kind),gameId:host.gameId() })]));
   // the session's own name of a record (the file's name is only a hint and is used when the session has no such record)
   const namer = () => {
     const maps = Object.fromEntries(CHANGE_KINDS.map((kind) => [kind, new Map((host.rows(kind) ?? []).map((row) => [row.recordIndex, row]))]));
@@ -212,18 +274,21 @@ export function createEditorChanges(host) {
     const parts = change.fields.map((entry) => describeFieldChange(kind, entry, {...host,recordIndex:change.recordIndex}));
     if (change.skills) parts.push(describeSkillChange(change.skills));
     if (change.spirits) parts.push(`정신커맨드 ${change.spirits.from.length}개 → ${change.spirits.to.length}개`);
+    if(change.weaponAdditions)parts.push(`추가 무장: ${formatFieldValue(kind,'weaponAdditions',change.weaponAdditions.to,host)}`);
+    if(change.construction)parts.unshift(`${kind==='weapon'?'무기 복제':'기체 구성'}: ${formatFieldValue(kind,'construction',change.construction.to,host)}`);
     return parts.join(" · ");
   }
 
   function renderList() {
     const byKind = changes();
+    const extra=host.extraChanges?.()??[];
     const records = CHANGE_KINDS.reduce((sum, kind) => sum + byKind[kind].length, 0);
     const count = typeof host.changeCount === "function" ? host.changeCount() : records;
     ui.title.textContent = count > 0 ? `바뀐 값 ${count}개` : "바뀐 값";
     syncButtons(records > 0);
     ui.summary.hidden = true;
     ui.list.hidden = false;
-    if (records === 0) {
+    if (records === 0&&extra.length===0) {
       ui.list.replaceChildren(node("p", "editor-changes-empty", "바뀐 값이 없습니다"));
       return;
     }
@@ -239,7 +304,7 @@ export function createEditorChanges(host) {
         button.type = "button";
         button.dataset.changeKind = kind;
         button.dataset.recordIndex = String(change.recordIndex);
-        button.dataset.changeFields = [...change.fields.map(({ field }) => field), ...(change.skills ? ["skills"] : []), ...(change.spirits ? ["spirits"] : [])].join(",");
+        button.dataset.changeFields = [...change.fields.map(({ field }) => field), ...(change.skills ? ["skills"] : []), ...(change.spirits ? ["spirits"] : []), ...(change.weaponAdditions?['weaponAdditions']:[]), ...(change.construction?['construction']:[])].join(",");
         const name = node("span", "editor-changes-name", `${nameOf(kind, change.recordIndex, change.name)}${typeof change.recordIndex==='number'?` #${change.recordIndex}`:''}`);
         const description=describe(kind,change),detail = node("span", "editor-changes-detail", kind==='event'?null:description);
         if(kind==='event')for(const entry of change.fields){
@@ -254,6 +319,12 @@ export function createEditorChanges(host) {
       group.append(heading, list);
       return group;
     });
+    if(extra.length){
+      const group=node('section','editor-changes-group'),heading=node('h3','editor-changes-heading','연결 자료'),list=node('ul','editor-changes-items');
+      for(const change of extra){const item=node('li'),button=node('button','editor-changes-item');button.type='button';button.dataset.changeKind=change.kind;
+        button.append(node('span','editor-changes-name',change.name),node('span','editor-changes-detail',change.detail));item.append(button);list.append(item);}
+      group.append(heading,list);groups.push(group);
+    }
     ui.list.replaceChildren(...groups);
   }
 
@@ -279,9 +350,10 @@ export function createEditorChanges(host) {
     }));
     // the conflicts are the values a newer patch changed: list them, with the value here and the change in the file
     const conflicts = plan.items.filter((item) => item.status === "conflict");
-    ui.details.hidden = conflicts.length === 0;
-    if (conflicts.length > 0) {
-      const summary = node("summary", "", `원래 값이 다른 곳 ${conflicts.length}개 보기`);
+    const skipped=plan.items.filter(item=>item.status==='skip');
+    ui.details.hidden = conflicts.length + skipped.length === 0;
+    if (conflicts.length + skipped.length > 0) {
+      const summary = node("summary", "", [`원래 값이 다른 곳 ${conflicts.length}개`, `건너뛴 항목 ${skipped.length}개`].filter((_,i)=>i===0?conflicts.length:skipped.length).join(' · ')+' 보기');
       const list = node("ul", "editor-preset-conflicts");
       const nameOf = namer();
       for (const item of conflicts) {
@@ -293,6 +365,15 @@ export function createEditorChanges(host) {
         const entry = node("li", "", `${name} · ${text}`);
         entry.dataset.changeKind = item.kind;
         entry.dataset.recordIndex = String(item.recordIndex);
+        list.append(entry);
+      }
+      for(const item of skipped){
+        const name=`${KIND_HEADINGS[item.kind]??item.kind} ${nameOf(item.kind,item.recordIndex,item.name)} #${item.recordIndex}`;
+        const entry=node('li','editor-preset-skip',`${name} · ${fieldTitle(item.kind,item.field,host)} · ${SKIP_REASON_COPY[item.reason]??item.reason}`);
+        entry.dataset.changeKind=item.kind;
+        entry.dataset.recordIndex=String(item.recordIndex);
+        entry.dataset.changeField=item.field;
+        entry.dataset.skipReason=item.reason;
         list.append(entry);
       }
       ui.details.replaceChildren(summary, list);
@@ -321,11 +402,13 @@ export function createEditorChanges(host) {
   // Closing drops a loaded file that was not applied. The close event (✕, Esc, a click outside, or close() here) gives the
   // focus back to the button, unless an entry was chosen: then it stays on the field the entry led to.
   function close() {
+    loadGeneration += 1;
     pending = null;
     if (ui.dialog.open) ui.dialog.close();
   }
 
   function handleClosed() {
+    if (ui.dialog.open) return;
     pending = null;
     if (!navigating) returnFocus.focus?.();
     navigating = false;
@@ -335,7 +418,7 @@ export function createEditorChanges(host) {
     const target = event.target.closest?.("button[data-change-kind]");
     if (!target) return;
     const kind = target.dataset.changeKind;
-    const recordIndex = ["deployment", "event", "objective", "reinforcement", "map"].includes(kind) ? target.dataset.recordIndex : Number(target.dataset.recordIndex);
+    const recordIndex = ["deployment", "event", "objective", "reinforcement", "roster", "dialogue", "map"].includes(kind) ? target.dataset.recordIndex : Number(target.dataset.recordIndex);
     const declared = (target.dataset.changeFields ?? "").split(",").filter(Boolean);
     const picked=event.target.closest?.('[data-change-field]');
     const field=picked&&target.contains(picked)?picked.dataset.changeField:null;
@@ -352,11 +435,13 @@ export function createEditorChanges(host) {
       const ours = GAME_LABELS[error.details?.sessionGame] ?? "지금 게임";
       return `${theirs}의 변경 내용이라 지금 연 ${ours}에는 넣을 수 없습니다.`;
     }
-    return PRESET_ERROR_COPY[error?.code] ?? "변경 내용 파일을 불러오지 못했습니다.";
+    return PRESET_ERROR_COPY[error?.code] ?? (error?.code === "EDITOR_MIGRATION_IDENTITY" ? error.message : "변경 내용 파일을 불러오지 못했습니다.");
   }
 
   async function loadFile(file) {
     if (!file || !host.hasSession() || !host.canEdit()) return false;
+    const generation = ++loadGeneration, sessionToken = host.sessionToken();
+    const current = () => generation === loadGeneration && host.hasSession() && host.canEdit() && host.sessionToken() === sessionToken;
     if (!ui.dialog.open) returnFocus = ui.load;
     pending = null;
     try {
@@ -367,16 +452,19 @@ export function createEditorChanges(host) {
       } catch {
         throw new PresetError("PRESET_READ_FAILED");
       }
+      if (!current()) return false;
       const preset = parsePreset(text, { gameId: host.gameId() });
+      host.validatePreset?.(preset);
       host.preparePreset?.(preset);
       const plan = planPresetApplication(preset, session());
-      pending = { preset, plan, fileName: typeof file.name === "string" ? file.name : "" };
+      pending = { preset, plan, sessionToken, fileName: typeof file.name === "string" ? file.name : "" };
       say("");
       renderSummary();
       if (!ui.dialog.open) ui.dialog.showModal?.();
       host.announce(`변경 내용 파일을 읽었습니다. 바로 적용 ${plan.counts.apply}개, 원래 값이 다름 ${plan.counts.conflict}개, 건너뜀 ${plan.counts.skip}개.`);
       return true;
     } catch (error) {
+      if (!current()) return false;
       renderList();
       say(errorText(error), "error");
       if (!ui.dialog.open) ui.dialog.showModal?.();
@@ -387,6 +475,13 @@ export function createEditorChanges(host) {
 
   function apply(mode) {
     if (!pending || !host.hasSession() || !host.canEdit()) return null;
+    if (pending.sessionToken !== host.sessionToken()) {
+      pending = null; renderList(); say('ROM이 바뀌었습니다. 변경 내용 파일을 다시 불러와 주세요.', 'error'); return null;
+    }
+    if (host.beforeApply && !host.beforeApply()) {
+      say('적용되지 않은 입력이 있습니다. 창을 닫고 수정하거나 복원한 뒤 다시 불러와 주세요.', 'error');
+      return null;
+    }
     const { preset } = pending;
     let result;
     try {
@@ -408,6 +503,7 @@ export function createEditorChanges(host) {
   }
 
   function cancel() {
+    loadGeneration += 1;
     pending = null;
     renderList();
     say("불러오기를 취소했습니다.");
@@ -439,6 +535,11 @@ export function createEditorChanges(host) {
 
   async function save() {
     if (!host.hasSession() || !host.canEdit()) return null;
+    if (host.beforeSave && !host.beforeSave()) {
+      say('적용되지 않은 입력을 수정하거나 복원한 뒤 편집값을 저장해 주세요.', 'error');
+      host.announce('적용되지 않은 입력을 수정하거나 복원한 뒤 편집값을 저장해 주세요.');
+      return null;
+    }
     const preset = buildPreset(
       { gameId: host.gameId(), releaseId: host.releaseId(), createdAt: new Date() },
       Object.fromEntries(CHANGE_KINDS.map((kind) => [kind, (host.rows(kind) ?? [])])),
@@ -485,7 +586,7 @@ export function createEditorChanges(host) {
     }
   }
 
-  function syncButtons(hasChanges = CHANGE_KINDS.some((kind) => diffEditorRows(kind, (host.rows(kind) ?? []), { fields: host.fields(kind) }).length > 0)) {
+  function syncButtons(hasChanges = CHANGE_KINDS.some((kind) => diffEditorRows(kind, (host.rows(kind) ?? []), { fields: host.fields(kind),gameId:host.gameId() }).length > 0)) {
     ui.button.dataset.changeCount = String(host.changeCount?.() ?? 0);
     const editable = host.hasSession() && host.canEdit();
     ui.save.disabled = !editable || !hasChanges;
@@ -510,6 +611,7 @@ export function createEditorChanges(host) {
 
   ui.button.addEventListener("click", open);
   ui.close.addEventListener("click", close);
+  ui.dialog.addEventListener("cancel", () => { loadGeneration += 1; });
   ui.dialog.addEventListener("close", handleClosed);
   ui.dialog.addEventListener("click", (event) => {
     if (event.target === ui.dialog) close(); // the backdrop: a click outside the dialog's box
@@ -518,6 +620,7 @@ export function createEditorChanges(host) {
   ui.save.addEventListener("click", () => { void save(); });
   ui.load.addEventListener("click", () => {
     if (!host.hasSession() || !host.canEdit()) return;
+    if (host.beforeSave && !host.beforeSave()) return;
     returnFocus = ui.load;
     ui.file.click?.();
   });

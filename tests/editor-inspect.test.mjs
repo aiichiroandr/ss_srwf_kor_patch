@@ -105,19 +105,16 @@ test('opening refuses a disc whose size, game or hash does not match the claim',
 // ---------------------------------------------------------------------------------------------------------------------
 // The bounded profile and what lies behind the stream
 
-test('a profile derived from the accepted disc records the stream end and a digest for every end position of the window', async () => {
+test('a profile records bounds without exposing short suffix hashes', async () => {
   const { disc, stream, profile } = await base();
   assert.equal(profile.schema, 'srwf.editor-bounded-provenance.v1');
   assert.deepEqual([profile.gameId, profile.baseTargetSha256, profile.size, profile.allocatedSectors], [GAME, disc.sha256, disc.image.length, Math.ceil(stream.length / 2048)]);
   const { tail } = profile;
   assert.equal(tail.streamEnd, tsrStreamEnd(stream));
   assert.equal(tail.window, Math.min(TAIL_WINDOW, tail.streamEnd));
-  assert.equal(tail.digests.length, tail.window + 1);
-  assert.ok(tail.digests.every((digest) => /^[0-9a-f]{16}$/.test(digest)));
+  assert.deepEqual(Object.keys(tail).sort(), ['streamEnd', 'window']);
   assert.deepEqual(tail, deriveTailProfile(Uint8Array.from([...stream, ...new Uint8Array(profile.allocatedSectors * 2048 - stream.length)]), tail.streamEnd));
-  assert.ok(Object.isFrozen(profile) && Object.isFrozen(tail) && Object.isFrozen(tail.digests));
-  // the digest at the end position is that of an empty tail, the others are all different
-  assert.equal(new Set(tail.digests).size, tail.digests.length);
+  assert.ok(Object.isFrozen(profile) && Object.isFrozen(tail));
   // a profile is only made from an exact accepted image
   const { session } = await makeSession(disc, (await base()).decoded, { gameId: GAME });
   await assert.rejects(createEditorProvenanceProfile(session), codeIs('EDITOR_CUSTOM_PROVENANCE'));
@@ -244,23 +241,35 @@ test('the leftover of the accepted stream behind a shorter stream of an older ed
   const { own, image, disc } = await olderEditorImage(['hp']);
   const gap = profile.tail.streamEnd - own.length;
   assert.ok(gap > 0 && gap < TAIL_WINDOW, `the older stream is ${gap} bytes shorter than the accepted one`);
-  const reopened = await full.inspectPatchedImage(new Blob([image]), localDescriptor(disc));
+  await assert.rejects(full.inspectPatchedImage(new Blob([image]), localDescriptor(disc)), codeIs('EDITOR_TSR_REFERENCE_REQUIRED'));
+  await assert.rejects(full.inspectPatchedImage(new Blob([image]), localDescriptor(disc), {tailReferenceBlob: new Blob([new Uint8Array(disc.image.length)])}), codeIs('EDITOR_TSR_REFERENCE_MISMATCH'));
+  const reopened = await full.inspectPatchedImage(new Blob([image]), localDescriptor(disc), {tailReferenceBlob: disc.blob});
   assert.equal(reopened.view.provenanceMode, 'bounded-editor-profile');
   assert.ok(reopened.view.units.filter((row) => row.editable).every((row) => row.hp === 0));
+  const rows = reopened.view;
+  const noOp = echoRequest(reopened.session, {units: rows.units, pilots: rows.pilots, weapons: rows.weapons});
+  const unchanged = await exportEditedImage(reopened.session, noOp);
+  assert.equal(unchanged.sha256, sha256(image), 'no-op save preserves the exact old image');
+  const edit = echoRequest(reopened.session, {units: rows.units, pilots: rows.pilots, weapons: rows.weapons}, (kind, row, fields) => {
+    if (kind === 'unit' && row.recordIndex === 5) fields.hp += 1;
+  });
+  const rewritten = await exportEditedImage(reopened.session, edit);
+  const clean = await full.inspectPatchedImage(rewritten.outputBlob, localDescriptor(disc));
+  assert.equal(clean.view.units.find(row => row.recordIndex === 5).hp, 1, 'edited export has a zero tail and reopens without the reference');
 
   // the leftover must be exactly the accepted bytes: one changed byte, anywhere in it, is a foreign byte
   const first = tsrStreamEnd(own);
   for (const place of [first, first + 1, first + Math.floor(gap / 2), profile.tail.streamEnd - 1]) {
     const original = image[reopened.session.file.extentLba * 2352 + 16 + place + Math.floor(place / 2048) * (2352 - 2048)];
     const tampered = rewriteExtentBytes(image, reopened.session.file.extentLba, place, Uint8Array.of(original ^ 0x20));
-    await assert.rejects(full.inspectPatchedImage(new Blob([tampered]), localDescriptor(disc)), codeIs('EDITOR_TSR_TAIL_FOREIGN'), `leftover byte ${place}`);
+    await assert.rejects(full.inspectPatchedImage(new Blob([tampered]), localDescriptor(disc), {tailReferenceBlob: disc.blob}), codeIs('EDITOR_TSR_TAIL_FOREIGN'), `leftover byte ${place}`);
   }
   // behind the accepted stream's own end only zero is allowed
   const beyond = rewriteExtentBytes(image, reopened.session.file.extentLba, profile.tail.streamEnd + 3, Uint8Array.of(9));
   await assert.rejects(full.inspectPatchedImage(new Blob([beyond]), localDescriptor(disc)), codeIs('EDITOR_TSR_TAIL_FOREIGN'));
   // a leftover cut short (zeroed from some point on) is not the accepted tail either
   const zeroed = rewriteExtentBytes(image, reopened.session.file.extentLba, profile.tail.streamEnd - 6, new Uint8Array(6));
-  await assert.rejects(full.inspectPatchedImage(new Blob([zeroed]), localDescriptor(disc)), codeIs('EDITOR_TSR_TAIL_FOREIGN'));
+  await assert.rejects(full.inspectPatchedImage(new Blob([zeroed]), localDescriptor(disc), {tailReferenceBlob: disc.blob}), codeIs('EDITOR_TSR_TAIL_FOREIGN'));
 });
 
 test('a leftover that starts before the window, or an image without tail digests, is refused; a zero tail is not', async () => {
@@ -292,21 +301,13 @@ test('the stream end is the byte behind the end marker, whatever follows', () =>
   assert.throws(() => tsrStreamEnd(Uint8Array.of(1)), codeIs('EDITOR_TSR_MALFORMED'));
 });
 
-test('tail digests cover [e, streamEnd) for every end position e in the window, nothing behind it', () => {
+test('tail profile contains only stream bounds, independent of original bytes', () => {
   const extent = Uint8Array.from({ length: 5000 }, (_, index) => (index * 31 + 7) & 255);
-  extent.fill(0, 3000);
   const profile = deriveTailProfile(extent, 3000);
-  assert.deepEqual([profile.streamEnd, profile.window, profile.digests.length], [3000, TAIL_WINDOW, TAIL_WINDOW + 1]);
-  const again = deriveTailProfile(extent, 3000);
-  assert.deepEqual(again, profile);
-  extent[3500] = 1; // behind the accepted stream: not part of any digest
+  assert.deepEqual(profile, {streamEnd: 3000, window: TAIL_WINDOW});
+  extent[2999] ^= 1;
   assert.deepEqual(deriveTailProfile(extent, 3000), profile);
-  extent[2999] ^= 1; // the last byte of the stream: part of every digest but the last
-  const changed = deriveTailProfile(extent, 3000);
-  assert.equal(changed.digests.at(-1), profile.digests.at(-1));
-  assert.ok(changed.digests.slice(0, -1).every((digest, index) => digest !== profile.digests[index]));
-  // a stream shorter than the window has a window as long as itself
-  assert.deepEqual([deriveTailProfile(extent, 100).window, deriveTailProfile(extent, 100).digests.length], [100, 101]);
+  assert.deepEqual(deriveTailProfile(extent, 100), {streamEnd: 100, window: 100});
 });
 
 // ---------------------------------------------------------------------------------------------------------------------

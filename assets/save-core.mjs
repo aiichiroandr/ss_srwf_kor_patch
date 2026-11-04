@@ -1,8 +1,8 @@
-import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261104-save3';
-import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261104-save3';
-import { requireSaveScalar } from './save-field-rules.mjs?v=20261104-save3';
-import { saveUnitGroup } from './save-unit-groups.mjs?v=20261104-save3';
-import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261104-save3';
+import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261104-part1';
+import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261104-part1';
+import { requireSaveScalar } from './save-field-rules.mjs?v=20261104-part1';
+import { saveUnitGroup } from './save-unit-groups.mjs?v=20261104-part1';
+import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261104-part1';
 // Saturn backup RAM containers; original bytes and unrelated saves stay private.
 // Contracts and source references: docs/SAVE_EDITOR.md.
 const MAGIC = new TextEncoder().encode('BackUpRam Format');
@@ -129,12 +129,13 @@ export async function openSave(input, catalog={}) {
   function list(){return Object.freeze(records.map(r=>model(r,current(r))));}
   function edit(key,field,value,slot=null){
     const r=get(key);need(r.editable,r.reason);const b=current(r).slice();let p,n;
-    if(field==='money'){requireSaveScalar('money',value);p=10;n=3;}
+    // The value already stored may be echoed unchanged even above the screen limit (save-field-rules.mjs).
+    if(field==='money'){p=10;n=3;requireSaveScalar('money',value,b[10]*65536+b[11]*256+b[12]);}
     else{
       integer(slot,0,127);p=0x1000+slot*12;
       need(u16(b,p)>0&&u16(b,p)<400,'이 파일럿 번호는 편집을 지원하지 않습니다.');
-      if(field==='level'){requireSaveScalar('level',value);p+=2;n=1;}
-      else if(field==='experience'){requireSaveScalar('experience',value);p+=4;n=2;}
+      if(field==='level'){requireSaveScalar('level',value,b[p+2]);p+=2;n=1;}
+      else if(field==='experience'){requireSaveScalar('experience',value,u16(b,p+4));p+=4;n=2;}
       else throw new Error('지원하지 않는 세이브 항목입니다.');
     }
     put(b,p,value,n);put(b,0,saveChecksum(b),4);

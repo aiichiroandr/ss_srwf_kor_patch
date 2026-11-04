@@ -133,6 +133,7 @@ FORBIDDEN_SUFFIXES = {
     ".tar", ".tgz", ".sav", ".srm", ".bup", ".bcr", ".bkr", ".mcr",
     ".dsv", ".yss", ".state", ".ips", ".bps", ".xdelta", ".xdelta1",
     ".xdelta2", ".xdelta3", ".vcdiff", ".ppf", ".pem", ".key", ".wasm",
+    ".sfc", ".smc",
 }
 FORBIDDEN_DIRS = {
     "build", "dist", "out", "staging", "coverage", "node_modules", ".cache",
@@ -346,7 +347,7 @@ REQUIRED_IGNORE_LINES = {
 EXPECTED_PACKAGE_SCRIPTS = {
     "build": "npm test",
     "verify": "python3 scripts/verify_repo.py",
-    "test": "node --test && PYTHONDONTWRITEBYTECODE=1 python3 -m scripts.verify_repo --test",
+    "test": "node scripts/run-node-tests.cjs && PYTHONDONTWRITEBYTECODE=1 python3 -m scripts.verify_repo --test",
 }
 
 EXPECTED_PRE_COMMIT_LINES = [
@@ -1185,6 +1186,63 @@ STATIC_RECOMPILATION_MARKER = re.compile(
     r"\bSH2(?:Context\s*&|Module\b|FuncEntry\b)|\bg_sh2_(?:modules|nmodules)\b"
 )
 STATIC_RECOMPILATION_SCAN_EXEMPT = {"scripts/verify_repo.py"}
+
+
+# Auxiliary local-only input (2026-11-04): the user's own 4th Super Robot Wars
+# (SFC, Japan) Rev 1 ROM, read in the browser to import unused-unit battle art
+# and map icons. Only Rev 1 is accepted, pinned by SHA-256 in the browser
+# identifier and AGENTS.md. Modules that read it may carry hashes, offsets and
+# decoding code only: never color words, pixels or palettes from the cartridge.
+SRW4_REV1_SHA256 = "efd72094b2727c4903924cf9296b3946b95a354f639b600e1d76d9ec6b9ca18b"
+SRW4_IDENTITY_MODULE = "assets/editor-srw4-rom.mjs"
+SRW4_SOURCE_MODULE = re.compile(r"^assets/editor-(?:srw4-|map-icon|kom-recovery)[a-z0-9-]*\.(?:mjs|js)$")
+SRW4_PALETTE_WORDS_LITERAL = re.compile(r"paletteWords\s*[\"']?\s*:\s*\[")
+SRW4_NUMERIC_LIST = re.compile(
+    r"\[\s*((?:0x[0-9a-fA-F]+|\d+)(?:\s*,\s*(?:0x[0-9a-fA-F]+|\d+)){4,})\s*\]"
+)
+
+
+def _literal_int(value: str) -> int:
+    value = value.strip()
+    return int(value, 16) if value.lower().startswith("0x") else int(value, 10)
+
+
+def validate_srw4_auxiliary_source(files: list[Path]) -> None:
+    present = {relative(path): path for path in files}
+    module = present.get(SRW4_IDENTITY_MODULE)
+    if module is not None:
+        try:
+            text = module.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            complain(f"{SRW4_IDENTITY_MODULE}: cannot read SRW4 identity module: {exc}")
+        else:
+            if f"export const SRW4_REV1_SHA256='{SRW4_REV1_SHA256}';" not in text:
+                complain(f"{SRW4_IDENTITY_MODULE}: Rev 1 SHA-256 pin is missing or changed")
+            if "sha256:SRW4_REV1_SHA256" not in text or "p.sha256===sha256" not in text:
+                complain(f"{SRW4_IDENTITY_MODULE}: Rev 1 SHA-256 must be compared before accepting a ROM")
+            if re.search(r"id:\s*'srw4-jp'", text):
+                complain(f"{SRW4_IDENTITY_MODULE}: only the Rev 1 SFC profile may be accepted")
+    agents = present.get("AGENTS.md")
+    if agents is not None:
+        try:
+            if SRW4_REV1_SHA256 not in agents.read_text(encoding="utf-8"):
+                complain("AGENTS.md: auxiliary SRW4 Rev 1 input must state its pinned SHA-256")
+        except (OSError, UnicodeError) as exc:
+            complain(f"AGENTS.md: cannot read: {exc}")
+    for name, path in sorted(present.items()):
+        if not SRW4_SOURCE_MODULE.match(name):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            complain(f"{name}: cannot read SRW4 source module: {exc}")
+            continue
+        if SRW4_PALETTE_WORDS_LITERAL.search(text):
+            complain(f"{name}: SFC palette word literal is forbidden")
+        for match in SRW4_NUMERIC_LIST.finditer(text):
+            if any(_literal_int(value) > 255 for value in match.group(1).split(",")):
+                complain(f"{name}: SFC-derived numeric word list is forbidden: {match.group(0)[:60]}")
+                break
 
 
 def validate_forbidden_artifacts(files: list[Path]) -> None:
@@ -2888,6 +2946,7 @@ def main() -> int:
     files = repository_files()
     validate_required_files(files)
     validate_forbidden_artifacts(files)
+    validate_srw4_auxiliary_source(files)
     validate_public_binary_assets(files)
     validate_schema_documents()
     validate_withdrawn_release_artifacts(files)

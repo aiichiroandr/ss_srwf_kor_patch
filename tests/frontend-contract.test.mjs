@@ -76,11 +76,22 @@ class FakeElement {
 
   querySelector(selector) {
     if (selector === "[data-step-status]") return this.status;
-    const tagName = selector.toUpperCase();
-    return findDescendants(this, (node) => node.tagName === tagName)[0] ?? null;
+    return this.querySelectorAll(selector)[0] ?? null;
   }
 
   querySelectorAll(selector) {
+    if (/^\.[\w-]+$/.test(selector)) {
+      const name = selector.slice(1);
+      return findDescendants(this, node => node.classList?.contains(name) || String(node.className ?? '').split(/\s+/).includes(name));
+    }
+    const attribute = /^(\w+)?\[([\w-]+)(?:="([^"]*)")?\]$/.exec(selector);
+    if (attribute) return findDescendants(this, node => {
+      const [, tag, name, expected] = attribute;
+      if (tag && node.tagName !== tag.toUpperCase()) return false;
+      const key = name.startsWith('data-') ? name.slice(5).replace(/-([a-z])/g, (_, ch) => ch.toUpperCase()) : null;
+      const value = node.getAttribute?.(name) ?? (key ? node.dataset?.[key] : null);
+      return value != null && (expected === undefined || String(value) === expected);
+    });
     const tagName = selector.toUpperCase();
     return findDescendants(this, (node) => node.tagName === tagName);
   }
@@ -345,7 +356,7 @@ const WIZARD_STEP_COPY = /\bSTEP(?:\s*[123])?\b(?!\s*=)/i;
 // 배포 자산의 캐시 개정판은 하나뿐이다. 이 상수를 고쳐야만 고정값이 함께
 // 움직이도록 한 곳에만 적는다. 여러 시험이 각자 literal 을 들고 있으면
 // 개정판을 올릴 때 일부만 따라가서 모듈이 두 번 적재된다.
-const STATIC_ASSET_REVISION = "20261104-save3";
+const STATIC_ASSET_REVISION = "20261104-part1";
 
 test("public page exposes the legal and accessibility contracts", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
@@ -2199,6 +2210,15 @@ test("the copy of a worker error message carries the numbers the worker forwards
   assert.doesNotMatch(tail.message, /bytes behind/);
 });
 
+test('battle source and attachment capacity failures have different Korean explanations',()=>{
+ const source=__testHooks.friendlyEditorError('EDITOR_BATTLE_COMPONENT_INVALID','English diagnostics',{component:'hand-points',reason:'source-mismatch'});
+ assert.match(source.message,/기준 데이터/);assert.doesNotMatch(source.message,/추가 기체 수|English/);
+ const full=__testHooks.friendlyEditorError('EDITOR_BATTLE_COMPONENT_INVALID','',{component:'hand-points',reason:'capacity',usedBytes:3000,limitBytes:2800});
+ assert.match(full.message,/3,000바이트/);assert.match(full.message,/200바이트 넘습니다/);
+ const generic=__testHooks.friendlyEditorError('EDITOR_BATTLE_COMPONENT_INVALID');
+ assert.doesNotMatch(generic.message,/추가 기체 수를 줄이|공개 패치 원본에서 다시 편집/);
+});
+
 test("v2 worker errors have Korean copy and source mismatches revoke preparation", () => {
   assert.match(__testHooks.friendlyWorkerError("COPY_SOURCE_MISMATCH").title, /원본 부분 검증/);
   assert.match(__testHooks.friendlyWorkerError("COPY_SOURCE_MISMATCH").message, /옮겨 쓸 원본 구간/);
@@ -2459,7 +2479,7 @@ test("font selector loads the exact revision for both games and blocks an absent
   }
 });
 
-test("the site lists only indexed families while archived patch notes remain metadata", async () => {
+test("accepted families remain indexed; the explicit review family is separate and archived notes remain metadata", async () => {
   const index = JSON.parse(await readFile(new URL("../manifest/releases.json", import.meta.url), "utf8"));
   const documents = new Map([
     ["manifest/releases.json", new TextEncoder().encode(JSON.stringify(index))],
@@ -2485,9 +2505,12 @@ test("the site lists only indexed families while archived patch notes remain met
     for (const gameId of ["srwf-f", "srwf-final"]) {
       await fresh.__testHooks.activateGame(gameId);
       const indexed = index.releases.filter((row) => row.gameId === gameId);
-      assert.deepEqual(fresh.__testHooks.state.visibleReleaseRows.map((row) => row.id), indexed.map((row) => row.id));
+      const visible = fresh.__testHooks.state.visibleReleaseRows;
+      assert.deepEqual(visible.filter(row => row.state === 'ACCEPTED').map(row => row.id), indexed.map(row => row.id));
+      const review = visible.filter(row => row.state === 'REVIEW');
+      assert.deepEqual(review, [], 'ordinary static site never requires private review artifacts');
       const families = [...new Set(indexed.map((row) => row.id.replace(/-[abc]$/, "")))];
-      assert.deepEqual(element("releaseSelect").children.map((option) => option.value), families);
+      assert.deepEqual(element("releaseSelect").children.map((option) => option.value), [...review.map(row => row.id.replace(/-[abc]$/, '')), ...families]);
       for (const family of families) {
         element("releaseSelect").value = family;
         await fresh.__testHooks.handleReleaseChange();
@@ -2498,6 +2521,15 @@ test("the site lists only indexed families while archived patch notes remain met
           assert.ok(!ARCHIVED_PATCH_NOTE_RELEASE_IDS.includes(fresh.__testHooks.state.release.id));
         }
       }
+    }
+    // The private review workspace (scripts/editor-review-overlay.json) is optional.
+    const reviewSupport=new URL('../editor-review/editor-support.mjs',import.meta.url);
+    if((await import('node:fs')).existsSync(reviewSupport)){
+      const {editorReviewSupport}=await import(reviewSupport.href);
+      fresh.registerLocalEditorSupport(editorReviewSupport);
+      await fresh.__testHooks.activateGame('srwf-final');
+      assert.deepEqual(fresh.__testHooks.state.visibleReleaseRows.filter(row=>row.state==='REVIEW').map(row=>row.id),['srwf-final-20261029-v0-4-c']);
+      assert.equal(fresh.__testHooks.state.releaseRows.length,12,'local review never changes the accepted release index');
     }
     assert.ok(requests.every((path) => path === "manifest/releases.json" || index.releases.some((row) => row.manifest === path)));
   } finally {
@@ -4127,15 +4159,17 @@ test("the notice and the spirit panel show the facts of a record and claim nothi
 
 // ---- 오류 안내문 -------------------------------------------------------------------------------------
 
+test('Final combined storage refusal reports the measured bytes without inventing relocation damage',()=>{
+  const copy=__testHooks.friendlyEditorError('EDITOR_STORAGE_INVALID','English detail',{reason:'final-inline-aux-capacity',usedBytes:490,limitBytes:486,excessBytes:999});
+  assert.match(copy.message,/완결편/);assert.match(copy.message,/490 B/);assert.match(copy.message,/486 B/);assert.match(copy.message,/4 B 큽니다/);
+  assert.doesNotMatch(copy.message,/999|이설 참조|English/);
+  const invalid=__testHooks.friendlyEditorError('EDITOR_STORAGE_INVALID','',{reason:'final-inline-aux-capacity',usedBytes:10,limitBytes:-1});
+  assert.doesNotMatch(invalid.message,/-1/);
+});
+
 test("every editor error code the core and the worker can raise has natural Korean copy", async () => {
-  const names = [
-    "editor-core", "editor-worker", "editor-provenance", "editor-provenance-profiles", "editor-directory",
-    "editor-grades", "editor-weapon-links", "editor-facts",
-    "editor-rewards", "editor-terrain",
-    "editor-scenario-archive", "editor-deployments", "editor-map-archive", "editor-scenario-provenance",
-    "editor-scenario-deadlines", "editor-scenario-objectives", "editor-scenario-spawns",
-    "editor-scenario-criteria", "editor-scenario-objective-base", "editor-scenario-event-criteria", "editor-scenario-event-phase", "editor-scenario-pilot-context",
-  ];
+  const names = (await readdir(new URL("../assets/", import.meta.url)))
+    .filter(name => /^editor-.*\.mjs$/.test(name)).map(name => name.slice(0, -4));
   const codes = new Set();
   for (const name of names) {
     const source = await readFile(new URL(`../assets/${name}.mjs`, import.meta.url), "utf8");

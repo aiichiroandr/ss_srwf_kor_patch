@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { locateIsoFiles, readCdUserExtent, rewriteCdUserExtent } from '../assets/editor-core.mjs';
+import { locateIsoFiles, readCdUserExtent, rewriteCdUserExtent, createMode1Sector } from '../assets/editor-core.mjs';
 import { buildDisc, DISC_LAYOUT, referenceMode1Sector, referenceMode1Problems, referenceMode2Form1Sector, referenceMode2Form1Problems } from './helpers/synthetic-iso.mjs';
 
 function disc(mode) {
@@ -165,4 +165,16 @@ test('MODE1 ISO directory inspection also batches its private extent reader with
   const interrupted = trackReads(new Blob(sectors), (_bytes, call) => { if (call === 2) cancelled.abort(); });
   await assert.rejects(locateIsoFiles(interrupted.blob, cancelled.signal), { name: 'AbortError' });
   assert.equal(interrupted.reads.length, 2);
+});
+
+
+test('new MODE1 sectors agree with independent EDC/ECC and BCD reference at address bounds', () => {
+  for (const lba of [0, 1, 221803, 449849]) for (const length of [0, 1, 2047, 2048]) {
+    const bytes = Uint8Array.from({length}, (_, i) => (i * 29 + lba) & 255);
+    const sector = createMode1Sector(lba, bytes);
+    assert.deepEqual(sector, referenceMode1Sector(lba, bytes));
+    assert.deepEqual(referenceMode1Problems(sector), []);
+  }
+  for (const lba of [-1, 0.5, 449850, Infinity]) assert.throws(() => createMode1Sector(lba, new Uint8Array()));
+  assert.throws(() => createMode1Sector(0, new Uint8Array(2049)));
 });

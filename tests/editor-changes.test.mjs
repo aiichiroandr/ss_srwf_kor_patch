@@ -1,3 +1,4 @@
+import {chooseSkillControl,offeredSkillIds} from "./helpers/skill-controls.mjs";
 // The change list and the preset buttons on the page: the button at the bottom opens the list of exactly the changed values,
 // an entry leads to its tab, record and field, and a preset file is saved, loaded, judged and applied to the pending rows the
 // way edits on the screen are. Behaviour only (state, rows, requests, focus); the wording on screen is not pinned.
@@ -6,7 +7,6 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
-import { choosePilotSkill } from "./helpers/pilot-skill-controls.mjs";
 import { diffEditorRows, parsePreset, serializePreset, buildPreset, PRESET_MAX_BYTES } from "../assets/editor-preset.mjs";
 
 const document = installFakeDom();
@@ -98,7 +98,8 @@ function addSkill(recordIndex, id, level) {
   hooks.selectEditorTab("pilot");
   hooks.selectEditorRecord("pilot", recordIndex);
   hooks.openPilotSkillDialog();
-  choosePilotSkill(byId, state.editorGameId, id, level);
+  chooseSkillControl(document,id);
+  byId("pilotSkillAddLevel").value = String(level);
   hooks.addPilotSkillFromDialog();
   byId("pilotSkillDialog").close();
 }
@@ -208,6 +209,51 @@ test("while the list is open the arrow keys stay with it, a click outside closes
 });
 
 // ---- saving --------------------------------------------------------------------------------------------------------------
+
+test('preset saving refuses invalid drafts instead of silently saving an older value',async()=>{
+ openSession();type('unit',2,'en',123);
+ const hp=field('unit','hp');hp.value='';hp.dispatchEvent({type:'input'});
+ let picked=0;globalThis.showSaveFilePicker=async()=>{picked++;throw Error('must not open');};
+ try{
+  assert.equal(await editorChanges.save(),null);assert.equal(picked,0);
+  assert.equal(hp.value,'');assert.equal(hp.getAttribute('aria-invalid'),'true');
+  assert.equal(row('unit',2).en,123);
+ }finally{delete globalThis.showSaveFilePicker;}
+});
+
+test('preset application preserves a draft that became invalid after file review opened',async()=>{
+ openSession();type('unit',1,'hp',1500);const text=await savedText();
+ openSession();assert.equal(await editorChanges.loadFile(presetFile(text)),true);
+ const hp=field('unit','hp'),before=row('unit',1).hp;hp.value='';hp.dispatchEvent({type:'input'});
+ assert.equal(editorChanges.apply('all'),null);assert.equal(hp.value,'');assert.equal(row('unit',1).hp,before);
+ assert.match(byId('editorChangesMessage').textContent,/입력/);
+ editorChanges.close();
+});
+
+test('a preset read cannot cross into a different ROM session',async()=>{
+ openSession();type('unit',1,'hp',1500);const text=await savedText();openSession();editorChanges.reset();
+ let finish;const file={name:'slow.json',size:Buffer.byteLength(text),text:()=>new Promise(resolve=>{finish=resolve;})};
+ const pending=editorChanges.loadFile(file);state.editorSessionToken='different-session';finish(text);
+ assert.equal(await pending,false);assert.equal(editorChanges.pending(),null);assert.equal(byId('editorChangesDialog').open,false);
+});
+
+test('a reviewed preset cannot be applied after the ROM session changes',async()=>{
+ openSession();type('unit',1,'hp',1500);const text=await savedText();openSession();
+ assert.equal(await editorChanges.loadFile(presetFile(text)),true);state.editorSessionToken='different-session';
+ const before=row('unit',1).hp;assert.equal(editorChanges.apply('all'),null);assert.equal(row('unit',1).hp,before);
+ assert.equal(editorChanges.pending(),null);assert.match(byId('editorChangesMessage').textContent,/ROM/);editorChanges.close();
+});
+
+test('a slower older preset read cannot replace a newer review or reopen a closed dialog',async()=>{
+ openSession();type('unit',1,'hp',1500);const first=await savedText();type('unit',1,'hp',1600);const second=await savedText();
+ openSession();editorChanges.reset();let finish;
+ const slow={name:'old.json',size:Buffer.byteLength(first),text:()=>new Promise(resolve=>{finish=resolve;})};
+ const previous=editorChanges.loadFile(slow);assert.equal(await editorChanges.loadFile(presetFile(second,'new.json')),true);
+ finish(first);assert.equal(await previous,false);assert.equal(editorChanges.pending().fileName,'new.json');
+ editorChanges.close();editorChanges.open();let finishClosed;
+ const closing=editorChanges.loadFile({name:'closed.json',size:Buffer.byteLength(first),text:()=>new Promise(resolve=>{finishClosed=resolve;})});
+ editorChanges.close();finishClosed(first);assert.equal(await closing,false);assert.equal(byId('editorChangesDialog').open,false);assert.equal(editorChanges.pending(),null);
+});
 
 test("saving without a file picker downloads the preset; the file holds the session's changes", async () => {
   openSession();
@@ -448,4 +494,14 @@ test("a busy session or no session cannot load or apply", async () => {
   hooks.installEditorRows(makeView());
   assert.equal(editorChanges.pending(), null);
   assert.equal(byId("editorChangesDialog").open, false);
+});
+
+test('F source connection participates in dirty-state and navigation without putting ROM data in a preset',async()=>{
+ openSession();state.editorFCampaign={font:'c',importReady:true,sourceBodies:51};
+ assert.equal(hooks.countEditorChanges(),1);
+ editorChanges.open();
+ const button=byId('editorChangesDialog').querySelector('button[data-change-kind="campaign"]');
+ assert.ok(button);assert.match(button.textContent,/JSON 제외/);assert.equal(byId('editorPresetSaveButton').disabled,true);
+ button.click();assert.equal(state.editorTab,'misc');
+ state.editorFCampaign=null;assert.equal(hooks.countEditorChanges(),0);editorChanges.refresh();
 });

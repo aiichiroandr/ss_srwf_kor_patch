@@ -2,16 +2,16 @@
 // victory/defeat actions execute first; this hook does not replace those paths.
 // The generated tail is authenticated by exact regeneration, then removed for
 // comparison with the original immutable scenario profile.
-import { inspectPendingObjectiveHook as hookOf, readScenarioPurpose, encodeObjectiveText as encodeText } from './editor-scenario-objective-base.mjs?v=20261104-save3';
-export { readScenarioPurpose } from './editor-scenario-objective-base.mjs?v=20261104-save3';
-import { CRITERIA_FIELDS, inspectScenarioCriteria, normalizeScenarioCriteriaBody, updateScenarioCriteriaBody, snapshotScenarioCriteria } from './editor-scenario-criteria.mjs?v=20261104-save3';
-import { normalizeScenarioReinforcementBody, inspectScenarioReinforcement } from './editor-scenario-spawns.mjs?v=20261104-save3';
-import { normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261104-save3';
-import { EVENT_PHASE_FIELDS, normalizeScenarioEventPhaseBody, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261104-save3';
-import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261104-save3';
-import { ownData } from './editor-own.mjs?v=20261104-save3';
+import { inspectPendingObjectiveHook as hookOf, readScenarioPurpose, encodeObjectiveText as encodeText } from './editor-scenario-objective-base.mjs?v=20261104-part1';
+export { readScenarioPurpose } from './editor-scenario-objective-base.mjs?v=20261104-part1';
+import { CRITERIA_FIELDS, inspectScenarioCriteria, normalizeScenarioCriteriaBody, updateScenarioCriteriaBody, snapshotScenarioCriteria } from './editor-scenario-criteria.mjs?v=20261104-part1';
+import { normalizeScenarioReinforcementBody, inspectScenarioReinforcement } from './editor-scenario-spawns.mjs?v=20261104-part1';
+import { normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261104-part1';
+import { EVENT_PHASE_FIELDS, normalizeScenarioEventPhaseBody, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261104-part1';
+import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261104-part1';
+import { ownData } from './editor-own.mjs?v=20261104-part1';
 
-import {objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261104-save3';
+import {objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261104-part1';
 const MAGIC = Uint8Array.of(83,82,87,70,68,76,48,49); // SRWFDL01
 const TRAILER = 24;
 const CAPACITY = Object.freeze({ 'srwf-f': 0x8000, 'srwf-final': 0x9000 });
@@ -65,10 +65,14 @@ function appendDeadline(original,gameId,deadline) {
 }
 
 export function normalizeScenarioDeadlineBody(body,gameId,supplied={}) {
-  const scenarioLayout=ownData(supplied,'scenarioLayout')??'latest',unitCount=ownData(supplied,'unitCount'),pilotContext=ownData(supplied,'pilotContext'),regionContexts=ownData(supplied,'regionContexts');
+  const scenarioLayout=ownData(supplied,'scenarioLayout')??'latest',unitCount=ownData(supplied,'unitCount'),pilotContext=ownData(supplied,'pilotContext'),regionContexts=ownData(supplied,'regionContexts'),reinforcementRoot=ownData(supplied,'reinforcementRoot');
   const phase=normalizeScenarioEventPhaseBody(body,gameId,{scenarioLayout,unitCount});body=phase.body;
   const event=normalizeScenarioEventCriteriaBody(body,gameId,{scenarioLayout,unitCount});body=event.body;
-  const spawn=normalizeScenarioReinforcementBody(body,gameId,{scenarioLayout});body=spawn.body;
+  const spawn=normalizeScenarioReinforcementBody(body,gameId,{scenarioLayout,unitCount,regionContexts,reinforcementRoot});body=spawn.body;
+  if(spawn.reinforcement&&(phase.eventPhase||event.eventCriteria)){
+    const error=new Error('증원 사용 중에는 기존 사건의 발동 조건·시점을 함께 변경할 수 없습니다.');
+    error.code='EDITOR_REINFORCEMENT_OBJECTIVE_CONFLICT';throw error;
+  }
   const composed=normalizeScenarioCriteriaBody(body,gameId,{scenarioLayout,unitCount,pilotContext,regionContexts});
   if(composed)return {...composed,reinforcement:spawn.reinforcement,eventCriteria:event.eventCriteria,eventPhase:phase.eventPhase};
   const bytes=body.decoded,hasTail=bytes.length>=TRAILER && same(bytes.subarray(bytes.length-TRAILER,bytes.length-TRAILER+8),MAGIC);
@@ -136,7 +140,7 @@ export function inspectScenarioDeadline(body,gameId,options={}) {
 }
 
 export function normalizeScenarioDeadlines(archive,supplied={}) {
-  const options={scenarioLayout:archive.scenarioLayout,unitCount:ownData(supplied,'unitCount'),pilotContext:ownData(supplied,'pilotContext'),regionContexts:ownData(supplied,'regionContexts')},deadlines=[],reinforcements=[],eventCriteria=[],eventPhases=[];
+  const options={scenarioLayout:archive.scenarioLayout,unitCount:ownData(supplied,'unitCount'),pilotContext:ownData(supplied,'pilotContext'),regionContexts:ownData(supplied,'regionContexts'),reinforcementRoot:ownData(supplied,'reinforcementRoot')},deadlines=[],reinforcements=[],eventCriteria=[],eventPhases=[];
   const bodies=archive.bodies.map(body=>{
     const normalized=normalizeScenarioDeadlineBody(body,archive.gameId,options);
     if(normalized.eventCriteria)eventCriteria.push(normalized.eventCriteria);

@@ -1,0 +1,718 @@
+{
+  "schema": "srwf.static-site-policy.v1",
+  "limitBytes": 1000000000,
+  "publicDocs": [
+    "docs/WEB_PORT_TEST.md",
+    "docs/EDITOR_FACTS.md"
+  ],
+  "files": [
+    "NOTICE.md",
+    "assets/app.mjs",
+    "assets/disc-source.mjs",
+    "assets/editor-alice-art.mjs",
+    "assets/editor-alice-construction.mjs",
+    "assets/editor-alice-crew-data.mjs",
+    "assets/editor-alice-crew-image.mjs",
+    "assets/editor-alice-crew-native.mjs",
+    "assets/editor-alice-crew-ui.mjs",
+    "assets/editor-alice-crew-v4.mjs",
+    "assets/editor-alice-face-copies.mjs",
+    "assets/editor-alice-multi-code.mjs",
+    "assets/editor-alice-targets.mjs",
+    "assets/editor-alice.mjs",
+    "assets/editor-animation-roster-profiles.mjs",
+    "assets/editor-animation.mjs",
+    "assets/editor-battle-beam-bank.mjs",
+    "assets/editor-battle-components.mjs",
+    "assets/editor-battle-dialogue.mjs",
+    "assets/editor-battle-handpoints.mjs",
+    "assets/editor-battle-motion.mjs",
+    "assets/editor-battle-scene-labels.mjs",
+    "assets/editor-battle-source-delta.mjs",
+    "assets/editor-battle-timeline.mjs",
+    "assets/editor-changes.mjs",
+    "assets/editor-collection-unlock.mjs",
+    "assets/editor-compression-recipe.mjs",
+    "assets/editor-core.mjs",
+    "assets/editor-cost-ui.mjs",
+    "assets/editor-costs.mjs",
+    "assets/editor-critical-fix-image.mjs",
+    "assets/editor-critical-fix.mjs",
+    "assets/editor-critical-values.mjs",
+    "assets/editor-debug-entry.mjs",
+    "assets/editor-deployments.mjs",
+    "assets/editor-dialogue-sequence.mjs",
+    "assets/editor-dialogue-speakers.mjs",
+    "assets/editor-directory.mjs",
+    "assets/editor-economy-profiles.mjs",
+    "assets/editor-effect-list.mjs",
+    "assets/editor-entity-art.mjs",
+    "assets/editor-event-flags.mjs",
+    "assets/editor-exs-aimed-art.mjs",
+    "assets/editor-exs-aimed-pose.mjs",
+    "assets/editor-exs-beam-geometry.mjs",
+    "assets/editor-exs-beam-motion.mjs",
+    "assets/editor-exs-beam-ui.mjs",
+    "assets/editor-f-inline.mjs",
+    "assets/editor-face-record.mjs",
+    "assets/editor-facts.mjs",
+    "assets/editor-fields.mjs",
+    "assets/editor-filter.mjs",
+    "assets/editor-final-inline-aux.mjs",
+    "assets/editor-final-region-snapshot.mjs",
+    "assets/editor-glyph-pools.mjs",
+    "assets/editor-glyphs.mjs",
+    "assets/editor-grades.mjs",
+    "assets/editor-hangul-OFL.txt",
+    "assets/editor-hangul-bitmap-data.mjs",
+    "assets/editor-help.mjs",
+    "assets/editor-hero-profiles.mjs",
+    "assets/editor-image-labels.mjs",
+    "assets/editor-kill-experience-profiles.mjs",
+    "assets/editor-kom-recovery.mjs",
+    "assets/editor-layout.mjs",
+    "assets/editor-list.mjs",
+    "assets/editor-loadout-profiles.mjs",
+    "assets/editor-loadout-ui.mjs",
+    "assets/editor-loadout.mjs",
+    "assets/editor-local-config.mjs",
+    "assets/editor-lock-layout.mjs",
+    "assets/editor-locks.mjs",
+    "assets/editor-map-archive.mjs",
+    "assets/editor-map-graphics.mjs",
+    "assets/editor-map-icon-packed.mjs",
+    "assets/editor-map-icon-patch-v2.mjs",
+    "assets/editor-map-icon-patch.mjs",
+    "assets/editor-map-icon-unit-links.mjs",
+    "assets/editor-map-icons.mjs",
+    "assets/editor-media-cache.mjs",
+    "assets/editor-migration.mjs",
+    "assets/editor-misc-examples.mjs",
+    "assets/editor-name-control.mjs",
+    "assets/editor-name-map.mjs",
+    "assets/editor-native-overlays.mjs",
+    "assets/editor-notice.mjs",
+    "assets/editor-own.mjs",
+    "assets/editor-pilot-layout-profiles.mjs",
+    "assets/editor-pilot-layout.mjs",
+    "assets/editor-pilot-name-map.mjs",
+    "assets/editor-preset.mjs",
+    "assets/editor-preview-resources.mjs",
+    "assets/editor-preview-verifier.mjs",
+    "assets/editor-provenance-profiles.mjs",
+    "assets/editor-provenance.mjs",
+    "assets/editor-review-support.mjs",
+    "assets/editor-reward-profiles.mjs",
+    "assets/editor-reward-ui.mjs",
+    "assets/editor-rewards.mjs",
+    "assets/editor-runtime.css",
+    "assets/editor-save-name-defaults.mjs",
+    "assets/editor-scenario-appearance.mjs",
+    "assets/editor-scenario-archive.mjs",
+    "assets/editor-scenario-chapter-data.mjs",
+    "assets/editor-scenario-chapters.mjs",
+    "assets/editor-scenario-combat-rewards.mjs",
+    "assets/editor-scenario-completion-title-bindings.mjs",
+    "assets/editor-scenario-completion-title-hints.mjs",
+    "assets/editor-scenario-criteria.mjs",
+    "assets/editor-scenario-deadlines.mjs",
+    "assets/editor-scenario-dialogue-ui.mjs",
+    "assets/editor-scenario-dialogue.mjs",
+    "assets/editor-scenario-display-grammar.mjs",
+    "assets/editor-scenario-display.mjs",
+    "assets/editor-scenario-event-criteria.mjs",
+    "assets/editor-scenario-event-phase.mjs",
+    "assets/editor-scenario-events.mjs",
+    "assets/editor-scenario-f-event-phase.mjs",
+    "assets/editor-scenario-labels.mjs",
+    "assets/editor-scenario-model.mjs",
+    "assets/editor-scenario-objective-base.mjs",
+    "assets/editor-scenario-objectives.mjs",
+    "assets/editor-scenario-pilot-context.mjs",
+    "assets/editor-scenario-placement-list.mjs",
+    "assets/editor-scenario-profiles.mjs",
+    "assets/editor-scenario-provenance.mjs",
+    "assets/editor-scenario-region-context.mjs",
+    "assets/editor-scenario-region-ui.mjs",
+    "assets/editor-scenario-reinforcement-data.mjs",
+    "assets/editor-scenario-reinforcement-pairs.mjs",
+    "assets/editor-scenario-reinforcement-profile.mjs",
+    "assets/editor-scenario-reinforcement-program.mjs",
+    "assets/editor-scenario-reinforcement-ui.mjs",
+    "assets/editor-scenario-roster-catalog.mjs",
+    "assets/editor-scenario-roster-context.mjs",
+    "assets/editor-scenario-roster-level-pins.mjs",
+    "assets/editor-scenario-roster-levels.mjs",
+    "assets/editor-scenario-roster-ui.mjs",
+    "assets/editor-scenario-spawns.mjs",
+    "assets/editor-scenario-stock-name-map.mjs",
+    "assets/editor-scenario-tile-picker.mjs",
+    "assets/editor-scenario-ui.mjs",
+    "assets/editor-scenario-unit-pickup.mjs",
+    "assets/editor-scenario-unit-rewards.mjs",
+    "assets/editor-search-tools.mjs",
+    "assets/editor-skill-list.mjs",
+    "assets/editor-skill-pagination.mjs",
+    "assets/editor-spawn-capacity-image.mjs",
+    "assets/editor-spawn-capacity.mjs",
+    "assets/editor-srw4-battle.mjs",
+    "assets/editor-srw4-file.mjs",
+    "assets/editor-srw4-native-map.mjs",
+    "assets/editor-srw4-rom.mjs",
+    "assets/editor-srw4-source-ui.mjs",
+    "assets/editor-srw4-source.mjs",
+    "assets/editor-srw4-undo.mjs",
+    "assets/editor-srw4-unused.mjs",
+    "assets/editor-stock-profiles.mjs",
+    "assets/editor-storage-budget.mjs",
+    "assets/editor-storage-safety.mjs",
+    "assets/editor-storage-ui.mjs",
+    "assets/editor-terrain-profiles.mjs",
+    "assets/editor-terrain-ui.mjs",
+    "assets/editor-terrain.mjs",
+    "assets/editor-text-codec.mjs",
+    "assets/editor-unit-abilities.mjs",
+    "assets/editor-unit-compact.mjs",
+    "assets/editor-unit-construction.mjs",
+    "assets/editor-unit-name-labels.mjs",
+    "assets/editor-unit-restoration.mjs",
+    "assets/editor-unit-storage-profiles.mjs",
+    "assets/editor-unit-storage.mjs",
+    "assets/editor-unit-upgrade-ui.mjs",
+    "assets/editor-unit-upgrade.mjs",
+    "assets/editor-unit-weapon-ui.mjs",
+    "assets/editor-v04-unsupported.mjs",
+    "assets/editor-weapon-clone.mjs",
+    "assets/editor-weapon-dialogue-ui.mjs",
+    "assets/editor-weapon-links.mjs",
+    "assets/editor-weapon-names.mjs",
+    "assets/editor-weapon-voice-profiles.mjs",
+    "assets/editor-worker.mjs",
+    "assets/font-previews/a-dos-thin-beamrifle.png",
+    "assets/font-previews/a-dos-thin-getterbeam.png",
+    "assets/font-previews/a-dos-thin-gundammk2.png",
+    "assets/font-previews/a-dos-thin-mazingerz.png",
+    "assets/font-previews/a-dos-thin-melee.png",
+    "assets/font-previews/a-dos-thin-orabegi.png",
+    "assets/font-previews/a-dos-thin-photonbeam.png",
+    "assets/font-previews/a-dos-thin-pinpanel.png",
+    "assets/font-previews/a-dos-thin-vesba.png",
+    "assets/font-previews/b-galmuri11-beamrifle.png",
+    "assets/font-previews/b-galmuri11-getterbeam.png",
+    "assets/font-previews/b-galmuri11-gundammk2.png",
+    "assets/font-previews/b-galmuri11-mazingerz.png",
+    "assets/font-previews/b-galmuri11-melee.png",
+    "assets/font-previews/b-galmuri11-orabegi.png",
+    "assets/font-previews/b-galmuri11-photonbeam.png",
+    "assets/font-previews/b-galmuri11-pinpanel.png",
+    "assets/font-previews/b-galmuri11-vesba.png",
+    "assets/font-previews/c-mona12-beamrifle.png",
+    "assets/font-previews/c-mona12-getterbeam.png",
+    "assets/font-previews/c-mona12-gundammk2.png",
+    "assets/font-previews/c-mona12-mazingerz.png",
+    "assets/font-previews/c-mona12-melee.png",
+    "assets/font-previews/c-mona12-orabegi.png",
+    "assets/font-previews/c-mona12-photonbeam.png",
+    "assets/font-previews/c-mona12-pinpanel.png",
+    "assets/font-previews/c-mona12-vesba.png",
+    "assets/font-revisions.mjs",
+    "assets/mixed-game-folder.mjs",
+    "assets/next-release-notes.mjs",
+    "assets/patch-core-v2.mjs",
+    "assets/patch-core.mjs",
+    "assets/patch-notes/fin-v0-3-btsr-boundaries.png",
+    "assets/patch-notes/fin-v0-3-btsr-ten.png",
+    "assets/patch-notes/fin-v0-3-revive-black.png",
+    "assets/patch-notes/fin-v0-3-revive-spirit.png",
+    "assets/patch-notes/fin-v0-3-shinji-eva3-1.png",
+    "assets/patch-notes/fin-v0-3-shinji-eva3-2.png",
+    "assets/patch-notes/srwf-final-v0-1-battle-dialogue-after.png",
+    "assets/patch-notes/srwf-final-v0-1-battle-dialogue-before.png",
+    "assets/patch-notes/srwf-final-v0-1-battle-speaker-after.png",
+    "assets/patch-notes/srwf-final-v0-1-battle-speaker-before.png",
+    "assets/patch-notes/srwf-final-v0-1-karaoke-caption-after.png",
+    "assets/patch-notes/srwf-final-v0-1-karaoke-caption-before.png",
+    "assets/patch-notes/v0-1-disconnect-after.png",
+    "assets/patch-notes/v0-1-disconnect-before.png",
+    "assets/patch-notes/v0-1-parts-after.png",
+    "assets/patch-notes/v0-1-parts-before.png",
+    "assets/patch-notes/v0-1-preview-body-after.png",
+    "assets/patch-notes/v0-1-preview-body-before.png",
+    "assets/patch-notes/v0-1-preview-heading-after.png",
+    "assets/patch-notes/v0-1-preview-heading-before.png",
+    "assets/patch-notes/v0-1-protagonist-names-after.png",
+    "assets/patch-notes/v0-1-protagonist-names-before.png",
+    "assets/patch-notes/v0-1-sortie-count-after.png",
+    "assets/patch-notes/v0-1-sortie-count-before.png",
+    "assets/patch-notes/v0-1-sortie-names-after.png",
+    "assets/patch-notes/v0-1-sortie-names-before.png",
+    "assets/patch-notes/v0-1-split-after.png",
+    "assets/patch-notes/v0-1-split-before.png",
+    "assets/patch-notes/v0-1-turn-end-after.png",
+    "assets/patch-notes/v0-1-turn-end-before.png",
+    "assets/patch-worker.mjs",
+    "assets/release-notes.mjs",
+    "assets/runtime-panel-frame.svg",
+    "assets/save-compatibility.mjs",
+    "assets/save-core.mjs",
+    "assets/save-field-rules.mjs",
+    "assets/save-metadata.mjs",
+    "assets/save-names.mjs",
+    "assets/save-pages.mjs",
+    "assets/save-ui.mjs",
+    "assets/save-unit-groups.mjs",
+    "assets/save-upgrade-bar.mjs",
+    "assets/sha256.mjs",
+    "assets/style.css",
+    "assets/user-guide.mjs",
+    "assets/user-guide/changes-desktop.png",
+    "assets/user-guide/changes-portrait.png",
+    "assets/user-guide/downloads-desktop.png",
+    "assets/user-guide/downloads-portrait.png",
+    "assets/user-guide/edit-desktop.png",
+    "assets/user-guide/edit-portrait.png",
+    "assets/user-guide/folder-desktop.png",
+    "assets/user-guide/folder-portrait.png",
+    "assets/user-guide/native-desktop.png",
+    "assets/user-guide/native-portrait.png",
+    "assets/user-guide/patched-desktop.png",
+    "assets/user-guide/patched-portrait.png",
+    "assets/user-guide/personal-desktop.png",
+    "assets/user-guide/personal-portrait.png",
+    "assets/user-guide/pilot-desktop.png",
+    "assets/user-guide/pilot-portrait.png",
+    "assets/user-guide/preset-desktop.png",
+    "assets/user-guide/preset-portrait.png",
+    "assets/user-guide/save-desktop.png",
+    "assets/user-guide/save-portrait.png",
+    "assets/user-guide/skills-desktop.png",
+    "assets/user-guide/skills-portrait.png",
+    "assets/user-guide/spirits-desktop.png",
+    "assets/user-guide/spirits-portrait.png",
+    "assets/user-guide/stock-desktop.png",
+    "assets/user-guide/stock-portrait.png",
+    "assets/user-guide/unit-abilities-desktop.png",
+    "assets/user-guide/unit-abilities-portrait.png",
+    "assets/user-guide/unit-desktop.png",
+    "assets/user-guide/unit-portrait.png",
+    "assets/user-guide/unit-terrain-desktop.png",
+    "assets/user-guide/unit-terrain-portrait.png",
+    "assets/user-guide/weapon-desktop.png",
+    "assets/user-guide/weapon-portrait.png",
+    "assets/user-guide/weapon-terrain-desktop.png",
+    "assets/user-guide/weapon-terrain-portrait.png",
+    "docs/EDITOR_FACTS.md",
+    "docs/WEB_PORT_TEST.md",
+    "index.html",
+    "manifest/releases.json",
+    "patches/srwf-f-20260915-v0-4-a.srwfp",
+    "patches/srwf-f-20260915-v0-4-b.srwfp",
+    "patches/srwf-f-20260915-v0-4-c.srwfp",
+    "patches/srwf-f-20260928-v0-5-a.srwfp",
+    "patches/srwf-f-20260928-v0-5-b.srwfp",
+    "patches/srwf-f-20260928-v0-5-c.srwfp",
+    "patches/srwf-final-20260928-v0-2-a.srwfp",
+    "patches/srwf-final-20260928-v0-2-b.srwfp",
+    "patches/srwf-final-20260928-v0-2-c.srwfp",
+    "patches/srwf-final-20261005-v0-3-a.srwfp",
+    "patches/srwf-final-20261005-v0-3-b.srwfp",
+    "patches/srwf-final-20261005-v0-3-c.srwfp",
+    "receipts/srwf-f-20260915-v0-4-a.acceptance.json",
+    "receipts/srwf-f-20260915-v0-4-b.acceptance.json",
+    "receipts/srwf-f-20260915-v0-4-c.acceptance.json",
+    "receipts/srwf-f-20260928-v0-5-a.acceptance.json",
+    "receipts/srwf-f-20260928-v0-5-b.acceptance.json",
+    "receipts/srwf-f-20260928-v0-5-c.acceptance.json",
+    "receipts/srwf-final-20260928-v0-2-a.acceptance.json",
+    "receipts/srwf-final-20260928-v0-2-b.acceptance.json",
+    "receipts/srwf-final-20260928-v0-2-c.acceptance.json",
+    "receipts/srwf-final-20261005-v0-3-a.acceptance.json",
+    "receipts/srwf-final-20261005-v0-3-b.acceptance.json",
+    "receipts/srwf-final-20261005-v0-3-c.acceptance.json",
+    "releases/srwf-f-20260915-v0-4-a.json",
+    "releases/srwf-f-20260915-v0-4-b.json",
+    "releases/srwf-f-20260915-v0-4-c.json",
+    "releases/srwf-f-20260928-v0-5-a.json",
+    "releases/srwf-f-20260928-v0-5-b.json",
+    "releases/srwf-f-20260928-v0-5-c.json",
+    "releases/srwf-final-20260928-v0-2-a.json",
+    "releases/srwf-final-20260928-v0-2-b.json",
+    "releases/srwf-final-20260928-v0-2-c.json",
+    "releases/srwf-final-20261005-v0-3-a.json",
+    "releases/srwf-final-20261005-v0-3-b.json",
+    "releases/srwf-final-20261005-v0-3-c.json",
+    "schemas/acceptance-receipt.schema.json",
+    "schemas/patch-descriptor-v2.schema.json",
+    "schemas/patch-descriptor.schema.json",
+    "schemas/release.schema.json",
+    "schemas/releases.schema.json",
+    "weapon-preview/runtime/8f342dac2ee485198ad3/saturn.js",
+    "weapon-preview/runtime/8f342dac2ee485198ad3/saturn.wasm",
+    "weapon-preview/runtime/BUILD.md",
+    "weapon-preview/runtime/COPYING",
+    "weapon-preview/runtime/LICENSE",
+    "weapon-preview/runtime/THIRD_PARTY.md",
+    "weapon-preview/runtime/current.json",
+    "weapon-preview/runtime/f-current.json",
+    "weapon-preview/runtime/f003b342a3fe2894da1c/saturn.js",
+    "weapon-preview/runtime/f003b342a3fe2894da1c/saturn.wasm",
+    "weapon-preview/runtime/source-8f342dac2ee485198ad3.tar.gz",
+    "weapon-preview/runtime/source-f003b342a3fe2894da1c.tar.gz",
+    "weapon-preview/worker.js",
+    "web-port/index.html",
+    "web-port/isolation-sw.js",
+    "web-port/ram-save-worker.mjs",
+    "web-port/ram-save.mjs",
+    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.js",
+    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.wasm",
+    "web-port/runtime/1a0261ada40574cfb43d/saturn.js",
+    "web-port/runtime/1a0261ada40574cfb43d/saturn.wasm",
+    "web-port/runtime/3ca68ea2ef0dcecd0b86/saturn.js",
+    "web-port/runtime/3ca68ea2ef0dcecd0b86/saturn.wasm",
+    "web-port/runtime/BUILD.md",
+    "web-port/runtime/COPYING",
+    "web-port/runtime/THIRD_PARTY.md",
+    "web-port/runtime/b4d1a7de24a7aa2a98b5/saturn.js",
+    "web-port/runtime/b4d1a7de24a7aa2a98b5/saturn.wasm",
+    "web-port/runtime/current-mobile-v14.json",
+    "web-port/runtime/current-mobile.json",
+    "web-port/runtime/current.json",
+    "web-port/runtime/source-16f9cf9fde74c2d70e6b.tar.gz",
+    "web-port/runtime/source-1a0261ada40574cfb43d.tar.gz",
+    "web-port/runtime/source-3ca68ea2ef0dcecd0b86.tar.gz",
+    "web-port/runtime/source-b4d1a7de24a7aa2a98b5.tar.gz",
+    "web-port/saves.mjs",
+    "web-port/style.css",
+    "web-port/worker.js"
+  ],
+  "pins": {
+    "manifest/releases.json": {
+      "bytes": 5016,
+      "sha256": "38ee10543d4b77a31f0cc231e1b7a485d8f22efacfdfb51375bfeee72837ece4"
+    },
+    "patches/srwf-f-20260915-v0-4-a.srwfp": {
+      "bytes": 63992864,
+      "sha256": "f31ffbd24da40bc4355fa14878d0d24d80887e4ea2a6d88409099c9568ded0de"
+    },
+    "patches/srwf-f-20260915-v0-4-b.srwfp": {
+      "bytes": 63991849,
+      "sha256": "d6fcea57763bad838b1cfc73fedec75e485ffd541fb9783de7e37a0186f6c920"
+    },
+    "patches/srwf-f-20260915-v0-4-c.srwfp": {
+      "bytes": 63994763,
+      "sha256": "71bac68e81558b2d4ef24f16408e11a058c23140d1cfb57b77a05fa6be1db94a"
+    },
+    "patches/srwf-f-20260928-v0-5-a.srwfp": {
+      "bytes": 69587546,
+      "sha256": "a309a7951effdbde05d5bd4c853eb41ccd8a5b00bb2be8a57df380734f28df59"
+    },
+    "patches/srwf-f-20260928-v0-5-b.srwfp": {
+      "bytes": 69588190,
+      "sha256": "0a49422528c142bd24cbbf975fdcfb4f09f059069e5025e48e81ad8efae70345"
+    },
+    "patches/srwf-f-20260928-v0-5-c.srwfp": {
+      "bytes": 69592331,
+      "sha256": "9981ea581a400807fbc6dc6c935dba39f18615f0223ded23c4675ed7f5d78f1d"
+    },
+    "patches/srwf-final-20260928-v0-2-a.srwfp": {
+      "bytes": 3632657,
+      "sha256": "ae7ec47edda7e3edb5a91ed612d2e644bc674c52c2fa7c317e113efbc9b4b9d4"
+    },
+    "patches/srwf-final-20260928-v0-2-b.srwfp": {
+      "bytes": 3714081,
+      "sha256": "be05f87a20780e434a8af9d30511a5edf8c3ed25fd024a451cc7a5e5355f6cb0"
+    },
+    "patches/srwf-final-20260928-v0-2-c.srwfp": {
+      "bytes": 3716160,
+      "sha256": "6992caf9a7279ff850bd872c3757e62d7eab5fd0e6340eaafa8f154dd63fe792"
+    },
+    "patches/srwf-final-20261005-v0-3-a.srwfp": {
+      "bytes": 3634793,
+      "sha256": "8df497a949f8f6f45c2b14a55cdbcf24b76a40afb46d736e6905675cee0da7ab"
+    },
+    "patches/srwf-final-20261005-v0-3-b.srwfp": {
+      "bytes": 3715976,
+      "sha256": "fe3c70d0524a9e386489106b97bf556cf29c2101fc59c8db838959a4aae8cd9b"
+    },
+    "patches/srwf-final-20261005-v0-3-c.srwfp": {
+      "bytes": 3718378,
+      "sha256": "f35cf3b4ec5d9da5dd864b86b42e993dd7c1648065d37f3717b4513829bfa87c"
+    },
+    "receipts/srwf-f-20260915-v0-4-a.acceptance.json": {
+      "bytes": 928,
+      "sha256": "8de9609f460d7696d1d2e6c1c58a3ba31464140d2c7b5497c5a304459366d017"
+    },
+    "receipts/srwf-f-20260915-v0-4-b.acceptance.json": {
+      "bytes": 928,
+      "sha256": "84a436ca53a06ca93551e0ad678aa663832f908502a8cc7bdad0755869f05e91"
+    },
+    "receipts/srwf-f-20260915-v0-4-c.acceptance.json": {
+      "bytes": 928,
+      "sha256": "5f2a993d021751ea93fce4e0b8811b1f7892fc4fb6d84571a5469064a159635a"
+    },
+    "receipts/srwf-f-20260928-v0-5-a.acceptance.json": {
+      "bytes": 966,
+      "sha256": "6241ba3f5c04aa98209222130cbd008b5afa44b5e734201a08ac5e4ebb52de78"
+    },
+    "receipts/srwf-f-20260928-v0-5-b.acceptance.json": {
+      "bytes": 966,
+      "sha256": "b21f2d8979e54eabefe75a77d0d42b7eb15231c71594784306d70c43c0ef6d56"
+    },
+    "receipts/srwf-f-20260928-v0-5-c.acceptance.json": {
+      "bytes": 966,
+      "sha256": "08b0cf5db0aa1e669dfc4c6a4a4db8b9a5ba988a9cd86372b34a90113d102bf3"
+    },
+    "receipts/srwf-final-20260928-v0-2-a.acceptance.json": {
+      "bytes": 970,
+      "sha256": "f802bd914622c56e166be427b80b0279252dfc90561fdae1c9737c450cdd08e3"
+    },
+    "receipts/srwf-final-20260928-v0-2-b.acceptance.json": {
+      "bytes": 970,
+      "sha256": "80c05b70af006e311d2ec0a734ba77abececdfc27293250f1232e42f490e1e07"
+    },
+    "receipts/srwf-final-20260928-v0-2-c.acceptance.json": {
+      "bytes": 970,
+      "sha256": "909e272f135be82f5cdeeceb136bfdd00c855bfa1e8b3a069c95804eed07348f"
+    },
+    "receipts/srwf-final-20261005-v0-3-a.acceptance.json": {
+      "bytes": 1018,
+      "sha256": "b999625850f0835da874fdd80d218082afc8ff4ddbbc699c77d34b16bf65ac54"
+    },
+    "receipts/srwf-final-20261005-v0-3-b.acceptance.json": {
+      "bytes": 1018,
+      "sha256": "dad30a59457d6c9757eb86efc6f7ea9608e50579bd2f9a350c8cc32dc00e547f"
+    },
+    "receipts/srwf-final-20261005-v0-3-c.acceptance.json": {
+      "bytes": 965,
+      "sha256": "75d5199357c443589f226dec62c27d799adf775bd4d35acb5924c770eb85f39a"
+    },
+    "releases/srwf-f-20260915-v0-4-a.json": {
+      "bytes": 1221,
+      "sha256": "b4db01d8bb70c4910293e124a89f6645a1ce408020d9b4474eb3f533ec1bfd5e"
+    },
+    "releases/srwf-f-20260915-v0-4-b.json": {
+      "bytes": 1221,
+      "sha256": "a3317c1c0cdf23d57f5422aca9c16506a42904f78a399f1374be6b7dcefc840d"
+    },
+    "releases/srwf-f-20260915-v0-4-c.json": {
+      "bytes": 1221,
+      "sha256": "be3c993c889c3af22d6e7265d56b8eba19497842f0308d6186b1e1b95db79f5e"
+    },
+    "releases/srwf-f-20260928-v0-5-a.json": {
+      "bytes": 1221,
+      "sha256": "97d5311fcb740f5acd6b5573bbe8c0b9362878abbb44e5312f95fb6942b45fde"
+    },
+    "releases/srwf-f-20260928-v0-5-b.json": {
+      "bytes": 1221,
+      "sha256": "658f7b9e8d14fa5ff91c3281f39ceaf8b1e36834e9a2396f86bde5078381d0df"
+    },
+    "releases/srwf-f-20260928-v0-5-c.json": {
+      "bytes": 1221,
+      "sha256": "d1e2d20dd3490ee40760c9ce885f4788a127f2153b753f47c8537b511c99a87f"
+    },
+    "releases/srwf-final-20260928-v0-2-a.json": {
+      "bytes": 1239,
+      "sha256": "e59a9eaf51973535461d8d34066846ff8e4511addd5432473e61a52d5eeb04f1"
+    },
+    "releases/srwf-final-20260928-v0-2-b.json": {
+      "bytes": 1239,
+      "sha256": "b0c7c13748bfb9237bf59e0b6c931c5d7140c1188b9ab9273cdb478ea3d47f20"
+    },
+    "releases/srwf-final-20260928-v0-2-c.json": {
+      "bytes": 1239,
+      "sha256": "d7f16e963cb268b07bcca5a61937b29bcdb98cf075acc7108d61d1cd47b714e5"
+    },
+    "releases/srwf-final-20261005-v0-3-a.json": {
+      "bytes": 1270,
+      "sha256": "666f3a10c604ac491d3b5d4842b81898041ede894d17b02c61c2917f84b874ef"
+    },
+    "releases/srwf-final-20261005-v0-3-b.json": {
+      "bytes": 1270,
+      "sha256": "3af3a6cba219fb8047bc29492d6ee5cefc0813685fdf56814eb8b7495f8d34b1"
+    },
+    "releases/srwf-final-20261005-v0-3-c.json": {
+      "bytes": 1270,
+      "sha256": "c543e42d16f86c4c8d7e2b9a6ac491c9ee7d0093e855b1593292a7f124d36180"
+    },
+    "schemas/acceptance-receipt.schema.json": {
+      "bytes": 2107,
+      "sha256": "5fb4736bbe8ce0271eb6d6950094a5aa6b2fe8a42316fd34faad6c2f7072320c"
+    },
+    "schemas/patch-descriptor-v2.schema.json": {
+      "bytes": 1284,
+      "sha256": "e9edf467b96f8b3597127626b4662fc036966db989b9eff7a2abfeb9e751a8a5"
+    },
+    "schemas/patch-descriptor.schema.json": {
+      "bytes": 1196,
+      "sha256": "116340473b69cceb390dfbd74a341afe50c823eda6ed7273491da43103ade98a"
+    },
+    "schemas/release.schema.json": {
+      "bytes": 5936,
+      "sha256": "22153852e241d0627a22cf68601556a23672d7f78368955138745080dff1cbdf"
+    },
+    "schemas/releases.schema.json": {
+      "bytes": 7711,
+      "sha256": "f855b0d6609dec4fbb13dab70219c6e77332e9a125feb8f1ffabf822d6577358"
+    },
+    "weapon-preview/runtime/8f342dac2ee485198ad3/saturn.js": {
+      "bytes": 116608,
+      "sha256": "54102fcdb67d89efe02025e1235386ec42d0a2071d7657381e55cecfc7fbc3f9"
+    },
+    "weapon-preview/runtime/8f342dac2ee485198ad3/saturn.wasm": {
+      "bytes": 38557979,
+      "sha256": "72914832ecd57779c5b443d9a6cbc8734e92465a6d55e0f1388d9b71dc62b4b0"
+    },
+    "weapon-preview/runtime/BUILD.md": {
+      "bytes": 5048,
+      "sha256": "6455111a0de0179685312d7f69fce3d7c68b0f78ee46ad7153abed1ec1aece11"
+    },
+    "weapon-preview/runtime/COPYING": {
+      "bytes": 18092,
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    "weapon-preview/runtime/LICENSE": {
+      "bytes": 1105,
+      "sha256": "cb79a2792717a7ec6744ed54f6dd6de1d96c66910ac8c4cf4f929d45aef7f84f"
+    },
+    "weapon-preview/runtime/THIRD_PARTY.md": {
+      "bytes": 6872,
+      "sha256": "c3f1645c1a48a1218253a63a82c60ce6a63a26f6f4fc5e10b7fe936c546fce35"
+    },
+    "weapon-preview/runtime/source-8f342dac2ee485198ad3.tar.gz": {
+      "bytes": 7064450,
+      "sha256": "430bd65b1dcac318d3f547847c603e3b03fc7ce4c13315ae6f752ab00f62992f"
+    },
+    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.js": {
+      "bytes": 117249,
+      "sha256": "6f0365566a2f3ae17da67d229e30ed78bc2a15032d7d8fb7371a3bc49361551b"
+    },
+    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.wasm": {
+      "bytes": 39237002,
+      "sha256": "a7228c8f1de632ca0ac2a0e5193fec2d9effd3236d21182e869c31f5ce19e6df"
+    },
+    "web-port/runtime/1a0261ada40574cfb43d/saturn.js": {
+      "bytes": 116490,
+      "sha256": "d5bd1af01f4d0952466004f6948b89f17e313883385fbcd14dc1c702be1dd8a8"
+    },
+    "web-port/runtime/1a0261ada40574cfb43d/saturn.wasm": {
+      "bytes": 39233602,
+      "sha256": "41c1cbb6becd7887cfe9e756919be86d23fcbea30177f5544a76ce02257d9e65"
+    },
+    "web-port/runtime/3ca68ea2ef0dcecd0b86/saturn.js": {
+      "bytes": 282137,
+      "sha256": "8d28861202b43c524edb6ed1829c2ff7152d0389663cb3c9b8350d55b167e63d"
+    },
+    "web-port/runtime/3ca68ea2ef0dcecd0b86/saturn.wasm": {
+      "bytes": 93929475,
+      "sha256": "3ca68ea2ef0dcecd0b86bd8328ddee52d8b73830c4a373cd0066433c80408832"
+    },
+    "web-port/runtime/BUILD.md": {
+      "bytes": 2830,
+      "sha256": "964eb692b61fdad1b9d32e12af574ea38f612c539ae33e236d7f790d6b59b332"
+    },
+    "web-port/runtime/COPYING": {
+      "bytes": 18092,
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    "web-port/runtime/THIRD_PARTY.md": {
+      "bytes": 6872,
+      "sha256": "c3f1645c1a48a1218253a63a82c60ce6a63a26f6f4fc5e10b7fe936c546fce35"
+    },
+    "web-port/runtime/b4d1a7de24a7aa2a98b5/saturn.js": {
+      "bytes": 116143,
+      "sha256": "f42e6ee78bbb1b2a08f52ddf3ecba78baa0391b68db700974a00fc304ef4c400"
+    },
+    "web-port/runtime/b4d1a7de24a7aa2a98b5/saturn.wasm": {
+      "bytes": 39344701,
+      "sha256": "b4d1a7de24a7aa2a98b520944709b6f666eab4148d7d677102b8f2d0c0e087dd"
+    },
+    "web-port/runtime/source-16f9cf9fde74c2d70e6b.tar.gz": {
+      "bytes": 7104735,
+      "sha256": "5b0fe5a41ad8b017a0e5b64eb6fa0e693b5189fb013f678ae43dd06bd074e578"
+    },
+    "web-port/runtime/source-1a0261ada40574cfb43d.tar.gz": {
+      "bytes": 7106448,
+      "sha256": "1f99e113e791403cf8872634b33a9d12709b79c75dd8080b944d523fe0427a16"
+    },
+    "web-port/runtime/source-3ca68ea2ef0dcecd0b86.tar.gz": {
+      "bytes": 7162462,
+      "sha256": "1e0260b140d925f81fb43595a4f3bbe7a57a0bc48b1d5f9bbfa30b5c461ab773"
+    },
+    "web-port/runtime/source-b4d1a7de24a7aa2a98b5.tar.gz": {
+      "bytes": 7146767,
+      "sha256": "a15786b3847419965ff85611ade8c99366c234661acb77cc7e8563d0d9680c2f"
+    },
+    "weapon-preview/runtime/f003b342a3fe2894da1c/saturn.js": {
+      "bytes": 118967,
+      "sha256": "75459efe9b124a29dcbc3cc50435291371a3df8d6fc0bf27fe5cc7bd962769c9"
+    },
+    "weapon-preview/runtime/f003b342a3fe2894da1c/saturn.wasm": {
+      "bytes": 40052920,
+      "sha256": "f003b342a3fe2894da1c4879d93f1ba627359129c01ed0d68f08ae8872fb03b9"
+    },
+    "weapon-preview/runtime/source-f003b342a3fe2894da1c.tar.gz": {
+      "bytes": 7164040,
+      "sha256": "7c2c989818793b784a8e50804d595ce7613e22cc470475c1d380cc03ba039c2e"
+    }
+  },
+  "runtimeSets": [
+    {
+      "surface": "web-port",
+      "version": "3ca68ea2ef0dcecd0b86"
+    },
+    {
+      "surface": "web-port",
+      "version": "b4d1a7de24a7aa2a98b5"
+    },
+    {
+      "surface": "web-port",
+      "version": "16f9cf9fde74c2d70e6b"
+    },
+    {
+      "surface": "web-port",
+      "version": "1a0261ada40574cfb43d"
+    },
+    {
+      "surface": "weapon-preview",
+      "version": "f003b342a3fe2894da1c"
+    },
+    {
+      "surface": "weapon-preview",
+      "version": "8f342dac2ee485198ad3"
+    }
+  ],
+  "runtimeManifests": {
+    "web-port/runtime/current.json": "3ca68ea2ef0dcecd0b86",
+    "web-port/runtime/current-mobile.json": "16f9cf9fde74c2d70e6b",
+    "web-port/runtime/current-mobile-v14.json": "1a0261ada40574cfb43d",
+    "weapon-preview/runtime/current.json": "f003b342a3fe2894da1c",
+    "weapon-preview/runtime/f-current.json": "8f342dac2ee485198ad3"
+  },
+  "runtimeNotices": [
+    "weapon-preview/runtime/BUILD.md",
+    "weapon-preview/runtime/COPYING",
+    "weapon-preview/runtime/LICENSE",
+    "weapon-preview/runtime/THIRD_PARTY.md",
+    "web-port/runtime/BUILD.md",
+    "web-port/runtime/COPYING",
+    "web-port/runtime/THIRD_PARTY.md"
+  ],
+  "releaseIds": [
+    "srwf-f-20260915-v0-4-a",
+    "srwf-f-20260915-v0-4-b",
+    "srwf-f-20260915-v0-4-c",
+    "srwf-f-20260928-v0-5-a",
+    "srwf-f-20260928-v0-5-b",
+    "srwf-f-20260928-v0-5-c",
+    "srwf-final-20260928-v0-2-a",
+    "srwf-final-20260928-v0-2-b",
+    "srwf-final-20260928-v0-2-c",
+    "srwf-final-20261005-v0-3-a",
+    "srwf-final-20261005-v0-3-b",
+    "srwf-final-20261005-v0-3-c"
+  ],
+  "runtimeWorkers": {
+    "web-port/worker.js": "web-port",
+    "weapon-preview/worker.js": "weapon-preview"
+  }
+}

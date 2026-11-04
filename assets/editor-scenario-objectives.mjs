@@ -2,11 +2,11 @@
 // subset. It is not an authorization to replace a scenario's callback or
 // purpose text. The criteria writer separately verifies the original action
 // destinations, callback references, RAM bounds and exact reversible template.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261104-save3';
-import { encodePilotObjectiveRule, snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261104-save3';
-import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261104-save3';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261104-part1';
+import { encodePilotObjectiveRule, snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261104-part1';
+import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261104-part1';
 
-import {encodeRegionRule,decodeRegionRule,regionContextOf} from './editor-scenario-region-context.mjs?v=20261104-save3';
+import {encodeRegionRule,decodeRegionRule,regionContextOf} from './editor-scenario-region-context.mjs?v=20261104-part1';
 const QUERIES = Object.freeze(['enemyCount', 'allyCount', 'turn']);
 const COMPARISONS = Object.freeze({ eq: 0xf2, ne: 0xf3, le: 0xf4, ge: 0xf5 });
 function fail(message) {
@@ -137,6 +137,28 @@ export function compileRegionObjectiveBranches(submitted,destinations,context){
   regionContextOf(context);record(destinations,['baseOffset','victory','defeat','pending']);
   if(['baseOffset','victory','defeat','pending'].some(k=>!Number.isInteger(ownData(destinations,k))||ownData(destinations,k)<56||ownData(destinations,k)>=0x8000))fail('Invalid F region destination.');
   return compile(submitted,destinations,context,true,false,true);
+}
+
+// A single condition for map events, without victory/defeat side effects.
+// The caller must separately authenticate its callback and once-only state.
+export function compileRegionPresenceBranch(rule,destinations,context){
+  const condition=decodeRegionRule(encodeRegionRule(rule,context),context);
+  record(destinations,['baseOffset','matched','pending']);
+  const values=Object.fromEntries(['baseOffset','matched','pending'].map(k=>[k,ownData(destinations,k)]));
+  if(Object.values(values).some(n=>!Number.isInteger(n)||n<56||n>=0x8000)
+    ||values.baseOffset+15>0x8000
+    ||[values.matched,values.pending].some(n=>n>=values.baseOffset&&n<values.baseOffset+15))fail('Invalid region event destination.');
+  const selector=[0xfffb,0xfffc,0xfffd][condition.sideCode];
+  const bytes=Uint8Array.of(0xc0,0x0f,selector>>>8,selector&255,
+    condition.x0,condition.y0,condition.x1,condition.y1,
+    condition.presence?0xf0:0xf1,0,0,0,1,0,0);
+  const view=new DataView(bytes.buffer);
+  for(const [cell,target] of [[10,values.matched],[13,values.pending]]){
+    const delta=target-(values.baseOffset+cell);
+    if(delta< -32768||delta>32767)fail('Region event branch exceeds its signed relative range.');
+    view.setInt16(cell,delta);
+  }
+  return Object.freeze({condition,bytes});
 }
 
 // The only currently recognized whole callback is the 24-byte default in

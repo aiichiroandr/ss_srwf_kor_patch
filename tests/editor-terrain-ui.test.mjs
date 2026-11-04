@@ -18,3 +18,16 @@ test('terrain controls cannot mutate a busy session and special tabs keep generi
  for(const id of ['unitEditorPanel','pilotEditorPanel','weaponEditorPanel','rewardEditorPanel'])assert.equal($(id).hidden,true);
  assert.equal($('terrainEditorPanel').hidden,false);$('rewardTabButton').click();assert.equal($('terrainEditorPanel').hidden,true);
 });
+test('invalid terrain drafts invalidate previews and recover when the original value is restored',async()=>{
+ const row=setup(),input=control('enRecovery'),revision=hooks.state.editorEditRevision;
+ set(input,101);assert.equal(row.enRecovery,10);assert.ok(hooks.state.editorEditRevision>revision);
+ await assert.rejects(hooks.requestAnimationSource(),/지형/);
+ const invalidRevision=hooks.state.editorEditRevision;set(input,10);
+ assert.ok(hooks.state.editorEditRevision>invalidRevision);assert.equal(input.getAttribute('aria-invalid'),null);
+ assert.equal(hooks.validateEditorForms({report:false}),true);
+});
+test('restoring an invalid terrain draft invalidates the previous preview',()=>{
+ setup();set(control('enRecovery'),101);const revision=hooks.state.editorEditRevision;
+ $('terrainReset').click();assert.equal(control('enRecovery').value,'10');
+ assert.ok(hooks.state.editorEditRevision>revision);assert.equal(hooks.validateEditorForms({report:false}),true);
+});

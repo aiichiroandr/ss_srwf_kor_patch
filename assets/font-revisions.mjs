@@ -55,10 +55,10 @@ export function fontReleaseIdentity(row) {
   return { groupId: match[1], revision: match[2] };
 }
 
-export function groupFontReleases(rows) {
+export function groupFontReleases(rows, {reviewIds = new Set()} = {}) {
   const groups = new Map();
   for (const row of rows) {
-    if (row.state !== "ACCEPTED") throw new Error("Unaccepted font release");
+    if (row.state !== "ACCEPTED" && !(row.state === "REVIEW" && reviewIds.has(row.id))) throw new Error("Unaccepted font release");
     const { groupId, revision } = fontReleaseIdentity(row);
     if (!groups.has(groupId)) {
       groups.set(groupId, { id: groupId, rows: [], revisioned: revision !== null });

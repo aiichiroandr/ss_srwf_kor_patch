@@ -2,7 +2,7 @@
 // Nothing here is game data: every byte is generated from a seed or spelled out by a test.
 import { createEditorInspector } from '../../assets/editor-core.mjs';
 import {
-  NAME, SKILL_CELLS, SPIRIT_CELLS, UNIT_ABILITY_CELLS, nameTable, pilotRecord, recordTable, unitRecord, weaponRecord, world,
+  NAME, SKILL_CELLS, SPIRIT_CELLS, UNIT_ABILITY_CELLS, nameTable, pilotRecord, recordTable, unitRecord, unitRecordWithWeapons, weaponRecord, world,
 } from './synthetic-tsr.mjs';
 import { buildDisc, mulberry32, packGreedy } from './synthetic-iso.mjs';
 
@@ -21,7 +21,7 @@ const digit = (index) => [0x30 + (index % 10), 0xff]; // glyph codes the Final t
 // `pilotTable` replaces the small default pilot table: { records, cellToRecord } like pilotWorld in synthetic-tsr.mjs (the
 // pilot names are made up from the cell number).
 // `unitAbilities` gives units their ability pairs: { [unit number]: [[id, condition flag number], ...] } (at most four).
-export function buildGame({ units = 300, seed = 7, pilotTail = null, pilotTable = null, unitAbilities = {}, rewardTable = null, terrainTable = null } = {}) {
+export function buildGame({ units = 300, seed = 7, pilotTail = null, pilotTable = null, unitAbilities = {}, unitWeapons = {}, rewardTable = null, terrainTable = null, costTable = null } = {}) {
   if (terrainTable && !rewardTable) rewardTable = recordTable(Array(48).fill(0), [Uint8Array.of(255, 255)]);
   const next = mulberry32(seed);
   const random16 = () => Math.floor(next() * 65536);
@@ -36,6 +36,11 @@ export function buildGame({ units = 300, seed = 7, pilotTail = null, pilotTable 
   for (const [number, pairs] of Object.entries(unitAbilities)) {
     pairs.forEach(([id, aux], slot) => { unitRecords[Number(number)][38 + 2 * slot] = id; unitRecords[Number(number)][39 + 2 * slot] = aux; });
   }
+  for (const [id, entries] of Object.entries(unitWeapons)) {
+    const head = unitRecords[Number(id)].slice(0, 46);
+    unitRecords[Number(id)] = unitRecordWithWeapons({ entries });
+    unitRecords[Number(id)].set(head);
+  }
   unitRecords.push(unitRecord({ graphic: 0, hp: 2300, en: 255, armor: 100 })); // an unfinished template without a name
   const unitNames = [NAME.DASH, ...Array.from({ length: units }, (_, index) => digit(index)), NAME.EMPTY];
   const real = weaponRecord('0020000000012c0730010103cf00000a00');
@@ -43,6 +48,7 @@ export function buildGame({ units = 300, seed = 7, pilotTail = null, pilotTable 
   const pilotCells = pilotTable ? pilotTable.cellToRecord.length : 4;
   const pilotNames = Array.from({ length: pilotCells }, (_, cell) => (cell === 0 ? NAME.DASH : digit(cell)));
   const parts = {
+    ...(costTable ? {31: costTable} : {}),
     ...(terrainTable ? { 19: nameTable(Array.from({ length: (terrainTable.byteLength - 16 - new DataView(terrainTable.buffer, terrainTable.byteOffset).getInt32(16)) / 2 }, (_, id) => digit(id))), 34: terrainTable } : {}),
     ...(rewardTable ? { 15: nameTable(Array.from({ length: 23 }, (_, id) => digit(id))), 32: rewardTable } : {}),
     11: nameTable(unitNames),

@@ -2,15 +2,17 @@
 // turn can move from enemy-start to player-start. The source is authenticated
 // after restoring the wrapper and canonicalizing the one existing turn byte.
 // This module does not grant compressed-carrier or accepted-release authority.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261104-save3';
-import { Sha256 } from './sha256.mjs?v=20261104-save3';
-import { snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261104-save3';
-import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-save3';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261104-part1';
+import { Sha256 } from './sha256.mjs?v=20261104-part1';
+import { snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261104-part1';
+import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-part1';
 
 export const F_EVENT_PHASE_FIELDS = Object.freeze(['eventPhase', 'eventJoin', 'eventRule1', 'eventRule2', 'eventRule3']);
 export const F_PHASE_SOURCE = Object.freeze({
   physicalIndex: 31, slot: 51, recordIndex: '31:2596', sourceBytes: 13804,
   canonicalSha256: '550413260020cd30dd4f746632ddf48672d47026fab54d9b8e884200914cbd8b',
+  maskedRosterSha256: '03d7d885cc98f281c639204b687cf0d0d5ea8c3616b8f1229ce52d9bf74ceb6f',
+  rosterLevelOffsets: Object.freeze([1551, 1556, 1561, 1566]),
   roots: Object.freeze([5006, 104, 857, 104, 1572, 2594, 548, 104, 2662, 2829, 2831, 2833, 2835, 5000]),
   firstEntry: 2315, firstEnd: 2322, regularEntry: 2322,
   tailOperand: 2336, enemyTargetOperand: 2597, enemyScalar: 2599,
@@ -53,7 +55,13 @@ function requireHost(body, gameId, options) {
 function canonicalSource(input) {
   if (input.length !== C.sourceBytes || input[C.enemyScalar] !== 0 || input[C.enemyScalar + 1] < 1 || input[C.enemyScalar + 1] > 99) fail('Invalid original event turn.');
   const bytes = input.slice(), turn = bytes[C.enemyScalar + 1]; bytes[C.enemyScalar + 1] = 5;
-  if (hexDigest(bytes) !== C.canonicalSha256 || !same(bytes.subarray(C.firstEntry, C.firstEnd), PREFIX)
+  const checked = bytes.slice();
+  for (const offset of C.rosterLevelOffsets) {
+    const level = checked[offset] >>> 1;
+    if (level < 1 || level > 99) fail('Invalid F roster level.');
+    checked[offset] &= 1;
+  }
+  if (hexDigest(checked) !== C.maskedRosterSha256 || !same(bytes.subarray(C.firstEntry, C.firstEnd), PREFIX)
     || !same(bytes.subarray(C.tailOperand, C.tailOperand + 2), TAIL)
     || !same(bytes.subarray(C.enemyTargetOperand, C.enemyTargetOperand + 2), ENEMY_TARGET)
     || rootsOf(bytes).some((r, i) => r !== C.roots[i])) fail('The restored F source differs from its pinned immutable body.');

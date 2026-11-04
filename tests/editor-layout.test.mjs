@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { packMeasuredGroups } from '../assets/editor-layout.mjs';
+import { packMeasuredGroups,editorLayoutNeedsMeasure } from '../assets/editor-layout.mjs';
+import {installFakeDom} from './helpers/fake-dom.mjs';
+
+test('live timeline paints never repack editor pages; preview toggles and field changes still do',()=>{
+ const d=installFakeDom(),form=d.createElement('div'),timeline=d.createElement('section'),canvas=d.createElement('canvas'),field=d.createElement('input'),preview=d.createElement('section');
+ timeline.className='weapon-timeline-panel';timeline.append(canvas);form.append(timeline,field,preview);
+ assert.equal(editorLayoutNeedsMeasure([{target:canvas,type:'attributes',attributeName:'hidden'},{target:timeline,type:'childList'}]),false);
+ assert.equal(editorLayoutNeedsMeasure([{target:preview,type:'attributes',attributeName:'hidden'}]),true);
+ assert.equal(editorLayoutNeedsMeasure([{target:canvas,type:'childList'},{target:field,type:'childList'}]),true);
+});
 
 test('related fields stay on one page when their measured layout fits', () => {
   const groups = ['hp', 'en', 'stats', 'spirits', 'skills'];

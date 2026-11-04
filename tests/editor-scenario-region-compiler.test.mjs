@@ -1,7 +1,22 @@
 import test from 'node:test';import assert from'node:assert/strict';
+import {compileRegionPresenceBranch} from '../assets/editor-scenario-objectives.mjs';
 import{compileRegionObjectiveBranches}from'../assets/editor-scenario-objectives.mjs';import{encodeObjectiveRule,snapshotScenarioCriteria,inspectScenarioCriteria,CRITERIA_FIELDS}from'../assets/editor-scenario-criteria.mjs';
 const context=Object.freeze({gameId:'srwf-f',unitCount:368,regionContext:Object.freeze({gameId:'srwf-f',physicalIndex:0,scenarioSlots:Object.freeze([0]),mapIndex:0,mapPhysicalIndex:0,mapSlots:Object.freeze([0]),width:32,height:32,identity:'0'.repeat(64)})}),defaults=Object.freeze({objectivePriority:0,victoryJoin:0,defeatJoin:0,victoryRule1:1,victoryRule2:0,victoryRule3:0,defeatRule1:2,defeatRule2:0,defeatRule3:0});
 const rule=q=>encodeObjectiveRule('factionRegion',q.presence?'present':'absent',q,context);
+test('map reward condition branches on one tile without emitting a battle outcome',()=>{
+ const input={sideCode:0,presence:true,x0:7,y0:9,x1:7,y1:9};
+ for(const base of [56,1000,32753])for(const present of [true,false]){
+  const ds={matched:200,pending:220},result=compileRegionPresenceBranch({...input,presence:present},{baseOffset:base,...ds},context);
+  assert.equal(result.bytes.length,15);
+  for(const [x,y,faction,word,inside] of [[7,9,0,0,true],[6,9,0,0,false],[7,8,0,0,false],[7,9,1,0,false],[7,9,0,8,false]]){
+   const actual=run(result.bytes,base,ds,{actors:[{x,y,faction,word}]});
+   assert.equal(actual,inside===present?ds.matched:ds.pending);
+  }
+ }
+ assert.throws(()=>compileRegionPresenceBranch({...input,x1:32},{baseOffset:1000,matched:200,pending:220},context));
+ assert.throws(()=>compileRegionPresenceBranch(input,{baseOffset:32754,matched:200,pending:220},context));
+ assert.throws(()=>compileRegionPresenceBranch(input,{baseOffset:1000,matched:200,pending:220},{...context,gameId:'srwf-final'}));
+});
 function run(code,base,ds,state){const v=new DataView(code.buffer,code.byteOffset,code.byteLength);let pc=base,value=777,flag=0;for(let steps=0;steps<150;steps++){if(Object.values(ds).includes(pc))return pc;const i=pc-base,op=code[i];assert.ok(i>=0&&i<code.length);if(op===1)pc=pc+1+v.getInt16(i+1);else if(op===0xc0&&code[i+1]===0x0f){const side={65531:0,65532:1,65533:2}[v.getUint16(i+2)],x0=code[i+4],y0=code[i+5],x1=code[i+6],y1=code[i+7];assert.ok(side!==undefined);value=state.actors.filter(a=>a.faction===side&&a.x!==255&&!(a.word&0x20000008)&&a.x>=x0&&a.x<=x1&&a.y>=y0&&a.y<=y1).length;flag=value?0:128;pc+=8;}else if(op===0xc0&&code[i+1]===0x0e){const unit=v.getUint16(i+2)&511;value=state.actors.filter(a=>a.unit===unit&&a.x!==255&&a.faction<3&&!(a.word&0x60000008)&&a.link===255).length;pc+=4;}else if(op===0xd3){value=code[i+1]===0xfc?state.enemies:state.allies;pc+=2;}else if(op===0xd4){assert.equal(code[i+1],0);value=state.turn;pc+=2;}else if(op===0xf0||op===0xf1){assert.equal(code[i+1],0);const yes=op===0xf0?!flag:!!flag;pc=yes?pc+2+v.getInt16(i+2):pc+4;}else if(op>=0xf2&&op<=0xf5){const n=v.getUint16(i+3),yes=[value===n,value!==n,value<=n,value>=n][op-0xf2];pc=yes?pc+1+v.getInt16(i+1):pc+5;}else assert.fail('Unknown emitted opcode '+op);}assert.fail('150-step cap');}
 function truth(q,s){if(q.query==='factionRegion'){const n=s.actors.filter(a=>a.faction===q.sideCode&&a.x!==255&&!(a.word&0x20000008)&&a.x>=q.x0&&a.x<=q.x1&&a.y>=q.y0&&a.y<=q.y1).length;return q.presence?n>0:n===0;}const n=q.query==='turn'?s.turn:q.query==='enemyCount'?s.enemies:q.query==='allyCount'?s.allies:s.actors.filter(a=>a.unit===q.value&&a.x!==255&&a.faction<3&&!(a.word&0x60000008)&&a.link===255).length;return q.comparison==='present'?n>0:q.comparison==='absent'?n===0:{eq:n===q.value,ne:n!==q.value,le:n<=q.value,ge:n>=q.value}[q.comparison];}
 

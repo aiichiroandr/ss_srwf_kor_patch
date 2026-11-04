@@ -1,17 +1,21 @@
+import {validateAllyReinforcement,ALLY_REINFORCEMENT_FIELDS} from './editor-scenario-reinforcement-data.mjs?v=20261104-part1';
 // The legacy root-4 boundary evidence accompanies the bounded root-4/root-5
 // event reader. No placement or condition is discovered by byte scanning.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261104-save3';
-import { readScenarioArchive, repackScenarioBodies } from './editor-scenario-archive.mjs?v=20261104-save3';
-import { readScenarioEvents } from './editor-scenario-events.mjs?v=20261104-save3';
-import { normalizeScenarioDeadlines, updateScenarioObjectiveBody } from './editor-scenario-deadlines.mjs?v=20261104-save3';
-import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261104-save3';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261104-part1';
+import { readScenarioArchive, repackScenarioBodies } from './editor-scenario-archive.mjs?v=20261104-part1';
+import { readScenarioEvents } from './editor-scenario-events.mjs?v=20261104-part1';
+import { normalizeScenarioDeadlines, updateScenarioObjectiveBody } from './editor-scenario-deadlines.mjs?v=20261104-part1';
+import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261104-part1';
+import { normalizeScenarioDialogues, writeScenarioDialogue } from './editor-scenario-dialogue.mjs?v=20261104-part1';
+import {canonicalAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261104-part1';
+import {readScenarioRosterLevels,planScenarioRosterLevelEdits,applyScenarioRosterLevelEdits,rosterLevelDecodedMasks} from './editor-scenario-roster-levels.mjs?v=20261104-part1';
 
-import { EVENT_CRITERIA_FIELDS, inspectEventCriteriaHook, snapshotEventCriteria, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261104-save3';
-import { EVENT_PHASE_FIELDS, inspectPhaseEventHook, snapshotPhaseEvent, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261104-save3';
-import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-save3';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261104-save3';
+import { EVENT_CRITERIA_FIELDS, inspectEventCriteriaHook, snapshotEventCriteria, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261104-part1';
+import { EVENT_PHASE_FIELDS, inspectPhaseEventHook, snapshotPhaseEvent, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261104-part1';
+import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261104-part1';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261104-part1';
 
-import {buildRegionContexts,objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261104-save3';
+import {buildRegionContexts,objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261104-part1';
 const FIXED = new Map([[0x05, 3], [0x6f, 7]]);
 const SUB = new Map([
   [0x80, new Map([[0, 3], [1, 2], [2, 2]])], [0x81, new Map([[0, 2]])],
@@ -104,32 +108,28 @@ export function readScenarioDeployments(archive, maps, { unitCount, pilotCount, 
       start, walkedEnd: cursor, boundary: end, stopOpcode: cursor < end ? bytes[cursor] : null,
       placements: events.rows, waves:events.waves, conditions:Object.freeze(eventConditions), frontiers:events.frontiers }));
   }
-  return Object.freeze({ gameId: archive.gameId, scenarios: Object.freeze(scenarios), rows: Object.freeze(rows), conditions:Object.freeze(conditions) });
+  return Object.freeze({ gameId: archive.gameId, scenarios: Object.freeze(scenarios), rows: Object.freeze(rows), conditions:Object.freeze(conditions), rosterLevels:readScenarioRosterLevels(archive,{unitCount,pilotCount}) });
 }
 
 export function deploymentDecodedMasks(model) {
   return Object.freeze(model.scenarios.map(scenario => Object.freeze({ physicalIndex: scenario.physicalIndex,
     ranges: Object.freeze([...scenario.placements.filter(row => row.editable).flatMap(row => [
       Object.freeze([row.byteOffset, 2, 255]), Object.freeze([row.byteOffset + 6, 1, 255]),
-    ]), ...scenario.conditions.filter(row=>row.editable).map(row=>Object.freeze([row.byteOffset+1,1,255]))]
+    ]), ...scenario.conditions.filter(row=>row.editable).map(row=>Object.freeze([row.byteOffset+1,1,255])),...rosterLevelDecodedMasks((model.rosterLevels??[]).filter(row=>row.physicalIndex===scenario.physicalIndex))]
       .sort((a,b)=>a[0]-b[0])) })));
 }
 
 export function validateScenarioReinforcements(rows,model){
-  const lookup=new Map(model.rows.map(row=>[`${row.physicalIndex}:${row.byteOffset}`,row]));
-  return Object.freeze(rows.flatMap(row=>{
-    const firstMap=row.templates.map(t=>lookup.get(`${row.physicalIndex}:${t.byteOffset}`)).find(r=>r?.editable)?.mapIndex;
-    const templates=row.templates.flatMap(template=>{
-      const source=lookup.get(`${row.physicalIndex}:${template.byteOffset}`);
-      return source?.editable&&source.mapIndex===firstMap?[Object.freeze({...template,...source})]:[];
-    });
-    const source=templates.find(t=>t.byteOffset===row.templateOffset);
-    if(row.enabled&&(!source||row.x>=source.width||row.y>=source.height)){
-      const e=new Error('The stored reinforcement leaves its verified map or source template.');e.code='EDITOR_REINFORCEMENT_INVALID';throw e;
+  // Rows originate in the authenticated scenario inspector. This shared
+  // shape check is not native allocation or callback authorization; the
+  // body writer must independently grant that capability before any write.
+  return Object.freeze(rows.map(row=>{
+    const scene=model.scenarios.find(scene=>scene.physicalIndex===row.physicalIndex);
+    const checked=validateAllyReinforcement(row);
+    if(!scene||scene.mapIndex!==row.mapIndex||!checked.valid){
+      const e=new Error('The stored reinforcement leaves its inspected map or eligible roster.');e.code='EDITOR_REINFORCEMENT_INVALID';throw e;
     }
-    if(!templates.length)return [];
-    const first=source??templates[0];
-    return [Object.freeze({...row,templates:Object.freeze(templates),mapIndex:first.mapIndex,width:first.width,height:first.height})];
+    return Object.freeze({...row});
   }));
 }
 
@@ -137,11 +137,31 @@ export async function repackScenarioDeployments(sourceBytes, gameId, maps, table
   if (!(sourceBytes instanceof Uint8Array)) fail('Missing scenario archive.');
   // Unit-kind conditions bind to the inspected TSR table, never a caller's
   // display row count or a count supplied with the edit request.
-  const source=sourceBytes.slice(),raw=readScenarioArchive(source,gameId,options),rawModel=readScenarioDeployments(raw,maps,tables),regionContexts=buildRegionContexts(raw,maps,rawModel.scenarios,tables);
-  const scenarioOptions={...options,unitCount:tables?.unitCount,pilotContext:tables?.pilotContext,regionContexts},context={gameId,unitCount:tables?.unitCount,pilotContext:tables?.pilotContext,regionContexts};
+  const source=sourceBytes.slice(),stored=readScenarioArchive(source,gameId,options);
+  const bindings=buildRegionContexts(stored,maps,readScenarioDeployments(stored,maps,tables).scenarios,tables);
+  const dialogue=normalizeScenarioDialogues(stored,{...options,glyphMap:options.sourceGlyphMap??options.glyphMap,speakerOptions:tables?.speakerOptions,unitCount:tables?.unitCount,pilotContext:tables?.pilotContext,reinforcementRoot:tables?.reinforcementRoot,regionContexts:bindings}),raw=dialogue.archive;
+  const rawModel=readScenarioDeployments(raw,maps,tables),regionContexts=buildRegionContexts(raw,maps,rawModel.scenarios,tables);
+  if(JSON.stringify(bindings)!==JSON.stringify(regionContexts))fail('RG01 dialogue restoration changed map binding.');
+  const scenarioOptions={...options,speakerOptions:tables?.speakerOptions,unitCount:tables?.unitCount,pilotContext:tables?.pilotContext,reinforcementRoot:tables?.reinforcementRoot,regionContexts},context={gameId,unitCount:tables?.unitCount,pilotContext:tables?.pilotContext,reinforcementRoot:tables?.reinforcementRoot,regionContexts};
   const normalized=normalizeScenarioDeadlines(raw,scenarioOptions),archive=normalized.archive;
   const model = readScenarioDeployments(archive, maps, tables, {eventCriteria:normalized.eventCriteria,eventPhases:normalized.eventPhases});
   if(JSON.stringify(regionContexts)!==JSON.stringify(buildRegionContexts(archive,maps,model.scenarios,tables)))fail('RG01 raw/canonical map binding differs.');
+  const dialogueInput=ownData(options,'dialogueEdits');
+  if(Object.hasOwn(options,'dialogueEdits')&&dialogueInput===undefined)fail('Dialogue edits must be own data.');
+  const dialogueList=readDenseList(dialogueInput===undefined?[]:dialogueInput,8192),dialogueLookup=new Map(dialogue.dialogues.map(row=>[row.recordIndex,row])),dialogueSeen=new Set();
+  if(dialogueList.problem)fail('Invalid dialogue edit list.');
+  const dialoguePlans=dialogueList.list.map(edit=>{
+    if(!edit||typeof edit!=='object'||Array.isArray(edit)||Reflect.ownKeys(edit).some(key=>!['recordIndex','text','pagesJson','speakerId','afterDialogueJson','identity'].includes(key)))fail('Unknown dialogue edit field.');
+    const recordIndex=ownData(edit,'recordIndex'),row=dialogueLookup.get(recordIndex),hasText=Object.hasOwn(edit,'text'),hasPages=Object.hasOwn(edit,'pagesJson'),hasSpeaker=Object.hasOwn(edit,'speakerId'),hasAfter=Object.hasOwn(edit,'afterDialogueJson');
+    if(hasPages&&hasText)fail('Dialogue text and pages cannot be submitted together.');
+    if(!row||dialogueSeen.has(recordIndex)||!hasText&&!hasPages&&!hasSpeaker&&!hasAfter||hasText&&typeof ownData(edit,'text')!=='string'||hasPages&&typeof ownData(edit,'pagesJson')!=='string'||hasSpeaker&&!Number.isInteger(ownData(edit,'speakerId'))||hasAfter&&typeof ownData(edit,'afterDialogueJson')!=='string'||Object.hasOwn(edit,'identity')&&ownData(edit,'identity')!==row.identity)fail('Unknown, duplicate or mismatched dialogue.');
+    dialogueSeen.add(recordIndex);return {row,recordIndex,...(hasText?{text:ownData(edit,'text')}:{}),...(hasPages?{pagesJson:ownData(edit,'pagesJson')}:{}),...(hasSpeaker?{speakerId:ownData(edit,'speakerId')}:{}),...(hasAfter?{afterDialogueJson:canonicalAfterDialogueJson(ownData(edit,'afterDialogueJson'))}:{}),identity:row.identity};
+  });
+  const wantedDialogue=new Map(dialogue.dialogueEdits.map(edit=>[edit.recordIndex,edit]));
+  for(const {row,...edit}of dialoguePlans){const merged={...wantedDialogue.get(edit.recordIndex),...edit};if(Object.hasOwn(edit,'text'))delete merged.pagesJson;if(Object.hasOwn(edit,'pagesJson'))delete merged.text;wantedDialogue.set(edit.recordIndex,merged);}
+  const rosterInput=ownData(options,'rosterLevelEdits');
+  if(Object.hasOwn(options,'rosterLevelEdits')&&rosterInput===undefined)fail('Roster level edits must be own data.');
+  const rosterPlans=planScenarioRosterLevelEdits(archive,tables,rosterInput??[]);
   const lookup = new Map(model.rows.map(row => [row.recordIndex, row]));
   const { list, problem } = readDenseList(submitted, 5000);
   if (problem) fail('Invalid deployment edit list.');
@@ -199,17 +219,20 @@ export async function repackScenarioDeployments(sourceBytes, gameId, maps, table
   const reinforcementRows=validateScenarioReinforcements(normalized.reinforcements,model),reinforcementLookup=new Map(reinforcementRows.map(row=>[row.recordIndex,row]));
   if(reinforcementList.problem)fail('Invalid reinforcement edit list.');
   const reinforcementPlans=reinforcementList.list.map(edit=>{
-    const keys=['recordIndex','enabled','templateOffset','turn','x','y','rewardSelector'];
+    const keys=['recordIndex',...ALLY_REINFORCEMENT_FIELDS];
     if(!edit||typeof edit!=='object'||Array.isArray(edit)||Reflect.ownKeys(edit).some(k=>!keys.includes(k)))fail('Unknown reinforcement edit field.');
     const recordIndex=ownData(edit,'recordIndex'),row=reinforcementLookup.get(recordIndex);
     if(!row||reinforcementSeen.has(recordIndex))fail('Unknown or duplicate reinforcement.');reinforcementSeen.add(recordIndex);
-    const config=Object.fromEntries(keys.slice(1).map(k=>[k,ownData(edit,k)])),source=row.templates.find(t=>t.byteOffset===config.templateOffset);
-    if(!source||!keys.slice(1).every(k=>Number.isInteger(config[k]))||config.x<0||config.y<0||config.x>=source.width||config.y>=source.height)fail('A reinforcement leaves its verified map or template.');
+    const config=Object.fromEntries(ALLY_REINFORCEMENT_FIELDS.map(k=>[k,ownData(edit,k)]));
+    const validation=validateAllyReinforcement(row,config);
+    if(!validation.valid)fail(validation.message);
     // Snapshot and validate the entire request before the first async pack.
-    updateScenarioReinforcementBody(archive.bodies[row.physicalIndex],gameId,config,options);
+    updateScenarioReinforcementBody(archive.bodies[row.physicalIndex],gameId,config,scenarioOptions);
     return {row,config};
   });
   const bodies = new Map();
+  for(const {row}of dialoguePlans)bodies.set(row.physicalIndex,archive.bodies[row.physicalIndex].decoded.slice());
+  for(const {row}of rosterPlans)if(!bodies.has(row.physicalIndex))bodies.set(row.physicalIndex,archive.bodies[row.physicalIndex].decoded.slice());
   for (const { row, x, y, rewardSelector } of planned) {
     let decoded = bodies.get(row.physicalIndex);
     if (!decoded) { decoded = archive.bodies[row.physicalIndex].decoded.slice(); bodies.set(row.physicalIndex, decoded); }
@@ -225,24 +248,33 @@ export async function repackScenarioDeployments(sourceBytes, gameId, maps, table
   const wantedEvents=new Map(model.conditions.filter(row=>row.eventCriteriaEditable).map(row=>[row.physicalIndex,Object.fromEntries((row.eventPhaseEditable?EVENT_PHASE_FIELDS:EVENT_CRITERIA_FIELDS).map(key=>[key,row[key]]))]));
   for(const {row,fields}of eventPlans)if(fields)wantedEvents.set(row.physicalIndex,fields);
   const wantedDeadlines=new Map(normalized.deadlines.map(row=>[row.physicalIndex,{deadline:row.deadline,fields:row.criteriaEditable?Object.fromEntries(CRITERIA_FIELDS.map(k=>[k,row[k]])):null}]));
-  const wantedReinforcements=new Map(reinforcementRows.map(row=>[row.physicalIndex,Object.fromEntries(['enabled','templateOffset','turn','x','y','rewardSelector'].map(k=>[k,row[k]]))]));
+  const wantedReinforcements=new Map(reinforcementRows.map(row=>[row.physicalIndex,Object.fromEntries(ALLY_REINFORCEMENT_FIELDS.map(k=>[k,row[k]]))]));
   for(const {row,config}of reinforcementPlans)wantedReinforcements.set(row.physicalIndex,config);
   for(const {row,deadline,fields}of deadlinePlans)wantedDeadlines.set(row.physicalIndex,{deadline,fields});
   for(const [physicalIndex,decoded]of bodies) {
+    const rosterEdits=rosterPlans.filter(plan=>plan.row.physicalIndex===physicalIndex).map(({row,initialLevel})=>({recordIndex:row.recordIndex,initialLevel}));
+    const leveled=rosterEdits.length?applyScenarioRosterLevelEdits({...archive.bodies[physicalIndex],decoded},gameId,rosterEdits,tables):decoded;
     const objective=wantedDeadlines.get(physicalIndex)??{deadline:0,fields:null};
-    const withDeadline=updateScenarioObjectiveBody({...archive.bodies[physicalIndex],decoded},gameId,objective.deadline,objective.fields,scenarioOptions),reinforcement=wantedReinforcements.get(physicalIndex);
+    const withDeadline=updateScenarioObjectiveBody({...archive.bodies[physicalIndex],decoded:leveled},gameId,objective.deadline,objective.fields,scenarioOptions),reinforcement=wantedReinforcements.get(physicalIndex);
+    if(reinforcement?.enabled===1&&(withDeadline.length!==leveled.length||withDeadline.some((value,index)=>value!==leveled[index]))){
+      const error=new Error('New reinforcement and modified victory/defeat conditions currently require the same pending callback.');
+      error.code='EDITOR_REINFORCEMENT_OBJECTIVE_CONFLICT';throw error;
+    }
     const roots=Object.freeze(Array.from({length:14},(_,i)=>i*4+new DataView(withDeadline.buffer).getInt32(i*4)));
-    let inner=reinforcement?updateScenarioReinforcementBody({...archive.bodies[physicalIndex],decoded:withDeadline,roots},gameId,reinforcement,options):withDeadline;
+    let inner=reinforcement?updateScenarioReinforcementBody({...archive.bodies[physicalIndex],decoded:withDeadline,roots},gameId,reinforcement,scenarioOptions):withDeadline;
     const eventFields=wantedEvents.get(physicalIndex);
     if(eventFields){
       const eventBody={...archive.bodies[physicalIndex],decoded:inner,roots:Object.freeze(Array.from({length:14},(_,i)=>i*4+new DataView(inner.buffer,inner.byteOffset,inner.byteLength).getInt32(i*4)))};
       inner=Object.hasOwn(eventFields,'eventPhase')?updateScenarioEventPhaseBody(eventBody,gameId,eventFields,scenarioOptions):updateScenarioEventCriteriaBody(eventBody,gameId,eventFields,scenarioOptions);
     }
-    bodies.set(physicalIndex,inner);
+    const dialogueRows=[...wantedDialogue.values()].filter(edit=>dialogueLookup.get(edit.recordIndex)?.physicalIndex===physicalIndex);
+    const dialogueBody={...archive.bodies[physicalIndex],decoded:inner,roots:Object.freeze(Array.from({length:14},(_,i)=>i*4+new DataView(inner.buffer,inner.byteOffset,inner.byteLength).getInt32(i*4)))};
+    bodies.set(physicalIndex,writeScenarioDialogue(dialogueBody,gameId,dialogueRows,{...scenarioOptions,replace:true,legacyPageAuthority:dialogue.legacyPageAuthorities.get(physicalIndex)}));
   }
   const result = await repackScenarioBodies(source, gameId,
     [...bodies].map(([physicalIndex, decoded]) => ({ physicalIndex, decoded })), scenarioOptions);
-  const checked=normalizeScenarioDeadlines(readScenarioArchive(result.bytes,gameId,scenarioOptions),scenarioOptions);
+  const checkedDialogue=normalizeScenarioDialogues(readScenarioArchive(result.bytes,gameId,scenarioOptions),scenarioOptions);
+  const checked=normalizeScenarioDeadlines(checkedDialogue.archive,scenarioOptions);
   const readBack = readScenarioDeployments(checked.archive, maps, tables,{eventCriteria:checked.eventCriteria,eventPhases:checked.eventPhases});
   const written = new Map(readBack.rows.map(row => [row.recordIndex, row]));
   for (const { row, x, y, rewardSelector } of planned) {
@@ -259,9 +291,15 @@ export async function repackScenarioDeployments(sourceBytes, gameId, maps, table
     if(actual?.deadline!==deadline||fields&&CRITERIA_FIELDS.some(k=>actual?.[k]!==fields[k]))fail('Stored objective read-back mismatch.');
   }
   const checkedReinforcements=validateScenarioReinforcements(checked.reinforcements,readBack);
+  const writtenRoster=new Map(readBack.rosterLevels.map(row=>[row.recordIndex,row]));
+  for(const {row,initialLevel}of rosterPlans){const actual=writtenRoster.get(row.recordIndex);if(!actual?.editable||actual.initialLevel!==initialLevel||actual.identity!==row.identity||actual.unitId!==row.unitId||actual.pilotId!==row.pilotId)fail('Stored roster level read-back mismatch.');}
+  const writtenDialogue=new Map(checkedDialogue.dialogues.map(row=>[row.recordIndex,row]));
+  for(const [recordIndex,edit]of wantedDialogue){const actual=writtenDialogue.get(recordIndex),original=dialogueLookup.get(recordIndex),hasText=Object.hasOwn(edit,'text'),hasPages=Object.hasOwn(edit,'pagesJson'),hasSpeaker=Object.hasOwn(edit,'speakerId'),hasAfter=Object.hasOwn(edit,'afterDialogueJson');
+    if(!actual||hasPages&&actual.pagesJson!==JSON.stringify(JSON.parse(edit.pagesJson))||hasText&&(actual.text!==edit.text||Boolean(actual.pagesJson))||hasSpeaker&&actual.speakerId!==edit.speakerId||hasAfter&&(actual.afterDialogueJson??'')!==canonicalAfterDialogueJson(edit.afterDialogueJson)||actual.originalText!==original.originalText||actual.identity!==original.identity||actual.speakerIdentity!==original.speakerIdentity)fail('Stored dialogue read-back mismatch.');
+  }
   for(const {row,config}of reinforcementPlans){
     const actual=checkedReinforcements.find(r=>r.recordIndex===row.recordIndex);
     if(!actual||actual.enabled!==config.enabled||config.enabled&&Object.keys(config).some(k=>actual[k]!==config[k]))fail('Stored reinforcement read-back mismatch.');
   }
-  return Object.freeze({ ...result, model: readBack, deadlines:checked.deadlines,reinforcements:checkedReinforcements,eventCriteria:checked.eventCriteria,eventPhases:checked.eventPhases });
+  return Object.freeze({ ...result, model: readBack, rosterLevels:readBack.rosterLevels, dialogues:checkedDialogue.dialogues, dialogueEdits:checkedDialogue.dialogueEdits, dialogueCoverage:checkedDialogue.dialogueCoverage, deadlines:checked.deadlines,reinforcements:checkedReinforcements,eventCriteria:checked.eventCriteria,eventPhases:checked.eventPhases });
 }

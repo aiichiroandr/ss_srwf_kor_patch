@@ -228,6 +228,24 @@ test('ids that share the record of id 1 are listed as a read-only alias group, a
 
 // -------- cause class: roles and head-less list templates at the pinned ids -----------------------------------------
 
+for(const gameId of ['srwf-f','srwf-final'])test(`${gameId}: hero name aliases localize source names without inheriting the dummy face or stats`,()=>{
+  const names=Array.from({length:321},()=>NAME.A);names[317]=NAME.B;
+  const records=Array.from({length:313},()=>pilotRecord({header:[0x14,1,0,0]}));
+  const mapping=Array.from({length:321},(_,i)=>i===0?0:i<=311?i-1:i<=319?0:312);
+  const {segments,decoded}=pilotWorld({records,cellToRecord:mapping,names}),before=decoded.slice();
+  const glyphs=new Map([...GLYPHS,['A1','ミ']]);
+  const aliases=pilotAliasRows(segments,decoded,glyphs,gameId).filter(r=>r.recordIndex>=312&&r.recordIndex<=319);
+  assert.equal(aliases.length,8);
+  assert.deepEqual(aliases.slice(4,6).map(r=>[r.name,r.shortName]),[['미나 라이클링','미나'],['B','B']],'custom names remain intact');
+  for(const row of aliases){
+    assert.equal(row.heroIdentity,true);assert.equal(row.statsValid,false);assert.equal(row.editable,false);
+    assert.equal(row.imageIndex,null);assert.equal(row.referenceImageIndex,row.recordIndex|1);
+    assert.equal(resolveEditorImageIndex(segments,'pilot',row.recordIndex,gameId),null);
+  }
+  assert.equal(resolveEditorImageIndex(segments,'pilot',1,gameId),1,'owner keeps its actual face');
+  assert.deepEqual(decoded,before);
+});
+
 test('hero slots, hero heads and head-less list templates are classified at their pinned ids', () => {
   const cells = 312;
   const records = Array.from({ length: cells }, () => pilotRecord({ header: [0x30, 0x05, 0x0d, 0x28] }));

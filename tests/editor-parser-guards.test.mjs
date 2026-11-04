@@ -23,7 +23,7 @@ import {
   weaponRows,
   writeUnitAbilities,
 } from '../assets/editor-core.mjs';
-import { buildDisc, packGreedy, tsrStream } from './helpers/synthetic-iso.mjs';
+import { buildDisc, packGreedy, tsrStream, referenceMode1Sector } from './helpers/synthetic-iso.mjs';
 import { GAME, PRODUCT, buildGame, descriptorFor, makeBase, trustFor } from './helpers/synthetic-game.mjs';
 import { GLYPHS, NAME, nameTable, pilotRecord, recordTable, unitRecord, weaponRecord, world } from './helpers/synthetic-tsr.mjs';
 
@@ -380,7 +380,7 @@ test('a decoded TSR with at most 29 root cells is refused, at the opening and at
 
 test('a stored (uncompressed) TSR.BIN is held to the same size limit as the data a stream decodes to', async () => {
   // a disc with one TSR.BIN extent of `sectors` sectors that begins with two zero bytes, the marker of the stored form. The
-  // directory reads and the opening of an accepted image check no sector checksum, so the sectors carry only their header.
+  // directory reads and the opening of an accepted image check no sector checksum, so the TSR fixture carries only headers, while media probes use complete valid sectors.
   const volume = (sectors) => {
     const total = 22 + sectors + 3;
     const image = new Uint8Array(total * 2352);
@@ -412,6 +412,7 @@ test('a stored (uncompressed) TSR.BIN is held to the same size limit as the data
   };
   const open = async (sectors) => {
     const image = volume(sectors);
+    for(const lba of [19,20])image.set(referenceMode1Sector(lba,image.slice(lba*2352+16,lba*2352+2064)),lba*2352);
     const { createHash } = await import('node:crypto');
     const sha256 = createHash('sha256').update(image).digest('hex');
     const trust = { targets: { [sha256]: { gameId: GAME, size: image.length, releaseId: 'synthetic-final-9-a' } }, profiles: [], latestGroups: { [GAME]: 'synthetic-final-9' } };

@@ -1,0 +1,77 @@
+{
+  "works": {
+    "sentinel": "건담 센티넬",
+    "dunbine": "성전사 단바인 OVA",
+    "blood": "중전기 엘가임"
+  },
+  "units": [
+    {
+      "preset": "s-gundam",
+      "graphic": 305,
+      "name": "S건담",
+      "work": "sentinel",
+      "text": "궁극의 건담을 목표로 개발된 고성능 시험기. 빔스마트건과 인컴으로 높은 화력을 발휘한다. 복잡한 기체 제어를 돕는 인공지능 ALICE를 탑재하고 있으며 전투를 통해 축적한 경험을 바탕으로 스스로 판단한다."
+    },
+    {
+      "preset": "s-g-cruiser",
+      "graphic": 295,
+      "name": "S건담 G크루저",
+      "work": "sentinel",
+      "text": "S건담이 각부를 결합한 채 변형한 고속 순항 형태. 강력한 추진력으로 전장을 빠르게 이동하며 빔스마트건과 빔캐논을 이용한 사격에 적합하다. 필요에 따라 모빌슈트 형태로 돌아가 전투를 계속한다."
+    },
+    {
+      "preset": "ex-s-gundam",
+      "graphic": 306,
+      "name": "Ex-S건담",
+      "work": "sentinel",
+      "text": "S건담에 장갑과 추진 장치를 더한 중장비 형태. 빔스마트건과 네 문의 빔캐논으로 강한 화력을 발휘한다. I필드로 방어력을 높였으며 리플렉터인컴을 이용한 사격도 가능하다. ALICE가 기체의 복잡한 제어를 지원한다."
+    },
+    {
+      "preset": "g-cruiser",
+      "graphic": 340,
+      "name": "G크루저",
+      "work": "sentinel",
+      "text": "Ex-S건담의 고속 순항 형태. 대형 추진 장치와 추가 연료를 활용해 높은 기동력을 발휘한다. 빔스마트건과 빔캐논을 유지한 채 적에게 접근하거나 거리를 벌리며 싸울 수 있다. 모빌슈트 형태와 역할을 나누는 변형이다."
+    },
+    {
+      "preset": "sirbine",
+      "graphic": 308,
+      "name": "서바인",
+      "work": "dunbine",
+      "text": "바란바란에 전해 내려오는 비보인 오라배틀러. 시온 자바가 탑승해 검은 기사 라반과 싸운다. 강한 오라력을 바탕으로 뛰어난 기동력을 발휘하며 검을 이용한 근접전에 특화되어 있다."
+    },
+    {
+      "preset": "zwauss",
+      "graphic": 309,
+      "name": "즈와우스",
+      "work": "dunbine",
+      "text": "검은 기사 라반 자라만드가 조종하는 거대한 오라배틀러. 검은 장갑과 넓은 날개 긴 꼬리를 지닌 모습이 특징이다. 강한 힘을 살린 근접전에 뛰어나며 시온 자바가 타는 서바인과 격전을 벌인다."
+    },
+    {
+      "preset": "blood-temple",
+      "graphic": 302,
+      "name": "블러드템플",
+      "work": "blood",
+      "text": "강한 화력과 기동력을 갖춘 중무장 기체. 근접 무장과 여러 빔병기를 함께 사용하며 버스터런처로 넓은 범위를 공격한다. 기가블래스터를 비롯한 강력한 사격 무장으로 적을 압도한다."
+    }
+  ],
+  "alice": {
+    "name": "ALICE",
+    "alias": "앨리스",
+    "work": "sentinel",
+    "voice": "없음",
+    "text": "S건담에 탑재된 학습형 인공지능. 전투와 조종사의 행동을 통해 경험을 쌓고 복잡한 기체 제어를 지원한다. 단순히 명령을 따르는 것에 그치지 않고 상황을 스스로 판단하도록 설계되었다. S건담과 Ex-S건담의 전투를 돕는다."
+  },
+  "sources": [
+    "https://gget.ggame.jp/jp/titles/detail.php?t=glyw2f6d",
+    "https://manual.bandai-hobby.net/pdf/636.pdf",
+    "https://www.sunrise-world.net/titles/titles.php?id=179",
+    "https://www.bandaispirits.co.jp/products/search/detail.php?grp_id=5325&prd_id=4549660062462000",
+    "https://srw.wiki.cre.jp/wiki/ブラッドテンプル"
+  ],
+  "notes": {
+    "blood": "중전기 엘가임의 본편 미등장 설정 기체. 제4차 슈퍼로봇대전은 첫 SRW 출연작이며 원작명과 구분한다.",
+    "measurements": "확인하지 못한 전장/중량은 다른 기체의 값을 복사해 표시하지 않음.",
+    "scope": "목록 등록과 설명은 추가 편집 데이터. 정식 F 원본 수록 설명이라고 주장하지 않음."
+  }
+}

@@ -68,7 +68,7 @@ function expectedMasks(decoded, locked) {
   const ranges = [];
   const uniqueCells = (offsets) => offsets.map((offset, cell) => [offset, cell]).filter(([offset, cell]) => cell >= 1 && offsets.indexOf(offset) === cell);
   // units: the shield and parry bits of +9, the move +24 and +26..+45
-  for (const [offset] of uniqueCells(offsetsOf(root[27]))) ranges.push([root[27].start + offset + 9, 1, 0x30], [root[27].start + offset + 24, 1, 255], [root[27].start + offset + 26, 20, 255]);
+  for (const [offset] of uniqueCells(offsetsOf(root[27]))) ranges.push([root[27].start + offset + 9, 1, 0x30], [root[27].start + offset + 19, 3, 255], [root[27].start + offset + 24, 1, 255], [root[27].start + offset + 25, 1, 48], [root[27].start + offset + 26, 20, 255]);
   const pilotOffsets = offsetsOf(root[28]);
   const starts = [...new Set(pilotOffsets)].sort((a, b) => a - b);
   for (const start of starts) {
@@ -80,7 +80,7 @@ function expectedMasks(decoded, locked) {
   for (const [offset] of uniqueCells(offsetsOf(root[29]))) {
     const at = root[29].start + offset;
     // weapons: +5..+7, the high nibble of +8, +9..+11, the ammo +12 only where it is not 0, EN +13..+14, morale +15, skill +16
-    ranges.push([at + 5, 3, 255], [at + 8, 1, 240], [at + 9, 3, 255], [at + 13, 4, 255]);
+    ranges.push([at + 2, 1, 63], [at + 5, 3, 255], [at + 8, 1, 240], [at + 9, 3, 255], [at + 13, 4, 255]);
     if (root[29].bytes[offset + 12] !== 0) ranges.push([at + 12, 1, 255]);
   }
   ranges.sort((a, b) => a[0] - b[0]);

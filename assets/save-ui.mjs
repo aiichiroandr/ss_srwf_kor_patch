@@ -1,11 +1,11 @@
-import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261104-save3';
-import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261104-save3';
-import { requestEditorNotice } from './editor-notice.mjs?v=20261104-save3';
-import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261104-save3';
-import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261104-save3';
-import { openSave } from './save-core.mjs?v=20261104-save3';
-import { pageItems,fitPages } from './save-pages.mjs?v=20261104-save3';
-import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261104-save3';
+import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261104-part1';
+import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261104-part1';
+import { requestEditorNotice } from './editor-notice.mjs?v=20261104-part1';
+import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261104-part1';
+import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261104-part1';
+import { openSave } from './save-core.mjs?v=20261104-part1';
+import { pageItems,fitPages } from './save-pages.mjs?v=20261104-part1';
+import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261104-part1';
 
 export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}={}) {
   const $=id=>document.getElementById(id),dialog=$('saveEditorDialog');
@@ -121,7 +121,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     $('saveCheckSummary').textContent=`세이브 검사 · ${issues.length?`오류 ${errors.length} · 주의 ${warns}`:'이 슬롯 정상'}${others?` · 다른 슬롯 ${others}개에 오류`:''}`;
     const list=$('saveCheckList');list.replaceChildren();
     for(const issue of issues){const li=document.createElement('li');li.className=issue.level==='error'?'is-error':'is-warn';
-      li.textContent=`${issue.level==='error'?'오류':'주의'} · ${issue.type==='unit'?'기체':'파일럿'} 칸 ${issue.slot+1} · ${name({id:issue.id},issue.type,r)} · ${issue.message}`;list.append(li);}
+      li.textContent=issue.type==='money'?`${issue.level==='error'?'오류':'주의'} · 보유 자금 · ${issue.message}`:`${issue.level==='error'?'오류':'주의'} · ${issue.type==='unit'?'기체':'파일럿'} 칸 ${issue.slot+1} · ${name({id:issue.id},issue.type,r)} · ${issue.message}`;list.append(li);}
     $('saveCheckRepair').disabled=busy||!r.editable||!errors.length;
     $('saveCheckRepairAll').disabled=busy||!(errors.length||others);
   }
@@ -230,7 +230,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
   function numericEdit(input,field,rowSlot){
     if(busy||!context().verified)return;
     const dk=draftKey(field,rowSlot);
-    try{const value=input.value.trim()===''?NaN:Number(input.value);requireSaveScalar(field,value);session.edit(key,field,value,rowSlot);drafts.delete(dk);fieldError(input,'');listRows();message(drafts.size?'변경했습니다. 남은 입력 오류를 수정한 뒤 저장하세요.':'변경 내역을 확인한 뒤 수정본을 저장하세요.');}
+    try{const value=input.value.trim()===''?NaN:Number(input.value),r=active();requireSaveScalar(field,value,field==='money'?r?.money??undefined:r?.pilots.find(p=>p.slot===rowSlot)?.[field]);session.edit(key,field,value,rowSlot);drafts.delete(dk);fieldError(input,'');listRows();message(drafts.size?'변경했습니다. 남은 입력 오류를 수정한 뒤 저장하세요.':'변경 내역을 확인한 뒤 수정본을 저장하세요.');}
     catch(e){drafts.set(dk,{value:input.value,error:e.message});fieldError(input,e.message);message(e.message,true);}controls();
   }
   function portraitRequest(type,id,r){

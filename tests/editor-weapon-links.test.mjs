@@ -260,11 +260,11 @@ test('unit rows carry their weapon list; weapon rows carry owners, owner names a
   assert.ok(weapons.every((row) => row.editable === (row.recordKind !== 'unused-filler')));
 });
 
-test('provenance: no editable (masked) byte range touches a unit weapon list, so it stays in the hashed region', () => {
+test('legacy provenance keeps the complete unit weapon list in the hashed region', () => {
   const { decoded } = linkedWorld({ rooted: true });
   const root = splitRootSegments(decoded);
   const units = unitRows(root, decoded, [], GLYPHS, 'srwf-final');
-  const masks = editorDecodedMasks(root, 'srwf-final');
+  const masks = editorDecodedMasks(root, 'srwf-final', { weaponLoadouts: false });
   assert.ok(masks.length > 0);
   for (const row of units) {
     const from = root[27].start + row.byteOffset + 46;

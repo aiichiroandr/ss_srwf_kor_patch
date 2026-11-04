@@ -1,6 +1,7 @@
 // Looks for the one patched BIN a folder holds for the selected release. Only names, sizes, the game header and the
 // optional CUE decide the candidate; the complete SHA-256 is read once, by the editor worker, so a large image is not
 // hashed twice. Whether the candidate is a public patch result or a personal edit is decided there, never here.
+import {isFCampaignImageSize} from './editor-v04-unsupported.mjs?v=20261104-part1';
 export async function findPatchedEditorImage(directory, release, { signal, onCueTracks } = {}) {
   const images = [], cues = [];
   let entries = 0;
@@ -11,7 +12,7 @@ export async function findPatchedEditorImage(directory, release, { signal, onCue
     if (/\.cue$/i.test(handle.name)) { cues.push(await handle.getFile()); continue; }
     if (!/\.(bin|img|iso)$/i.test(handle.name)) continue;
     const file = await handle.getFile();
-    if (file.size === release.target.size || file.size === release.source.size) images.push(file);
+    if (file.size === release.target.size || file.size === release.source.size || isFCampaignImageSize(file.size,release.gameId)) images.push(file);
   }
   const exact = images.filter(file => file.name === release.target.filename);
   const candidates = exact.length ? exact : images;

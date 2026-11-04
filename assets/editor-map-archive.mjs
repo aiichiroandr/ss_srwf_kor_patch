@@ -1,11 +1,12 @@
 // MAP_MAP: two sc01 tile planes per member. MAP_BANK: bk00 graphics and the
 // tile -> terrain lookup consumed by the map constructor. No graphics are shipped.
-import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261104-save3';
-import { ownData, readDenseList } from './editor-own.mjs?v=20261104-save3';
+import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261104-part1';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261104-part1';
 const FORMATS = Object.freeze({
   'srwf-f': Object.freeze({ maps: 111, banks: 21, terrains: 120 }),
   'srwf-final': Object.freeze({ maps: 127, banks: 24, terrains: 144 }),
 });
+const CAMPAIGN_FORMAT=Object.freeze({maps:238,banks:45,terrains:144});
 function fail(message, code = 'EDITOR_MAP_INVALID', details) {
   const error = new Error(message); error.code = code;
   if (details) error.details = details;
@@ -46,6 +47,9 @@ function decode(compressed, maxLength) {
 
 export function readMapArchive(bytes, gameId) {
   const format = ownData(FORMATS, gameId); if (!format) fail('Unknown map game.');
+  return readMaps(bytes,gameId,format);
+}
+function readMaps(bytes,gameId,format){
   const { members, slots } = membersOf(bytes, format.maps);
   for (const member of members) {
     const body = bytes.subarray(member.start, member.end);
@@ -75,6 +79,9 @@ export function readMapArchive(bytes, gameId) {
 
 export function readMapBankArchive(bytes, gameId) {
   const format = ownData(FORMATS, gameId); if (!format) fail('Unknown map bank game.');
+  return readBanks(bytes,gameId,format);
+}
+function readBanks(bytes,gameId,format){
   const { members, slots } = membersOf(bytes, format.banks);
   for (const member of members) {
     const body = bytes.subarray(member.start, member.end);
@@ -87,6 +94,12 @@ export function readMapBankArchive(bytes, gameId) {
   }
   return Object.freeze({ gameId, members: Object.freeze(members), slots: Object.freeze(slots.map(member => member.physicalIndex)) });
 }
+
+// Explicit extended readers for a full 127+111 / 24+21 campaign container.
+// The ordinary inspector/writer keeps its original strict game counts. These
+// readers confer no disc identity, terrain mapping or export authority.
+export function readCampaignMapArchive(bytes){return readMaps(bytes,'srwf-final',CAMPAIGN_FORMAT);}
+export function readCampaignMapBankArchive(bytes){return readBanks(bytes,'srwf-final',CAMPAIGN_FORMAT);}
 
 export async function repackMapTiles(sourceBytes, bankBytes, gameId, submitted, { signal, onProgress } = {}) {
   abort(signal);

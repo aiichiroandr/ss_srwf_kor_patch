@@ -1,6 +1,10 @@
 // Shared, bounded root-8 and purpose-text evidence. Reading a byte pattern
 // does not authorize a write; callers must authenticate the canonical body.
-import { F_NAME_MAP, FINAL_NAME_MAP } from './editor-name-map.mjs?v=20261104-save3';
+import { F_NAME_MAP, FINAL_NAME_MAP } from './editor-name-map.mjs?v=20261104-part1';
+import { F_NAME_SUPPLEMENT } from './editor-pilot-name-map.mjs?v=20261104-part1';
+// Match the existing F name/text codec: the accepted font also contains
+// supplemental cells such as F193 (맵), used by original F63 objectives.
+const F_OBJECTIVE_NAME_MAP=new Map([...F_NAME_SUPPLEMENT,...F_NAME_MAP]);
 export const OBJECTIVE_RAM_CAPACITY = Object.freeze({ 'srwf-f':0x8000, 'srwf-final':0x9000 });
 const CAPACITY=OBJECTIVE_RAM_CAPACITY;
 const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
@@ -99,14 +103,14 @@ export function readScenarioPurpose(bytes, gameId) {
   const table=p+2+data.getInt16(p+2); if(table<56 || table+4>bytes.length)return null;
   const first=table+data.getInt16(table), second=table+2+data.getInt16(table+2);
   if(first<table+4 || second<table+4 || first>=bytes.length || second>=bytes.length)return null;
-  const names=gameId==='srwf-f'?F_NAME_MAP:FINAL_NAME_MAP;
+  const names=gameId==='srwf-f'?F_OBJECTIVE_NAME_MAP:FINAL_NAME_MAP;
   const victory=readText(bytes,first,names), defeat=readText(bytes,second,names);
   if(!victory || !defeat || first<second && victory.end>second || second<first && defeat.end>first)return null;
   return {root:p,table,victory:victory.text,defeat:defeat.text};
 }
 
 export function encodeObjectiveText(text,gameId) {
-  const names=gameId==='srwf-f'?F_NAME_MAP:FINAL_NAME_MAP, reverse=new Map();
+  const names=gameId==='srwf-f'?F_OBJECTIVE_NAME_MAP:FINAL_NAME_MAP, reverse=new Map();
   for(const [key,glyph]of names) {
     const normal=glyph.normalize('NFKC');
     if([...normal].length===1 && !reverse.has(normal))reverse.set(normal,key);

@@ -556,8 +556,10 @@ export async function normalizeSelectedSource(handles, expectedSize, profileId) 
  * Discover one supported source representation among the direct children of a
  * user-selected folder. This never descends into subdirectories and never
  * reads an entire disc image while deciding which handles to normalize.
+ * A campaign importer may include generated names; its worker still checks
+ * the complete image against the accepted F source and font hashes.
  */
-export async function normalizeSourceDirectory(directoryHandle, expectedSize, profileId) {
+export async function normalizeSourceDirectory(directoryHandle, expectedSize, profileId, {includeGeneratedOutputs = false} = {}) {
   requireExpectedSize(expectedSize);
   if (profileId !== undefined && !discSetForExpectedSize(expectedSize, profileId)) {
     fail("SOURCE_PROFILE_UNSUPPORTED", "Source profile id and size do not match a pinned disc set");
@@ -587,7 +589,7 @@ export async function normalizeSourceDirectory(directoryHandle, expectedSize, pr
   // generated naming form into a second source candidate on the next visit.
   const possibleRawHandles = handles.filter((handle) => (
     DIRECTORY_RAW_EXTENSION_PATTERN.test(handle.name)
-    && !GENERATED_PATCH_OUTPUT_PATTERN.test(handle.name)
+    && (includeGeneratedOutputs || !GENERATED_PATCH_OUTPUT_PATTERN.test(handle.name))
   ));
   const matchingRawHandles = [];
   for (const handle of possibleRawHandles) {

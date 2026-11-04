@@ -795,3 +795,29 @@ test('neighbouring invalidated references are repaired together, so one match ca
   // merged: T1 and T2 become one reference of 40 bytes; parsed apart they would need one more reference (3 bytes)
   assert.ok(result.bytes.length <= stored.length + 5, `grew by ${result.bytes.length - stored.length} bytes`);
 });
+
+test('removing an appended tail retries complete near matches within the original sector allocation', async () => {
+  const {decoded,slotLength}=await fixture();
+  const complete=await compressTsr(decoded,{completeNearMatches:true});
+  assert.ok(complete.length<=slotLength);
+  const extended=Uint8Array.from([...decoded,81,82,83,84]);
+  const stored=await compressTsr(extended,{completeNearMatches:true});
+  assert.ok(stored.length<=slotLength);
+  const slot=new Uint8Array(slotLength);slot.set(stored);
+  const disc=buildDisc({slot}),opened=await makeSession(disc,decoded);
+  const session={...opened.session,storedDecoded:extended};
+  const unchanged=await buildEditedImage(session,extended);
+  assert.equal(unchanged.tsr.method,'repack');
+  assert.equal(unchanged.bytesChanged,0);
+  const result=await buildEditedImage(session,decoded);
+  assert.equal(result.tsr.method,'recompress');
+  assert.equal(result.tsr.packedBytes,complete.length);
+  assert.equal(result.tsr.writableBytes,slotLength);
+  assert.equal(result.tsr.directoryBytes,slotLength);
+  assert.equal(result.outputBlob.size,disc.blob.size);
+  const files=await locateIsoFiles(result.outputBlob);
+  assert.equal(files.tsr.extentLba,session.file.extentLba);
+  assert.equal(files.tsr.byteLength,slotLength);
+  const image=new Uint8Array(await result.outputBlob.arrayBuffer());
+  assert.deepEqual(decompressTsr(readFileBytes(image,files.tsr.extentLba,files.tsr.byteLength)),decoded);
+});

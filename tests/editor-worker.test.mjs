@@ -17,6 +17,7 @@ function harness(api = {}) {
   const fakeApi = {
     inspectPatchedImage: async () => ({ session: { sessionToken: 'session-1' }, view: { sessionToken: 'session-1' } }),
     exportEditedImage: async () => ({ ok: true }),
+    preflightEditedImage:async()=>({canExport:true}),
     previewEditorRecord: async (session, kind, recordIndex) => ({ kind, recordIndex, image: null }),
     ...api,
   };
@@ -27,6 +28,196 @@ function harness(api = {}) {
 
 const job = (type, extra = {}) => ({ type, jobId: 'job-00001', ...extra });
 const growth = { packedBytes: 216000, slotBytes: 215040, writableBytes: 215040 };
+
+test('unchanged ingame preview and save catalog retain the inspected overlay without recomposition',async()=>{
+ const canonical=new Blob(['canonical']),outer=new Blob(['canonical plus inspected overlay']);
+ const session={sessionToken:'session-1',sourceBlob:canonical,
+  descriptor:{gameId:'srwf-final',targetSha256:'canonical',baseTargetSha256:'accepted'}};
+ const original={blob:outer,descriptor:{...session.descriptor,targetSha256:'outer',targetSize:outer.size}};
+ const view={gameId:'srwf-final',targetHash:'outer',units:[{recordIndex:430}],ingame:{enabled:true}};
+ const run=harness({inspectPatchedImage:async()=>({session,view}),
+  readEditorSourceImage:s=>{assert.equal(s,session);return original;},
+  exportEditedImage:async()=>{throw Error('unchanged input must not be rebuilt');}});
+ await run.send(job('INSPECT'));
+ for(const includeSaveCatalog of [false,true]){
+  await run.send({type:'ANIMATION_SOURCE',previewId:'ingame-source-'+includeSaveCatalog,
+   sessionToken:'session-1',includeSaveCatalog});
+  assert.equal(run.last().type,'ANIMATION_SOURCE_COMPLETE');
+  assert.equal(run.last().blob,outer);assert.equal(run.last().descriptor,original.descriptor);
+  if(includeSaveCatalog)assert.equal(run.last().saveCatalog,view);
+ }
+});
+
+test('save additions use the inspected export catalog without replacing the editing session or rebuilding the download',async()=>{
+ const original=new Blob(['base']),output=new Blob(['edited']),descriptor={gameId:'srwf-final',targetSha256:'base',baseTargetSha256:'base',targetSize:4};
+ const session={sessionToken:'session-1',sourceBlob:original,descriptor};let inspections=0,exports=0;
+ const catalog={gameId:'srwf-final',targetHash:'edited',units:[{recordIndex:430,construction:{preset:'s-gundam'}}]};
+ const run=harness({inspectPatchedImage:async(blob,d)=>{inspections++;if(inspections===1)return{session,view:{gameId:'srwf-final',targetHash:'base',units:[]}};assert.equal(blob,output);assert.equal(d.targetSha256,'base');return{session:{sessionToken:'output-only'},view:catalog};},exportEditedImage:async s=>{assert.equal(s,session);exports++;return{outputBlob:output,sha256:'edited'};}});
+ await run.send(job('INSPECT'));
+ const request={units:[{recordIndex:430}]};
+ for(let i=0;i<2;i++){
+  await run.send({type:'ANIMATION_SOURCE',previewId:'save-catalog-'+i,sessionToken:'session-1',request,includeSaveCatalog:true});
+  assert.equal(run.last().saveCatalog,catalog);assert.equal(run.last().blob,output);
+ }
+ await run.send(job('EXPORT',{request}));assert.equal(run.last().type,'EXPORT_COMPLETE');assert.equal(exports,1);assert.equal(inspections,2);
+});
+
+test('a mismatched save catalog cannot publish or seed the completed export cache',async()=>{
+ let inspections=0,exports=0;const blob=new Blob(['base']),session={sessionToken:'session-1',sourceBlob:blob,descriptor:{gameId:'srwf-final',targetSha256:'base',baseTargetSha256:'base'}};
+ const run=harness({inspectPatchedImage:async()=>++inspections===1?{session,view:{}}:{view:{gameId:'srwf-final',targetHash:'different',units:[]}},exportEditedImage:async()=>{exports++;return{outputBlob:blob,sha256:'edited'};}});
+ await run.send(job('INSPECT'));await run.send({type:'ANIMATION_SOURCE',previewId:'bad-save-catalog',sessionToken:'session-1',request:{units:[]},includeSaveCatalog:true});
+ assert.equal(run.last().type,'ANIMATION_SOURCE_ERROR');assert.equal(run.last().errorCode,'EDITOR_SAVE_CATALOG_INVALID');
+ await run.send(job('EXPORT',{request:{units:[]}}));assert.equal(exports,2);
+});
+
+test('opening the save catalog preempts a speculative preview without letting its late result evict the verified output',async()=>{
+ const blob=new Blob(['verified']),session={sessionToken:'session-1',sourceBlob:blob,descriptor:{gameId:'srwf-final',targetSha256:'base',baseTargetSha256:'base'}};let inspected=0,exports=0,late;
+ const run=harness({inspectPatchedImage:async()=>++inspected===1?{session,view:{}}:{view:{gameId:'srwf-final',targetHash:'edited',units:[]}},exportEditedImage:async()=>{exports++;if(exports===1)return new Promise(resolve=>{late=resolve;});return{outputBlob:blob,sha256:'edited'};}});
+ await run.send(job('INSPECT'));const request={units:[]};await run.send({type:'ANIMATION_SOURCE',previewId:'old-speculative',sessionToken:'session-1',request});
+ await run.send({type:'ANIMATION_SOURCE',previewId:'new-save-catalog',sessionToken:'session-1',request,includeSaveCatalog:true});assert.equal(run.last().saveCatalog.targetHash,'edited');
+ late({outputBlob:blob,sha256:'edited'});await settle();assert.equal(run.posts.some(p=>p.message.type==='ANIMATION_SOURCE_COMPLETE'&&p.message.previewId==='old-speculative'),false);
+ await run.send(job('EXPORT',{request}));assert.equal(exports,2);assert.equal(run.last().type,'EXPORT_COMPLETE');
+});
+
+test('factory imports install no listener; a review wrapper can install exactly one worker',async()=>{
+  const previous=globalThis.self,listeners=[],posts=[];
+  const scope={addEventListener(type,handler){if(type==='message')listeners.push(handler);},postMessage(message){posts.push(message);}};
+  globalThis.self=scope;
+  try{
+    const factory=await import('../assets/editor-worker.mjs?factory=1&bootstrap-test=review');
+    assert.equal(listeners.length,0,'importing the factory must not also start a default worker');
+    let inspected=0;
+    factory.createEditorWorker(scope,{inspectPatchedImage:async()=>{inspected++;return{session:{sessionToken:'one'},view:{sessionToken:'one'}};}});
+    assert.equal(listeners.length,1);
+    listeners[0]({data:{type:'INSPECT',jobId:'one-review-job'}});await settle();
+    assert.equal(inspected,1);assert.deepEqual(posts.map(p=>p.type),['INSPECT_COMPLETE']);
+    listeners.length=0;
+    await import('../assets/editor-worker.mjs?bootstrap-test=standalone');
+    assert.equal(listeners.length,1,'the standalone worker still auto-installs');
+  }finally{
+    if(previous===undefined)delete globalThis.self;else globalThis.self=previous;
+  }
+});
+
+test('F campaign verification binds to the open Final session and ignores a requested font',async()=>{
+ let reads=0,attached=0,exports=0,clears=0;
+ const sourceBlob=new Blob(['F source']);
+ const run=harness({
+  prepareFCampaignEditorSource:async(session,blob,options)=>{
+   reads++;assert.equal(session.sessionToken,'session-1');assert.equal(blob,sourceBlob);
+   assert.equal(Object.hasOwn(options,'font'),false);return {verified:true};
+  },
+  attachFCampaignEditorSource:(session,token)=>{attached++;assert.equal(token.verified,true);return {font:'c',importReady:false};},
+  clearFCampaignEditorSource:()=>{clears++;},
+  exportEditedImage:async()=>{exports++;return {};},
+ });
+ await run.send(job('F_CAMPAIGN_CONNECT',{sourceBlob,sessionToken:'session-1'}));
+ assert.equal(run.last().error.code,'EDITOR_SESSION_MISSING');assert.equal(reads,0);
+ await run.send(job('INSPECT',{}));
+ await run.send(job('F_CAMPAIGN_CONNECT',{sourceBlob,sessionToken:'stale',font:'a'}));
+ assert.equal(reads,0);
+ await run.send(job('F_CAMPAIGN_CONNECT',{sourceBlob,sessionToken:'session-1',font:'a'}));
+ assert.equal(run.last().type,'F_CAMPAIGN_SOURCE_COMPLETE');assert.equal(run.last().catalog.font,'c');
+ assert.equal(reads,1);assert.equal(attached,1);assert.equal(exports,0);
+ await run.send(job('F_CAMPAIGN_DISCONNECT',{sessionToken:'session-1'}));assert.equal(clears,1);assert.equal(run.last().catalog,null);
+});
+
+test('reset while verifying F cannot attach to a replacement disc or discard its edits',async()=>{
+ let finish,attached=0;
+ const run=harness({
+  prepareFCampaignEditorSource:()=>new Promise(resolve=>{finish=resolve;}),
+  attachFCampaignEditorSource:()=>{attached++;},
+ });
+ await run.send(job('INSPECT',{}));await run.send(job('F_CAMPAIGN_CONNECT',{sessionToken:'session-1'}));
+ await run.send({type:'RESET'});await run.send(job('INSPECT',{}));finish({});await settle();
+ assert.equal(attached,0);assert.equal(run.last().type,'CANCELLED');
+ await run.send(job('EXPORT',{request:{}}));assert.equal(run.last().type,'EXPORT_COMPLETE');
+});
+
+test('a cartridge connection needs the current disc session and never exports the disc', async () => {
+  let reads=0, exports=0;
+  const {send,last}=harness({
+    prepareSrw4EditorSource:async () => {reads++;return {};},
+    attachSrw4EditorSource:() => ({identity:{profileId:'srw4-jp'}}),
+    exportEditedImage:async()=>{exports++;return {};},
+  });
+  await send(job('SRW4_CONNECT',{sessionToken:'session-1'}));assert.equal(last().error.code,'EDITOR_SESSION_MISSING');
+  await send(job('INSPECT',{}));
+  await send(job('SRW4_CONNECT',{sessionToken:'another-session'}));assert.equal(last().error.code,'EDITOR_SESSION_MISSING');assert.equal(reads,0);
+  await send(job('SRW4_CONNECT',{sessionToken:'session-1'}));
+  assert.equal(last().type,'SRW4_SOURCE_COMPLETE');assert.equal(reads,1);assert.equal(exports,0);
+});
+
+test('a refused cartridge leaves the open disc exportable', async () => {
+  let attachments=0;
+  const {send,last}=harness({
+    prepareSrw4EditorSource:async()=>{throw Object.assign(Error('wrong cartridge'),{code:'SRW4_ROM_IDENTITY'});},
+    attachSrw4EditorSource:()=>{attachments++;},
+  });
+  await send(job('INSPECT',{}));await send(job('SRW4_CONNECT',{sessionToken:'session-1'}));
+  assert.equal(last().error.code,'SRW4_ROM_IDENTITY');assert.equal(attachments,0);
+  await send(job('EXPORT',{request:{}}));assert.equal(last().type,'EXPORT_COMPLETE');
+});
+
+test('fourth-game coordinate capacity is checked before a source is attached',async()=>{
+ let attachments=0,checked=0;
+ const entries=[{recordIndex:430,preset:'ex-s-gundam'}];
+ const error=Object.assign(Error('좌표 공간 부족'),{code:'EDITOR_BATTLE_COMPONENT_INVALID',details:{component:'hand-points',reason:'capacity',usedBytes:2972,limitBytes:2963}});
+ const run=harness({prepareSrw4EditorSource:async()=>({}),preflightSrw4HandPoints:async(_session,plan)=>{checked++;assert.deepEqual(plan,entries);throw error;},attachSrw4EditorSource:()=>{attachments++;}});
+ await run.send(job('INSPECT',{}));await run.send(job('SRW4_CONNECT',{sessionToken:'session-1',restorations:entries}));
+ assert.equal(checked,1);assert.equal(attachments,0);assert.equal(run.last().error.code,error.code);assert.deepEqual(run.last().error.details,error.details);
+ assert.ok(run.posts.some(post=>post.message.phase==='srw4-target-check'));
+ await run.send(job('EXPORT',{request:{}}));assert.equal(run.last().type,'EXPORT_COMPLETE');
+});
+
+test('cancelling fourth-game capacity checking cannot attach the source later',async()=>{
+ let finish,attached=0;
+ const run=harness({prepareSrw4EditorSource:async()=>({}),preflightSrw4HandPoints:()=>new Promise(resolve=>{finish=resolve;}),attachSrw4EditorSource:()=>{attached++;}});
+ await run.send(job('INSPECT',{}));await run.send(job('SRW4_CONNECT',{sessionToken:'session-1',restorations:[]}));
+ await run.send({type:'CANCEL',jobId:'job-00001'});finish();await settle();
+ assert.equal(attached,0);assert.equal(run.last().type,'CANCELLED');
+});
+
+test('reset during cartridge reading prevents a late attachment to a replacement disc', async () => {
+  let finish, attachments=0;
+  const {send,last}=harness({
+    prepareSrw4EditorSource:()=>new Promise(resolve=>{finish=resolve;}),
+    attachSrw4EditorSource:()=>{attachments++;},
+  });
+  await send(job('INSPECT',{}));await send(job('SRW4_CONNECT',{sessionToken:'session-1'}));
+  await send({type:'RESET'});await send(job('INSPECT',{}));finish({});await settle();
+  assert.equal(last().type,'CANCELLED');assert.equal(attachments,0);
+  await send(job('EXPORT',{request:{}}));assert.equal(last().type,'EXPORT_COMPLETE');
+});
+
+test('switching or disconnecting cartridge sources invalidates a completed export cache', async () => {
+  let exports=0, clears=0;
+  const {send}=harness({
+    exportEditedImage:async()=>({sequence:++exports}),
+    prepareSrw4EditorSource:async()=>({}),attachSrw4EditorSource:()=>({assets:[]}),
+    clearSrw4EditorSource:()=>{clears++;},
+  });
+  await send(job('INSPECT',{}));await send(job('EXPORT',{request:{}}));await send(job('EXPORT',{request:{}}));assert.equal(exports,1);
+  await send(job('SRW4_CONNECT',{sessionToken:'session-1'}));await send(job('EXPORT',{request:{}}));assert.equal(exports,2);
+  await send(job('SRW4_DISCONNECT',{sessionToken:'session-1'}));await send(job('EXPORT',{request:{}}));assert.equal(exports,3);assert.equal(clears,1);
+});
+
+test('battle dialogue is read from the current authenticated session and a replaced session cannot publish late text',async()=>{
+ let finish,calls=0;const {send,last}=harness({readBattleDialogue:(_session,pilot)=>{calls++;assert.equal(pilot,71);return new Promise(resolve=>finish=resolve);}});
+ await send({type:'BATTLE_DIALOGUE',previewId:'text-1',sessionToken:'session-1',pilot:71});assert.equal(last().type,'BATTLE_DIALOGUE_ERROR');assert.equal(calls,0);
+ await send(job('INSPECT',{}));await send({type:'BATTLE_DIALOGUE',previewId:'text-2',sessionToken:'other',pilot:71});assert.equal(calls,0);
+ await send({type:'BATTLE_DIALOGUE',previewId:'text-3',sessionToken:'session-1',pilot:71});await send({type:'RESET'});finish({pilot:71,types:[]});await settle();assert.equal(last().type,'BATTLE_DIALOGUE_ERROR');
+});
+
+test('capacity preflight is a session-bound cancellable job and does not call export',async()=>{
+ let exports=0;const {send,last}=harness({exportEditedImage:async()=>{exports++;}});
+ await send(job('PREFLIGHT',{request:{}}));assert.equal(last().error.code,'EDITOR_SESSION_MISSING');
+ await send(job('INSPECT',{}));await send(job('PREFLIGHT',{request:{}}));
+ assert.deepEqual(last(),{type:'PREFLIGHT_COMPLETE',jobId:'job-00001',budget:{canExport:true}});assert.equal(exports,0);
+ const {send:cancel,last:cancelLast}=harness({preflightEditedImage:(_s,_r,{signal})=>new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(signal.reason)))});
+ await cancel(job('INSPECT',{}));await cancel(job('PREFLIGHT',{request:{}}));await cancel({type:'CANCEL',jobId:'job-00001'});
+ assert.equal(cancelLast().type,'CANCELLED');
+});
 
 test('an error travels with its code, its message and only the whole numbers of its details', async () => {
   const error = Object.assign(new Error('The edited TSR.BIN needs 216000 bytes'), {
@@ -105,6 +296,112 @@ test('inspect answers with the view and keeps the session for the export; no ses
   assert.ok(posts.length >= 4);
 });
 
+test('preview and export retain bounded coordinate capacity diagnostics', async () => {
+  const error=Object.assign(new Error('좌표 공간 부족'),{code:'EDITOR_BATTLE_COMPONENT_INVALID',details:{component:'hand-points',reason:'capacity',usedBytes:2972,limitBytes:2963}});
+  const run=harness({exportEditedImage:async()=>{throw error;}});
+  await run.send(job('INSPECT',{}));
+  await run.send({type:'ANIMATION_SOURCE',previewId:'preview-capacity',sessionToken:'session-1',request:{sessionToken:'session-1'}});
+  assert.equal(run.last().type,'ANIMATION_SOURCE_ERROR');
+  assert.equal(run.last().errorCode,'EDITOR_BATTLE_COMPONENT_INVALID');
+  assert.deepEqual(run.last().details,error.details);
+  await run.send(job('EXPORT',{request:{sessionToken:'session-1'}}));
+  assert.deepEqual(run.last().error.details,error.details);
+});
+
+test('preview and download share one completed export in either order and replay its storage budget', async () => {
+  for (const first of ['ANIMATION_SOURCE', 'EXPORT']) {
+    let exports = 0;
+    const original = new Blob(['original']), edited = new Blob(['edited']);
+    const noop = first === 'ANIMATION_SOURCE', outputBlob = noop ? original : edited, sha256 = noop ? 'original-sha' : 'edited-sha';
+    const result = { outputBlob, sha256, size: outputBlob.size, bytesChanged: noop ? 0 : 2352,
+      receipt: { schema: 'srwf.editor-output-receipt.v1', sha256 } };
+    const budget = { canExport: true, packedBytes: 123 };
+    const run = harness({
+      inspectPatchedImage: async () => ({ session: { sessionToken: 'session-1', sourceBlob: original,
+        descriptor: { targetSha256: 'original-sha', targetSize: original.size } }, view: {} }),
+      exportEditedImage: async (_session, _request, { onBudget }) => { exports++; onBudget(budget); return result; },
+    });
+    const request = { sessionToken: 'session-1', unitEdits: [{ recordIndex: 7, fields: { hp: 3210 } }] };
+    const sendOutput = type => run.send(type === 'EXPORT' ? job(type, { request: structuredClone(request) })
+      : { type, previewId: 'animation-1', sessionToken: 'session-1', request: structuredClone(request) });
+    await run.send(job('INSPECT'));
+    await sendOutput(first);
+    await sendOutput(first === 'EXPORT' ? 'ANIMATION_SOURCE' : 'EXPORT');
+    await sendOutput('EXPORT');
+    assert.equal(exports, 1, first);
+    assert.equal(run.last().result, result, 'receipt, no-op metadata, hash and Blob are reused together');
+    const preview = run.posts.find(post => post.message.type === 'ANIMATION_SOURCE_COMPLETE').message;
+    assert.equal(preview.blob, result.outputBlob); assert.equal(preview.descriptor.targetSha256, result.sha256);
+    assert.equal(preview.descriptor.targetSize, result.outputBlob.size);
+    const budgets = run.posts.filter(post => post.message.type === 'STORAGE_BUDGET').map(post => post.message);
+    assert.deepEqual(budgets, Array.from({ length: 2 }, () => ({ type: 'STORAGE_BUDGET', jobId: 'job-00001', budget })));
+    await run.send({ type: 'ANIMATION_SOURCE', previewId: 'unedited', sessionToken: 'session-1' });
+    assert.equal(run.last().blob, original, 'a request-free preview still receives the authenticated source');
+    assert.equal(exports, 1);
+  }
+});
+
+test('completed export cache retains only one exact request and replaces it for a new authenticated session', async () => {
+  let exports = 0;
+  const run = harness({ exportEditedImage: async () => ({ number: ++exports }) });
+  await run.send(job('INSPECT'));
+  const a = { sessionToken: 'session-1', collectionUnlock: false }, b = { ...a, collectionUnlock: true };
+  for (const request of [a, structuredClone(a), b, a]) await run.send(job('EXPORT', { request }));
+  assert.equal(exports, 3, 'the older request is evicted when another completes');
+  await run.send(job('INSPECT'));
+  await run.send(job('EXPORT', { request: a }));
+  assert.equal(exports, 4, 'a successful inspection invalidates even an equal session token');
+  await run.send({ type: 'RESET' });
+  await run.send(job('EXPORT', { request: a }));
+  assert.equal(run.last().error.code, 'EDITOR_SESSION_MISSING');
+  assert.equal(exports, 4);
+});
+
+test('cache keys never hide request values that JSON omits or coerces from core validation', async () => {
+  let exports = 0;
+  const run = harness({ exportEditedImage: async (_session, request) => {
+    exports++;
+    if (Object.hasOwn(request, 'optional') || request.values?.some(value => typeof value === 'number' && !Number.isFinite(value))
+      || request.values && !Object.hasOwn(request.values, 0)) throw Error('invalid request');
+    return { number: exports };
+  } });
+  await run.send(job('INSPECT'));
+  for (const [valid, invalid] of [[{}, { optional: undefined }], [{ values: [null] }, { values: [NaN] }],
+    [{ values: [null] }, { values: new Array(1) }]]) {
+    await run.send(job('EXPORT', { request: valid }));
+    const before = exports;
+    await run.send(job('EXPORT', { request: invalid }));
+    assert.equal(exports, before + 1, 'ambiguous keys must call the core');
+    assert.equal(run.last().type, 'ERROR');
+  }
+});
+
+test('failed exports and unpostable results are retried instead of becoming completed cache entries', async () => {
+  for (const type of ['EXPORT', 'ANIMATION_SOURCE']) {
+    let calls = 0;
+    const run = harness({ exportEditedImage: async () => {
+      if (++calls === 1) throw Error('first failed');
+      return { outputBlob: new Blob(['edited']), sha256: 'edited-sha' };
+    }, inspectPatchedImage: async () => ({ session: { sessionToken: 'session-1', descriptor: {} }, view: {} }) });
+    const message = type === 'EXPORT' ? job(type, { request: {} })
+      : { type, previewId: 'animation-1', sessionToken: 'session-1', request: {} };
+    await run.send(job('INSPECT'));
+    await run.send(message); assert.match(run.last().type, /ERROR$/);
+    let failPost = true;
+    const post = run.scope.postMessage.bind(run.scope);
+    run.scope.postMessage = (message, transfer) => {
+      if (failPost && message.type === `${type === 'EXPORT' ? 'EXPORT' : 'ANIMATION_SOURCE'}_COMPLETE`) {
+        failPost = false; throw new DOMException('could not be cloned', 'DataCloneError');
+      }
+      post(message, transfer);
+    };
+    await run.send(message); assert.match(run.last().type, /ERROR$/);
+    await run.send(message); assert.match(run.last().type, /COMPLETE$/);
+    await run.send(message); assert.match(run.last().type, /COMPLETE$/);
+    assert.equal(calls, 3, type);
+  }
+});
+
 test('a refused or cancelled inspect leaves the session of the open image exportable; a successful one and RESET replace it', async () => {
   let mode = 'ok';
   const exported = [];
@@ -131,7 +428,7 @@ test('a refused or cancelled inspect leaves the session of the open image export
   mode = 'ok';
   await send(job('INSPECT', { descriptor: { n: 4 } }));
   await send(job('EXPORT', { request: {} }));
-  assert.deepEqual(exported, ['session-1', 'session-1', 'session-4'], 'the new image replaced the old session');
+  assert.deepEqual(exported, ['session-1', 'session-4'], 'a refused or cancelled inspect preserves the cache; a new image replaces it');
   await send({ type: 'RESET' });
   await send(job('EXPORT', { request: {} }));
   assert.equal(last().error.code, 'EDITOR_SESSION_MISSING');
@@ -240,6 +537,17 @@ test('previews need the session of the current image and send their pixels as a 
   assert.equal(posts.length, before);
 });
 
+test('saved hero preview options reach the core and retain their image source',async()=>{
+ const calls=[];
+ const {send,last}=harness({previewEditorRecord:async(session,kind,recordIndex,options)=>{
+  calls.push({kind,recordIndex,options});return {kind,recordIndex,image:null,imageSource:'save'};
+ }});
+ await send(job('INSPECT',{}));
+ await send({type:'PREVIEW',previewId:'saved-main',sessionToken:'session-1',kind:'pilot',recordIndex:303,heroFaceId:317});
+ assert.deepEqual(calls,[{kind:'pilot',recordIndex:303,options:{heroFaceId:317}}]);
+ assert.equal(last().imageSource,'save');
+});
+
 // ---------------------------------------------------------------------------------------------------------------------
 // The job lifecycle: what an aborted or reset job can still do
 
@@ -257,6 +565,105 @@ function gated(extra = {}) {
   return { ...run, pending, types: () => run.posts.map((post) => post.message.type) };
 }
 const sessionOf = (token) => ({ session: { sessionToken: token }, view: { sessionToken: token } });
+
+test('a real F connection preempts speculative preview preparation without admitting its late output', async () => {
+  let finishSource, attached=0;
+  const run=gated({
+    prepareFCampaignEditorSource:()=>new Promise(resolve=>{finishSource=resolve;}),
+    attachFCampaignEditorSource:()=>{attached++;return {font:'c',importReady:true};},
+  });
+  await run.send(job('INSPECT'));
+  run.pending[0].resolve(sessionOf('session-1'));await settle();
+  await run.send({type:'ANIMATION_SOURCE',previewId:'background-source',sessionToken:'session-1',request:{hp:7}});
+  const background=run.pending[1];
+  await run.send({type:'F_CAMPAIGN_CONNECT',jobId:'short',sessionToken:'session-1'});
+  assert.equal(background.args.options.signal.aborted,false,'invalid requests cannot preempt reads');
+  await run.send(job('F_CAMPAIGN_CONNECT',{jobId:'connect-00002',sessionToken:'session-1',sourceBlob:new Blob(['owned F'])}));
+  assert.equal(background.args.options.signal.aborted,true);
+  assert.equal(typeof finishSource,'function','the foreground request reaches the core immediately');
+  background.resolve({outputBlob:new Blob(['stale preview']),sha256:'stale'});await settle();
+  assert.equal(run.posts.some(p=>p.message.type==='ANIMATION_SOURCE_COMPLETE'),false);
+  await run.send(job('EXPORT',{jobId:'export-00003',request:{hp:7}}));
+  assert.equal(run.last().error.code,'EDITOR_BUSY','a late preview cannot release the real connection slot');
+  finishSource({verified:true});await settle();
+  assert.equal(attached,1);assert.equal(run.last().type,'F_CAMPAIGN_SOURCE_COMPLETE');
+  await run.send(job('EXPORT',{jobId:'export-00004',request:{hp:7}}));
+  assert.equal(run.pending.length,3,'cancelled preview cannot populate the completed export cache');
+  run.pending[2].resolve({outputBlob:new Blob(['fresh']),sha256:'fresh'});await settle();
+  assert.equal(run.last().type,'EXPORT_COMPLETE');assert.equal(run.last().result.sha256,'fresh');
+});
+
+test('an export starts immediately after cancelling a pending animation source',async()=>{
+  const run=gated();await run.send(job('INSPECT'));
+  run.pending[0].resolve(sessionOf('session-1'));await settle();
+  await run.send({type:'ANIMATION_SOURCE',previewId:'source-to-cancel',sessionToken:'session-1',request:{hp:7}});
+  await run.send(job('EXPORT',{jobId:'export-00002',request:{hp:8}}));
+  assert.equal(run.pending[1].args.options.signal.aborted,true);assert.equal(run.pending.length,3);
+  run.pending[2].resolve({outputBlob:new Blob(['saved']),sha256:'saved'});await settle();
+  assert.equal(run.last().type,'EXPORT_COMPLETE');
+  run.pending[1].resolve({outputBlob:new Blob(['stale']),sha256:'stale'});await settle();
+  assert.equal(run.posts.filter(p=>p.message.type==='EXPORT_COMPLETE').length,1);
+  assert.equal(run.posts.some(p=>p.message.type==='ANIMATION_SOURCE_COMPLETE'),false);
+});
+
+test('cancelled preview and download exports never populate the completed cache', async () => {
+  for (const type of ['EXPORT', 'ANIMATION_SOURCE']) {
+    const run = gated();
+    await run.send(job('INSPECT'));
+    run.pending[0].resolve({ session: { sessionToken: 'session-1', descriptor: {} }, view: {} });
+    await settle();
+    const message = type === 'EXPORT' ? job(type, { jobId: 'job-00002', request: { hp: 7 } })
+      : { type, previewId: 'animation-1', sessionToken: 'session-1', request: { hp: 7 } };
+    await run.send(message);
+    await run.send({ type: 'CANCEL', jobId: type === 'EXPORT' ? message.jobId : message.previewId });
+    run.pending[1].resolve({ outputBlob: new Blob(['cancelled']), sha256: 'cancelled-sha' });
+    await settle();
+    assert.match(run.last().type, /CANCELLED|ERROR/);
+    assert.equal(run.posts.some(post => post.message.type === `${type === 'EXPORT' ? 'EXPORT' : 'ANIMATION_SOURCE'}_COMPLETE`), false);
+    await run.send(message);
+    assert.equal(run.pending.length, 3, type);
+    run.pending[2].resolve({ outputBlob: new Blob(['current']), sha256: 'current-sha' });
+    await settle();
+    await run.send(message);
+    assert.equal(run.pending.length, 3, 'only the successful retry is reused');
+  }
+});
+
+test('cache-hit jobs still obey cancellation before publishing their result', async () => {
+  for (const type of ['EXPORT', 'ANIMATION_SOURCE']) {
+    let exports = 0;
+    const run = harness({
+      inspectPatchedImage: async () => ({ session: { sessionToken: 'session-1', descriptor: {} }, view: {} }),
+      exportEditedImage: async () => { exports++; return { outputBlob: new Blob(['edited']), sha256: 'edited-sha' }; },
+    });
+    await run.send(job('INSPECT'));
+    await run.send(job('EXPORT', { request: { hp: 7 } }));
+    const before = run.posts.length;
+    const message = type === 'EXPORT' ? job(type, { jobId: 'job-00002', request: { hp: 7 } })
+      : { type, previewId: 'animation-1', sessionToken: 'session-1', request: { hp: 7 } };
+    run.scope.handler({ data: message });
+    run.scope.handler({ data: { type: 'CANCEL', jobId: type === 'EXPORT' ? message.jobId : message.previewId } });
+    await settle();
+    assert.equal(exports, 1, 'the cached job did not start core work');
+    assert.equal(run.posts.slice(before).some(post => post.message.type.endsWith('_COMPLETE')), false);
+    assert.equal(run.last().type, type === 'EXPORT' ? 'CANCELLED' : 'ANIMATION_SOURCE_ERROR');
+  }
+});
+
+test('a reset old export cannot replace or evict a newer session completed cache', async () => {
+  const run = gated({ inspectPatchedImage: async () => ({ session: { sessionToken: 'same-token' }, view: {} }) });
+  await run.send(job('INSPECT'));
+  await run.send(job('EXPORT', { jobId: 'job-00002', request: { hp: 7 } }));
+  await run.send({ type: 'RESET' });
+  await run.send(job('INSPECT'));
+  await run.send(job('EXPORT', { jobId: 'job-00003', request: { hp: 8 } }));
+  const current = { number: 'current' };
+  run.pending[1].resolve(current); await settle();
+  run.pending[0].resolve({ number: 'stale' }); await settle();
+  await run.send(job('EXPORT', { request: { hp: 8 } }));
+  assert.equal(run.pending.length, 2);
+  assert.equal(run.last().result, current);
+});
 
 test('RESET while the last read of an inspect is pending: the finished inspect publishes nothing and the session stays reset', async () => {
   const run = gated();

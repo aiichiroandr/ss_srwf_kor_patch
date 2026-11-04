@@ -7,6 +7,8 @@ import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
 // Shared folder → language → optional editor → output flow. Worker replies are supplied by the test;
 // heights and clipping are measured separately in a real browser.
 const document = installFakeDom();
+// Workflow tests acknowledge the shared notice; dialog behavior has its own tests.
+globalThis.localStorage = { getItem: key => key === "srwf-editor-notice-v1" ? "acknowledged" : null };
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 loadHtml(document, html);
 const initialConsoleError = console.error;
@@ -87,6 +89,7 @@ class FakeWorker {
     workers.push(this);
   }
   addEventListener(type, listener) { this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]); }
+  removeEventListener(type, listener) { this.listeners.set(type, (this.listeners.get(type) ?? []).filter(item => item !== listener)); }
   postMessage(message) { this.messages.push(message); }
   terminate() { this.terminated = true; }
   emit(data) { for (const listener of this.listeners.get("message") ?? []) listener({ data }); }
@@ -199,7 +202,11 @@ test("one public workflow opens a folder before choosing language, editing or sa
  reset(); hooks.syncModeUi();
  assert.match(html, /class="mode-switch" hidden/);
  assert.equal(state.mode,"editor");
+ assert.equal(byId("saveEditorOpen").hidden,true);
+ assert.equal(byId("saveEditorOpen").disabled,true);
  assert.equal(byId("editorSourceRegion").hidden,false);
+ assert.equal(byId("editorEntryRegion").dataset.sessionReady,"false");
+ assert.equal(byId("editorEntryState").textContent,"파일 대기");
  assert.equal(byId("workflowOpenEditor").disabled,true);
  assert.equal(byId("workflowSkipEditor").disabled,true);
  assert.equal(byId("workflowSaveRegion").hidden,true);
@@ -207,6 +214,11 @@ test("one public workflow opens a folder before choosing language, editing or sa
 
 test("stock inspection does not patch or open the editing screen automatically",async()=>{
  reset(); await openSession("stock",nativeView()); hooks.syncModeUi();
+ assert.equal(byId("editorEntryRegion").dataset.sessionReady,"true");
+ assert.equal(byId("saveEditorOpen").hidden,false);
+ assert.equal(byId("saveEditorOpen").disabled,false);
+ assert.equal(byId("saveEditorOpen").textContent,"F완결편 세이브 데이터 열기");
+ assert.equal(byId("workflowOpenEditor").textContent,"F완결편 롬 에디터 열기");
  const editor=workerNamed("srwf-local-data-editor");
  assert.equal(editor.last("INSPECT").descriptor.imageKind,"local");
  assert.equal(editor.last("INSPECT").imageBlob.size,FINAL_STOCK);
@@ -216,15 +228,28 @@ test("stock inspection does not patch or open the editing screen automatically",
  assert.equal(byId("editorRegion").hidden,true);
  assert.equal(byId("releaseRegion").hidden,false);
  assert.match(byId("editorSourceState").textContent,/정품 원본/);
- chooseOriginal(); hooks.prepareWorkflow("editor");
+ chooseOriginal(); await hooks.prepareWorkflow("editor");
  assert.equal(state.workflowStage,"editor");
  assert.equal(byId("editorRegion").hidden,false);
  assert.equal(workerNamed("srwf-local-editor-build"),undefined);
 });
 
+test("a token without an installed workspace cannot open an empty editor or save view",async()=>{
+ reset(); await openSession("stock",nativeView());
+ byId("editorWorkspace").hidden=true;
+ hooks.syncModeUi();
+ assert.equal(byId("workflowOpenEditor").disabled,true);
+ assert.equal(byId("workflowSkipEditor").disabled,true);
+ await hooks.prepareWorkflow("editor");
+ hooks.navigateWorkflow("save");
+ assert.equal(state.workflowStage,"setup");
+ assert.equal(byId("editorRegion").hidden,true);
+ assert.equal(byId("workflowSaveRegion").hidden,true);
+});
+
 test("only explicit Korean selection runs the accepted patch engine; then the requested editor opens",async()=>{
  reset(); await openSession("stock",nativeView());
- hooks.prepareWorkflow("editor");
+ await hooks.prepareWorkflow("editor");
  const build=workerNamed("srwf-local-editor-build");
  const prepare=build.last("PREPARE_SOURCE");
  assert.equal(prepare.sourceFile.size,FINAL_STOCK);
@@ -243,6 +268,36 @@ test("only explicit Korean selection runs the accepted patch engine; then the re
  assert.equal(byId("editor-entry-heading").textContent,"3. 게임 데이터 편집");
 });
 
+test('main-page return reuses the prepared worker, imports and edits even when its base label differs',async()=>{
+ reset();await openSession('stock',nativeView());await hooks.prepareWorkflow('editor');
+ const build=workerNamed('srwf-local-editor-build'),prepare=build.last('PREPARE_SOURCE');
+ build.emit({type:'complete',jobId:prepare.jobId,preparationToken:'verified'});
+ const output=build.last('BUILD_PATCH_DOWNLOAD');
+ build.emit({type:'complete',jobId:output.jobId,result:{outputBlob:new SizedBlob(FINAL_TARGET,'built'),targetSha256:TARGET_HASHES.c}});
+ const worker=workerNamed('srwf-local-data-editor');
+ worker.emit({type:'INSPECT_COMPLETE',jobId:worker.last('INSPECT').jobId,view:viewFor({base:'srwf-final-private-v0-4-word-c'})});
+ const token=state.editorSessionToken;
+ state.editorUnits=[...state.editorUnits]; // Imports may replace the rows while retaining the authenticated worker.
+ const units=state.editorUnits;
+ state.editorUnits[0].hp=1234;
+ const imported={preset:'s-gundam',source:'retained'};state.editorUnits[0].construction=imported;
+ const before=workers.map(w=>w.messages.length);
+ hooks.navigateWorkflow('setup');await hooks.prepareWorkflow('editor');
+ assert.equal(state.workflowStage,'editor');assert.equal(state.editorSessionToken,token);
+ assert.equal(state.editorUnits,units);assert.equal(state.editorUnits[0].construction,imported);
+ assert.equal(state.editorUnits[0].hp,1234);assert.equal(state.editorWorker,worker);
+ assert.deepEqual(workers.map(w=>w.messages.length),before,'returning must not inspect, rebuild or reset a worker');
+ assert.deepEqual(prompts,[],'returning must not offer to discard pending edits');
+});
+
+test('returning still prepares a new base after an explicit language choice',async()=>{
+ reset();await openSession('stock',nativeView());chooseOriginal();await hooks.prepareWorkflow('editor');
+ hooks.navigateWorkflow('setup');byId('languageOriginal').checked=false;byId('languageKorean').checked=true;
+ await hooks.prepareWorkflow('editor');
+ assert.ok(workerNamed('srwf-local-editor-build')?.last('PREPARE_SOURCE'));
+ assert.equal(state.editorOperation,null,'the patch builder, rather than an unrelated inspection, owns preparation');
+});
+
 test("verified patched input skips patch settings and a new original restores the full flow", async () => {
  reset(); await openSession("patched", viewFor());
  assert.equal(byId("releaseRegion").hidden, true);
@@ -257,6 +312,22 @@ test("verified patched input skips patch settings and a new original restores th
  assert.equal(byId("editor-entry-heading").textContent, "3. 게임 데이터 편집");
  assert.equal(byId("workflow-save-heading").textContent, "4. BIN/CUE 저장");
  assert.equal(byId("workflowDetectedSummary").hidden, true);
+});
+
+test('the save editor prepares the selected Korean ROM before opening its names',async()=>{
+ reset();byId('saveEditorDialog').open=false;await openSession('stock',nativeView());
+ await hooks.prepareWorkflow('save-editor');
+ assert.equal(byId('saveEditorDialog').open,false);
+ const build=workerNamed('srwf-local-editor-build'),prepare=build.last('PREPARE_SOURCE');
+ build.emit({type:'complete',jobId:prepare.jobId,preparationToken:'verified'});
+ const request=build.last('BUILD_PATCH_DOWNLOAD');
+ build.emit({type:'complete',jobId:request.jobId,result:{outputBlob:new SizedBlob(FINAL_TARGET,'built'),targetSha256:TARGET_HASHES.c}});
+ const editor=workerNamed('srwf-local-data-editor');
+ editor.emit({type:'INSPECT_COMPLETE',jobId:editor.last('INSPECT').jobId,view:viewFor()});
+ assert.equal(state.workflowBaseKind,'korean');assert.equal(state.workflowStage,'setup');
+ assert.equal(byId('saveEditorDialog').open,true);byId('saveEditorDialog').close();
+ // FakeElement.close does not emit the browser's close event.
+ byId('saveEditorDialog').dispatchEvent({type:'close'});await settle();
 });
 
 test("personal input keeps its language and existing values, and setup/save/editor navigation keeps new edits",async()=>{
@@ -274,6 +345,35 @@ test("personal input keeps its language and existing values, and setup/save/edit
  assert.equal(state.editorUnits[0].hp,1234);
  assert.equal(state.editorSessionToken,view.sessionToken);
  assert.equal(byId("editorSourceState").textContent,"수치 조정된 BIN으로 확인");
+});
+
+test("invalid editor input keeps the save screen open and offers a way to the problem",async()=>{
+ reset(); await openSession("patched",viewFor());
+ hooks.navigateWorkflow("editor"); hooks.selectEditorTab("unit");
+ const input=hooks.EDITOR_UI.unit.form.querySelector('[data-editor-field="hp"]');
+ input.value="";
+ hooks.navigateWorkflow("save");
+ const editor=workerNamed('srwf-local-data-editor'),before=editor.messages.length;
+ await hooks.exportEditorImage();
+ assert.equal(state.workflowStage,'save');
+ assert.equal(editor.messages.length,before,'invalid input must not start an export');
+ assert.equal(byId('editorError').hidden,false);
+ assert.match(byId('editorError').textContent,/HP|입력/);
+ const action=[...byId('editorError').querySelectorAll('button')].find(button=>button.textContent==='입력 확인하기');
+ assert.ok(action); action.click();
+ assert.equal(state.workflowStage,'editor');
+ assert.equal(state.editorTab,'unit');
+ assert.equal(input.value,'','the unaccepted input remains available for correction');
+ assert.equal(input.getAttribute('aria-invalid'),'true');
+});
+
+test("returning from save to the other tab does not try to scroll a record list",async()=>{
+ reset(); await openSession("patched",viewFor());
+ hooks.navigateWorkflow("editor"); hooks.selectEditorTab("misc");
+ hooks.navigateWorkflow("save");
+ assert.doesNotThrow(()=>hooks.navigateWorkflow("editor"));
+ assert.equal(state.workflowStage,'editor');
+ assert.equal(state.editorTab,'misc');
 });
 
 test("an older accepted version stays patch-only and uses the common verified BIN/CUE output", async () => {
@@ -315,9 +415,128 @@ test("a refused new image preserves the existing session and rows",async()=>{
  assert.equal(byId("editorSourceError").hidden,false);
 });
 
+test("invalid inspected CUE geometry cannot replace the existing session identity",async()=>{
+ reset(); await openSession("patched",viewFor());
+ const token=state.editorSessionToken,units=state.editorUnits,tracks=state.editorCueTracks;
+ await openSession("patched",{...viewFor(),sessionToken:"bad-layout-token",ingame:{enabled:true,version:10}});
+ assert.equal(state.editorSessionToken,token);
+ assert.equal(state.editorUnits,units);
+ assert.equal(state.editorCueTracks,tracks);
+ assert.equal(byId("editorWorkspace").hidden,false);
+ assert.match(byId("editorSourceErrorTitle").textContent,/BIN\/CUE/);
+});
+
+// B22: synthetic worker replies exercise the actual candidate-attempt and UI
+// state machine. They do not authenticate these fixtures as real ROMs.
+function beginFallbackAttempt(name = "v0.4-이라고-쓴-미확인.bin") {
+ const stock={blob:new SizedBlob(FINAL_STOCK,"verified-stock.bin"),displayName:"verified-stock.cue",format:"cue-bin",fileCount:4};
+ const plan={release:state.release,stock,patched:{file:new SizedBlob(FINAL_TARGET,name),tracks:null},order:["patched","stock"],next:0,note:"",sourceHandles:[]};
+ hooks.startEditorJob("scan");hooks.runEditorAttempt(plan);
+ return {plan,editor:workerNamed("srwf-local-data-editor")};
+}
+function reply(editor,type,extra={}) {editor.emit({type,jobId:editor.last("INSPECT").jobId,...extra});}
+function finishFallback(code="EDITOR_CUSTOM_PROVENANCE",name) {
+ const {plan,editor}=beginFallbackAttempt(name);
+ reply(editor,"ERROR",{error:{code}});
+ assert.equal(state.editorSourceFallback,null,"failed candidate alone must not commit a fallback");
+ reply(editor,"INSPECT_COMPLETE",{view:nativeView()});
+ return {plan,editor};
+}
+
+for(const code of ["EDITOR_CUSTOM_PROVENANCE","EDITOR_REVISION_OUTDATED"]){
+ test(`B22 ${code}: successful fallback names both files and the authenticated output base`,()=>{
+  reset();finishFallback(code);
+  assert.equal(state.editorSourceFallback.rejectedName,"v0.4-이라고-쓴-미확인.bin");
+  assert.equal(state.editorSourceFallback.selectedName,"verified-stock.cue + BIN 3개");
+  assert.equal(byId("editorSourceFallback").hidden,false);
+  assert.equal(byId("workflowSaveFallback").hidden,false);
+  const text=byId("editorSourceFallback").textContent;
+  assert.match(text,/열지 않은 파일: v0.4-이라고-쓴-미확인.bin/);
+  assert.match(text,/선택된 정품 원본: verified-stock.cue \+ BIN 3개/);
+  assert.match(text,/현재 출력 기반: .*원본 언어/);
+  assert.match(text,/변경 내용은 이 출력에 포함되지 않습니다/);
+  assert.doesNotMatch(text,/v0.4 기반|v0.4 한글 패치/);
+  chooseOriginal();hooks.navigateWorkflow("save");
+  assert.match(byId("workflowSaveSummary").textContent,/^원본 언어 · 변경 0건$/);
+  assert.equal(byId("workflowSaveFallback").textContent,text);
+ });
+}
+
+test("B22 later Korean build and restore keep the fallback provenance but update the actual output basis",async()=>{
+ reset();finishFallback();const fallback=state.editorSourceFallback;
+ await hooks.prepareWorkflow("editor");
+ assert.equal(state.editorSourceFallback,fallback);
+ assert.match(byId("editorSourceFallback").textContent,/현재 출력 기반: .*원본 언어/);
+ const build=workerNamed("srwf-local-editor-build"),prepare=build.last("PREPARE_SOURCE");
+ build.emit({type:"complete",jobId:prepare.jobId,preparationToken:"verified"});
+ const request=build.last("BUILD_PATCH_DOWNLOAD");
+ build.emit({type:"complete",jobId:request.jobId,result:{outputBlob:new SizedBlob(FINAL_TARGET,"built"),targetSha256:TARGET_HASHES.c}});
+ const editor=workerNamed("srwf-local-data-editor");reply(editor,"INSPECT_COMPLETE",{view:viewFor()});
+ assert.equal(state.editorSourceFallback,fallback);
+ hooks.navigateWorkflow("save");
+ assert.match(byId("workflowSaveSummary").textContent,/^v0.3 c 한글 패치/);
+ assert.match(byId("workflowSaveFallback").textContent,/현재 출력 기반: .*v0.3 c 한글 패치/);
+ hooks.navigateWorkflow("setup");chooseOriginal();await hooks.prepareWorkflow("editor");
+ reply(editor,"INSPECT_COMPLETE",{view:nativeView()});
+ assert.equal(state.editorSourceFallback,fallback);
+ assert.match(byId("workflowSaveFallback").textContent,/현재 출력 기반: .*원본 언어/);
+});
+
+for(const outcome of ["ERROR","CANCELLED","INVALID_VIEW"]){
+ test(`B22 ${outcome}: incomplete fallback leaves the existing session and fallback record intact`,()=>{
+  reset();finishFallback();const fallback=state.editorSourceFallback,token=state.editorSessionToken;
+  state.editorUnits[0].hp=1234;
+  const {editor}=beginFallbackAttempt("another.bin");
+  reply(editor,"ERROR",{error:{code:"EDITOR_CUSTOM_PROVENANCE"}});
+  assert.equal(state.editorSourceFallback,fallback);
+  if(outcome==="INVALID_VIEW")reply(editor,"INSPECT_COMPLETE",{view:{...nativeView(),unitCount:0}});
+  else reply(editor,outcome,{error:{code:"EDITOR_CUSTOM_PROVENANCE"}});
+  assert.equal(state.editorSessionToken,token);
+  assert.equal(state.editorUnits[0].hp,1234);
+  assert.equal(state.editorSourceFallback,fallback);
+  assert.doesNotMatch(byId("editorSourceFallback").textContent,/another.bin/);
+ });
+}
+
+test("B22 a different valid folder clears the notice, and reset/session loss remove it",async()=>{
+ reset();finishFallback();
+ await openSession("patched",viewFor());
+ assert.equal(state.editorSourceFallback,null);
+ assert.equal(byId("editorSourceFallback").hidden,true);
+ assert.equal(byId("workflowSaveFallback").textContent,"");
+ finishFallback();hooks.clearEditorState();hooks.syncModeUi();
+ assert.equal(state.editorSourceFallback,null);assert.equal(byId("editorSourceFallback").hidden,true);
+ reset();const {editor}=finishFallback();
+ hooks.beginEditorInspection(new SizedBlob(FINAL_TARGET,"other.bin"),{localImage:true,origin:"patched",release:state.release});
+ reply(editor,"ERROR",{error:{code:"EDITOR_SESSION_MISSING"}});
+ assert.equal(state.editorSessionToken,null);assert.equal(state.editorSourceFallback,null);
+ assert.equal(byId("workflowSaveFallback").hidden,true);
+});
+
+test("B22 does not expand fallback eligibility and renders filenames as literal text",()=>{
+ reset();const {plan,editor}=beginFallbackAttempt("<img src=x onerror=alert(1)>.bin");
+ reply(editor,"ERROR",{error:{code:"EDITOR_GAME_MISMATCH"}});
+ assert.equal(plan.next,1);assert.equal(state.editorSourceFallback,null);
+ reset();finishFallback("EDITOR_CUSTOM_PROVENANCE","<img src=x onerror=alert(1)>.bin");
+ assert.match(byId("editorSourceFallback").textContent,/<img src=x onerror=alert\(1\)>\.bin/);
+ assert.equal(byId("editorSourceFallback").querySelector("img"),null);
+});
+
+test("B22 candidate slot does not override the worker's actual file classification",()=>{
+ reset();const {editor}=beginFallbackAttempt();
+ reply(editor,"ERROR",{error:{code:"EDITOR_CUSTOM_PROVENANCE"}});
+ reply(editor,"INSPECT_COMPLETE",{view:viewFor()});
+ assert.equal(state.editorSourceFallback.selectedKind,"공개 한글 패치본");
+ assert.match(byId("editorSourceFallback").textContent,/선택된 공개 한글 패치본:/);
+ assert.doesNotMatch(byId("editorSourceFallback").textContent,/선택된 정품 원본:/);
+ assert.match(byId("workflowSaveSummary").textContent,/^v0.3 c 한글 패치/);
+});
+
 test("contradictory public identity is rejected rather than labelled as accepted",async()=>{
  reset(); await openSession("patched",viewFor({targetHash:"d".repeat(64),baseHash:TARGET_HASHES.c,match:false}));
  assert.equal(state.editorSessionToken,null);
+ assert.equal(byId("saveEditorOpen").hidden,true);
+ assert.equal(byId("saveEditorOpen").disabled,true);
  assert.equal(byId("editorSourceError").hidden,false);
 });
 
@@ -423,29 +642,4 @@ test("cancelling the output picker releases the busy lock without clearing the r
   assert.equal(state.workflowSaving, false);
   assert.equal(state.workflowOutput, output);
   assert.equal(byId("workflowFolderStatus").hidden, true);
-});
-
-
-test("patch download, validation and application report the current stage without opening the editor early", async () => {
-  reset(); await openSession("stock", nativeView());
-  state.release.patch.size = 3_718_378;
-  hooks.prepareWorkflow("editor");
-  const build = workerNamed("srwf-local-editor-build");
-  const jobId = build.last("PREPARE_SOURCE").jobId;
-  build.emit({type: "phase", jobId, phase: "patch-download"});
-  assert.equal(byId("progressTitle").textContent, "한글 패치 받는 중");
-  assert.match(byId("progressDetail").textContent, /3\.5 MB/);
-  build.emit({type: "progress", jobId, processed: 100, total: 400});
-  assert.equal(byId("progressPercent").textContent, "25%");
-  build.emit({type: "phase", jobId, phase: "patch-parse"});
-  assert.equal(byId("progressTitle").textContent, "한글 패치 검사 중");
-  assert.equal(byId("editorRegion").hidden, true);
-  assert.equal(byId("workflowOpenEditor").disabled, true);
-  build.emit({type: "phase", jobId, phase: "toString"});
-  assert.equal(byId("progressTitle").textContent, "한글 패치 검사 중");
-  build.emit({type: "phase", jobId, phase: "source-apply"});
-  assert.match(byId("progressTitle").textContent, /한글패치를 적용/);
-  build.emit({type: "phase", jobId, phase: "output-verify"});
-  assert.match(byId("progressTitle").textContent, /적용 결과/);
-  assert.equal(byId("editorRegion").hidden, true);
 });

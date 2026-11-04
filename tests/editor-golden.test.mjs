@@ -298,14 +298,14 @@ for (const profile of EDITOR_PROVENANCE_PROFILES) {
   const lane = RELEASE_LANES[release];
   if (!lane) continue;
   const available = Boolean(GOLDEN_DIR) && fs.existsSync(`${GOLDEN_DIR}/${lane}.TSR.BIN`) && fs.existsSync(`${GOLDEN_DIR}/${lane}.TSR.dec`);
-  test(`golden ${lane}: the stored profile's tail digests are the ones of the accepted stream`, { skip: !available }, () => {
+  test(`golden ${lane}: the stored profile records only the accepted stream bounds`, { skip: !available }, () => {
     const stored = new Uint8Array(fs.readFileSync(`${GOLDEN_DIR}/${lane}.TSR.BIN`));
     const extent = new Uint8Array(profile.allocatedSectors * 2048);
     extent.set(stored);
     assert.equal(stored.length <= extent.length, true);
     const streamEnd = tsrStreamEnd(stored);
     assert.ok(extent.subarray(streamEnd).every((byte) => byte === 0), 'the accepted image holds only zero behind its stream');
-    assert.deepEqual(profile.tail, { ...deriveTailProfile(extent, streamEnd), digests: [...deriveTailProfile(extent, streamEnd).digests] });
+    assert.deepEqual(profile.tail, deriveTailProfile(extent, streamEnd));
     assert.deepEqual(decompressTsr(stored), new Uint8Array(fs.readFileSync(`${GOLDEN_DIR}/${lane}.TSR.dec`)));
   });
 }

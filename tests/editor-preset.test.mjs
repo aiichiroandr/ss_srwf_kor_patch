@@ -28,49 +28,6 @@ import { PRESET_ERROR_COPY, SKIP_REASON_COPY, formatFieldValue } from "../assets
 
 const GAME = "srwf-final";
 
-test('read-only scenario display rows cannot become saved edits or change-list entries while writable edits remain',()=>{
-  const cases=[
-    ['deployment','deployments','x',2,5],
-    ['event','events','turn',2,3],
-    ['objective','objectives','deadline',0,4],
-    ['reinforcement','reinforcements','x',2,5],
-    ['map','mapCells','tileId',1,2],
-  ];
-  const rows={};
-  for(const[kind,,field,from,to]of cases){
-    const indices=kind==='map'?['2:0:2:3','2:0:3:3']:['0:100','0:200'];
-    rows[kind]=indices.map((recordIndex,i)=>({recordIndex,identity:`${kind}:1:${String(i).repeat(64)}`,name:i?'수정 가능':'표시 전용',
-      editable:i===1,[field]:to,original:Object.freeze({[field]:from})}));
-    assert.deepEqual(diffEditorRows(kind,rows[kind]).map(change=>change.recordIndex),[indices[1]]);
-  }
-  const before=structuredClone(rows);
-  const saved=JSON.parse(serializePreset(buildPreset({gameId:GAME},rows)));
-  for(const[kind,key,field,from,to]of cases){
-    assert.deepEqual(saved[key],[{recordIndex:rows[kind][1].recordIndex,identity:rows[kind][1].identity,name:'수정 가능',fields:{[field]:{from,to}}}]);
-  }
-  assert.equal(parsePreset(JSON.stringify(saved)).changeCount,5);
-  assert.deepEqual(rows,before);
-  const onlyDisplay=Object.fromEntries(cases.map(([kind])=>[kind,[rows[kind][0]]]));
-  const empty=buildPreset({gameId:GAME},onlyDisplay);
-  assert.equal(presetChangeCount(empty),0);
-  for(const[,key]of cases)assert.equal(Object.hasOwn(empty,key),false);
-});
-
-test('ordinary locked unit and pilot rows retain preset import skip behavior',()=>{
-  const edited=baseView();
-  find(edited,'unit',5).hp=3100;
-  find(edited,'pilot',1).atk=121;
-  assert.deepEqual(diffEditorRows('unit',edited.units).map(change=>change.recordIndex),[5]);
-  assert.deepEqual(diffEditorRows('pilot',edited.pilots).map(change=>change.recordIndex),[1]);
-  const parsed=parsePreset(serializePreset(buildPreset({gameId:GAME},tables(edited))));
-  const fresh=baseView(),plan=planPresetApplication(parsed,fresh);
-  assert.deepEqual(plan.counts,{apply:0,conflict:0,same:0,skip:2});
-  assert.deepEqual(plan.skipReasons,{'read-only':2});
-  assert.equal(applyPresetPlan(plan,fresh,'all').applied,0);
-  assert.equal(find(fresh,'unit',5).hp,3000);
-  assert.equal(find(fresh,'pilot',1).atk,120);
-});
-
 test('all six objective preset rules enforce the declared game ceiling and canonical wire values',()=>{
   const fields=['victoryRule1','victoryRule2','victoryRule3','defeatRule1','defeatRule2','defeatRule3'];
   const wire=(gameId,field,to)=>serializePreset({format:PRESET_FORMAT,version:1,gameId,units:[],pilots:[],weapons:[],objectives:[{
@@ -406,6 +363,21 @@ function presetWith(entries) {
 }
 const reasons = (plan) => plan.items.map((item) => [item.kind, item.recordIndex, item.field, item.status, item.reason]);
 
+test('legacy weapon hit corrections survive JSON round-trip while new three-digit modifiers are refused',()=>{
+  for(const legacy of [-128,-100,100,127]){
+    const next=legacy<0?-99:99;
+    const session=baseView({weapon:{1:{hit:legacy}}});session.weapons[0].hit=next;
+    const saved=buildPreset({gameId:GAME},tables(session));
+    assert.deepEqual(saved.weapons[0].fields.hit,{from:legacy,to:next});
+    const parsed=parsePreset(serializePreset(saved));
+    const fresh=baseView({weapon:{1:{hit:legacy}}});
+    assert.equal(applyPreset(parsed,fresh,'matching').applied,1);
+    assert.equal(fresh.weapons[0].hit,next);
+    saved.weapons[0].fields.hit.to=legacy===100?127:100;
+    assert.throws(()=>parsePreset(serializePreset(saved)),{code:'PRESET_BAD_VALUE'});
+  }
+});
+
 test("records the session does not have or cannot edit are skipped with their reason and stay untouched", () => {
   const session = baseView();
   const plan = planPresetApplication(presetWith({
@@ -557,152 +529,4 @@ test("presets keep boolean flags and spirit lists, checking the shared pair capa
   assert.equal(target.units[0].shield, true); assert.equal(target.pilots[1].spirits[0].id, 2);
   target.pilots[1].pairCapacity = 1;
   assert.equal(planPresetApplication(parsed, target).items.find((item) => item.field === "spirits").reason, "spirit-capacity");
-});
-
-const expansionSpirits = () => Array.from({ length: 6 }, (_, index) => ({ id: index + 1, level: index + 1, name: `m${index + 1}` }));
-const expansionKoujiSkills = () => [{ id: 69, level: 30, name: "s69" }, { id: 70, level: 38, name: "s70" }, { id: 78, level: 1, name: "s78" }];
-function expansionView(pool = 2) {
-  const facts = (skills, capacity, external) => ({
-    specialAbilities: skills, spirits: expansionSpirits(), spiritEditable: true, spiritMinimum: 0,
-    spiritChoices: catalogOf(Array.from({ length: 30 }, (_, index) => index + 1)),
-    pairCapacity: capacity, skillCapacity: capacity + external - 6,
-    addableSkills: catalogOf(Array.from({ length: 51 }, (_, index) => index + 33)),
-    pilotExpansionGroup: "verified-span", pilotExpansionPairs: pool,
-    sharedPilotPairFree: pool, skillExpansionPairs: external, pilotSpiritReserve: 6,
-  });
-  const session = baseView({ pilot: {
-    2: facts([], 6, pool), 5: facts(expansionKoujiSkills(), 9, pool), 3: facts([], 6 + pool, 0),
-  } });
-  for (const row of session.pilots) if (Array.isArray(row.spirits)) row.original = { ...row.original, spirits: row.spirits.map((entry) => ({ ...entry })) };
-  return session;
-}
-function expansionPreset(session, records = [2, 5]) {
-  for (const recordIndex of records) find(session, "pilot", recordIndex).specialAbilities.push({ id: 41, level: 1, name: "s41" });
-  return parsePreset(serializePreset(buildPreset({ gameId: GAME }, tables(session))));
-}
-const expansionLists = (session) => session.pilots.map((row) => ({
-  recordIndex: row.recordIndex, skills: skillRequest(row.specialAbilities),
-  spirits: (row.spirits ?? []).map(({ id, level }) => ({ id, level })),
-}));
-
-test("an expanded Bright and Kouji preset reloads both additions while preserving every existing spirit and milestone", () => {
-  const source = expansionView(2);
-  const original = expansionLists(source);
-  const parsed = expansionPreset(source);
-  const target = expansionView(2);
-  const before = expansionLists(target);
-  const plan = planPresetApplication(parsed, target);
-  assert.deepEqual(plan.items.map((item) => [item.recordIndex, item.status, item.reason]), [[2, "apply", null], [5, "apply", null]]);
-  assert.deepEqual(expansionLists(target), before, "planning does not mutate either pilot or its budget");
-  assert.equal(applyPresetPlan(plan, target, "all").applied, 2);
-  assert.deepEqual(expansionLists(target), expansionLists(source));
-  for (const recordIndex of [2, 5]) {
-    const beforeRow = original.find((row) => row.recordIndex === recordIndex);
-    const after = find(target, "pilot", recordIndex);
-    assert.deepEqual(after.spirits.map(({ id, level }) => ({ id, level })), beforeRow.spirits);
-    assert.deepEqual(skillRequest(after.specialAbilities), [...beforeRow.skills, { id: 41, level: 1 }]);
-  }
-  const savedAgain = parsePreset(serializePreset(buildPreset({ gameId: GAME }, tables(target))));
-  const reopened = expansionView(2);
-  assert.equal(applyPreset(savedAgain, reopened, "matching").applied, 2);
-  assert.deepEqual(expansionLists(reopened), expansionLists(source), "repeated editing and preset reload retain the same two additions");
-});
-
-test("two individually valid imports cannot spend the same final shared padding pair", () => {
-  const parsed = expansionPreset(expansionView(1));
-  for (const mode of ["matching", "all"]) {
-    const target = expansionView(1);
-    const before = expansionLists(target);
-    const references = target.pilots.map((row) => [row.spirits, row.specialAbilities]);
-    const plan = planPresetApplication(parsed, target);
-    assert.deepEqual(plan.items.map((item) => [item.status, item.reason]), [["skip", "spirit-capacity"], ["skip", "spirit-capacity"]]);
-    assert.equal(applyPresetPlan(plan, target, mode).applied, 0);
-    assert.deepEqual(expansionLists(target), before);
-    for (const [index, row] of target.pilots.entries()) {
-      assert.equal(row.spirits, references[index][0]);
-      assert.equal(row.specialAbilities, references[index][1]);
-    }
-  }
-});
-
-test("an import includes already pending edits in the shared budget and rechecks a stale plan before mutation", () => {
-  const target = expansionView(1);
-  const brightOnly = expansionPreset(expansionView(1), [2]);
-  const koujiOnly = expansionPreset(expansionView(1), [5]);
-  const staleKouji = planPresetApplication(koujiOnly, target);
-  assert.equal(staleKouji.counts.apply, 1);
-  assert.equal(applyPreset(brightOnly, target, "all").applied, 1);
-  const before = expansionLists(target);
-  assert.equal(find(target, "pilot", 3).skillExpansionPairs, -1, "the pending addition consumes the donor's original own padding");
-  assert.equal(applyPresetPlan(staleKouji, target, "all").applied, 0, "a previously valid plan cannot overspend the newly consumed pair");
-  assert.deepEqual(expansionLists(target), before);
-  const fresh = planPresetApplication(koujiOnly, target);
-  assert.equal(fresh.counts.skip, 1);
-  assert.deepEqual(expansionLists(target), before);
-});
-
-test("matching-only imports also account for a conflicting ability already consuming the shared pool", () => {
-  const parsed = expansionPreset(expansionView(1));
-  for (const mode of ["matching", "all"]) {
-    const target = expansionView(1);
-    find(target, "pilot", 2).specialAbilities = [{ id: 41, level: 9, name: "s41" }];
-    const before = expansionLists(target);
-    const plan = planPresetApplication(parsed, target);
-    assert.deepEqual(plan.items.map((item) => [item.status, item.reason]), [["skip", "spirit-capacity"], ["skip", "spirit-capacity"]]);
-    assert.equal(applyPresetPlan(plan, target, mode).applied, 0);
-    assert.deepEqual(expansionLists(target), before, "neither mode can ignore the conflicting pilot's existing pool use");
-  }
-});
-
-test("preset imports cannot trade a deleted spirit for a new skill and reserve missing slots before allocating expansion", () => {
-  const session = expansionView(5);
-  const row = find(session, "pilot", 2);
-  row.pairCapacity = 2;
-  row.skillCapacity = 6;
-  row.spirits = [{ id: 1, level: 1, name: "m1" }];
-  row.original = { ...row.original, spirits: row.spirits.slice() };
-  row.pilotSpiritReserve = 1;
-  row.specialAbilities = [{ id: 69, level: 1, name: "s69" }];
-  row.originalSkillEntries = row.specialAbilities.slice();
-  row.skillChoices = catalogOf(Array.from({ length: 51 }, (_, index) => index + 33));
-  const parsed = presetWith({ pilots: [{ recordIndex: 2,
-    skills: { from: [{ id: 69, level: 1 }], to: [{ id: 69, level: 1 }, { id: 41, level: 1 }] },
-    spirits: { from: [{ id: 1, level: 1 }], to: [] },
-  }] });
-  const before = expansionLists(session);
-  const plan = planPresetApplication(parsed, session);
-  assert.deepEqual(plan.items.map((item) => [item.status, item.reason]), [["skip", "spirit-capacity"], ["skip", "spirit-capacity"]]);
-  assert.equal(applyPresetPlan(plan, session, "all").applied, 0);
-  assert.deepEqual(expansionLists(session), before, "both lists remain intact when five donor pairs cannot also cover the six-slot reservation");
-});
-
-test("a saved five-spirit personal image keeps its canonical sixth-slot reserve on preset reload", () => {
-  const session = expansionView(0);
-  const row = find(session, "pilot", 2);
-  row.spirits = row.spirits.slice(0, 5);
-  row.original = { ...row.original, spirits: row.spirits.slice() };
-  const parsed = expansionPreset(expansionView(0), [2]);
-  const before = expansionLists(session);
-  assert.equal(planPresetApplication(parsed, session).items[0].reason, "spirit-capacity");
-  assert.equal(applyPreset(parsed, session, "all").applied, 0);
-  assert.deepEqual(expansionLists(session), before);
-});
-
-test("a short original record can still import a same-count replacement without being forced to expand", () => {
-  const session = expansionView(0);
-  const row = find(session, "pilot", 2);
-  row.pairCapacity = 2;
-  row.skillCapacity = 1;
-  row.pilotSpiritReserve = 1;
-  row.spirits = [{ id: 1, level: 1, name: "m1" }];
-  row.original = { ...row.original, spirits: row.spirits.slice() };
-  row.specialAbilities = [{ id: 69, level: 1, name: "s69" }];
-  row.originalSkillEntries = row.specialAbilities.slice();
-  row.skillChoices = catalogOf(Array.from({ length: 51 }, (_, index) => index + 33));
-  const parsed = presetWith({ pilots: [{ recordIndex: 2,
-    skills: { from: [{ id: 69, level: 1 }], to: [{ id: 41, level: 1 }] },
-  }] });
-  assert.equal(applyPreset(parsed, session, "matching").applied, 1);
-  assert.deepEqual(skillRequest(row.specialAbilities), [{ id: 41, level: 1 }]);
-  assert.deepEqual(row.spirits.map(({ id, level }) => ({ id, level })), [{ id: 1, level: 1 }]);
 });

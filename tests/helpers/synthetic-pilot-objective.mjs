@@ -17,3 +17,4 @@ export function executePilotObjective(bytes,start,state){
  }
  assert.fail('No callback outcome');
 }
+

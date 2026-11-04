@@ -1,15 +1,18 @@
 // TSR root 34, subtables 3 and 4: two combat factors and HP/EN recovery per map terrain.
 // Combat stores the remaining multiplier (100 = unchanged); the editor shows the reduction.
 // EN's high bit is a separate runtime control. It is never made mutable by this editor.
-import { Sha256 } from "./sha256.mjs?v=20261104-save3";
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261104-save3";
+import { Sha256 } from "./sha256.mjs?v=20261104-part1";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261104-part1";
 
 export const TERRAIN_FIELDS = Object.freeze(["avoidanceBonus", "defenseBonus", "hpRecovery", "enRecovery"]);
 export const TERRAIN_LABELS = Object.freeze({ avoidanceBonus: "회피 보정", defenseBonus: "방어 보정", hpRecovery: "HP 회복", enRecovery: "EN 회복" });
 const COUNTS = Object.freeze({ "srwf-f": 120, "srwf-final": 144 });
 function fail(message) { const error = new Error(message); error.code = "EDITOR_TERRAIN_INVALID"; throw error; }
 
-export function terrainValueAllowed(value) { return Number.isInteger(value) && value >= 0 && value <= 100; }
+export function terrainValueAllowed(value, field = "hpRecovery") {
+  const minimum = ["avoidanceBonus", "defenseBonus"].includes(field) ? -100 : 0;
+  return Number.isInteger(value) && value >= minimum && value <= 100;
+}
 
 export function readTerrainTable(segment, gameId) {
   const bytes = segment?.bytes;
@@ -28,7 +31,7 @@ export function readTerrainTable(segment, gameId) {
       hpRecovery: bytes[recoveryOffset], enRecovery: bytes[recoveryOffset + 1] & 127,
       identity: `terrain:1:${new Sha256().update(new TextEncoder().encode(`terrain:${gameId}:${recordIndex}`)).hex()}`,
     };
-    if (TERRAIN_FIELDS.some(field => !terrainValueAllowed(row[field]))) fail("The terrain factors or recovery values exceed the verified range.");
+    if (TERRAIN_FIELDS.some(field => !terrainValueAllowed(row[field], field))) fail("The terrain factors or recovery values exceed the verified range.");
     return row;
   });
   return rows;
@@ -57,7 +60,7 @@ export function updateTerrainRecords(segment, gameId, submitted) {
     for (const field of Reflect.ownKeys(fields)) {
       if (!TERRAIN_FIELDS.includes(field)) fail("Unknown terrain field.");
       const value = ownData(fields, field);
-      if (!terrainValueAllowed(value)) fail("Terrain values must be whole percentages from 0 to 100.");
+      if (!terrainValueAllowed(value, field)) fail("Combat reductions must be -100..100; recovery percentages must be 0..100.");
       wanted[field] = value;
     }
     return wanted;

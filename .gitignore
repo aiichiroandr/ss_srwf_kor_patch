@@ -90,3 +90,22 @@ screenshots/
 
 # Local assistant configuration and nested worktrees
 .claude/
+
+# Local-only weapon/animation preview runtime; not part of the public site.
+/weapon-preview/
+
+# Private local v0.4 review workspace (scripts/editor-review-overlay.json in the
+# local checkout): private QA code and data, review payloads and its own runtime.
+/editor-review/
+
+# Internal collaboration documents, excluded from publication.
+/docs/CODEX_TO_CLAUDE_PATCHER_20260911.md
+/docs/F_V04_SAVE_HANDOFF_AND_HARDWARE.md
+/docs/F_V04_RELEASE_PREPARATION.md
+/docs/FIN_V01_R109_RELEASE_PREPARATION.md
+
+# Local debug output and native build products
+/hw-log.txt
+*.o
+*.elf
+*.map

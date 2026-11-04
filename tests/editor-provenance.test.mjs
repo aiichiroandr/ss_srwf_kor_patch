@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { immutableBytesHash, immutableImageHash, validateMaskRanges } from "../assets/editor-provenance.mjs";
 import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "../assets/editor-provenance-profiles.mjs";
+import { STOCK_EDITOR_PROFILES } from "../assets/editor-stock-profiles.mjs";
 
 test("provenance allows only the exact field bits and preserves the weapon low nibble", () => {
   const accepted = new Uint8Array([0x12, 0x34, 0x56, 0x78]);
@@ -38,26 +39,26 @@ test("provenance hashing supports cancellation without accepting a partial hash"
   await assert.rejects(immutableImageHash(new Blob([new Uint8Array(8)]), [], { signal: controller.signal }), { name: "AbortError" });
 });
 
-test("the stored profiles carry tail digests of the shape the padding check reads; the one of the retired F release carries none", () => {
+test("the stored profiles carry bounds but no recoverable short suffix hashes", () => {
   const withTail = [];
   const without = [];
   for (const profile of EDITOR_PROVENANCE_PROFILES) {
     const release = ACCEPTED_EDITOR_TARGETS[profile.baseTargetSha256].releaseId;
     if (!profile.tail) { without.push(release); continue; }
     withTail.push(release);
-    const { streamEnd, window, digests } = profile.tail;
+    const { streamEnd, window } = profile.tail;
     assert.ok(Number.isSafeInteger(streamEnd) && streamEnd > 0 && streamEnd <= profile.allocatedSectors * 2048, release);
     assert.equal(window, Math.min(1024, streamEnd), release);
-    assert.equal(digests.length, window + 1, release);
-    assert.ok(digests.every((digest) => /^[0-9a-f]{16}$/.test(digest)), release);
-    assert.equal(new Set(digests).size, digests.length, "every end position has its own digest");
-    assert.deepEqual(Object.keys(profile.tail).sort(), ["digests", "streamEnd", "window"]);
+    assert.deepEqual(Object.keys(profile.tail).sort(), ["streamEnd", "window"]);
   }
   assert.deepEqual(without, ["srwf-f-20260915-v0-4-a"]);
   assert.deepEqual(withTail.sort(), [
     "srwf-f-20260928-v0-5-a", "srwf-f-20260928-v0-5-b", "srwf-f-20260928-v0-5-c",
     "srwf-final-20261005-v0-3-a", "srwf-final-20261005-v0-3-b", "srwf-final-20261005-v0-3-c",
   ]);
+  for (const profile of STOCK_EDITOR_PROFILES) {
+    assert.deepEqual(Object.keys(profile.tail).sort(), ["streamEnd", "window"]);
+  }
 });
 
 test("every accepted lane of the latest releases has a bounded profile, and the masks of a lane do not depend on its font variant", () => {
