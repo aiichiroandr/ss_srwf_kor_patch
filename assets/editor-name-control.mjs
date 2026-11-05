@@ -1,4 +1,4 @@
-import {encodeEditorText} from './editor-text-codec.mjs?v=20261105-part2';
+import {encodeEditorText} from './editor-text-codec.mjs?v=20261105-part3';
 export function createWeaponNameControl({container,row,gameId,canEdit,onChange,onInvalid=()=>{},encodeText,textOptions=()=>({})}){
  const label=document.createElement('label');label.className='weapon-name-field';
  const caption=document.createElement('span');caption.textContent='무기명';

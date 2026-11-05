@@ -1,6 +1,6 @@
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
-import { COMPLETION_TITLE_HINT_BINDINGS } from './editor-scenario-completion-title-bindings.mjs?v=20261105-part2';
-import {rosterLevelSourceBodyPin} from './editor-scenario-roster-level-pins.mjs?v=20261105-part2';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part3';
+import { COMPLETION_TITLE_HINT_BINDINGS } from './editor-scenario-completion-title-bindings.mjs?v=20261105-part3';
+import {rosterLevelSourceBodyPin} from './editor-scenario-roster-level-pins.mjs?v=20261105-part3';
 const freeze = Object.freeze;
 const SOURCE = 'source-local-completion-title';
 const KNOWN_GAMES = freeze(['srwf-f', 'srwf-final']);

@@ -2,11 +2,11 @@
 // turn can move from enemy-start to player-start. The source is authenticated
 // after restoring the wrapper and canonicalizing the one existing turn byte.
 // This module does not grant compressed-carrier or accepted-release authority.
-import { ownData, ownDataCopy as ownCopy, readDenseList } from './editor-own.mjs?v=20261105-part2';
-import { sha256Hex } from './sha256.mjs?v=20261105-part2';
-import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261105-part2';
-import { snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261105-part2';
-import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261105-part2';
+import { ownData, ownDataCopy as ownCopy, readDenseList } from './editor-own.mjs?v=20261105-part3';
+import { sha256Hex } from './sha256.mjs?v=20261105-part3';
+import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261105-part3';
+import { snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261105-part3';
+import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261105-part3';
 
 export const F_EVENT_PHASE_FIELDS = Object.freeze(['eventPhase', 'eventJoin', 'eventRule1', 'eventRule2', 'eventRule3']);
 export const F_PHASE_SOURCE = Object.freeze({

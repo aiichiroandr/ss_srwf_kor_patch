@@ -1,6 +1,6 @@
 // Dictionary display only: authored entries are dormant until the corresponding
 // verified import / ALICE identity is exported. No save registration flags move.
-import {dictionaryPortraitExecState} from './editor-dictionary-portraits.mjs?v=20261105-part2';
+import {dictionaryPortraitExecState} from './editor-dictionary-portraits.mjs?v=20261105-part3';
 export const DICTIONARY_ADDITIONS=Object.freeze({execBytes:758232,hooks:Object.freeze([
  Object.freeze({offset:0x8278c,original:0x2029f200,fixed:0x2029f600,kind:'alice'}),
  Object.freeze({offset:0x82b10,original:0x06004cc8,fixed:0x2029f640,kind:'units'}),

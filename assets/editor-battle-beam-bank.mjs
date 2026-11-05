@@ -2,8 +2,8 @@
 // recover the exact authenticated archive before ordinary disc provenance.
 // Compression and the reviewed geometry transform are injected; this module
 // never imports editor-core or changes executable code.
-import {sha256Hex as hash} from './sha256.mjs?v=20261105-part2';
-import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261105-part2';
+import {sha256Hex as hash} from './sha256.mjs?v=20261105-part3';
+import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261105-part3';
 
 const SOURCE_BANK=0x050c,TARGET_BANK=0x053f,COUNT=384,HEADER=4632,FOOTER=16,VERSION=1;
 const MAGIC=new TextEncoder().encode('SRWBBK01'),BANK_MAGIC=Uint8Array.of(0x62,0x6b,0x30,0x31),MAP_MAGIC=Uint8Array.of(0x73,0x63,0x30,0x32);

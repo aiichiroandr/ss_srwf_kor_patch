@@ -3,11 +3,11 @@
 // records in bounded TSR tail space. Other segments and name pointers stay at
 // their original addresses. The vacated logical table is never a second
 // uncontrolled copy. A profile restores the logical table before hashing.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
-import { planUnitLoadouts } from './editor-loadout.mjs?v=20261105-part2';
-import { weaponsOfUnit } from './editor-weapon-links.mjs?v=20261105-part2';
-import {createUnitRestorationStorage,appendConstructedUnitTable,readUnitRestorationPrefix} from './editor-unit-restoration.mjs?v=20261105-part2';
-import {writeRelative32} from './editor-storage-safety.mjs?v=20261105-part2';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part3';
+import { planUnitLoadouts } from './editor-loadout.mjs?v=20261105-part3';
+import { weaponsOfUnit } from './editor-weapon-links.mjs?v=20261105-part3';
+import {createUnitRestorationStorage,appendConstructedUnitTable,readUnitRestorationPrefix} from './editor-unit-restoration.mjs?v=20261105-part3';
+import {writeRelative32} from './editor-storage-safety.mjs?v=20261105-part3';
 
 const write32 = (bytes, at, value) => new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).setInt32(at, value);
 const invalid = reason => { const error = new Error(`Invalid expanded unit storage (${reason}).`); error.code = 'EDITOR_LOADOUT_INVALID'; error.details = { kind: 'unit', field: 'weapons', reason }; throw error; };

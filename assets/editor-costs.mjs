@@ -1,8 +1,8 @@
 // TSR root 31: subtable 1 = five unit categories x 10 u16 costs;
 // subtable 3 = four weapon classes x 11 u16 costs (last = full-upgrade bonus).
 // Final multiplies weapon costs by ten; unit costs and F weapon costs are unscaled.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
-import { Sha256 } from './sha256.mjs?v=20261105-part2';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part3';
+import { Sha256 } from './sha256.mjs?v=20261105-part3';
 const UNIT_NAMES = ['한계 반응', '장갑', 'EN', 'HP', '운동성'];
 function fail(message) { const e = new Error(message); e.code = 'EDITOR_COST_INVALID'; throw e; }
 export function costValueAllowed(row, value) {

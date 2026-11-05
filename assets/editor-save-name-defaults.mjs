@@ -3,7 +3,7 @@
 // native resolver at 0601D05C -> 20289B58 first reuses the R075 exact matcher;
 // its old-save extension only adds alias cases. Full-name matches stop at FF
 // or the 14-byte field bound, including historically truncated legacy names.
-import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {Sha256} from './sha256.mjs?v=20261105-part3';
 const DEFAULTS=Object.freeze([
  [152,'레난제스 스타로드',[[14,'7df481f7129374c881ca607e98e26e5205bdc34fbdb10a419842164feb9dbae7'],[14,'ab9a06f59edbeb3d44eb48809a584aa1a74fa03566e2b085f11410bc70f87fc2']]],
  [153,'이룸가르트 카자하라',[[12,'72aa04ae2ca5ba1ab8208ce3b257730aef13a51996b54aac47a3ed9138bd52fd'],[14,'4bb0df551414ea527c387602312a78e64fe8db45e54cd447443a4adfb215555c']]],

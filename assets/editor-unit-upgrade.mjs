@@ -1,6 +1,6 @@
-import {UNIT_CONCEPTS,CONSTRUCTION_WEAPON_ROLES,unitConstructionPreset,unitConstructionLoadout,unitConstructionStatsForRow,constructUnitUpgradeRow,planConceptUnitConstruction,replaceUnitRow} from './editor-unit-construction.mjs?v=20261105-part2';
-import {UNIT_WEAPON_FIELDS,pendingUnitWeapons,unitWeaponFields,planUnitLoadouts} from './editor-loadout.mjs?v=20261105-part2';
-import {isFieldValueInBounds} from './editor-fields.mjs?v=20261105-part2';
+import {UNIT_CONCEPTS,CONSTRUCTION_WEAPON_ROLES,unitConstructionPreset,unitConstructionLoadout,unitConstructionStatsForRow,constructUnitUpgradeRow,planConceptUnitConstruction,replaceUnitRow} from './editor-unit-construction.mjs?v=20261105-part3';
+import {UNIT_WEAPON_FIELDS,pendingUnitWeapons,unitWeaponFields,planUnitLoadouts} from './editor-loadout.mjs?v=20261105-part3';
+import {isFieldValueInBounds} from './editor-fields.mjs?v=20261105-part3';
 
 // Observed editable defaults of the accepted F v0.5 / Final v0.3 donor units.
 // Never use an already edited donor as evidence of an older user's baseline.

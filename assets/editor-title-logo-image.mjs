@@ -1,5 +1,5 @@
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261105-part2';
-import {inspectFinalTitleLogo,setFinalTitleLogo} from './editor-title-logo.mjs?v=20261105-part2';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261105-part3';
+import {inspectFinalTitleLogo,setFinalTitleLogo} from './editor-title-logo.mjs?v=20261105-part3';
 
 async function readImage(blob,gameId,signal){
  if(gameId!=='srwf-final'||blob.size<8*1024*1024)return null;

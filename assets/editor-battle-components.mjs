@@ -1,14 +1,14 @@
 // Bounded reconstruction of the user's own C_ROBOT parts. No stock game art and
 // no drawn unit art is bundled: a created unit's body comes from the 4th SRW Rev 1 source. The original archive is exactly recoverable from shared records,
 // bounded source deltas and compression recipes before provenance checks.
-import {makeExSAimedPoseParts} from './editor-exs-aimed-pose.mjs?v=20261105-part2';
-import {applyBattleArtPatch} from './editor-art-patch.mjs?v=20261105-part2';
-import {EXS_AIMED_ART_V16} from './editor-exs-aimed-art.mjs?v=20261105-part2';
-import {validateSrw4CruiserFrame} from './editor-srw4-battle.mjs?v=20261105-part2';
-import {sha256Hex as hash} from './sha256.mjs?v=20261105-part2';
-import {base64ToBytes,bytesEqual as same,dataView as v} from './editor-bytes.mjs?v=20261105-part2';
-import {makeCompressionRecipe,restoreCompressionRecipe} from './editor-compression-recipe.mjs?v=20261105-part2';
-import {makeBattleSourceDelta,restoreBattleSourceDelta} from './editor-battle-source-delta.mjs?v=20261105-part2';
+import {makeExSAimedPoseParts} from './editor-exs-aimed-pose.mjs?v=20261105-part3';
+import {applyBattleArtPatch} from './editor-art-patch.mjs?v=20261105-part3';
+import {EXS_AIMED_ART_V16} from './editor-exs-aimed-art.mjs?v=20261105-part3';
+import {validateSrw4CruiserFrame} from './editor-srw4-battle.mjs?v=20261105-part3';
+import {sha256Hex as hash} from './sha256.mjs?v=20261105-part3';
+import {base64ToBytes,bytesEqual as same,dataView as v} from './editor-bytes.mjs?v=20261105-part3';
+import {makeCompressionRecipe,restoreCompressionRecipe} from './editor-compression-recipe.mjs?v=20261105-part3';
+import {makeBattleSourceDelta,restoreBattleSourceDelta} from './editor-battle-source-delta.mjs?v=20261105-part3';
 const PROFILES=Object.freeze({
  'srwf-f':Object.freeze({count:356,size:633327,sha256:'78baf9269f2cee95947e91cd3610a05e73817d19a0eecb55b6e196da22f63fcd'}),
  'srwf-final':Object.freeze({count:369,size:652842,sha256:'bb40e7e5b602ba559f7c6a90f774a01661beae8ff41dfbdc496ced2788762d48'}),
