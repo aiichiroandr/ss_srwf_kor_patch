@@ -55,6 +55,7 @@ import {constructUnitRow,constructUnitUpgradeRow,replaceUnitRow,unitConstruction
 import {createWeaponCloneRow,weaponCloneIds} from './editor-weapon-clone.mjs?v=20261105-part2';
 import {previousUnitConcept} from './editor-unit-upgrade.mjs?v=20261105-part2';
 import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261105-part2';
+import {bytesEqual as sameWeaponIds} from './editor-bytes.mjs?v=20261105-part2';
 
 export const PRESET_FORMAT = "srwf.editor-preset";
 export const PRESET_VERSION = 1;
@@ -346,7 +347,6 @@ function parseSkillList(value, details, spirits = false) {
   }));
 }
 
-const sameWeaponIds=(a,b)=>a.length===b.length&&a.every((id,i)=>id===b[i]);
 function parseWeaponIds(value,details,gameId){
   return Object.freeze(readList(value,16,details).map(id=>{
     if(!Number.isSafeInteger(id)||id<1||id>=(gameId==='srwf-f'?1280:1408))fail('PRESET_BAD_VALUE',details);

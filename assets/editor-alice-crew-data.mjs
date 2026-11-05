@@ -2,19 +2,17 @@
 // remain separate; this module owns only the reversible TSR representation.
 import {ALICE_ART} from './editor-alice-art.mjs?v=20261105-part2';
 import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
-import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {base64ToBytes as unbase64,bytesEqual as same,dataView as dv} from './editor-bytes.mjs?v=20261105-part2';
 
 const MAGIC=new TextEncoder().encode('SRWALC02'),FOOTER=16,FACE_BYTES=2744;
 // Pilot #399's reserved 27-byte record is recognized by SHA-256; its bytes are
 // never carried in this source.
 const RESERVED_SHA256='80828dbb5168be6fcbf5bc05e37e6464a9ea3bacf437e011140d8d6654b4111a';
-export function isAliceReservedPilot(bytes){return bytes instanceof Uint8Array&&bytes.length===27&&new Sha256().update(bytes).hex()===RESERVED_SHA256;}
+export function isAliceReservedPilot(bytes){return bytes instanceof Uint8Array&&bytes.length===27&&sha256Hex(bytes)===RESERVED_SHA256;}
 const NAME=Uint8Array.of(0x16,0x21,0x1e,0x18,0x1a,255);
-const dv=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 const headerAt=length=>Math.ceil((length+84)/4)*4;
 const endAt=length=>headerAt(length)+FACE_BYTES;
-const unbase64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 function invalid(message='인공지능 서브파일럿의 이름·정신기 설정을 확인하지 못했습니다.'){
  const error=Error(message);error.code='EDITOR_ALICE_INVALID';throw error;
 }

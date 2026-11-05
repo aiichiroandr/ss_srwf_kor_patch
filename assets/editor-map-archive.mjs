@@ -2,6 +2,7 @@
 // tile -> terrain lookup consumed by the map constructor. No graphics are shipped.
 import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261105-part2';
 import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { bytesEqual as same } from './editor-bytes.mjs?v=20261105-part2';
 const FORMATS = Object.freeze({
   'srwf-f': Object.freeze({ maps: 111, banks: 21, terrains: 120 }),
   'srwf-final': Object.freeze({ maps: 127, banks: 24, terrains: 144 }),
@@ -13,7 +14,6 @@ function fail(message, code = 'EDITOR_MAP_INVALID', details) {
   throw error;
 }
 function abort(signal) { if (signal?.aborted) throw new DOMException('Operation aborted.', 'AbortError'); }
-function same(a, b) { return a.length === b.length && a.every((value, i) => value === b[i]); }
 function tag(bytes, at, text) { return [...text].every((char, i) => bytes[at + i] === char.charCodeAt(0)); }
 function membersOf(bytes, count) {
   if (!(bytes instanceof Uint8Array) || bytes.length <= count * 8 || bytes.length > 4 * 1024 * 1024) fail('Unsupported map archive length.');

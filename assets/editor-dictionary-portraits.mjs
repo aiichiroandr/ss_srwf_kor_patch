@@ -2,6 +2,7 @@
 // name pointers are restored before the portrait draw; saved pilot data stays intact.
 import {DICTIONARY_PORTRAIT_DATA} from './editor-dictionary-portrait-data.mjs?v=20261105-part2';
 import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {base64UrlToBytes} from './editor-bytes.mjs?v=20261105-part2';
 export const DICTIONARY_PORTRAIT_HOOK=Object.freeze({execBytes:758232,offset:534572,original:0x06014860,fixed:0x2029f500,helperBytes:92,
  hooks:Object.freeze([
   Object.freeze({offset:0x8278c,original:0x06004cc8,fixed:0x2029f200}),
@@ -38,7 +39,7 @@ export function inspectDictionaryPortraitSlot(bytes,extentLba,byteLength){
  }return null;
 }
 function xorRecipe(bytes,recipe){
- const stream=Uint8Array.from(atob(recipe.xor.replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0)),out=new Uint8Array(bytes);let at=0,end=0;
+ const stream=base64UrlToBytes(recipe.xor),out=new Uint8Array(bytes);let at=0,end=0;
  const integer=()=>{let n=0,shift=0;for(let i=0;i<4;i++){if(at>=stream.length)invalid();const b=stream[at++];n+=(b&127)*2**shift;if(!(b&128))return n;shift+=7;}invalid();};
  while(at<stream.length){const start=end+integer(),n=integer();end=start+n;if(!n||end>out.length||at+n>stream.length)invalid();
   for(let i=0;i<n;i++){const b=stream[at++];if(!b)invalid();out[start+i]^=b;}}

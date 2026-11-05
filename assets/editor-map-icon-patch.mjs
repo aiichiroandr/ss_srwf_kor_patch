@@ -2,6 +2,7 @@
 // This planner operates on the decoded KOM bank. The caller must independently
 // preserve the original compression stream and enforce its fixed packed span.
 import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {bytesEqual as equal,bytesToHex as hex,dataView as dv} from './editor-bytes.mjs?v=20261105-part2';
 import {ownData,ownEntry,readDenseList} from './editor-own.mjs?v=20261105-part2';
 import {SRW4_ASSET_KEYS} from './editor-srw4-rom.mjs?v=20261105-part2';
 
@@ -18,8 +19,6 @@ export const MAP_ICON_PATCH_PROFILES=Object.freeze({
 });
 const MAGIC=new TextEncoder().encode('SRWKOM01'),HEADER=128,ENTRY=8,MAX_ASSIGNMENTS=64;
 const start=id=>128+id*128;
-const dv=bytes=>new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
-const equal=(a,b)=>a.length===b.length&&a.every((n,i)=>n===b[i]);
 const empty=bytes=>bytes.every(n=>n===0);
 const clone=bytes=>Uint8Array.from(bytes);
 function fail(reason){const error=Error('기체 맵 아이콘의 원본·연결·저장 공간을 확인하지 못했습니다.');error.code='EDITOR_MAP_ICON_PATCH_INVALID';error.details={component:'map-icons',reason};throw error;}
@@ -27,7 +26,6 @@ function integer(value,min,max){if(!Number.isSafeInteger(value)||value<min||valu
 function list(value,max){const result=readDenseList(value,max);if(!result.list)fail('list');return result.list;}
 function bank(value){if(!(value instanceof Uint8Array)||value.length!==MAP_ICON_PATCH_BYTES)fail('bank');return clone(value);}
 function hexBytes(hex){if(typeof hex!=='string'||!/^[0-9a-f]{64}$/.test(hex))fail('hash');return Uint8Array.from(hex.match(/../g),n=>parseInt(n,16));}
-function hex(bytes){return Array.from(bytes,n=>n.toString(16).padStart(2,'0')).join('');}
 function references(value){
  const ids=new Set(),refs=list(value,512).map(row=>{
   const recordIndex=integer(ownData(row,'recordIndex'),0,511),iconId=integer(ownData(row,'iconId'),0,511);

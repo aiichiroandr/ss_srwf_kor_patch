@@ -1,11 +1,10 @@
 // SP04 production writes require the exact source profile and local candidate
 // exclusions; the standalone byte codec never grants those permissions.
-import { ownData } from './editor-own.mjs?v=20261105-part2';
-import { readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
 import { compilePendingAllyReinforcementProgram } from './editor-scenario-reinforcement-program.mjs?v=20261105-part2';
 import { readReinforcementPairOptions } from './editor-scenario-reinforcement-pairs.mjs?v=20261105-part2';
 import { regionContextFor, regionContextOf, regionContextDigest } from './editor-scenario-region-context.mjs?v=20261105-part2';
-import { sha256Hex } from './sha256.mjs?v=20261105-part2';
+import { bytesEqual as equal, dataView as view, sha256Digest as digest } from './editor-bytes.mjs?v=20261105-part2';
 import {inspectReinforcementSourceProfile,readScenarioReinforcementCandidates,reinforcementSourceCapacity} from './editor-scenario-reinforcement-profile.mjs?v=20261105-part2';
 import { EDITOR_SPAWN_CAPACITY_INFO } from './editor-spawn-capacity.mjs?v=20261105-part2';
 const MAGIC=Uint8Array.of(83,82,87,70,83,80,48,49),TRAILER=32;
@@ -14,10 +13,8 @@ const PREVIOUS_CODEC_MAGIC=Uint8Array.of(83,82,87,70,83,80,48,51);
 const CODEC_MAGIC=Uint8Array.of(83,82,87,70,83,80,48,52),CODEC_TRAILER=176;
 const CODEC_FIELDS=Object.freeze(['enabled','pilotId','unitId','level','triggerX','triggerY','x','y']);
 const CODEC_PERMISSIONS=Object.freeze({codec:true,callback:false,pilotLifetime:false,nativeOverlay:false,productionWrite:false});
-const equal=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]),view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 function fail(message='New reinforcement pilot lifetime and callback authorization have not been proved.'){const error=new Error(message);error.code='EDITOR_REINFORCEMENT_INVALID';throw error;}
 function marked(bytes,magic,trailer){return bytes instanceof Uint8Array&&bytes.length>=trailer&&magic.every((x,i)=>bytes[bytes.length-trailer+i]===x);}
-function digest(bytes){return Uint8Array.from(sha256Hex(bytes).match(/../g),x=>parseInt(x,16));}
 const hashRecord=value=>digest(new TextEncoder().encode(JSON.stringify(value)));
 function snapshotCodecConfig(input){
  if(!input||typeof input!=='object'||Array.isArray(input)||Reflect.ownKeys(input).length!==CODEC_FIELDS.length||Reflect.ownKeys(input).some(key=>!CODEC_FIELDS.includes(key)))fail('Invalid SP04 configuration shape.');

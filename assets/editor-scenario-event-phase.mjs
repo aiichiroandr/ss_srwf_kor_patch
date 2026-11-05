@@ -2,8 +2,8 @@
 // Metadata restores source bytes; it grants no profile or runtime authority.
 // PH01 is outside TE02: restore this wrapper before any existing normalizer.
 // Source/code hashes authenticate reversibility, never an accepted profile.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
-import { Sha256 } from './sha256.mjs?v=20261105-part2';
+import { ownData, ownDataCopy as ownCopy, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261105-part2';
 import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, inspectEventCriteriaHook,
   normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261105-part2';
 import { snapshotFPhaseEvent, inspectFPhaseEventHook, normalizeScenarioFEventPhaseBody,
@@ -13,13 +13,6 @@ export const EVENT_PHASE_FIELDS=Object.freeze(['eventPhase',...EVENT_CRITERIA_FI
 const MAGIC=Uint8Array.of(83,82,87,70,80,72,48,49),TRAILER=96,CODE_LENGTH=14;
 const TAIL=2788,ACTION=2797,YIELD4=2786,YIELD5=2801,ROOT4=2311,ROOT5=2790,ROOT8=2805;
 const WINDOW4=Uint8Array.of(255,254),WINDOW5=Uint8Array.of(0xd0,0,0,250);
-const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
-const viewOf=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const rootsOf=b=>Array.from({length:14},(_,i)=>i*4+viewOf(b).getInt32(i*4));
-const digest=b=>new Sha256().update(b).digest();
-const ownCopy=o=>Object.fromEntries(Reflect.ownKeys(o).flatMap(key=>{
-  const d=Object.getOwnPropertyDescriptor(o,key);return d&&Object.hasOwn(d,'value')?[[key,d.value]]:[];
-}));
 function fail(message){const e=new Error(message);e.code='EDITOR_EVENT_PHASE_INVALID';throw e;}
 function layoutOf(options){
   if(Object.hasOwn(options??{},'scenarioLayout')&&ownData(options,'scenarioLayout')===undefined)fail('Layout must be own data.');

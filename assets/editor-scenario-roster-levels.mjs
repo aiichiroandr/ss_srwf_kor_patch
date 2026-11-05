@@ -2,7 +2,7 @@
 // replacing a pilot/unit, allocating another actor or adding VM commands.
 import {readScenarioPilotAssignments} from './editor-scenario-display.mjs?v=20261105-part2';
 import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
-import {Sha256} from './sha256.mjs';
+import {Sha256} from './sha256.mjs?v=20261105-part2';
 const text=new TextEncoder(),word=(b,p)=>b[p]*256+b[p+1];
 function fail(message){const e=new Error(message);e.code='EDITOR_ROSTER_LEVEL_INVALID';throw e;}
 function validateArchive(archive,tables){

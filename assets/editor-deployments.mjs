@@ -12,8 +12,7 @@ import {readScenarioRosterLevels,planScenarioRosterLevelEdits,applyScenarioRoste
 
 import { EVENT_CRITERIA_FIELDS, inspectEventCriteriaHook, snapshotEventCriteria, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261105-part2';
 import { EVENT_PHASE_FIELDS, inspectPhaseEventHook, snapshotPhaseEvent, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261105-part2';
-import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261105-part2';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose } from './editor-scenario-criteria.mjs?v=20261105-part2';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261105-part2';
 
 import {buildRegionContexts,objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261105-part2';
 const FIXED = new Map([[0x05, 3], [0x6f, 7]]);

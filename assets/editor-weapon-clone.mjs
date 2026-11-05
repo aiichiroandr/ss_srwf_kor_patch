@@ -8,6 +8,7 @@ import {isWeaponRequiredSkillEditable} from './editor-facts.mjs?v=20261105-part2
 import {requireTsrInspectionSize,requireTsrRuntimeSize} from './editor-storage-safety.mjs?v=20261105-part2';
 import {editorTextMetrics} from './editor-text-codec.mjs?v=20261105-part2';
 import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261105-part2';
 import {screenFieldLimit} from './editor-fields.mjs?v=20261105-part2';
 const MAGIC='SRWCPY01',FOOTER=16;
 const PROFILES=Object.freeze({
@@ -15,8 +16,6 @@ const PROFILES=Object.freeze({
  'srwf-final':Object.freeze({count:1408,first:1331,last:1343,preimageSha256:'0508223126731bb976230a9caaf76f085e521a1b28a362995627b2ce74f5490b'}),
 });
 const FIELDS=['attack','hit','critical','minRange','maxRange','terrain','energy','ammo','requiredMorale','requiredSkill','voiceType'];
-const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const equal=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
 function fail(reason){const e=Error('독립 무기를 복제할 빈 레코드·기반 무기 또는 복원 기록이 올바르지 않습니다.');e.code='EDITOR_WEAPON_CLONE_INVALID';e.details={kind:'weapon',reason};throw e;}
 export function weaponCloneIds(gameId){const p=Object.hasOwn(PROFILES,gameId)?PROFILES[gameId]:null;return p?Array.from({length:p.last-p.first+1},(_,i)=>p.first+i):[];}
 export function isWeaponClonePreimage(bytes,gameId){const p=Object.hasOwn(PROFILES,gameId)?PROFILES[gameId]:null;if(!p)fail('game');return bytes instanceof Uint8Array&&bytes.length===17&&sha256Hex(bytes)===p.preimageSha256;}

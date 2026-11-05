@@ -4,6 +4,7 @@ import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-
 import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
 import { normalizeScenarioDeadlineBody } from './editor-scenario-deadlines.mjs?v=20261105-part2';
 import { readScenarioDialogue } from './editor-scenario-dialogue.mjs?v=20261105-part2';
+import { bytesEqual as same, scenarioRootOffsets } from './editor-bytes.mjs?v=20261105-part2';
 
 export const SCENARIO_ARCHIVE_FORMATS = Object.freeze({
   'srwf-f': Object.freeze({ slots: 74, endCellBias: 4 }),
@@ -17,7 +18,6 @@ function fail(message, code = 'EDITOR_SCENARIO_INVALID', details) {
   if (details) error.details = details;
   throw error;
 }
-function same(a, b) { return a.length === b.length && a.every((x, i) => x === b[i]); }
 const stable = value => JSON.stringify(value, function (key, item) {
   return item && typeof item === 'object' && !Array.isArray(item)
     ? Object.fromEntries(Object.keys(item).sort().map(k => [k, item[k]])) : item;
@@ -46,8 +46,7 @@ export function validateScenarioRebase(before, after, beforeScope, afterScope, g
 function abort(signal) { if (signal?.aborted) throw new DOMException('Operation aborted.', 'AbortError'); }
 function rootsOf(bytes) {
   if (!(bytes instanceof Uint8Array) || bytes.length < 57 || bytes.length > MAX_BODY_BYTES) fail('Invalid scenario body length.');
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const roots = Array.from({ length: 14 }, (_, i) => i * 4 + view.getInt32(i * 4));
+  const roots = scenarioRootOffsets(bytes);
   if (roots.some(offset => offset < 56 || offset >= bytes.length)) fail('A scenario root points outside its decoded body.');
   return Object.freeze(roots);
 }

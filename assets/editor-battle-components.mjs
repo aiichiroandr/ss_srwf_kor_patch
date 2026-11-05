@@ -5,7 +5,8 @@ import {makeExSAimedPoseParts} from './editor-exs-aimed-pose.mjs?v=20261105-part
 import {applyBattleArtPatch} from './editor-art-patch.mjs?v=20261105-part2';
 import {EXS_AIMED_ART_V16} from './editor-exs-aimed-art.mjs?v=20261105-part2';
 import {validateSrw4CruiserFrame} from './editor-srw4-battle.mjs?v=20261105-part2';
-import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {sha256Hex as hash} from './sha256.mjs?v=20261105-part2';
+import {base64ToBytes,bytesEqual as same,dataView as v} from './editor-bytes.mjs?v=20261105-part2';
 import {makeCompressionRecipe,restoreCompressionRecipe} from './editor-compression-recipe.mjs?v=20261105-part2';
 import {makeBattleSourceDelta,restoreBattleSourceDelta} from './editor-battle-source-delta.mjs?v=20261105-part2';
 const PROFILES=Object.freeze({
@@ -29,9 +30,6 @@ export const BATTLE_COMPONENT_RECIPES=Object.freeze([
  {preset:'s-g-cruiser',graphic:295,parts:[],created:'s-gcruiser-v6'},
 ].map(r=>Object.freeze({...r,parts:Object.freeze(r.parts.map(Object.freeze))})));
 const MAGIC=new TextEncoder().encode('SRWBCP01'),MAGIC_V2=new TextEncoder().encode('SRWBCP02'),MAGIC_V3=new TextEncoder().encode('SRWBCP03'),MAGIC_V4=new TextEncoder().encode('SRWBCP04'),MAGIC_V5=new TextEncoder().encode('SRWBCP05'),MAGIC_V6=new TextEncoder().encode('SRWBCP06'),MAGIC_V7=new TextEncoder().encode('SRWBCP07'),MAGIC_V8=new TextEncoder().encode('SRWBCP08'),MAGIC_V9=new TextEncoder().encode('SRWBCP09'),FOOTER=16,VERSION=6,LEGACY_RECIPES=5,PRE_DUAL_RECIPES=8;
-const v=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
-const hash=b=>new Sha256().update(b).hex();
 function invalid(message){const e=new Error(message);e.code='EDITOR_BATTLE_COMPONENT_INVALID';throw e;}
 function need(b,at,n){if(!Number.isSafeInteger(at)||!Number.isSafeInteger(n)||at<0||n<0||at+n>b.length)invalid('전투 그림 범위를 확인하지 못했습니다.');}
 
@@ -84,7 +82,7 @@ export function createBattleComponentCodec({decode,encode,profiles=PROFILES,alia
   const drawn=version<3?(isCruiser?legacyCruiserArt:legacySplitArt?.[recipe.created]):(version===3?aircraftArtV3:version===4?aircraftArtV4:aircraftArt)?.[isCruiser?'gCruiser':recipe.created];
   if(!useNative&&!drawn)invalid(isCruiser?'G크루저 변형의 전투 그림은 연결한 제4차 Rev 1 원본에서만 가져옵니다. 기타 → 제4차에서 원본을 연결한 뒤 추가·저장해 주세요.':'이 분리형 기체의 전투 그림은 제공하지 않습니다.');
   const asset=useNative?validateSrw4CruiserFrame(native?.frames?.find(f=>f.preset===recipe.preset),recipe.preset):drawn;
-  const pixels=useNative?asset.pixels:asset&&Uint8Array.from(atob(asset.pixels),c=>c.charCodeAt(0));
+  const pixels=useNative?asset.pixels:asset&&base64ToBytes(asset.pixels);
   if(!asset||asset.width%8||pixels.length!==asset.width*asset.height/2||hash(pixels)!==asset.pixelSha256)invalid('새 기체 도트 자산이 손상됐습니다.');
   // v1/v2 retain their exact artwork and palette contract. New art selects a
   // source palette explicitly and pins all 15 visible colors before writing.

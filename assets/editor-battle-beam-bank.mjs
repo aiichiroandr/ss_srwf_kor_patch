@@ -2,7 +2,8 @@
 // recover the exact authenticated archive before ordinary disc provenance.
 // Compression and the reviewed geometry transform are injected; this module
 // never imports editor-core or changes executable code.
-import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {sha256Hex as hash} from './sha256.mjs?v=20261105-part2';
+import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261105-part2';
 
 const SOURCE_BANK=0x050c,TARGET_BANK=0x053f,COUNT=384,HEADER=4632,FOOTER=16,VERSION=1;
 const MAGIC=new TextEncoder().encode('SRWBBK01'),BANK_MAGIC=Uint8Array.of(0x62,0x6b,0x30,0x31),MAP_MAGIC=Uint8Array.of(0x73,0x63,0x30,0x32);
@@ -13,8 +14,6 @@ const PROFILES=Object.freeze({
  'srwf-f':Object.freeze({size:1719395,sha256:'a288976fd82be6060befeea0cf3ec45002a04925d22097837f7d3fd614f4b897',sourceSha256:SOURCE_SHA,sourcePixelSha256:SOURCE_PIXEL_SHA,sourceMapSha256:SOURCE_MAP_SHA}),
  'srwf-final':Object.freeze({size:1737780,sha256:'a94c248f021629e449142cd8c8fdf3d77af1440107bddae62a213f173153f547',sourceSha256:SOURCE_SHA,sourcePixelSha256:SOURCE_PIXEL_SHA,sourceMapSha256:SOURCE_MAP_SHA}),
 });
-const hash=b=>new Sha256().update(b).hex(),view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const equal=(a,b)=>a.length===b.length&&a.every((n,i)=>n===b[i]);
 const index=id=>(id>>>8)*64+(id&255),SOURCE=index(SOURCE_BANK),TARGET=index(TARGET_BANK);
 const META=12+COUNT*8;
 function bad(reason){const e=new Error('Ex-S 전용 빔 연출의 원본·저장 공간·복원 기록을 확인하지 못했습니다.');e.code='EDITOR_BATTLE_COMPONENT_INVALID';e.details={component:'beam-bank',reason};throw e;}

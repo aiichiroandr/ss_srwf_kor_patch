@@ -3,9 +3,9 @@
 import {encodeEditorText,decodeEditorText} from './editor-text-codec.mjs?v=20261105-part2';
 import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
 import {requireTsrRuntimeSize,requireTsrInspectionSize,tsrRuntimeLimit,tsrHistoricalStorageLimit,writeRelative32} from './editor-storage-safety.mjs?v=20261105-part2';
+import {dataView as view} from './editor-bytes.mjs?v=20261105-part2';
 const MAGIC=new TextEncoder().encode('SRWNAM01'),SHARED=new TextEncoder().encode('SRWNAM02'),FOOTER=16,MAX_COUNT=1408,MAX_BYTES=32;
 const fail=()=>{const e=Error('무기 이름 확장 데이터가 올바르지 않습니다.');e.code='EDITOR_WEAPON_NAME_INVALID';throw e;};
-const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 function nameTable(b,gameId){
  const d=view(b),at=56,start=at+d.getInt32(at);if(start<144||start>=b.length-4)fail();
  // Accepted F relocates even the first name backwards. A string pointer is

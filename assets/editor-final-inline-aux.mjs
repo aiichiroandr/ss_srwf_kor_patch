@@ -1,9 +1,8 @@
 // Bounded auxiliary storage in verified zero slack; runtime limit is unchanged.
 import {requireTsrInspectionSize,tsrRuntimeLimit,writeRelative32} from './editor-storage-safety.mjs?v=20261105-part2';
+import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261105-part2';
 const UNIT='SRUCMP09',MAGIC='SRXAUX01',HEADER=16;
-const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 const marker=(b,at,s)=>at>=0&&at+s.length<=b.length&&[...s].every((c,i)=>b[at+i]===c.charCodeAt(0));
-const equal=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 function fail(reason,details={}){const e=Error('완결편의 이름·복원 기록을 안전한 기체 표 공간에 저장할 수 없습니다.');e.code='EDITOR_STORAGE_INVALID';e.details={reason,...details};throw e;}
 function area(bytes){
  if(!(bytes instanceof Uint8Array)||bytes.length<164)return null;

@@ -6,15 +6,14 @@ import {F_NAME_SUPPLEMENT} from './editor-pilot-name-map.mjs?v=20261105-part2';
 import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261105-part2';
 import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
 import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {bytesEqual as same,dataView as view} from './editor-bytes.mjs?v=20261105-part2';
 import {requireTsrInspectionSize,writeRelative32,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261105-part2';
 
 import {UNUSED_UNIT_PRESETS,unitConstructionWeapons,unitConstructionLoadout,writeUnitConcept,writeSSeparatedStructure,cruiserRole,requireAircraftGraphicCompatibility,writeExSCruiserStructure} from './editor-unit-construction.mjs?v=20261105-part2';
 export {UNUSED_UNIT_PRESETS};
 const MAGIC=0x53525531,COMPACT_MAGIC=0x5332,align=n=>Math.ceil(n/4)*4;
-const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 const r16=(b,o)=>view(b).getUint16(o),r32=(b,o)=>view(b).getUint32(o),i32=(b,o)=>view(b).getInt32(o);
 const w16=(b,o,v)=>view(b).setUint16(o,v),w32=(b,o,v)=>view(b).setInt32(o,v);
-const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 const invalid=reason=>{const e=new Error(`Invalid unused unit construction (${reason}).`);e.code='EDITOR_UNIT_RESTORATION_INVALID';e.details={kind:'unit',reason};throw e;};
 const preset=id=>UNUSED_UNIT_PRESETS.find(p=>p.id===id);
 const physical=(table,size)=>[...new Set(table.offsets)].sort((a,b)=>a-b)

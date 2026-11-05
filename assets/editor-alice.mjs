@@ -3,7 +3,8 @@ import {fixAliceFaceCopies,normalizeAliceFaceCopies,aliceFaceCopiesNeedFix} from
 // are intentionally separate from this bounded, opt-in graphic/name change.
 import {readAliceCrewV4,writeAliceCrewV4} from './editor-alice-crew-v4.mjs?v=20261105-part2';
 import {ALICE_ART,ALICE_V03_DISC_MASKS,ALICE_BASE_SHA256} from './editor-alice-art.mjs?v=20261105-part2';
-import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {sha256Hex as hash} from './sha256.mjs?v=20261105-part2';
+import {base64ToBytes as unbase64,bytesEqual as same,dataView as view} from './editor-bytes.mjs?v=20261105-part2';
 import {readPackedGraphicRecord} from './editor-face-record.mjs?v=20261105-part2';
 import {readAliceCrewData,writeAliceCrewData,isAliceReservedPilot,ALICE_CREW_DEFAULTS} from './editor-alice-crew-data.mjs?v=20261105-part2';
 const MAGIC=new TextEncoder().encode('SRWALC01'),FOOTER=16,FACE_HEADER_BYTES=2744;
@@ -15,10 +16,6 @@ const payloadBytes=length=>headerOffset(length)-length+FACE_HEADER_BYTES;
 const LEGACY_TAIL_SHA256='bf5e8ffa51a9e748985800c1d3d7f1a2a6ae7435136593ca8d9637e3f87c699c';
 const LEGACY_FIXED='원본 파일럿 기록이 없어 이 옛 형식의 ALICE 등록은 되돌리거나 동승 설정을 바꿀 수 없습니다. ALICE를 켠 채로만 다시 저장할 수 있습니다.';
 const NAME=Uint8Array.from([0x16,0x21,0x1e,0x18,0x1a,0xff]); // ＡＬＩＣＥ in both original/accepted Latin fonts.
-const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
-const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const hash=b=>new Sha256().update(b).hex();
-const unbase64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 function invalid(message='ALICE 이름·초상 등록 데이터를 확인하지 못했습니다.'){
  const e=Error(message);e.code='EDITOR_ALICE_INVALID';throw e;
 }

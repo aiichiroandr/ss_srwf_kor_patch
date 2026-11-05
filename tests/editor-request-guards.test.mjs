@@ -15,7 +15,7 @@ import {
   updateWeaponRecords,
   weaponRows,
 } from '../assets/editor-core.mjs';
-import { readDenseList, ownData, ownEntry } from '../assets/editor-own.mjs';
+import { readDenseList, ownData, ownDataCopy, ownEntry } from '../assets/editor-own.mjs';
 import * as fixture from './helpers/synthetic-pilots.mjs';
 import { echoRequest } from './helpers/synthetic-iso.mjs';
 import { makeBase } from './helpers/synthetic-game.mjs';
@@ -87,6 +87,26 @@ test('readDenseList: an array with every index present is a list, everything els
   const { list } = readDenseList(original, 2);
   original[0] = 9;
   assert.deepEqual(list, [1, 2]);
+});
+
+test('ownDataCopy snapshots own data properties without running accessors', () => {
+  const tag = Symbol('tag');
+  let reads = 0;
+  const source = Object.create({ inherited: 1 }, {
+    plain: { value: 2, enumerable: true },
+    hidden: { value: 3, enumerable: false },
+    [tag]: { value: 4, enumerable: true },
+    getter: { get() { reads += 1; return 5; }, enumerable: true },
+  });
+  const copy = ownDataCopy(source);
+  assert.deepEqual(Reflect.ownKeys(copy), ['plain', 'hidden', tag]);
+  assert.equal(copy.plain, 2); assert.equal(copy.hidden, 3); assert.equal(copy[tag], 4);
+  assert.equal(Object.getPrototypeOf(copy), Object.prototype, 'the snapshot is a plain object');
+  assert.equal(reads, 0, 'an accessor is never invoked');
+  assert.equal(Object.isFrozen(ownDataCopy(Object.freeze({ a: 1 }))), false, 'a frozen source yields a fresh object');
+  assert.deepEqual(ownDataCopy([7, 8]), { 0: 7, 1: 8, length: 2 });
+  assert.throws(() => ownDataCopy(null), TypeError);
+  assert.throws(() => ownDataCopy(undefined), TypeError);
 });
 
 test('ownData and ownEntry answer only what the object itself holds', () => {

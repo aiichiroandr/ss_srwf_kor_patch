@@ -1,7 +1,8 @@
 // Native 06038FFC uses the unit record id (not its picture id) in BTSR's
 // signed-byte attachment lists. Missing units reach FFFF,00,50: below the hand.
 // Share only byte-identical lists to add entries without growing the file.
-import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {sha256Hex as hash} from './sha256.mjs?v=20261105-part2';
+import {bytesEqual as equal,dataView as dv} from './editor-bytes.mjs?v=20261105-part2';
 import {makeCompressionRecipe,restoreCompressionRecipe} from './editor-compression-recipe.mjs?v=20261105-part2';
 import {EXS_ALIGNED_CHARGE_POINTS} from './editor-exs-beam-motion.mjs?v=20261105-part2';
 const profiles=Object.freeze({
@@ -56,8 +57,6 @@ export const BATTLE_MUZZLE_POINTS_V6=alignedPoints(BATTLE_MUZZLE_POINTS_V4);
 export const BATTLE_MUZZLE_POINTS_V7=alignedPoints(BATTLE_MUZZLE_POINTS_V5);
 const MAGIC2=new TextEncoder().encode('SRWBAP02'),MAGIC=new TextEncoder().encode('SRWBAP03'),MAGIC4=new TextEncoder().encode('SRWBAP04'),MAGIC5=new TextEncoder().encode('SRWBAP05'),MAGIC6=new TextEncoder().encode('SRWBAP06'),MAGIC7=new TextEncoder().encode('SRWBAP07'),LEDGER=20;
 const muzzlePointsFor=version=>version===7?BATTLE_MUZZLE_POINTS_V7:version===6?BATTLE_MUZZLE_POINTS_V6:version>=5?BATTLE_MUZZLE_POINTS_V5:version>=4?BATTLE_MUZZLE_POINTS_V4:BATTLE_MUZZLE_POINTS;
-const hash=b=>new Sha256().update(b).hex(),dv=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const equal=(a,b)=>a.length===b.length&&a.every((n,i)=>n===b[i]);
 // Japanese stock and the accepted Korean patch have the same coordinate
 // layout, but different surrounding text. Pin both complete source files;
 // never treat an arbitrary hash mismatch as a coordinate edit.

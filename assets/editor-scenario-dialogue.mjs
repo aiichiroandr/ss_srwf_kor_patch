@@ -5,7 +5,8 @@
 // validation. This module does not grant scenario/archive write authority.
 import {readScenarioDialogueOwners} from './editor-scenario-display.mjs?v=20261105-part2';
 import {nameMap} from './editor-text-codec.mjs?v=20261105-part2';
-import {Sha256} from './sha256.mjs';
+import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {bytesEqual as same,bytesToHex,dataView as view,scenarioRootOffsets,sha256Digest as digest} from './editor-bytes.mjs?v=20261105-part2';
 import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
 import {readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261105-part2';
 import {normalizeScenarioDeadlineBody} from './editor-scenario-deadlines.mjs?v=20261105-part2';
@@ -21,14 +22,11 @@ const legacyPageAuthorities=new WeakMap();
 const CAPACITY=Object.freeze({'srwf-f':0x8000,'srwf-final':0x9000});
 const MAX_BODY=256*1024,MAX_EDITS=8192,MAX_READ=4096;
 const utf8=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
-const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
-const hex=b=>Array.from(b,x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();
-const digest=b=>Uint8Array.from(new Sha256().update(b).hex().match(/../g),x=>parseInt(x,16));
-const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
+const hex=b=>bytesToHex(b).toUpperCase();
 function fail(message){const e=new Error(message);e.code='EDITOR_DIALOGUE_INVALID';throw e;}
 function rootsOf(b){
  if(b.length<57||b.length>MAX_BODY)fail('지원하지 않는 대사 본문 크기입니다.');
- const v=view(b),roots=Array.from({length:14},(_,i)=>i*4+v.getInt32(i*4));
+ const roots=scenarioRootOffsets(b);
  if(roots.some(p=>p<56||p>=b.length))fail('대사 본문의 루트 참조가 잘못되었습니다.');
  return Object.freeze(roots);
 }
@@ -138,7 +136,7 @@ function inspect(body,gameId,options){
     const expandable=editable&&!group.reason&&expandedLimit>end-start&&minimum<=CAPACITY[gameId];
     const interrupt=group.owners.some(o=>view(reference.decoded).getUint16(o.byteOffset+3)&0x8000);
     const pagesEditable=editable&&!interrupt&&Boolean(PAGE_WIDTH[gameId])&&!group.reason&&group.ts.every(t=>['text','FF'].includes(t.kind))&&start===group.start&&end===group.end-1&&minimum+16<=CAPACITY[gameId];
-    row={recordIndex:key,identity:`dialogue:1:${new Sha256().update(utf8.encode(JSON.stringify([gameId,body.physicalIndex,start,end,hex(b.subarray(start,end))]))).hex()}`,
+    row={recordIndex:key,identity:`dialogue:1:${sha256Hex(utf8.encode(JSON.stringify([gameId,body.physicalIndex,start,end,hex(b.subarray(start,end))])))}`,
      physicalIndex:body.physicalIndex,byteOffset:start,text,originalText:text,maxBytes:end-start,editable,
      pagesEditable,maxPages:MAX_PAGES,maxPageBytes:PAGE_BUDGET-1,maxPageLines:MAX_PAGE_LINES,maxPageWidth:PAGE_WIDTH[gameId]??null,pagesJson:'',
      pagesReadOnlyReason:pagesEditable?'':interrupt?'자동 진행 대사에는 다음 페이지가 표시되지 않아 페이지를 추가하지 않습니다.':!PAGE_WIDTH[gameId]?'이 게임의 고정 대사창 폭 확인 전에는 새 페이지를 추가하지 않습니다.':group.reason||'제어 토큰이 없는 전체 단일 문구에서만 다음 페이지를 추가합니다.',
@@ -178,7 +176,7 @@ function speakerFields(row,body,reference,catalog){
  else if(!catalog.has(speakerId)||variant>=catalog.get(speakerId).variantCount)reason='원래 화자와 초상화 변형의 연결을 확인하지 못했습니다.';
  else if(row.owners.some(owner=>body.decoded[owner.byteOffset]!==0xb1||view(body.decoded).getUint16(owner.byteOffset+3)!==packed))reason='검증된 이벤트 확장이 바꾼 대사 호출은 변경하지 않습니다.';
  return {speakerId,originalSpeakerId:speakerId,speakerVariant:variant,speakerEditable:!reason,speakerReadOnlyReason:reason,
-  speakerIdentity:`speaker:1:${new Sha256().update(utf8.encode(JSON.stringify([body.physicalIndex,row.owners.map(owner=>[owner.byteOffset,v.getUint16(owner.byteOffset+3)])]))).hex()}`};
+  speakerIdentity:`speaker:1:${sha256Hex(utf8.encode(JSON.stringify([body.physicalIndex,row.owners.map(owner=>[owner.byteOffset,v.getUint16(owner.byteOffset+3)])])))}`};
 }
 export function validateScenarioDialogueSpeaker(row,speakerId,options={}){
  try{const catalog=speakerCatalog(options);if(!catalog)fail('파일럿과 실제 초상화 검증이 필요합니다.');if(!row?.speakerEditable)fail(row?.speakerReadOnlyReason||'이 대사의 화자는 읽기 전용입니다.');const candidate=catalog.get(speakerId);

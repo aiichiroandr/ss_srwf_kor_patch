@@ -499,6 +499,30 @@ test("static entry assets share an explicit cache revision", async () => {
   }
 });
 
+// 모듈 사이의 정적 import 도 꼬리표를 빠뜨리지 않는다. 꼬리표가 없으면 같은
+// 모듈이 두 URL로 따로 캐시되고 두 번째 인스턴스가 생긴다. 로컬 서버가 응답만
+// 바꿔 끼우는 editor-local-config.mjs 하나만 꼬리표 없이 불린다.
+const UNVERSIONED_MODULES = new Set(["./editor-local-config.mjs"]);
+
+function untaggedModuleImports(source) {
+  return [...source.matchAll(/\b(?:from\s*|import\s*\(\s*)(["'])(\.{1,2}\/[^"'?]+\.m?js)\1/g)]
+    .map((match) => match[2])
+    .filter((specifier) => !UNVERSIONED_MODULES.has(specifier));
+}
+
+test("shipped modules import each other with the cache revision", async () => {
+  const assetsDirectory = new URL("../assets/", import.meta.url);
+  const names = (await readdir(assetsDirectory)).filter((name) => name.endsWith(".mjs")).sort();
+  assert.ok(names.includes("editor-bytes.mjs"));
+  for (const name of names) {
+    const source = await readFile(new URL(name, assetsDirectory), "utf8");
+    assert.deepEqual(untaggedModuleImports(source), [], `assets/${name} imports a module without ?v=`);
+  }
+  assert.deepEqual(untaggedModuleImports("import {a} from './a.mjs';import('./b.js');"), ["./a.mjs", "./b.js"]);
+  assert.deepEqual(untaggedModuleImports(`import {a} from './a.mjs?v=${STATIC_ASSET_REVISION}';`), []);
+  assert.deepEqual(untaggedModuleImports("import {localEditorReview} from './editor-local-config.mjs';"), []);
+});
+
 test("the cache-token guard flags numeric and alphanumeric stale revisions alike", () => {
   const revision = STATIC_ASSET_REVISION;
   assert.deepEqual(staleCacheTokens(`a.mjs?v=${revision} b.css?v=${revision}`, revision), []);

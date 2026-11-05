@@ -6,6 +6,7 @@
 // by the existing whole-disc provenance after exact overlay normalization.
 import {ALICE_MULTI_WORDS,ALICE_MULTI_LITERALS,ALICE_MULTI_ENTRIES} from './editor-alice-multi-code.mjs?v=20261105-part2';
 import {ALICE_BASE_SHA256} from './editor-alice-art.mjs?v=20261105-part2';
+import {bytesEqual as same,dataView as dv} from './editor-bytes.mjs?v=20261105-part2';
 const BASE=0x06003300,IP_AT=0x1300,SLOT=1024,EXE_BYTES=758232;
 // Reproduced Saturn states have zeros at 0x06003300..0x06003317.
 // Keep the authenticated IP slot but place every live instruction beyond it.
@@ -43,8 +44,6 @@ const WORDS=Object.freeze([
 const EXS_LITERAL=0x26c,CRUISER_LITERAL=0x270;
 const PILOT_CALLS=Object.freeze([0x1c5b0,0x22b00,0x25a68,0x25b84,0x26cf8,0x27854,0x278b8,0x27d80,0x27e20,0x281d4,0x2b5a4,0x2d624,0x2d7f0,0x2e5a4,0x2f36c,0x4dc24,0x4e008,0x4f948,0x4fa4c,0x4fb50,0x4fbf8,0x4ffd8,0x50c3c,0x50d94,0x53978,0x54ce8,0x54f04,0x55484,0x55c10,0x5971c,0x597a4,0x59fdc,0x5a2b0,0x5a9b4,0x5aaa0,0x5c604,0x5e8dc,0x61468,0x615e0,0x627b0,0x6358c,0x6502c,0x654ac,0x65984,0x65b8c,0x67608,0x678b4,0x69e24,0x6b084,0x6b5e8,0x6b7bc,0x6bdc4,0x6cf28,0x6d550,0x6d8a8,0x6dd50,0x6e374,0x6e848,0x71578,0x71fc4,0x7210c,0x72334,0x792dc,0x7b5e0,0x7b904,0x7cb4c]);
 const ACTOR_CALLS=Object.freeze([0x4f480]);
-const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
-const dv=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 // Installs before 2026-11-05 released the crew frame with add #127,r15; add #1,r15.
 // An interrupt between them stacks onto an odd R15 (SH-2 address error, BIOS
 // hang). They stay readable, and every export rewrites them with the aligned pair.

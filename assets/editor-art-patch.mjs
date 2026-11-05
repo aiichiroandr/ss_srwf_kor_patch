@@ -1,7 +1,7 @@
 // Authored pixel replacements carry only source fingerprints. Original pixels
 // are read from the authenticated user's archive, never bundled in this module.
-import {Sha256} from './sha256.mjs?v=20261105-part2';
-const hash=bytes=>new Sha256().update(bytes).hex();
+import {sha256Hex as hash} from './sha256.mjs?v=20261105-part2';
+import {hexToBytes} from './editor-bytes.mjs?v=20261105-part2';
 const sha=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);
 function invalid(message){const error=new Error(message);error.code='EDITOR_BATTLE_COMPONENT_INVALID';throw error;}
 
@@ -15,7 +15,7 @@ export function applyBattleArtPatch(source,asset){
   if(!Number.isSafeInteger(at)||!Number.isSafeInteger(length)||at<end||length<1||length>source.length-at
    ||typeof afterHex!=='string'||afterHex.length!==length*2
    ||!/^[0-9a-f]+$/.test(afterHex))invalid('전투 그림의 변경 범위가 올바르지 않습니다.');
-  pixels.set(Uint8Array.from(afterHex.match(/../g),byte=>parseInt(byte,16)),at);end=at+length;
+  pixels.set(hexToBytes(afterHex),at);end=at+length;
  }
  if(hash(pixels)!==asset.pixelSha256)invalid('전투 그림의 변경 결과가 다릅니다.');
  return pixels;

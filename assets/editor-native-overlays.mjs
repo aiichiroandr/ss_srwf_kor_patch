@@ -8,7 +8,7 @@ import {ownData} from './editor-own.mjs?v=20261105-part2';
 import {dictionaryPortraitExecState,setDictionaryPortraitExec} from './editor-dictionary-portraits.mjs?v=20261105-part2';
 import {dictionaryAdditionsExecState,setDictionaryAdditionsExec} from './editor-dictionary-additions.mjs?v=20261105-part2';
 import {campaignSaveExecState,setCampaignSaveExec}from'./editor-v04-unsupported.mjs?v=20261105-part2';
-const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
+import {bytesEqual as same} from './editor-bytes.mjs?v=20261105-part2';
 // Trusted factory for non-game fixtures only. Production never takes a caller's
 // editor/profile and binds the accepted capacity implementation below.
 export function createNativeOverlayComposer(capacity){

@@ -1,7 +1,8 @@
 // Reuse original D_ANIME records and the existing FA45 attachment command.
 // All source records survive; the length ledger reconstructs the exact disc
 // archive before ordinary provenance checks. No new executable is required.
-import {Sha256}from './sha256.mjs?v=20261105-part2';
+import {sha256Hex as hash}from './sha256.mjs?v=20261105-part2';
+import {bytesEqual as same,dataView as view}from './editor-bytes.mjs?v=20261105-part2';
 import {makeExSAlignedBeamMotion}from './editor-exs-beam-motion.mjs?v=20261105-part2';
 const PROFILES=Object.freeze({
  'srwf-f':{size:1586091,sha256:'a52c98c278b25de72662c09a2d656bc62bb95ad651f7bba7b00935144617659a'},
@@ -11,7 +12,6 @@ const COUNT=768,HEADER=6168,TARGET=4*128+25,BEAM_TARGET=5*128+37,EXS_TARGET=767,
 const MAGIC1=new TextEncoder().encode('SRWDAN01'),MAGIC2=new TextEncoder().encode('SRWDAN02'),MAGIC3=new TextEncoder().encode('SRWDAN03'),MAGIC4=new TextEncoder().encode('SRWDAN04'),MAGIC5=new TextEncoder().encode('SRWDAN05');
 const FOUR_BEAM_SHA='0f2fa8e1db0c82f539bd1149fd944abd9f0b2504fdb1f1b4549b22bd924dda5f';
 const EXS_RESERVED_SHA='5ef1d8375da84f6e549b261e27313e1a2bfeb4709520e67accefa1f682ab1d30';
-const hash=b=>new Sha256().update(b).hex(),view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength),same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 function bad(){const e=Error('전투 사출 연출의 원본과 저장 공간을 확인하지 못했습니다.');e.code='EDITOR_BATTLE_COMPONENT_INVALID';throw e;}
 export function patchIncomLaunch(record){
  if(!(record instanceof Uint8Array)||record.length<100)bad();const d=view(record),table=d.getUint32(4,true);

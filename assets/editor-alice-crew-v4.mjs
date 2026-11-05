@@ -2,11 +2,12 @@
 import{ALICE_ART}from'./editor-alice-art.mjs?v=20261105-part2';
 import{aliceCrewConfig,isAliceReservedPilot}from'./editor-alice-crew-data.mjs?v=20261105-part2';
 import{expandFinalInlineAuxiliary}from'./editor-final-inline-aux.mjs?v=20261105-part2';
+import{base64ToBytes,bytesEqual as same,dataView as d}from'./editor-bytes.mjs?v=20261105-part2';
 // SRWALC03 and the compact (flag 4) form belong to the v0.4 portrait carrier,
 // which the public build does not ship: both are refused, never rewritten.
 const MAGIC='SRWALC04',LEGACY='SRWALC03',FOOTER=16,NAME=Uint8Array.of(0x16,0x21,0x1e,0x18,0x1a,255);
-const d=b=>new DataView(b.buffer,b.byteOffset,b.byteLength),same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]),tag=(b,s)=>b.length>=16&&[...s].every((c,i)=>b[b.length-16+i]===c.charCodeAt(0));
-const faceHeader=()=>Uint8Array.from(atob(ALICE_ART.faceHeader),c=>c.charCodeAt(0));
+const tag=(b,s)=>b.length>=16&&[...s].every((c,i)=>b[b.length-16+i]===c.charCodeAt(0));
+const faceHeader=()=>base64ToBytes(ALICE_ART.faceHeader);
 function invalid(){const e=Error('ALICE 다중 동승 기록·초상 주소·기체 연결이 검증된 형식과 다릅니다.');e.code='EDITOR_ALICE_INVALID';throw e;}
 function target(b,cell){if(!Number.isInteger(cell)||cell<0||cell+4>b.length)invalid();const at=cell+d(b).getInt32(cell);if(at<144||at>=b.length)invalid();return at;}
 function pos(b){const root=target(b,112),pointer=root+399*4,full=target(b,48)+399*4,short=target(b,52)+399*4,donor=target(b,root+246*4),record=target(b,pointer);if(root+1600>b.length||d(b).getUint32(root)!==1600||record+27>b.length||donor+23>b.length||full+4>b.length||short+4>b.length)invalid();return{pointer,full,short,donor,record};}

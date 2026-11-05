@@ -2,22 +2,14 @@
 // The writer changes its skip branch only. It preserves the original action,
 // E9, saved resume, roots and all other script bytes. Carrier/provenance checks
 // must still authenticate the fully normalized source against its profile.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownData, ownDataCopy as dataCopy, readDenseList } from './editor-own.mjs?v=20261105-part2';
 import { compileObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261105-part2';
 import { encodeObjectiveRule, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261105-part2';
-import { Sha256 } from './sha256.mjs?v=20261105-part2';
+import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261105-part2';
 
 export const EVENT_CRITERIA_FIELDS=Object.freeze(['eventJoin','eventRule1','eventRule2','eventRule3']);
 const MAGIC=Uint8Array.of(83,82,87,70,84,69,48,50),TRAILER=80; // SRWFTE02
 const ROOT5=2790,HOOK=2792,ACTION=2797,PENDING=2801,ROOT8=2805;
-const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
-const viewOf=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const rootsOf=b=>Array.from({length:14},(_,i)=>i*4+viewOf(b).getInt32(i*4));
-const digest=b=>new Sha256().update(b).digest();
-const dataCopy=object=>Object.fromEntries(Reflect.ownKeys(object).flatMap(key=>{
-  const descriptor=Object.getOwnPropertyDescriptor(object,key);
-  return descriptor&&Object.hasOwn(descriptor,'value')?[[key,descriptor.value]]:[];
-}));
 function fail(message){const e=new Error(message);e.code='EDITOR_EVENT_CRITERIA_INVALID';throw e;}
 
 export function snapshotEventCriteria(input){

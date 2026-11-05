@@ -2,6 +2,7 @@
 // session; this module ships no sprite pixels. V1 remains a separate codec.
 // The caller preserves the original packed stream and enforces its fixed span.
 import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {bytesEqual as equal,bytesToHex as hex,dataView as dv} from './editor-bytes.mjs?v=20261105-part2';
 import {ownData,ownEntry,readDenseList} from './editor-own.mjs?v=20261105-part2';
 import {SRW4_ASSET_KEYS} from './editor-srw4-rom.mjs?v=20261105-part2';
 import {MAP_ICON_PATCH_PROFILES,MAP_ICON_PATCH_SOURCE_IDS,MAP_ICON_PATCH_SOURCE_WIRE_IDS,MAP_ICON_PATCH_TRANSFORM_REVISION,MAP_ICON_PATCH_MAX_RECOVERY_BYTES} from './editor-map-icon-patch.mjs?v=20261105-part2';
@@ -14,8 +15,6 @@ export const MAP_ICON_PATCH_V2_MAX_SOURCE_ASSETS=519;
 export const MAP_ICON_PATCH_V2_REUSED_FLAG=0x4000;
 const MAGIC=new TextEncoder().encode('SRWKOM02'),HEADER=MAP_ICON_PATCH_V2_HEADER_BYTES,ENTRY=8;
 const start=id=>128+id*128;
-const dv=bytes=>new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
-const equal=(a,b)=>a.length===b.length&&a.every((n,i)=>n===b[i]);
 const empty=bytes=>bytes.every(n=>n===0);
 const clone=bytes=>Uint8Array.from(bytes);
 function fail(reason){const error=Error('기체 맵 아이콘의 원본·연결·저장 공간을 확인하지 못했습니다.');error.code='EDITOR_MAP_ICON_PATCH_INVALID';error.details={component:'map-icons',reason};throw error;}
@@ -23,7 +22,6 @@ function integer(value,min,max){if(!Number.isSafeInteger(value)||value<min||valu
 function list(value,max){const result=readDenseList(value,max);if(!result.list)fail('list');return result.list;}
 function bank(value){if(!(value instanceof Uint8Array)||value.length!==MAP_ICON_PATCH_BYTES)fail('bank');return clone(value);}
 function hexBytes(hex){if(typeof hex!=='string'||!/^[0-9a-f]{64}$/.test(hex))fail('hash');return Uint8Array.from(hex.match(/../g),n=>parseInt(n,16));}
-function hex(bytes){return Array.from(bytes,n=>n.toString(16).padStart(2,'0')).join('');}
 function assetCode(assetId){
  const named=SRW4_ASSET_KEYS.indexOf(assetId);if(named>=0)return named;
  if(typeof assetId!=='string'||!/^icon:(0|[1-9][0-9]{0,2})$/.test(assetId))fail('asset-code');

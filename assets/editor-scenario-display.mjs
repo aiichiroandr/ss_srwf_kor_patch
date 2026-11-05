@@ -4,7 +4,7 @@
 // and scheduling context: their return boundary alone grants neither.
 import { decodeScenarioInstruction } from './editor-scenario-events.mjs?v=20261105-part2';
 import { DISPLAY_INSTRUCTION_LENGTHS } from './editor-scenario-display-grammar.mjs?v=20261105-part2';
-import { Sha256 } from './sha256.mjs';
+import { Sha256 } from './sha256.mjs?v=20261105-part2';
 import { ANIMATION_ROSTER_PROFILES } from './editor-animation-roster-profiles.mjs?v=20261105-part2';
 
 const word=(b,p)=>b[p]*256+b[p+1];

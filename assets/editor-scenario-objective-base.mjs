@@ -2,14 +2,12 @@
 // does not authorize a write; callers must authenticate the canonical body.
 import { F_NAME_MAP, FINAL_NAME_MAP } from './editor-name-map.mjs?v=20261105-part2';
 import { F_NAME_SUPPLEMENT } from './editor-pilot-name-map.mjs?v=20261105-part2';
+import { bytesEqual as same, bytesToHex, dataView as viewOf, scenarioRootOffsets as rootsOf } from './editor-bytes.mjs?v=20261105-part2';
 // Match the existing F name/text codec: the accepted font also contains
 // supplemental cells such as F193 (맵), used by original F63 objectives.
 const F_OBJECTIVE_NAME_MAP=new Map([...F_NAME_SUPPLEMENT,...F_NAME_MAP]);
 export const OBJECTIVE_RAM_CAPACITY = Object.freeze({ 'srwf-f':0x8000, 'srwf-final':0x9000 });
 const CAPACITY=OBJECTIVE_RAM_CAPACITY;
-const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
-const viewOf=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-function rootsOf(bytes){const v=viewOf(bytes);return Array.from({length:14},(_,i)=>i*4+v.getInt32(i*4));}
 function fail(message){const e=new Error(message);e.code='EDITOR_OBJECTIVE_INVALID';throw e;}
 export function inspectPendingObjectiveHook(bytes, roots, patched=false) {
   const start=roots[8], end=Math.min(...roots.filter(offset=>offset>start),bytes.length);
@@ -88,7 +86,7 @@ function readText(bytes, start, nameMap) {
     if(bytes[p]===255) return {text,end:p+1};
     const n=bytes[p]>=235&&bytes[p]<=245?2:1;
     if(p+n>bytes.length) return null;
-    const key=Array.from(bytes.subarray(p,p+n),byte=>byte.toString(16).padStart(2,'0')).join('').toUpperCase();
+    const key=bytesToHex(bytes.subarray(p,p+n)).toUpperCase();
     const glyph=nameMap.get(key); if(glyph===undefined)return null;
     text+=glyph; p+=n;
   }

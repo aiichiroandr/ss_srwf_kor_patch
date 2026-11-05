@@ -1,12 +1,12 @@
 // Pure-data Ex-S beam geometry. Pixels and palettes come from a verified ROM.
 // Frame atlas geometry is reconstructed into a separate authenticated bank.
 // No runtime, file, disc, actor, or executable writes occur here.
+import {dataView as dv} from './editor-bytes.mjs?v=20261105-part2';
 function bad(reason='structure') {
  const error=Error('4연장 빔 효과의 그림 구조를 확인하지 못했습니다.');
  error.code='EDITOR_BATTLE_COMPONENT_INVALID';error.details={component:'beam-geometry',reason};throw error;
 }
 const check=(condition,reason)=>{if(!condition)bad(reason);};
-const dv=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 const SOURCE_CENTERS=[7,15,26,34];
 // Original world bitmap origin (-184,88), source bright core ends at x322.
 // Rounded target centers: UR,UL,LR,LL. Half-pixel port centers round upward.

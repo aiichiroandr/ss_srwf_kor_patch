@@ -3,6 +3,7 @@
 // This low-level codec does NOT authorize the decoded icon edits; callers must
 // also validate them with editor-map-icon-patch and the verified source pack.
 import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {bytesEqual as equal,dataView as dv} from './editor-bytes.mjs?v=20261105-part2';
 import {ownData,ownEntry} from './editor-own.mjs?v=20261105-part2';
 import {MAP_ICON_PATCH_BYTES,MAP_ICON_PATCH_MAX_RECOVERY_BYTES} from './editor-map-icon-patch.mjs?v=20261105-part2';
 
@@ -11,8 +12,6 @@ export const MAP_ICON_PACKED_PROFILES=Object.freeze({
  'srwf-final':Object.freeze({bytes:28416,sha256:'6b09c45434123d7191f7a6f5f36d9c72211d0aaf7e9b2ea4b2a27ac1d16564d1',decodedSha256:'67ce85a0f4c49a9446d21a2a8b3628c334d8d48060fe0761c91324a9862366b2'}),
 });
 const MAGIC=new TextEncoder().encode('SRWKMR01'),HEADER=28,MAX_PACKED_BYTES=98304;
-const dv=bytes=>new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
-const equal=(a,b)=>a.length===b.length&&a.every((n,i)=>n===b[i]);
 const clone=bytes=>Uint8Array.from(bytes);
 function fail(reason,numbers={}){const error=Error('KOM 압축 원본 복원이나 기존 파일 공간을 확인하지 못했습니다.');error.code='EDITOR_MAP_ICON_PACKED_INVALID';error.details={component:'map-icon-packed',reason,...numbers};throw error;}
 function integer(n,min,max){if(!Number.isSafeInteger(n)||n<min||n>max)fail('range');return n;}

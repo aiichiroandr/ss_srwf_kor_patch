@@ -13,7 +13,7 @@ import re
 import struct
 import subprocess
 import sys
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import unquote, urlsplit
 import zlib
 
@@ -829,17 +829,32 @@ def inspect_srwfp(data: bytes) -> dict[str, int | str]:
 # Retain only small descriptors, never the large patch bytes. Repeated manifest
 # checks in one verifier process still hash fresh bytes and compare fresh fields.
 _PATCH_DESCRIPTOR_CACHE: dict[tuple, dict[str, int | str]] = {}
+_PATCH_DESCRIPTOR_CACHE_LIMIT = 128
+
+
+def _cached_descriptor(
+    cache: dict[tuple, dict[str, int | str]],
+    key: tuple,
+    inspect: Callable[[bytes], dict[str, int | str]],
+    data: bytes,
+) -> dict[str, int | str]:
+    """Return a copy of the descriptor for `key`, inspecting `data` on a miss.
+
+    The key carries the payload digest and every limit the inspector reads, so a
+    changed limit never reuses a descriptor that was computed under another one.
+    """
+    if key not in cache:
+        actual = inspect(data)
+        if len(cache) >= _PATCH_DESCRIPTOR_CACHE_LIMIT:
+            cache.pop(next(iter(cache)))
+        cache[key] = actual
+    return dict(cache[key])
 
 
 def inspect_srwfp_cached(data: bytes) -> dict[str, int | str]:
     key = (hashlib.sha256(data).digest(), PATCH_MAX, BODY_MAX, RECORD_MAX,
            MAX_DOWNLOAD_CAPTURE_BYTES, DOWNLOAD_CAPTURE_CHUNK_BYTES)
-    if key not in _PATCH_DESCRIPTOR_CACHE:
-        actual = inspect_srwfp(data)
-        if len(_PATCH_DESCRIPTOR_CACHE) >= 128:
-            _PATCH_DESCRIPTOR_CACHE.pop(next(iter(_PATCH_DESCRIPTOR_CACHE)))
-        _PATCH_DESCRIPTOR_CACHE[key] = actual
-    return dict(_PATCH_DESCRIPTOR_CACHE[key])
+    return _cached_descriptor(_PATCH_DESCRIPTOR_CACHE, key, inspect_srwfp, data)
 
 
 def _inflate_srwfp_body(compressed: bytes, body_size: int) -> bytes:
@@ -1082,12 +1097,7 @@ def inspect_srwfp_v2_cached(data: bytes) -> dict[str, int | str]:
     key = (hashlib.sha256(data).digest(), PATCH_MAX, BODY_MAX, RECORD_MAX,
            MAX_DOWNLOAD_CAPTURE_BYTES, DOWNLOAD_CAPTURE_CHUNK_BYTES,
            V2_GROWTH_MAX, V2_COPY_RECORD_MAX, V2_COPY_LENGTH_MIN)
-    if key not in _PATCH_V2_DESCRIPTOR_CACHE:
-        actual = inspect_srwfp_v2(data)
-        if len(_PATCH_V2_DESCRIPTOR_CACHE) >= 128:
-            _PATCH_V2_DESCRIPTOR_CACHE.pop(next(iter(_PATCH_V2_DESCRIPTOR_CACHE)))
-        _PATCH_V2_DESCRIPTOR_CACHE[key] = actual
-    return dict(_PATCH_V2_DESCRIPTOR_CACHE[key])
+    return _cached_descriptor(_PATCH_V2_DESCRIPTOR_CACHE, key, inspect_srwfp_v2, data)
 
 
 def is_v2_growth_target_size(size: Any, source_profile: dict[str, Any] | None) -> bool:

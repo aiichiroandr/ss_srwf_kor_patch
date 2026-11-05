@@ -3,6 +3,7 @@
 // The optional second bank keeps the defender shot in its original geometry.
 import {patchFourBeamLaunch} from './editor-battle-motion.mjs?v=20261105-part2';
 import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {dataView as view} from './editor-bytes.mjs?v=20261105-part2';
 
 export const EXS_ALIGNED_BEAM_MOTION=0x057f;
 export const EXS_ALIGNED_BEAM_BANK=0x053f;
@@ -10,7 +11,6 @@ export const EXS_ALIGNED_CHARGE_POINTS=Object.freeze({
  25:Object.freeze([30,0]),26:Object.freeze([-39,-16]),
  27:Object.freeze([-12,11]),28:Object.freeze([-41,5]),
 });
-const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 function bad(){const e=new Error('Ex-S 전용 빔 연출의 원본 명령이 일치하지 않습니다.');e.code='EDITOR_BATTLE_COMPONENT_INVALID';throw e;}
 
 export function makeExSAlignedBeamMotion(original,{expectedHash,fast=false,preserveImpact=false}={}){

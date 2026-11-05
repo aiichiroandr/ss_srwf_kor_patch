@@ -1,10 +1,9 @@
 // Compile user conditions around the original root-8 action destinations.
 // Original guards, dialogue, flags and clear/failure actions stay in place.
-import { ownData } from './editor-own.mjs?v=20261105-part2';
+import { ownData, ownDataCopy as pilotBodyData, readDenseList } from './editor-own.mjs?v=20261105-part2';
 import { compileObjectiveBranches, compileEntityObjectiveBranches, compilePilotObjectiveBranches, compileRegionObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261105-part2';
 import { snapshotPilotObjectiveContext, encodePilotObjectiveRule, decodePilotObjectiveRule } from './editor-scenario-pilot-context.mjs?v=20261105-part2';
-import { Sha256 } from './sha256.mjs?v=20261105-part2';
-import { readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { bytesEqual as same, dataView as viewOf, hexToBytes, scenarioRootOffsets as rootsOf, sha256Digest } from './editor-bytes.mjs?v=20261105-part2';
 import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261105-part2';
 import { inspectPendingObjectiveHook, inspectClosedObjectiveCallback, readScenarioPurpose, encodeObjectiveText, OBJECTIVE_RAM_CAPACITY } from './editor-scenario-objective-base.mjs?v=20261105-part2';
 
@@ -15,9 +14,6 @@ const MAGIC=Uint8Array.of(83,82,87,70,79,66,48,49),TRAILER=80; // SRWFOB01
 const RELOCATED_MAGIC=Uint8Array.of(83,82,87,70,79,66,48,50); // SRWFOB02
 const PILOT_MAGIC=Uint8Array.of(83,82,87,70,80,86,48,49),PILOT_TRAILER=128; // SRWFPV01
 const ENTITY_MAGIC=Uint8Array.of(83,82,87,70,79,66,48,51); // SRWFOB03
-const viewOf=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
-const rootsOf=b=>Array.from({length:14},(_,i)=>i*4+viewOf(b).getInt32(i*4));
 function fail(message){const e=new Error(message);e.code='EDITOR_OBJECTIVE_INVALID';throw e;}
 
 const REGION_MAGIC=Uint8Array.of(83,82,87,70,82,71,48,49),REGION_TRAILER=160;
@@ -304,9 +300,6 @@ export function updateScenarioCriteriaBody(body,gameId,fields,deadline=0,options
 // PV01 replaces an old objective extension. It is never a pilot tag inside an
 // OB/DL trailer. Restore full original source + ordinary-head catalog, then
 // demand exact regeneration before canonical provenance comparison.
-const digestPilot=b=>new Sha256().update(b).digest();
-const hashBytes=hex=>Uint8Array.from(hex.match(/../g).map(n=>parseInt(n,16)));
-const pilotBodyData=body=>Object.fromEntries(Reflect.ownKeys(body).flatMap(k=>{const d=Object.getOwnPropertyDescriptor(body,k);return d&&Object.hasOwn(d,'value')?[[k,d.value]]:[];}));
 function pilotBodySnapshot(body){
   const decoded=ownData(body,'decoded'),r=readDenseList(ownData(body,'roots'),14),slots=readDenseList(ownData(body,'slots'),200),physicalIndex=ownData(body,'physicalIndex');
   if(!(decoded instanceof Uint8Array)||decoded.length<57||decoded.length>0x9000||r.problem||r.list.length!==14||slots.problem||!slots.list.length||slots.list.some(n=>!Number.isInteger(n)||n<0||n>=200)||!Number.isInteger(physicalIndex)||physicalIndex<0||r.list.some((n,i)=>!Number.isInteger(n)||n<56||n>=decoded.length||n!==i*4+viewOf(decoded).getInt32(i*4)))fail('Invalid declared pilot objective body.');
@@ -329,15 +322,15 @@ function appendPilot(body,gameId,snapshot,deadline,options){
   if(decoded.length>OBJECTIVE_RAM_CAPACITY[gameId])fail('Pilot objective exceeds the proved scenario RAM boundary.');decoded.set(source);decoded.set(code,base);decoded.set(pending,pendingBase);decoded.set(text,root13);viewOf(decoded).setInt32(52,root13-52);
   for(const [p,target,n]of [[hook.headOffset,base,14],[hook.yieldOffset,pendingBase,4]]){const delta=target-(p+1);if(delta< -32768||delta>32767)fail('Pilot objective hook leaves its signed range.');decoded.fill(0,p,p+n);decoded.set([1,delta>>>8&255,delta&255],p);}
   const meta=decoded.subarray(decoded.length-PILOT_TRAILER),v=viewOf(meta);meta.set(PILOT_MAGIC);v.setUint32(8,base);v.setUint32(12,hook.start);v.setUint32(16,purpose.root);meta[21]=0x11;meta[22]=deadline;
-  CRITERIA_FIELDS.forEach((k,i)=>v.setUint16(24+i*2,snapshot.fields[k]));meta.set(source.subarray(hook.headOffset,hook.headOffset+18),42);meta.set(digestPilot(source),60);meta.set(hashBytes(pc.sha256),92);
+  CRITERIA_FIELDS.forEach((k,i)=>v.setUint16(24+i*2,snapshot.fields[k]));meta.set(source.subarray(hook.headOffset,hook.headOffset+18),42);meta.set(sha256Digest(source),60);meta.set(hexToBytes(pc.sha256),92);
   return {decoded,criteria:snapshot.fields,deadline,hook,purpose,generatedPurpose:generated};
 }
 function normalizePilot(body,gameId,options){
   const b=ownData(body,'decoded'),metadata=b.subarray(b.length-PILOT_TRAILER),context={gameId,unitCount:ownData(options,'unitCount'),pilotContext:ownData(options,'pilotContext')},pc=pilotContextOf(context),v=viewOf(metadata),length=v.getUint32(8),root8=v.getUint32(12),root13=v.getUint32(16),deadline=metadata[22];
-  if(gameId!=='srwf-final'||(ownData(options,'scenarioLayout')??'latest')!=='latest'||length<57||length>=b.length-PILOT_TRAILER||b.length>0x9000||metadata[20]||metadata[21]!==0x11||metadata[23]||deadline>98||metadata.subarray(124).some(Boolean)||root8<56||root8>=length||root13<56||root13>=length||!same(metadata.subarray(92,124),hashBytes(pc.sha256)))fail('Invalid pilot objective metadata or identity catalog.');
+  if(gameId!=='srwf-final'||(ownData(options,'scenarioLayout')??'latest')!=='latest'||length<57||length>=b.length-PILOT_TRAILER||b.length>0x9000||metadata[20]||metadata[21]!==0x11||metadata[23]||deadline>98||metadata.subarray(124).some(Boolean)||root8<56||root8>=length||root13<56||root13>=length||!same(metadata.subarray(92,124),hexToBytes(pc.sha256)))fail('Invalid pilot objective metadata or identity catalog.');
   const decoded=b.slice(0,length);viewOf(decoded).setInt32(52,root13-52);if(32+viewOf(decoded).getInt32(32)!==root8)fail('Pilot objective root relocation is unsupported.');
   const head=root8+8*countGuards(decoded,root8);if(head+18>length)fail('Invalid restored pilot objective head.');decoded.set(metadata.subarray(42,60),head);
-  if(!same(digestPilot(decoded),metadata.subarray(60,92)))fail('Pilot objective restored original hash differs.');
+  if(!same(sha256Digest(decoded),metadata.subarray(60,92)))fail('Pilot objective restored original hash differs.');
   const canonical=Object.freeze({...pilotBodyData(body),decoded,roots:Object.freeze(rootsOf(decoded))}),fields=Object.fromEntries(CRITERIA_FIELDS.map((k,i)=>[k,v.getUint16(24+i*2)])),snapshot=snapshotScenarioCriteria(fields,context);
   const expected=appendPilot(canonical,gameId,snapshot,deadline,options);if(!same(expected.decoded,b))fail('Pilot objective differs from exact regeneration.');return {...expected,body:canonical};
 }
@@ -361,7 +354,7 @@ function appendRegion(submitted,gameId,snapshot,deadline,options){
  const decoded=new Uint8Array(root13+text.length+REGION_TRAILER);if(decoded.length>0x8000||decoded.length-source.length>381)fail('Region exceeds F RAM/growth bound.');decoded.set(source);decoded.set(prefix,base);decoded.set(code,codeBase);decoded.set(pending,pendingBase);decoded.set(text,root13);viewOf(decoded).setInt32(52,root13-52);
  if(mode)viewOf(decoded).setInt32(32,base-32);else for(const[p,t,n]of [[hook.headOffset,codeBase,14],[hook.yieldOffset,pendingBase,4]]){const d=t-(p+1);if(d< -32768||d>32767)fail('Region hook leaves signed range.');decoded.fill(0,p,p+n);decoded.set([1,d>>>8&255,d&255],p);}
  const m=decoded.subarray(decoded.length-REGION_TRAILER),v=viewOf(m);m.set(REGION_MAGIC);v.setUint32(8,base);v.setUint32(12,hook.start);v.setUint32(16,observed.purpose.root);m[20]=mode;m[21]=0x0f;m[22]=deadline;m[23]=1;m[24]=snapshot.fields.objectivePriority;m[25]=snapshot.fields.victoryJoin;m[26]=snapshot.fields.defeatJoin;
- ['victoryRule1','victoryRule2','victoryRule3','defeatRule1','defeatRule2','defeatRule3'].forEach((key,i)=>v.setUint32(28+i*4,snapshot.fields[key]));if(!mode)m.set(source.subarray(hook.headOffset,hook.headOffset+18),52);m.set(digestPilot(source),72);m.set(regionContextDigest(c),104);m[136]=c.width;m[137]=c.height;v.setUint16(138,c.mapIndex);v.setUint16(140,c.physicalIndex);
+ ['victoryRule1','victoryRule2','victoryRule3','defeatRule1','defeatRule2','defeatRule3'].forEach((key,i)=>v.setUint32(28+i*4,snapshot.fields[key]));if(!mode)m.set(source.subarray(hook.headOffset,hook.headOffset+18),52);m.set(sha256Digest(source),72);m.set(regionContextDigest(c),104);m[136]=c.width;m[137]=c.height;v.setUint16(138,c.mapIndex);v.setUint16(140,c.physicalIndex);
  return {decoded,criteria:snapshot.fields,deadline,hook,purpose:observed.purpose,generatedPurpose:generated,regionContext:c};
 }
 function normalizeRegion(submitted,gameId,options){
@@ -369,7 +362,7 @@ function normalizeRegion(submitted,gameId,options){
  if(gameId!=='srwf-f'||(ownData(options,'scenarioLayout')??'latest')!=='latest'||b.length>0x8000||length<57||length>=b.length-REGION_TRAILER||r8<56||r8>=length||r13<56||r13>=length||![0,1].includes(mode)||m[21]!==0x0f||m[23]!==1||deadline>98||m[27]||m.subarray(mode?52:70,72).some(Boolean)||m.subarray(142).some(Boolean)||m[136]!==c.width||m[137]!==c.height||v.getUint16(138)!==c.mapIndex||v.getUint16(140)!==c.physicalIndex||!same(m.subarray(104,136),regionContextDigest(c)))fail('Invalid RG01 metadata/map context.');
  const decoded=b.slice(0,length);viewOf(decoded).setInt32(32,r8-32);viewOf(decoded).setInt32(52,r13-52);
  if(!mode){const head=r8+8*countGuards(decoded,r8);if(head+18>length)fail('Restored RG01 hook leaves source.');decoded.set(m.subarray(52,70),head);}
- if(!same(digestPilot(decoded),m.subarray(72,104)))fail('RG01 restored fullsource hash mismatch.');
+ if(!same(sha256Digest(decoded),m.subarray(72,104)))fail('RG01 restored fullsource hash mismatch.');
  const canonical=pilotBodySnapshot({...pilotBodyData(body),decoded,roots:rootsOf(decoded)});if(c.physicalIndex!==canonical.physicalIndex||!same(c.scenarioSlots,canonical.slots))fail('RG01 physical/selector binding mismatch.');
  const fields={objectivePriority:m[24],victoryJoin:m[25],defeatJoin:m[26],...Object.fromEntries(['victoryRule1','victoryRule2','victoryRule3','defeatRule1','defeatRule2','defeatRule3'].map((key,i)=>[key,v.getUint32(28+i*4)]))},snapshot=snapshotScenarioCriteria(fields,context);
  if(!hasRegions(snapshot.tree))fail('RG01 lacks a region rule.');const expected=appendRegion(canonical,gameId,snapshot,deadline,options);if(!same(expected.decoded,b))fail('RG01 differs from exact regeneration.');return {...expected,body:canonical};

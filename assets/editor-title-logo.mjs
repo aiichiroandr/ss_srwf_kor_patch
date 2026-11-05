@@ -2,9 +2,9 @@
 // graphic slots; it adds no resource, pointer, record or archive allocation.
 import {FINAL_TITLE_LOGO_DATA as DATA} from './editor-title-logo-data.mjs?v=20261105-part2';
 import {sha256Hex} from './sha256.mjs?v=20261105-part2';
+import {base64UrlToBytes,bytesEqual as same} from './editor-bytes.mjs?v=20261105-part2';
 
 function invalid(){const e=Error('완결편 타이틀의 원본 또는 보정 데이터가 일치하지 않습니다.');e.code='EDITOR_TITLE_LOGO_INVALID';throw e;}
-const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 function slots(bytes){
  if(!(bytes instanceof Uint8Array)||bytes.length<1208||bytes.length>4*1024*1024)return null;
  const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),table=v.getUint32(0);
@@ -29,7 +29,7 @@ export function inspectFinalTitleLogo(bytes){
 function xorSlot(bytes,spec,state){
  if(state==='original')return;
  const encoded=(spec.shared??spec.variants[state]).xor;
- const stream=Uint8Array.from(atob(encoded.replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0));let at=0,end=0;
+ const stream=base64UrlToBytes(encoded);let at=0,end=0;
  function number(){let n=0,shift=0;for(let i=0;i<4;i++){if(at>=stream.length)invalid();const b=stream[at++];n+=(b&127)*2**shift;if(!(b&128))return n;shift+=7;}invalid();}
  while(at<stream.length){
   const start=end+number(),length=number();end=start+length;

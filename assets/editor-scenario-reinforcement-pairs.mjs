@@ -4,7 +4,7 @@
 import {dataRecordOffsets,isTailOnlyBlock,MAX_PILOT_RECORD_BYTES} from './editor-core.mjs?v=20261105-part2';
 import {readHangarUnitRewardOptions} from './editor-scenario-unit-rewards.mjs?v=20261105-part2';
 import {ownData} from './editor-own.mjs?v=20261105-part2';
-import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {sha256Hex} from './sha256.mjs?v=20261105-part2';
 
 const encoder=new TextEncoder(),GAMES=new Set(['srwf-f','srwf-final']);
 const permissions=Object.freeze({callback:false,map:false,capacity:false,onceOnly:false});
@@ -14,7 +14,7 @@ function snapshot(input,keys){
  if(!input||typeof input!=='object'||Array.isArray(input)||Reflect.ownKeys(input).some(k=>!keys.includes(k))||keys.some(k=>!Object.hasOwn(input,k)||!Object.getOwnPropertyDescriptor(input,k)?.enumerable||!Object.hasOwn(Object.getOwnPropertyDescriptor(input,k),'value')))fail('증원 입력 항목이 잘못되었습니다.');
  return Object.fromEntries(keys.map(k=>[k,ownData(input,k)]));
 }
-function hash(value){return new Sha256().update(encoder.encode(JSON.stringify(value))).hex();}
+function hash(value){return sha256Hex(encoder.encode(JSON.stringify(value)));}
 
 export function readReinforcementPairOptions(root,{gameId}={}){
  limit(gameId);const data=root?.[28]?.bytes,unitBytes=root?.[27]?.bytes;

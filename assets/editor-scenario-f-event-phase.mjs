@@ -2,8 +2,9 @@
 // turn can move from enemy-start to player-start. The source is authenticated
 // after restoring the wrapper and canonicalizing the one existing turn byte.
 // This module does not grant compressed-carrier or accepted-release authority.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
-import { Sha256 } from './sha256.mjs?v=20261105-part2';
+import { ownData, ownDataCopy as ownCopy, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { sha256Hex } from './sha256.mjs?v=20261105-part2';
+import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261105-part2';
 import { snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261105-part2';
 import { encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261105-part2';
 
@@ -27,15 +28,6 @@ const ACTION_REFS = Object.freeze([
   [2611, 2601], [2619, 2601], [2622, 13045], [2644, 2649], [2660, 2601],
 ]);
 const GUARD_BOUNDARIES = [2613, 2636], GUARD_SIZES = [8, 16];
-const same = (a, b) => a.length === b.length && a.every((byte, i) => byte === b[i]);
-const viewOf = b => new DataView(b.buffer, b.byteOffset, b.byteLength);
-const digest = b => new Sha256().update(b).digest();
-const hexDigest = b => new Sha256().update(b).hex();
-const rootsOf = b => Array.from({ length: 14 }, (_, i) => i * 4 + viewOf(b).getInt32(i * 4));
-const ownCopy = object => Object.fromEntries(Reflect.ownKeys(object).flatMap(key => {
-  const d = Object.getOwnPropertyDescriptor(object, key);
-  return d && Object.hasOwn(d, 'value') ? [[key, d.value]] : [];
-}));
 function fail(message) { const error = new Error(message); error.code = 'EDITOR_EVENT_PHASE_INVALID'; throw error; }
 function layoutOf(options) {
   if (Object.hasOwn(options ?? {}, 'scenarioLayout') && ownData(options, 'scenarioLayout') === undefined) fail('Layout must be own data.');
@@ -61,7 +53,7 @@ function canonicalSource(input) {
     if (level < 1 || level > 99) fail('Invalid F roster level.');
     checked[offset] &= 1;
   }
-  if (hexDigest(checked) !== C.maskedRosterSha256 || !same(bytes.subarray(C.firstEntry, C.firstEnd), PREFIX)
+  if (sha256Hex(checked) !== C.maskedRosterSha256 || !same(bytes.subarray(C.firstEntry, C.firstEnd), PREFIX)
     || !same(bytes.subarray(C.tailOperand, C.tailOperand + 2), TAIL)
     || !same(bytes.subarray(C.enemyTargetOperand, C.enemyTargetOperand + 2), ENEMY_TARGET)
     || rootsOf(bytes).some((r, i) => r !== C.roots[i])) fail('The restored F source differs from its pinned immutable body.');

@@ -6,6 +6,7 @@
 // two generated replacements are verified together; partial installs fail.
 import {sha256Hex} from './sha256.mjs?v=20261105-part2';
 import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
+import {bytesEqual as same,dataView as view} from './editor-bytes.mjs?v=20261105-part2';
 
 const GAME='srwf-f',IP_BYTES=0x1800,EXEC_BYTES=731504,IP_OFFSET=0x1700,CODE_BYTES=256;
 const ADDRESS=0x06003700,EXEC_BASE=0x06004000,DISPATCH=0x060b25ac-EXEC_BASE;
@@ -16,8 +17,6 @@ const ACCEPTED_BASES=Object.freeze([
  '75555116f784115e7104c593fd990491ae182b9493d9f159201e17b3e3d88202'
 ]);
 function fail(message){const error=new Error(message);error.code='EDITOR_SPAWN_CAPACITY_INVALID';throw error;}
-const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
-const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
 function pointer(value){const bytes=new Uint8Array(4);view(bytes).setUint32(0,value);return bytes;}
 
 // Small label assembler for our own leaf function. It executes no external

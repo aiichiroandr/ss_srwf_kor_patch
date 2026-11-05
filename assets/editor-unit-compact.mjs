@@ -6,10 +6,9 @@
 // the existing provenance normalizers still authenticate that logical layout.
 import {unusedUnitFillerTest} from './editor-unit-restoration.mjs?v=20261105-part2';
 import {writeRelative32,requireTsrRuntimeSize,tsrRuntimeLimit,tsrHistoricalStorageLimit} from './editor-storage-safety.mjs?v=20261105-part2';
+import {bytesEqual as equal,bytesToHex,dataView as view} from './editor-bytes.mjs?v=20261105-part2';
 const MAGIC=new TextEncoder().encode('SRUCMP01'),MAGIC_F=new TextEncoder().encode('SRUCMP02'),MAGIC_FINAL=new TextEncoder().encode('SRUCMP03'),MAGIC_SPLIT_OLD=new TextEncoder().encode('SRUCMP04'),MAGIC_SPLIT=new TextEncoder().encode('SRUCMP05'),FOOTER=32,SPLIT_FOOTER=40;
 const MAGIC_INLINE_F=new TextEncoder().encode('SRUCMP06'),MAGIC_INLINE_F7=new TextEncoder().encode('SRUCMP07'),MAGIC_INLINE_FINAL=new TextEncoder().encode('SRUCMP08'),MAGIC_INLINE_FINAL_REF=new TextEncoder().encode('SRUCMP09');
-const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
-const equal=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 function fail(reason,details={}){const e=Error('기체 데이터를 게임의 허용 메모리 안에 안전하게 저장할 수 없습니다. 변경을 줄여 주세요.');e.code='EDITOR_STORAGE_INVALID';e.details={reason,...details};throw e;}
 function pointers(bytes){
   if(bytes.length<8)fail('unit-table');
@@ -258,7 +257,7 @@ function expandFinalReference(stored,foot,profiles,inlineAuxiliary){
   ||unitStart<144||unitStart+unitLength!==foot+FOOTER||unitStart+unitLength>tsrRuntimeLimit('srwf-final')
   ||tableSize<8||tableSize%4||tableSize>4096||used<tableSize||guard>metaStart
   ||108+v.getInt32(108)!==unitStart||stored.subarray(unitStart+used,metaStart).some(Boolean))fail('compact-layout');
- const hash=Array.from(stored.subarray(metaStart,foot),x=>x.toString(16).padStart(2,'0')).join('');
+ const hash=bytesToHex(stored.subarray(metaStart,foot));
  if(!Array.isArray(profiles))fail('reference-profile');
  const matches=profiles.filter(p=>p.gameId==='srwf-final'&&p.baseTargetSha256===hash&&p.unitStorage),profile=matches[0];
  const storage=profile?.unitStorage,offsets=storage?.offsets;

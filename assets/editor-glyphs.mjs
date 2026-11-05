@@ -1,6 +1,7 @@
 // Newly entered Hangul only. Existing game glyphs never leave the supplied TSR.
 // The authenticated pools contain no known consumer references in accepted a/b/c.
 import { sha256Hex } from './sha256.mjs?v=20261105-part2';
+import { base64UrlToBytes, bytesEqual as equal, bytesToHex as hex, hexToBytes as unhex } from './editor-bytes.mjs?v=20261105-part2';
 import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
 import {requireTsrRuntimeSize,requireTsrInspectionSize,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261105-part2';
 import { EDITOR_GLYPH_PROFILES } from './editor-glyph-pools.mjs?v=20261105-part2';
@@ -15,9 +16,6 @@ export const EDITOR_GLYPH_FONT_NOTICE = '추가한 글자만 갈무리11 기반 
 const HASH = /^[0-9a-f]{64}$/, CODE = /^[E-F][0-9A-F]{3}$/;
 let fontBank;
 function fail(message, code = 'EDITOR_GLYPH_INVALID') { const error = new Error(message); error.code = code; throw error; }
-function hex(bytes) { return Array.from(bytes, value => value.toString(16).padStart(2, '0')).join(''); }
-function unhex(value) { return Uint8Array.from(value.match(/../g), pair => parseInt(pair, 16)); }
-function equal(a, b) { return a.length === b.length && a.every((value, i) => value === b[i]); }
 function exact(value, keys) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const supplied = Reflect.ownKeys(value);
@@ -57,7 +55,7 @@ function expandManifest(bytes,gameId,zeroOriginals=false){
 
 function loadFontBank() {
   if (fontBank) return fontBank;
-  const packed = Uint8Array.from(atob(EDITOR_HANGUL_PACKED.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+  const packed = base64UrlToBytes(EDITOR_HANGUL_PACKED);
   const output = new Uint8Array(FONT_BYTES);
   let input = 0, cursor = 0;
   while (cursor < output.length) {

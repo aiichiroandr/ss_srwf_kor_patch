@@ -80,6 +80,7 @@ F와 완결편의 수치 A/B에서 같은 세이브 payload를 쓰면 이름의 
 
 F용·완결편용 로컬 분석 프로젝트와 구 도구(`SRWF_TSRViewer.exe`, `research/tips.utf8.txt`)는 저장소 밖 작업자의 로컬 폴더에 있다. 위치는 저장소에 기록하지 않으므로 작업자에게 확인하고, 파일이 없으면 상위 폴더의 파일명 목록부터 찾는다.
 
+- 모듈 공용 헬퍼: 바이트 배열 비교·DataView·hex/base64 변환·SHA-256 digest·시나리오 본문의 14개 root 읽기는 `assets/editor-bytes.mjs`, 자기 소유 속성 조회와 복사는 `assets/editor-own.mjs`를 쓴다. 모듈마다 사본을 새로 만들지 않는다(`tests/editor-bytes.test.mjs`가 사본을 거부한다).
 - raw sector는 2352 bytes, user payload는 +16에서 2048 bytes. ISO extent는 logical LBA다.
 - TSR 상대 포인터는 **포인터 셀 자신의 주소 + signed BE32 변위**. F완결편은 backward pointer/alias가 있으므로 root 순번을 물리 정렬 순번으로 바꾸지 않는다. 영역 끝은 다음 물리 unique offset으로 경계 처리한다.
 - 현재 해석: root27 유닛,28 파일럿,29 무기. 명칭 root11 유닛,12 파일럿,13 파일럿 약칭,14 무기,16 정신기,17 파일럿 특수능력,18 기체 특수능력. 새 버전은 파서 근거로 다시 확인한다.
