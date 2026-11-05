@@ -70,7 +70,7 @@ test('scenarioRootOffsets resolves the 14 self-relative root cells',()=>{
 
 test('editor modules use the shared helpers instead of private copies',()=>{
  // A private copy of a shared helper drifts silently; keep one definition.
- // editor-bytes.mjs owns the byte helpers and editor-own.mjs the own-data snapshot.
+ // editor-bytes.mjs owns the byte helpers and editor-own-copy.mjs the own-data snapshot.
  const copies=[
   /Object\.fromEntries\(Reflect\.ownKeys\(\w+\)\.flatMap\(/,
   /=\s*\(a,\s*b\)\s*=>\s*a\.length\s*===\s*b\.length\s*&&\s*a\.every\(/,
@@ -81,7 +81,7 @@ test('editor modules use the shared helpers instead of private copies',()=>{
   /function\s+\w+\s*\((\w+)\)\s*\{\s*return\s+Array\.from\(\1,\s*\(?(\w+)\)?\s*=>\s*\2\.toString\(16\)\.padStart\(2,\s*'0'\)\)\.join\(''\);?\s*\}/,
  ];
  const offenders=[];
- for(const name of readdirSync(new URL('assets/',root)).filter(n=>n.endsWith('.mjs')&&n!=='editor-bytes.mjs'&&n!=='editor-own.mjs')){
+ for(const name of readdirSync(new URL('assets/',root)).filter(n=>n.endsWith('.mjs')&&n!=='editor-bytes.mjs'&&n!=='editor-own-copy.mjs')){
   const text=readFileSync(new URL(`assets/${name}`,root),'utf8');
   for(const pattern of copies)if(pattern.test(text))offenders.push(`${name}: ${pattern}`);
  }

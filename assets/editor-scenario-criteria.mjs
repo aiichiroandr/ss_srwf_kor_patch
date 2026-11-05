@@ -1,6 +1,7 @@
 // Compile user conditions around the original root-8 action destinations.
 // Original guards, dialogue, flags and clear/failure actions stay in place.
-import { ownData, ownDataCopy as pilotBodyData, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownDataCopy as pilotBodyData } from './editor-own-copy.mjs?v=20261105-part2';
 import { compileObjectiveBranches, compileEntityObjectiveBranches, compilePilotObjectiveBranches, compileRegionObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261105-part2';
 import { snapshotPilotObjectiveContext, encodePilotObjectiveRule, decodePilotObjectiveRule } from './editor-scenario-pilot-context.mjs?v=20261105-part2';
 import { bytesEqual as same, dataView as viewOf, hexToBytes, scenarioRootOffsets as rootsOf, sha256Digest } from './editor-bytes.mjs?v=20261105-part2';

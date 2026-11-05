@@ -21,16 +21,6 @@ export function ownData(object, key) {
   return descriptor !== undefined && hasOwn.call(descriptor, "value") ? descriptor.value : undefined;
 }
 
-// A plain-object snapshot of every own DATA property of `object`, string and symbol keys alike. Accessors are skipped
-// without being invoked, so a getter can neither run nor answer differently on a later read. A null or undefined
-// `object` throws a TypeError, as Reflect.ownKeys does.
-export function ownDataCopy(object) {
-  return Object.fromEntries(Reflect.ownKeys(object).flatMap((key) => {
-    const descriptor = Object.getOwnPropertyDescriptor(object, key);
-    return descriptor !== undefined && hasOwn.call(descriptor, "value") ? [[key, descriptor.value]] : [];
-  }));
-}
-
 // A snapshot of a request list: `{ list, problem }`. The value must be an array of at most `maximumLength` entries whose
 // every index is present as an own data property. `problem` is null for a good list, otherwise
 //   "not-a-list"  the value is not an array

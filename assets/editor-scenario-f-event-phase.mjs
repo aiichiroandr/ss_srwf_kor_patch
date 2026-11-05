@@ -2,7 +2,8 @@
 // turn can move from enemy-start to player-start. The source is authenticated
 // after restoring the wrapper and canonicalizing the one existing turn byte.
 // This module does not grant compressed-carrier or accepted-release authority.
-import { ownData, ownDataCopy as ownCopy, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownDataCopy as ownCopy } from './editor-own-copy.mjs?v=20261105-part2';
 import { sha256Hex } from './sha256.mjs?v=20261105-part2';
 import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261105-part2';
 import { snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261105-part2';

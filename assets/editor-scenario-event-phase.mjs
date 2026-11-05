@@ -2,7 +2,8 @@
 // Metadata restores source bytes; it grants no profile or runtime authority.
 // PH01 is outside TE02: restore this wrapper before any existing normalizer.
 // Source/code hashes authenticate reversibility, never an accepted profile.
-import { ownData, ownDataCopy as ownCopy, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownDataCopy as ownCopy } from './editor-own-copy.mjs?v=20261105-part2';
 import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261105-part2';
 import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, inspectEventCriteriaHook,
   normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261105-part2';

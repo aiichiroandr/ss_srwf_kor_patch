@@ -2,7 +2,8 @@
 // The writer changes its skip branch only. It preserves the original action,
 // E9, saved resume, roots and all other script bytes. Carrier/provenance checks
 // must still authenticate the fully normalized source against its profile.
-import { ownData, ownDataCopy as dataCopy, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part2';
+import { ownDataCopy as dataCopy } from './editor-own-copy.mjs?v=20261105-part2';
 import { compileObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261105-part2';
 import { encodeObjectiveRule, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261105-part2';
 import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261105-part2';
