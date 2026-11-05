@@ -1,6 +1,6 @@
 // Bind an authenticated icon plan to the already validated logical root27.
 // Icon IDs are not unit IDs. Only the low bit of byte 0 and byte 1 change.
-import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part2';
+import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part3';
 function fail(reason){const error=Error('기체와 맵 아이콘의 연결을 확인하지 못했습니다.');error.code='EDITOR_MAP_ICON_UNIT_INVALID';error.details={reason};throw error;}
 function list(input,max){const {list}=readDenseList(input,max);if(!list)fail('list');return list;}
 function int(value,min,max){if(!Number.isSafeInteger(value)||value<min||value>max)fail('range');return value;}

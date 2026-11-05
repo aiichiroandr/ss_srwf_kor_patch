@@ -1,9 +1,9 @@
 // Structural evidence for an event's condition -> roster -> dialogue group.
 // This is deliberately a read-only catalog. A reached instruction boundary is
 // not proof of unique execution, roster capacity or safe cross-scenario moves.
-import {decodeScenarioDisplayInstruction,matchesScenarioRosterAnchor} from './editor-scenario-display.mjs?v=20261105-part2';
-import {ANIMATION_ROSTER_PROFILES} from './editor-animation-roster-profiles.mjs?v=20261105-part2';
-import {Sha256} from './sha256.mjs?v=20261105-part2';
+import {decodeScenarioDisplayInstruction,matchesScenarioRosterAnchor} from './editor-scenario-display.mjs?v=20261105-part3';
+import {ANIMATION_ROSTER_PROFILES} from './editor-animation-roster-profiles.mjs?v=20261105-part3';
+import {Sha256} from './sha256.mjs?v=20261105-part3';
 
 const encoder=new TextEncoder(),word=(b,p)=>b[p]*256+b[p+1],hex=n=>n.toString(16).padStart(2,'0').toUpperCase();
 const freeze=list=>Object.freeze(list.map(Object.freeze));

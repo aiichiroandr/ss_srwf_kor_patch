@@ -2,10 +2,10 @@
 // This runs after provenance validation and never participates in decoded
 // masks, region contexts or writer lookup tables. Calls can change the map
 // and scheduling context: their return boundary alone grants neither.
-import { decodeScenarioInstruction } from './editor-scenario-events.mjs?v=20261105-part2';
-import { DISPLAY_INSTRUCTION_LENGTHS } from './editor-scenario-display-grammar.mjs?v=20261105-part2';
-import { Sha256 } from './sha256.mjs?v=20261105-part2';
-import { ANIMATION_ROSTER_PROFILES } from './editor-animation-roster-profiles.mjs?v=20261105-part2';
+import { decodeScenarioInstruction } from './editor-scenario-events.mjs?v=20261105-part3';
+import { DISPLAY_INSTRUCTION_LENGTHS } from './editor-scenario-display-grammar.mjs?v=20261105-part3';
+import { Sha256 } from './sha256.mjs?v=20261105-part3';
+import { ANIMATION_ROSTER_PROFILES } from './editor-animation-roster-profiles.mjs?v=20261105-part3';
 
 const word=(b,p)=>b[p]*256+b[p+1];
 // B1's bounded dialogue handler changes text/face state, not the loaded map.

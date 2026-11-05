@@ -15,8 +15,7 @@ import {
   updateWeaponRecords,
   weaponRows,
 } from '../assets/editor-core.mjs';
-import { readDenseList, ownData, ownEntry } from '../assets/editor-own.mjs';
-import { ownDataCopy } from '../assets/editor-own-copy.mjs';
+import { readDenseList, ownData, ownDataCopy, ownEntry } from '../assets/editor-own.mjs';
 import * as fixture from './helpers/synthetic-pilots.mjs';
 import { echoRequest } from './helpers/synthetic-iso.mjs';
 import { makeBase } from './helpers/synthetic-game.mjs';

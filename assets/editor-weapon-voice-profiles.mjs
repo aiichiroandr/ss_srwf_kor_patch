@@ -1,5 +1,5 @@
 // Only weapon +2 bits 0..5 (dialogue key); all other parent bounds stay pinned.
-import {UNIT_STORAGE_PROFILES} from './editor-unit-storage-profiles.mjs?v=20261105-part2';
+import {UNIT_STORAGE_PROFILES} from './editor-unit-storage-profiles.mjs?v=20261105-part3';
 const pins=[
   {
     "base": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",
