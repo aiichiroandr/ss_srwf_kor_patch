@@ -212,6 +212,36 @@ def make_structural_patch(source_size: int, edits: list[tuple[int, bytes]]) -> b
     return bytes(header) + zlib.compress(body)
 
 
+def reference_scan_compressed_block(reader, huffman, produced_bytes, advertised_window):
+    """The plain decode_huffman loop that scan_compressed_block inlines, kept here as its oracle."""
+    literal_huffman, distance_huffman = huffman
+    produced = produced_bytes
+    while True:
+        symbol = verifier.decode_huffman(reader, literal_huffman)
+        if symbol <= 255:
+            produced += 1
+        elif symbol == 256:
+            return produced
+        elif 257 <= symbol <= 285:
+            length_index = symbol - 257
+            length = verifier.LENGTH_BASES[length_index] + reader.read(verifier.LENGTH_EXTRA_BITS[length_index])
+            distance_symbol = verifier.decode_huffman(reader, distance_huffman)
+            if distance_symbol > 29:
+                raise verifier.SrwfpFormatError("distance alphabet contains a reserved symbol")
+            distance = verifier.DISTANCE_BASES[distance_symbol] + reader.read(
+                verifier.DISTANCE_EXTRA_BITS[distance_symbol]
+            )
+            if distance > produced:
+                raise verifier.SrwfpFormatError("DEFLATE back-reference precedes the output")
+            if distance > advertised_window:
+                raise verifier.SrwfpFormatError("DEFLATE back-reference exceeds the advertised zlib window")
+            produced += length
+        else:
+            raise verifier.SrwfpFormatError("literal/length alphabet contains a reserved symbol")
+        if produced > verifier.BODY_MAX:
+            raise verifier.SrwfpFormatError(f"body exceeds the {verifier.BODY_MAX}-byte cap")
+
+
 class SrwfpInspectionTests(unittest.TestCase):
     def setUp(self) -> None:
         verifier.errors.clear()
@@ -282,6 +312,54 @@ class SrwfpInspectionTests(unittest.TestCase):
                     with mock_patch.object(verifier, "FAST_HUFFMAN_BITS", 0):
                         slow = outcome(variant, len(raw), window)
                     self.assertEqual(fast, slow, (index, window, len(variant)))
+
+    def test_inlined_block_scanner_reports_exactly_what_the_plain_decoder_loop_reports(self) -> None:
+        rng = random.Random(1951)
+
+        def outcome(stream, size, window):
+            try:
+                verifier.inspect_deflate_payload(stream, size, window)
+                return ("accepted",)
+            except verifier.SrwfpFormatError as exc:
+                return ("refused", str(exc))
+
+        kinds = set()
+        for index in range(24):
+            raw = bytes(rng.randrange(256) for _ in range(rng.randrange(1, 1500)))
+            if index % 3 == 0:
+                # A repeat more than 256 bytes back, so a 256-byte window is exceeded.
+                raw = raw + bytes(rng.randrange(256) for _ in range(300)) + raw
+            elif index % 3 == 1:
+                raw = raw[:24] * 80 + raw
+            else:
+                raw = bytes([raw[0] & 3]) * (len(raw) * 4)
+            window_bits = [9, 10, 12, 15][index % 4]
+            strategy = [zlib.Z_DEFAULT_STRATEGY, zlib.Z_FIXED, zlib.Z_HUFFMAN_ONLY, zlib.Z_RLE, zlib.Z_FILTERED][index % 5]
+            compressor = zlib.compressobj(index % 10, zlib.DEFLATED, window_bits, 8, strategy)
+            stream = compressor.compress(raw) + compressor.flush()
+            variants = [stream, stream[:-1], stream + b"\x00", stream[:max(6, len(stream) // 2)]]
+            for _ in range(5):
+                damaged = bytearray(stream)
+                for _ in range(rng.randrange(1, 3)):
+                    damaged[rng.randrange(2, len(stream) - 4)] ^= 1 << rng.randrange(8)
+                variants.append(bytes(damaged))
+            for variant in variants:
+                for window in (256, 1 << window_bits):
+                    for size in (len(raw), len(raw) + 1):
+                        for fast_bits, body_max in ((verifier.FAST_HUFFMAN_BITS, verifier.BODY_MAX), (0, max(1, len(raw) // 2))):
+                            with mock_patch.object(verifier, "FAST_HUFFMAN_BITS", fast_bits), \
+                                    mock_patch.object(verifier, "BODY_MAX", body_max):
+                                inlined = outcome(variant, size, window)
+                                with mock_patch.object(verifier, "scan_compressed_block", reference_scan_compressed_block):
+                                    plain = outcome(variant, size, window)
+                            self.assertEqual(inlined, plain, (index, len(variant), window, size, fast_bits, body_max))
+                            kinds.add(inlined[-1].split(" produces ")[0])
+        # The comparison reached the scanner's own refusals, not only header or size checks.
+        for message in ("DEFLATE back-reference exceeds the advertised zlib window",
+                        "DEFLATE back-reference precedes the output", "DEFLATE payload is truncated"):
+            self.assertIn(message, kinds)
+        self.assertTrue(any(kind.startswith("body exceeds the") for kind in kinds))
+        self.assertIn("accepted", kinds)
 
     def test_valid_patch_descriptor_is_exact(self) -> None:
         descriptor = verifier.inspect_srwfp(self.patch)

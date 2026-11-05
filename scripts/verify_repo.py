@@ -619,29 +619,101 @@ DISTANCE_EXTRA_BITS = [
 ]
 
 
+# Payload bytes held in scan_compressed_block's integer bit window.
+SCAN_WINDOW_BYTES = 128
+
+
+def _bit_window(data: bytes, bit_offset: int) -> tuple[int, int, int]:
+    """Return (bits, first_bit, end_bit) for the window starting at bit_offset's byte."""
+    first = bit_offset >> 3
+    last = min(len(data), first + SCAN_WINDOW_BYTES)
+    return int.from_bytes(data[first:last], "little"), first << 3, last << 3
+
+
 def scan_compressed_block(
     reader: DeflateBitReader,
     huffman: tuple[HuffmanTable, HuffmanTable],
     produced_bytes: int,
     advertised_window: int,
 ) -> int:
+    """Scan one Huffman-coded block and return the output size after it.
+
+    This is the per-symbol hot loop of the verifier. It inlines the table path
+    of decode_huffman and the bit reads of DeflateBitReader over a local
+    integer window, and hands every symbol the table cannot answer (long or
+    invalid codes, the last bits of the payload) to decode_huffman itself.
+    Each symbol is still decoded, its extra bits read, and only then checked,
+    with the same checks, order and messages as a plain decode_huffman loop.
+    """
     literal_huffman, distance_huffman = huffman
+    literal_width, literal_fast = literal_huffman[3], literal_huffman[4]
+    distance_width, distance_fast = distance_huffman[3], distance_huffman[4]
+    literal_mask = (1 << literal_width) - 1
+    distance_mask = (1 << distance_width) - 1
+    length_bases, length_extra_bits = LENGTH_BASES, LENGTH_EXTRA_BITS
+    distance_bases, distance_extra_bits = DISTANCE_BASES, DISTANCE_EXTRA_BITS
+    data = reader.data
+    total_bits = len(data) * 8
+    body_max = BODY_MAX
     produced = produced_bytes
+    position = reader.bit_offset
+    # The window only moves forward, as position does, so it is refilled when
+    # the bits to read reach past its end.
+    window = window_start = window_end = 0
     while True:
-        symbol = decode_huffman(reader, literal_huffman)
+        entry = None
+        if literal_fast and position + literal_width <= total_bits:
+            if position + literal_width > window_end:
+                window, window_start, window_end = _bit_window(data, position)
+            entry = literal_fast[(window >> (position - window_start)) & literal_mask]
+        if entry is not None:
+            position += entry[0]
+            symbol = entry[1]
+        else:
+            reader.bit_offset = position
+            symbol = decode_huffman(reader, literal_huffman)
+            position = reader.bit_offset
+
         if symbol <= 255:
             produced += 1
         elif symbol == 256:
+            reader.bit_offset = position
             return produced
         elif 257 <= symbol <= 285:
             length_index = symbol - 257
-            length = LENGTH_BASES[length_index] + reader.read(LENGTH_EXTRA_BITS[length_index])
-            distance_symbol = decode_huffman(reader, distance_huffman)
+            extra = length_extra_bits[length_index]
+            if position + extra > total_bits:
+                raise SrwfpFormatError("DEFLATE payload is truncated")
+            length = length_bases[length_index]
+            if extra:
+                if position + extra > window_end:
+                    window, window_start, window_end = _bit_window(data, position)
+                length += (window >> (position - window_start)) & ((1 << extra) - 1)
+                position += extra
+
+            entry = None
+            if distance_fast and position + distance_width <= total_bits:
+                if position + distance_width > window_end:
+                    window, window_start, window_end = _bit_window(data, position)
+                entry = distance_fast[(window >> (position - window_start)) & distance_mask]
+            if entry is not None:
+                position += entry[0]
+                distance_symbol = entry[1]
+            else:
+                reader.bit_offset = position
+                distance_symbol = decode_huffman(reader, distance_huffman)
+                position = reader.bit_offset
             if distance_symbol > 29:
                 raise SrwfpFormatError("distance alphabet contains a reserved symbol")
-            distance = DISTANCE_BASES[distance_symbol] + reader.read(
-                DISTANCE_EXTRA_BITS[distance_symbol]
-            )
+            extra = distance_extra_bits[distance_symbol]
+            if position + extra > total_bits:
+                raise SrwfpFormatError("DEFLATE payload is truncated")
+            distance = distance_bases[distance_symbol]
+            if extra:
+                if position + extra > window_end:
+                    window, window_start, window_end = _bit_window(data, position)
+                distance += (window >> (position - window_start)) & ((1 << extra) - 1)
+                position += extra
             if distance > produced:
                 raise SrwfpFormatError("DEFLATE back-reference precedes the output")
             if distance > advertised_window:
@@ -649,8 +721,8 @@ def scan_compressed_block(
             produced += length
         else:
             raise SrwfpFormatError("literal/length alphabet contains a reserved symbol")
-        if produced > BODY_MAX:
-            raise SrwfpFormatError(f"body exceeds the {BODY_MAX}-byte cap")
+        if produced > body_max:
+            raise SrwfpFormatError(f"body exceeds the {body_max}-byte cap")
 
 
 def inspect_deflate_payload(compressed: bytes, expected_size: int, advertised_window: int) -> None:
