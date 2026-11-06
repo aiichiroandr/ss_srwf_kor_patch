@@ -1,4 +1,4 @@
-import {Sha256} from './sha256.mjs?v=20261105-part3';
+import {Sha256} from './sha256.mjs?v=20261106-part4';
 
 // Stream the immutable Blob in a disposable worker, never a whole-ROM buffer
 // on the editor's UI thread. No network, persistence or game execution here.

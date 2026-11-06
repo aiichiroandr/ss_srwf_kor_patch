@@ -4,6 +4,8 @@
 The loader recipes bind these bytes to exact DIC/EXEC preimages. This script
 only emits the 1 KiB shared helper block and its authored component routines.
 See docs/SRW4_DICTIONARY_ADDITIONS.md for callers, RAM and entry conditions.
+2026-11-05: 'list-names' (0x2029F980) is the portrait revision-4 wrapper for
+the person list names; it fills the former zero tail 0x2029F96C..0x2029FA00.
 """
 from pathlib import Path
 import argparse
@@ -80,7 +82,31 @@ c.mark('old');c.literal(0,0x2029fa08);ld(c,0,0);c.emit(0x402b,9)
 parts.append(save(c,'body-lookup',0x2029f780,128))
 # Shared percentage update: R4 is the denominator including added entries.
 c=Code(0x2029f940);mov(c,5,4);c.literal(0,0x060c63ec);ld(c,4,0,2);c.emit(0x644d);imm(c,1,100);c.emit(0x0417,0x041a,0x4f22);call(c,0x060a4dfc);c.emit(0x4f26);c.literal(1,0x060c6150);st(c,1,0);ret(c)
-parts.append(save(c,'percentage',0x2029f940,96))
+parts.append(save(c,'percentage',0x2029f940,64))
+# Person list names (portrait revision 4; EXEC literal 0x060865E0 = file 0x825E0,
+# loaded only by the list draw at 0x06086570). The list queues F100+id with
+# 0x06015FF4, which only appends code bytes to the text ring 0x060C5BD8; the
+# names are resolved later, inside 0x06015EBC(86) ('FB FF FF' pops, root-12
+# cells read bytewise by 0x06004CC8). So the swap brackets that interpreter
+# call, not the enqueue. Person section only (identity word 0x2029FA00 == 1):
+# root-12 cells 304..319 point at the approved Korean names of table 0x2029F400
+# (same value 0x2029F240 writes for one cell), the original interpreter runs
+# with R4..R7 untouched, and all 16 cells are restored from the stack before
+# returning. Root-12 cells sit at 2 mod 4 (base 0x002460E2 in JP/v0.3/v0.4), so
+# every cell access is two mov.w; an odd base would skip the swap. No global
+# scratch: 0x2029F580/0x2029F588 (detail header -> portrait restore) are never
+# read or written. Other sections (unit list, identity 2) tail-call unchanged.
+c=Code(0x2029f980);c.literal(3,0x06015ebc);c.literal(0,0x2029fa00);ld(c,0,0);c.emit(0x8801);c.branch(0x8b00,'tail')
+c.literal(1,0x2021d030);ld(c,2,1);add(c,2,1);mov(c,0,2);c.emit(0xc801);c.branch(0x8900,'person')
+c.mark('tail');c.emit(0x432b,0x0009)
+c.mark('person');push(c,8);push(c,9);c.emit(0x4f22);imm(c,8,76);c.emit(0x4808,0x4808);add(c,8,2);c.literal(9,0x2029f400);imm(c,2,16)
+# 16 cells, pair index (16-R2)>>1; bounded by DT; old cell words go to the stack.
+c.mark('swap');plus(c,15,-4);ld(c,0,8,2);st(c,15,0,2);c.emit(0x8581,0x81f1);imm(c,0,16);c.emit(0x3028,0x4001,0x4008,0x009e,0x3088,0x8181,0x4029);st(c,8,0,2)
+c.emit(0x4210);c.branch(0x8f00,'swap');plus(c,8,4)
+c.emit(0x430b,0x0009);imm(c,9,16)
+c.mark('restore');plus(c,8,-4);ld(c,0,15,2);st(c,8,0,2);c.emit(0x85f1,0x8181,0x4910);c.branch(0x8f00,'restore');plus(c,15,4)
+c.emit(0x4f26);pop(c,9);c.emit(0x000b);pop(c,8)
+parts.append(save(c,'list-names',0x2029f980,128))
 # Robot list wrapper scans only the existing table, appends matching additions,
 # and bounds the same 511-entry list buffer. Registration flags are untouched.
 c=Code(0x2029f800)

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
-import {canEditSaveNames,createSaveNameAuthority} from '../assets/save-name-support.mjs?v=20261105-part3';
+import {canEditSaveNames,createSaveNameAuthority} from '../assets/save-name-support.mjs?v=20261106-part4';
 import {authenticatedSaveCatalog,saveNameAuthorityFixture} from './helpers/authenticated-save-catalog.mjs';
 import {syntheticSave,syntheticHeroUnits} from './helpers/synthetic-save.mjs';
 import {encodeEditorText} from '../assets/editor-text-codec.mjs';

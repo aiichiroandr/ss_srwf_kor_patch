@@ -1,5 +1,5 @@
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261105-part3';
-import {dictionaryPortraitExecState,setDictionaryPortraitExec,inspectDictionaryPortraitSlot,changeDictionaryPortraitSlot,dictionaryPortraitAllocation} from './editor-dictionary-portraits.mjs?v=20261105-part3';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261106-part4';
+import {dictionaryPortraitExecState,setDictionaryPortraitExec,inspectDictionaryPortraitSlot,changeDictionaryPortraitSlot,dictionaryPortraitAllocation} from './editor-dictionary-portraits.mjs?v=20261106-part4';
 
 function invalid(){const e=Error('인물사전 초상화의 연결과 사전 데이터가 일치하지 않습니다.');e.code='EDITOR_DICTIONARY_PORTRAIT_INVALID';throw e;}
 async function readImage(blob,{gameId,signal}){
@@ -15,8 +15,9 @@ async function readImage(blob,{gameId,signal}){
  return {files,exec,slot,state,allocation};
 }
 async function change(blob,options,enabled){
- const image=await readImage(blob,options),revision=enabled?3:0;
- if(!image||image.state.revision===revision&&(!enabled||image.state.latest))return {outputBlob:blob,changedSectors:[],dictionaryPortraits:image?{enabled}:null};
+ // Enabled means the newest recorded revision; any older revision is upgraded.
+ const image=await readImage(blob,options),done=state=>enabled?state.latest:state.revision===0;
+ if(!image||done(image.state))return {outputBlob:blob,changedSectors:[],dictionaryPortraits:image?{enabled}:null};
  const {files,slot,exec,allocation}=image,{signal,gameId}=options;
  const next=changeDictionaryPortraitSlot(slot,files.dic.extentLba,files.dic.byteLength,enabled);
  const changed=[];let current=blob;
@@ -30,7 +31,7 @@ async function change(blob,options,enabled){
  if(v.getUint32(at,true)!==files.dic.byteLength||v.getUint32(at+4)!==files.dic.byteLength)invalid();
  v.setUint32(at,next.byteLength,true);v.setUint32(at+4,next.byteLength);
  await write({extentLba:files.dic.recordLba,byteLength:2048},directory);
- const checked=await readImage(current,options);if(checked?.state.revision!==revision||enabled&&!checked.state.latest||current.size!==blob.size)invalid();
+ const checked=await readImage(current,options);if(!checked||!done(checked.state)||current.size!==blob.size)invalid();
  return {outputBlob:current,changedSectors:[...new Set(changed)],dictionaryPortraits:{enabled}};
 }
 export async function inspectDictionaryPortraitImage(blob,options={}){const image=await readImage(blob,options);return image?{available:true,enabled:image.state.revision>0}:{available:false,enabled:false};}

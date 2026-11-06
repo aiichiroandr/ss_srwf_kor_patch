@@ -1,4 +1,4 @@
-import {Sha256} from './sha256.mjs?v=20261105-part3';
+import {Sha256} from './sha256.mjs?v=20261106-part4';
 
 // Small byte helpers shared by the editor modules. Every helper is a pure
 // function without module state, so a second instance of this module (for

@@ -1,6 +1,6 @@
 // Replacing a weapon preserves the unit's list footprint, upgrade slot,
 // event flag, investment bit and all unassigned bits. No executable is edited.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part3';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261106-part4';
 
 export const UNIT_WEAPON_FIELDS = Object.freeze(Array.from({ length: 16 }, (_, i) => `weapon${i + 1}`));
 export const isUnitWeaponField = field => UNIT_WEAPON_FIELDS.includes(field);

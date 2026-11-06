@@ -1,10 +1,10 @@
 // SCEDATA carrier only. No VM command, objective or deployment write is enabled
 // by this module. Callers must separately authenticate allowed decoded changes.
-import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261105-part3';
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part3';
-import { normalizeScenarioDeadlineBody } from './editor-scenario-deadlines.mjs?v=20261105-part3';
-import { readScenarioDialogue } from './editor-scenario-dialogue.mjs?v=20261105-part3';
-import { bytesEqual as same, scenarioRootOffsets } from './editor-bytes.mjs?v=20261105-part3';
+import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261106-part4';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261106-part4';
+import { normalizeScenarioDeadlineBody } from './editor-scenario-deadlines.mjs?v=20261106-part4';
+import { readScenarioDialogue } from './editor-scenario-dialogue.mjs?v=20261106-part4';
+import { bytesEqual as same, scenarioRootOffsets } from './editor-bytes.mjs?v=20261106-part4';
 
 export const SCENARIO_ARCHIVE_FORMATS = Object.freeze({
   'srwf-f': Object.freeze({ slots: 74, endCellBias: 4 }),

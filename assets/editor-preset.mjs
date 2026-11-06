@@ -1,8 +1,8 @@
-import {exSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261105-part3';
-import {encodeEditorText,editorTextMetrics} from './editor-text-codec.mjs?v=20261105-part3';
-import {validateScenarioDialogueSpeaker} from './editor-scenario-dialogue.mjs?v=20261105-part3';
-import {canonicalAfterDialogueJson,readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261105-part3';
-import {ALLY_REINFORCEMENT_FIELDS,validateAllyReinforcement} from './editor-scenario-reinforcement-data.mjs?v=20261105-part3';
+import {exSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261106-part4';
+import {encodeEditorText,editorTextMetrics} from './editor-text-codec.mjs?v=20261106-part4';
+import {validateScenarioDialogueSpeaker} from './editor-scenario-dialogue.mjs?v=20261106-part4';
+import {canonicalAfterDialogueJson,readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261106-part4';
+import {ALLY_REINFORCEMENT_FIELDS,validateAllyReinforcement} from './editor-scenario-reinforcement-data.mjs?v=20261106-part4';
 // Editor presets: the changes of one editor session as a small JSON file that can be saved and loaded into another session
 // of the same game (for example the next public patch with the same personal balance changes). Pure functions over plain
 // rows: no DOM, no files, no game text. The format is documented in docs/LOCAL_EDITOR.md ("변경 내용 목록·저장·불러오기").
@@ -25,14 +25,14 @@ import {ALLY_REINFORCEMENT_FIELDS,validateAllyReinforcement} from './editor-scen
 // still has the `from` value, is a conflict when it has another value, is already done when it has the `to` value, and is
 // skipped (with a reason) when the session could not take it: a record that does not exist or is read-only, a structural
 // unit ability (editor-locks.mjs), a terrain grade the writer refuses, a skill list the record cannot hold.
-import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261105-part3';
-import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261105-part3';
-import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261105-part3';
-import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261105-part3';
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isStoredFieldValueInBounds, isObjectiveRuleValueInBounds, isScreenFieldEditAllowed } from "./editor-fields.mjs?v=20261105-part3";
-import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261105-part3";
-import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261105-part3";
-import { ownData, readDenseList } from "./editor-own.mjs?v=20261105-part3";
+import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-context.mjs?v=20261106-part4';
+import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261106-part4';
+import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261106-part4';
+import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261106-part4';
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isStoredFieldValueInBounds, isObjectiveRuleValueInBounds, isScreenFieldEditAllowed } from "./editor-fields.mjs?v=20261106-part4";
+import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261106-part4";
+import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261106-part4";
+import { ownData, readDenseList } from "./editor-own.mjs?v=20261106-part4";
 import {
   DEFAULT_CONSUMER_LIMIT,
   countConsumers,
@@ -44,18 +44,18 @@ import {
   skillRequest,
   spiritRequest, spiritCatalog, isSpiritLocked,
   pilotPairRequirement, syncPilotExpansionBudget,
-} from "./editor-skill-list.mjs?v=20261105-part3";
+} from "./editor-skill-list.mjs?v=20261106-part4";
 
-import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261105-part3";
-import { costValueAllowed } from "./editor-costs.mjs?v=20261105-part3";
-import { isUnitWeaponField, pendingUnitWeapons,unitWeaponFamily } from './editor-loadout.mjs?v=20261105-part3';
-import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261105-part3";
+import { isWeaponRequiredSkillEditable } from "./editor-facts.mjs?v=20261106-part4";
+import { costValueAllowed } from "./editor-costs.mjs?v=20261106-part4";
+import { isUnitWeaponField, pendingUnitWeapons,unitWeaponFamily } from './editor-loadout.mjs?v=20261106-part4';
+import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261106-part4";
 
-import {constructUnitRow,constructUnitUpgradeRow,replaceUnitRow,unitConstructionPreset,unitConstructionLoadout,unitConstructionRewards,linkExSCruiserRows,tagConstructionWeaponClones,requireAircraftGraphicCompatibility,UNIT_CONCEPTS} from './editor-unit-construction.mjs?v=20261105-part3';
-import {createWeaponCloneRow,weaponCloneIds} from './editor-weapon-clone.mjs?v=20261105-part3';
-import {previousUnitConcept} from './editor-unit-upgrade.mjs?v=20261105-part3';
-import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261105-part3';
-import {bytesEqual as sameWeaponIds} from './editor-bytes.mjs?v=20261105-part3';
+import {constructUnitRow,constructUnitUpgradeRow,replaceUnitRow,unitConstructionPreset,unitConstructionLoadout,unitConstructionRewards,linkExSCruiserRows,tagConstructionWeaponClones,requireAircraftGraphicCompatibility,UNIT_CONCEPTS} from './editor-unit-construction.mjs?v=20261106-part4';
+import {createWeaponCloneRow,weaponCloneIds} from './editor-weapon-clone.mjs?v=20261106-part4';
+import {previousUnitConcept} from './editor-unit-upgrade.mjs?v=20261106-part4';
+import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261106-part4';
+import {bytesEqual as sameWeaponIds} from './editor-bytes.mjs?v=20261106-part4';
 
 export const PRESET_FORMAT = "srwf.editor-preset";
 export const PRESET_VERSION = 1;

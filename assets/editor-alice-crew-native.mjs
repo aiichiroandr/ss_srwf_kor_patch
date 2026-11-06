@@ -4,9 +4,9 @@
 // It tail-calls the untouched original pilot/crew-list functions and uses the
 // game's allocator and SP initializer. All three input files are authenticated
 // by the existing whole-disc provenance after exact overlay normalization.
-import {ALICE_MULTI_WORDS,ALICE_MULTI_LITERALS,ALICE_MULTI_ENTRIES} from './editor-alice-multi-code.mjs?v=20261105-part3';
-import {ALICE_BASE_SHA256} from './editor-alice-art.mjs?v=20261105-part3';
-import {bytesEqual as same,dataView as dv} from './editor-bytes.mjs?v=20261105-part3';
+import {ALICE_MULTI_WORDS,ALICE_MULTI_LITERALS,ALICE_MULTI_ENTRIES} from './editor-alice-multi-code.mjs?v=20261106-part4';
+import {ALICE_BASE_SHA256} from './editor-alice-art.mjs?v=20261106-part4';
+import {bytesEqual as same,dataView as dv} from './editor-bytes.mjs?v=20261106-part4';
 const BASE=0x06003300,IP_AT=0x1300,SLOT=1024,EXE_BYTES=758232;
 // Reproduced Saturn states have zeros at 0x06003300..0x06003317.
 // Keep the authenticated IP slot but place every live instruction beyond it.

@@ -1,15 +1,15 @@
-import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261105-part3';
+import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261106-part4';
 // Remaining artwork is real. Numeric headers are explicit clones; new weapon
 // configurations use reviewed existing records, never recovered original specs.
-import {F_NAME_MAP,FINAL_NAME_MAP} from './editor-name-map.mjs?v=20261105-part3';
-import {F_NAME_SUPPLEMENT} from './editor-pilot-name-map.mjs?v=20261105-part3';
-import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261105-part3';
-import {ownData,readDenseList} from './editor-own.mjs?v=20261105-part3';
-import {sha256Hex} from './sha256.mjs?v=20261105-part3';
-import {bytesEqual as same,dataView as view} from './editor-bytes.mjs?v=20261105-part3';
-import {requireTsrInspectionSize,writeRelative32,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261105-part3';
+import {F_NAME_MAP,FINAL_NAME_MAP} from './editor-name-map.mjs?v=20261106-part4';
+import {F_NAME_SUPPLEMENT} from './editor-pilot-name-map.mjs?v=20261106-part4';
+import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261106-part4';
+import {ownData,readDenseList} from './editor-own.mjs?v=20261106-part4';
+import {sha256Hex} from './sha256.mjs?v=20261106-part4';
+import {bytesEqual as same,dataView as view} from './editor-bytes.mjs?v=20261106-part4';
+import {requireTsrInspectionSize,writeRelative32,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261106-part4';
 
-import {UNUSED_UNIT_PRESETS,unitConstructionWeapons,unitConstructionLoadout,writeUnitConcept,writeSSeparatedStructure,cruiserRole,requireAircraftGraphicCompatibility,writeExSCruiserStructure} from './editor-unit-construction.mjs?v=20261105-part3';
+import {UNUSED_UNIT_PRESETS,unitConstructionWeapons,unitConstructionLoadout,writeUnitConcept,writeSSeparatedStructure,cruiserRole,requireAircraftGraphicCompatibility,writeExSCruiserStructure} from './editor-unit-construction.mjs?v=20261106-part4';
 export {UNUSED_UNIT_PRESETS};
 const MAGIC=0x53525531,COMPACT_MAGIC=0x5332,align=n=>Math.ceil(n/4)*4;
 const r16=(b,o)=>view(b).getUint16(o),r32=(b,o)=>view(b).getUint32(o),i32=(b,o)=>view(b).getInt32(o);

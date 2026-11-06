@@ -1,9 +1,9 @@
 // Current-battle permission, derived from authenticated F scenario control graphs.
 // This is not a claim about later story joins or other scenarios.
-import {sha256Hex} from './sha256.mjs?v=20261105-part3';
-import {immutableBytesHash} from './editor-provenance.mjs?v=20261105-part3';
-import {dataRecordOffsets} from './editor-core.mjs?v=20261105-part3';
-import {readReinforcementPairOptions,inspectReinforcementPairLocalRisks} from './editor-scenario-reinforcement-pairs.mjs?v=20261105-part3';
+import {sha256Hex} from './sha256.mjs?v=20261106-part4';
+import {immutableBytesHash} from './editor-provenance.mjs?v=20261106-part4';
+import {dataRecordOffsets} from './editor-core.mjs?v=20261106-part4';
+import {readReinforcementPairOptions,inspectReinforcementPairLocalRisks} from './editor-scenario-reinforcement-pairs.mjs?v=20261106-part4';
 // Each row carries its own proof-derived reserve. A caller cannot lower it.
 // F1 initialization precedes body34's remaining three C7/CA01 pairs.
 const F_PROFILES=Object.freeze([

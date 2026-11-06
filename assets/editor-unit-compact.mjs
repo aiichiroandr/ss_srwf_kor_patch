@@ -4,9 +4,9 @@
 // records below Final's 2028d000 CD-sector reserve. Active units remain independent.
 // The small footer retains the logical pointer table for lossless reopening;
 // the existing provenance normalizers still authenticate that logical layout.
-import {unusedUnitFillerTest} from './editor-unit-restoration.mjs?v=20261105-part3';
-import {writeRelative32,requireTsrRuntimeSize,tsrRuntimeLimit,tsrHistoricalStorageLimit} from './editor-storage-safety.mjs?v=20261105-part3';
-import {bytesEqual as equal,bytesToHex,dataView as view} from './editor-bytes.mjs?v=20261105-part3';
+import {unusedUnitFillerTest} from './editor-unit-restoration.mjs?v=20261106-part4';
+import {writeRelative32,requireTsrRuntimeSize,tsrRuntimeLimit,tsrHistoricalStorageLimit} from './editor-storage-safety.mjs?v=20261106-part4';
+import {bytesEqual as equal,bytesToHex,dataView as view} from './editor-bytes.mjs?v=20261106-part4';
 const MAGIC=new TextEncoder().encode('SRUCMP01'),MAGIC_F=new TextEncoder().encode('SRUCMP02'),MAGIC_FINAL=new TextEncoder().encode('SRUCMP03'),MAGIC_SPLIT_OLD=new TextEncoder().encode('SRUCMP04'),MAGIC_SPLIT=new TextEncoder().encode('SRUCMP05'),FOOTER=32,SPLIT_FOOTER=40;
 const MAGIC_INLINE_F=new TextEncoder().encode('SRUCMP06'),MAGIC_INLINE_F7=new TextEncoder().encode('SRUCMP07'),MAGIC_INLINE_FINAL=new TextEncoder().encode('SRUCMP08'),MAGIC_INLINE_FINAL_REF=new TextEncoder().encode('SRUCMP09');
 function fail(reason,details={}){const e=Error('기체 데이터를 게임의 허용 메모리 안에 안전하게 저장할 수 없습니다. 변경을 줄여 주세요.');e.code='EDITOR_STORAGE_INVALID';e.details={reason,...details};throw e;}

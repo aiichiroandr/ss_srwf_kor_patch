@@ -1,4 +1,4 @@
-import { Sha256 } from "./sha256.mjs?v=20261105-part3";
+import { Sha256 } from "./sha256.mjs?v=20261106-part4";
 
 export function validateMaskRanges(ranges, size) {
   if (!Array.isArray(ranges) || ranges.length > 50000 || !Number.isSafeInteger(size) || size < 1) {

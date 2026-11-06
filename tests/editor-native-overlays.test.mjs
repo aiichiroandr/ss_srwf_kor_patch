@@ -25,7 +25,7 @@ test('dictionary portrait correction composes with collection, critical and capa
  assert.equal(inspectCollectionCode(on.exec),true);assert.equal(inspectCriticalFix(on.exec,'srwf-final').enabled,true);
  assert.deepEqual(composer.normalizeSpawnCapacity(on.ip,on.exec,options).exec,overlays);
  assert.equal(composer.applySpawnCapacity(on.ip,on.exec,{...options,enabled:true}).patches.length,0);
- for(const at of [H.offset,H.offset+2,125]){
+ for(const at of [H.offset,H.offset+2,H.hooks.find(h=>h.since===4).offset+3,125]){
   const bad=on.exec.slice();bad[at]^=1;
   assert.throws(()=>composer.normalizeSpawnCapacity(on.ip,bad,options));
  }

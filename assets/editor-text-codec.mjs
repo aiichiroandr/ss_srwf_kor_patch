@@ -1,6 +1,6 @@
-import {F_NAME_MAP,FINAL_NAME_MAP} from './editor-name-map.mjs?v=20261105-part3';
-import {F_NAME_SUPPLEMENT,FINAL_PILOT_NAME_MAP} from './editor-pilot-name-map.mjs?v=20261105-part3';
-import {finalDefaultSaveName,finalDefaultSaveAlias} from './editor-save-name-defaults.mjs?v=20261105-part3';
+import {F_NAME_MAP,FINAL_NAME_MAP} from './editor-name-map.mjs?v=20261106-part4';
+import {F_NAME_SUPPLEMENT,FINAL_PILOT_NAME_MAP} from './editor-pilot-name-map.mjs?v=20261106-part4';
+import {finalDefaultSaveName,finalDefaultSaveAlias} from './editor-save-name-defaults.mjs?v=20261106-part4';
 const maps=new Map(),F_TEXT_MAP=new Map([...F_NAME_SUPPLEMENT,...F_NAME_MAP]);
 // `hero` remains the legacy reader for old Final pilot/save fields. New
 // custom save names reach the ordinary font renderer when the game's exact

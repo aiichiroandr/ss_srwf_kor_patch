@@ -1,8 +1,8 @@
 // MAP_MAP: two sc01 tile planes per member. MAP_BANK: bk00 graphics and the
 // tile -> terrain lookup consumed by the map constructor. No graphics are shipped.
-import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261105-part3';
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part3';
-import { bytesEqual as same } from './editor-bytes.mjs?v=20261105-part3';
+import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261106-part4';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261106-part4';
+import { bytesEqual as same } from './editor-bytes.mjs?v=20261106-part4';
 const FORMATS = Object.freeze({
   'srwf-f': Object.freeze({ maps: 111, banks: 21, terrains: 120 }),
   'srwf-final': Object.freeze({ maps: 127, banks: 24, terrains: 144 }),

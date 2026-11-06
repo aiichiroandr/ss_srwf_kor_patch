@@ -1,8 +1,8 @@
-import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261105-part3';
-import {readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261105-part3';
-import {unitConstructionPreset} from './editor-unit-construction.mjs?v=20261105-part3';
-import {criticalPercentLabel, criticalValues} from './editor-critical-values.mjs?v=20261105-part3';
-import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261105-part3';
+import { objectiveContextFor } from './editor-scenario-region-context.mjs?v=20261106-part4';
+import {readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261106-part4';
+import {unitConstructionPreset} from './editor-unit-construction.mjs?v=20261106-part4';
+import {criticalPercentLabel, criticalValues} from './editor-critical-values.mjs?v=20261106-part4';
+import { objectiveRuleLabel, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261106-part4';
 // The change list of the editor and its preset file: the button at the bottom of the editor (the change count) opens a
 // dialog that lists every changed record grouped by unit, pilot and weapon; an entry jumps to that record and field. The
 // footer saves the changes as a preset file (.json) and loads one: a loaded file is checked, judged against the open
@@ -15,8 +15,8 @@ import {
   gradeLabel,
   splitWeaponTerrain,
   weaponGradeLabel,
-} from "./editor-grades.mjs?v=20261105-part3";
-import { skillDiff } from "./editor-skill-list.mjs?v=20261105-part3";
+} from "./editor-grades.mjs?v=20261106-part4";
+import { skillDiff } from "./editor-skill-list.mjs?v=20261106-part4";
 import {
   PresetError,
   applyPreset,
@@ -28,7 +28,7 @@ import {
   presetChangeCount,
   presetFileName,
   serializePreset,
-} from "./editor-preset.mjs?v=20261105-part3";
+} from "./editor-preset.mjs?v=20261106-part4";
 
 export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "upgrade", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "roster", "dialogue", "glyph", "map", "collection", "alice", "debug", "critical", "beam"]);
 const KIND_HEADINGS = Object.freeze({beam:"Ex-S 빔포 연출 보정",critical:"크리티컬 보정 오류 수정",debug:"디버그 메뉴",alice:"ALICE 등록",collection:"도감·영상 해금", unit: "기체", pilot: "파일럿", weapon: "무기", upgrade: "개조 비용", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 아군 증원", roster: "로스터 초기 레벨", dialogue: "시나리오 대사", glyph: "추가 글자", map: "맵 타일" });

@@ -1,8 +1,8 @@
 // Read-only battle dialogue selection used by the weapon dialogue viewer (editor-battle-dialogue.mjs).
 // Copied from the local weapon-preview/pilot-dialogue.mjs without its preview-runtime parts, because the public
 // site does not carry weapon-preview/. Never used by the ROM exporter.
-import {Sha256} from './sha256.mjs?v=20261105-part3';
-import {PILOT_DIALOGUE_PROFILES as profiles} from './editor-pilot-dialogue-profiles.mjs?v=20261105-part3';
+import {Sha256} from './sha256.mjs?v=20261106-part4';
+import {PILOT_DIALOGUE_PROFILES as profiles} from './editor-pilot-dialogue-profiles.mjs?v=20261106-part4';
 export function previewPilotDialogueInfo(gameId,pilot){return profiles[gameId]?.[pilot]??null;}
 function record(bytes,id,count){
  const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),cell=id*4;

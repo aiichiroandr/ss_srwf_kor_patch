@@ -1,10 +1,10 @@
 // New pilot + ordinary unit data only. Installing a callback additionally
 // requires the authenticated actor/tile preflight and the local event guard.
 // These builders alone never authorize a new appearance in a scenario.
-import {dataRecordOffsets,isTailOnlyBlock,MAX_PILOT_RECORD_BYTES} from './editor-core.mjs?v=20261105-part3';
-import {readHangarUnitRewardOptions} from './editor-scenario-unit-rewards.mjs?v=20261105-part3';
-import {ownData} from './editor-own.mjs?v=20261105-part3';
-import {sha256Hex} from './sha256.mjs?v=20261105-part3';
+import {dataRecordOffsets,isTailOnlyBlock,MAX_PILOT_RECORD_BYTES} from './editor-core.mjs?v=20261106-part4';
+import {readHangarUnitRewardOptions} from './editor-scenario-unit-rewards.mjs?v=20261106-part4';
+import {ownData} from './editor-own.mjs?v=20261106-part4';
+import {sha256Hex} from './sha256.mjs?v=20261106-part4';
 
 const encoder=new TextEncoder(),GAMES=new Set(['srwf-f','srwf-final']);
 const permissions=Object.freeze({callback:false,map:false,capacity:false,onceOnly:false});

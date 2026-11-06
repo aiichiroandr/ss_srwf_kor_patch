@@ -1,8 +1,8 @@
-import {tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261105-part3';
-import {unitStorageUsage,fUnitOffsetLedgerDiagnostics,finalInlineLedgerBytes,isFinalReferenceInlineUnitStorage,isFinalInlineUnitStorage} from './editor-unit-compact.mjs?v=20261105-part3';
-import {fInlineAuxiliaryUsage} from './editor-f-inline.mjs?v=20261105-part3';
-import {finalInlineAuxiliaryUsage} from './editor-final-inline-aux.mjs?v=20261105-part3';
-import {pilotLayout,pilotPaddingPairs} from './editor-pilot-layout.mjs?v=20261105-part3';
+import {tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261106-part4';
+import {unitStorageUsage,fUnitOffsetLedgerDiagnostics,finalInlineLedgerBytes,isFinalReferenceInlineUnitStorage,isFinalInlineUnitStorage} from './editor-unit-compact.mjs?v=20261106-part4';
+import {fInlineAuxiliaryUsage} from './editor-f-inline.mjs?v=20261106-part4';
+import {finalInlineAuxiliaryUsage} from './editor-final-inline-aux.mjs?v=20261106-part4';
+import {pilotLayout,pilotPaddingPairs} from './editor-pilot-layout.mjs?v=20261106-part4';
 
 const row=(id,label,usedBytes,limitBytes,fixed=false)=>Object.freeze({id,label,usedBytes,limitBytes,remainingBytes:limitBytes-usedBytes,fixed});
 function pilotPools(segment,rows,gameId){

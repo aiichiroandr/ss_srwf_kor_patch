@@ -2,11 +2,11 @@
 // subset. It is not an authorization to replace a scenario's callback or
 // purpose text. The criteria writer separately verifies the original action
 // destinations, callback references, RAM bounds and exact reversible template.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261105-part3';
-import { encodePilotObjectiveRule, snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261105-part3';
-import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261105-part3';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261106-part4';
+import { encodePilotObjectiveRule, snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261106-part4';
+import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261106-part4';
 
-import {encodeRegionRule,decodeRegionRule,regionContextOf} from './editor-scenario-region-context.mjs?v=20261105-part3';
+import {encodeRegionRule,decodeRegionRule,regionContextOf} from './editor-scenario-region-context.mjs?v=20261106-part4';
 const QUERIES = Object.freeze(['enemyCount', 'allyCount', 'turn']);
 const COMPARISONS = Object.freeze({ eq: 0xf2, ne: 0xf3, le: 0xf4, ge: 0xf5 });
 function fail(message) {

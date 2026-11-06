@@ -1,11 +1,11 @@
 // V2 decoded KOM planner. Image data is supplied and authenticated by the
 // session; this module ships no sprite pixels. V1 remains a separate codec.
 // The caller preserves the original packed stream and enforces its fixed span.
-import {sha256Hex} from './sha256.mjs?v=20261105-part3';
-import {bytesEqual as equal,bytesToHex as hex,dataView as dv} from './editor-bytes.mjs?v=20261105-part3';
-import {ownData,ownEntry,readDenseList} from './editor-own.mjs?v=20261105-part3';
-import {SRW4_ASSET_KEYS} from './editor-srw4-rom.mjs?v=20261105-part3';
-import {MAP_ICON_PATCH_PROFILES,MAP_ICON_PATCH_SOURCE_IDS,MAP_ICON_PATCH_SOURCE_WIRE_IDS,MAP_ICON_PATCH_TRANSFORM_REVISION,MAP_ICON_PATCH_MAX_RECOVERY_BYTES} from './editor-map-icon-patch.mjs?v=20261105-part3';
+import {sha256Hex} from './sha256.mjs?v=20261106-part4';
+import {bytesEqual as equal,bytesToHex as hex,dataView as dv} from './editor-bytes.mjs?v=20261106-part4';
+import {ownData,ownEntry,readDenseList} from './editor-own.mjs?v=20261106-part4';
+import {SRW4_ASSET_KEYS} from './editor-srw4-rom.mjs?v=20261106-part4';
+import {MAP_ICON_PATCH_PROFILES,MAP_ICON_PATCH_SOURCE_IDS,MAP_ICON_PATCH_SOURCE_WIRE_IDS,MAP_ICON_PATCH_TRANSFORM_REVISION,MAP_ICON_PATCH_MAX_RECOVERY_BYTES} from './editor-map-icon-patch.mjs?v=20261106-part4';
 
 export {MAP_ICON_PATCH_PROFILES,MAP_ICON_PATCH_SOURCE_IDS,MAP_ICON_PATCH_SOURCE_WIRE_IDS,MAP_ICON_PATCH_TRANSFORM_REVISION,MAP_ICON_PATCH_MAX_RECOVERY_BYTES};
 export const MAP_ICON_PATCH_BYTES=128+512*128;

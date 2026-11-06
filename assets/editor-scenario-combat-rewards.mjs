@@ -1,4 +1,4 @@
-import {isFieldValueInBounds} from './editor-fields.mjs?v=20261105-part3';
+import {isFieldValueInBounds} from './editor-fields.mjs?v=20261106-part4';
 
 const controls=Object.freeze([
  {id:'scenarioKillMoney',kind:'unit',field:'killMoney',label:'격추 자금'},

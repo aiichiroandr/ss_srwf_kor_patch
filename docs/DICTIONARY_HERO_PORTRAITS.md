@@ -71,3 +71,18 @@ previously unreferenced CD sector; its exact preimage is restored on reset.
 See [SRW4_DICTIONARY_ADDITIONS.md](SRW4_DICTIONARY_ADDITIONS.md) for current
 lengths, independent enable conditions, original revision compatibility and
 new native evidence. Original/1/2 recipes remain readable and reversible.
+
+## Revision 4: word access on the name cells (2026-11-06)
+
+Root-12 and root-13 name cells of 304..319 start at 2 mod 4 (bases
+0x202460E2 and 0x20247402). The revision-3 helpers at 0x2029F240 and
+0x2029F500 read and wrote those cells with `mov.l` (for example 0x2029F284),
+which is an SH-2 address error: Mednafen and hardware stop when a 304..319
+detail page opens. Revision 4 accesses each cell as two words (an odd cell is
+left alone) and adds the person-list name wrapper at 0x2029F980 (EXEC literal
+0x060865E0). `scripts/build_dictionary_header_helpers.py` assembles the
+header helpers (`--legacy` re-emits the revision-3 bytes);
+`tests/editor-dictionary-header-helpers.test.mjs` runs both in an SH-2
+interpreter that faults on unaligned access. Revision-3 images stay readable
+and an export with portraits ON upgrades them to revision 4; the DIC length
+becomes 81,170 bytes inside the same 81,920-byte allocation.

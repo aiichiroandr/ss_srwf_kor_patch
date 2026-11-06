@@ -1,5 +1,5 @@
-import { decodeMapIcon } from './editor-map-icons.mjs?v=20261105-part3';
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261105-part3';
+import { decodeMapIcon } from './editor-map-icons.mjs?v=20261106-part4';
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261106-part4';
 
 export function paintEntityPortrait(canvas, result) {
   const image = result?.image, ctx = canvas.getContext?.('2d');
