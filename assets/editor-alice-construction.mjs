@@ -1,4 +1,4 @@
-import {ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261106-part4';
+import {ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261110-part1';
 const snapshot=row=>Object.fromEntries(ALICE_EDITOR_FIELDS.map(key=>[key,row[key]]));
 
 // A newly chosen Ex-S pair opts into its proposed support crew. A previously

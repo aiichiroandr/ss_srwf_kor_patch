@@ -14,7 +14,7 @@ test('linked fourth-game source shows only its icon cards and keeps disconnect a
  const input=root.querySelector('input[type="file"]');input.files=[{name:'fixture.sfc'}];input.dispatchEvent({type:'change',target:input});await wait();
  assert.equal(connected.name,'fixture.sfc');assert.equal(root.querySelectorAll('.srw4-source-asset').length,7);
  assert.equal(root.querySelector('table'),null);assert.equal(root.querySelector('input[type="search"]'),null);
- assert.match(root.querySelector('[role="status"]').textContent,/7기 추가/);
+ assert.match(root.querySelector('[role="status"]').textContent,/7형태 추가/);
  fail=true;input.files=[{name:'bad.sfc'}];input.dispatchEvent({type:'change',target:input});await wait();
  assert.match(root.querySelector('[role="status"]').textContent,/확인 실패/);assert.equal(root.querySelectorAll('.srw4-source-asset').length,7);
  root.querySelectorAll('button').find(button=>button.textContent==='가져오기 취소').click();await wait();assert.equal(undoCount,1);assert.equal(root.querySelector('.srw4-source-results').hidden,true);
@@ -32,7 +32,7 @@ test('source progress stays indeterminate during reading and verification, then 
  ui.progress({phase:'srw4-icon-scan',indeterminate:true});assert.match(status.textContent,/아이콘/);assert.equal(bar.hasAttribute('value'),false);
  ui.progress({phase:'srw4-target-check',indeterminate:true});assert.match(status.textContent,/저장 공간/);assert.equal(bar.hasAttribute('value'),false);
  complete({identity:{title:'제4차 Rev 1',sha256:'a'.repeat(64)},addedUnitCount:0,assets:[],palettes:[]});await wait();
- assert.equal(bar.hidden,true);assert.match(status.textContent,/0기 추가/);
+ assert.equal(bar.hidden,true);assert.match(status.textContent,/0형태 추가/);
  file.files=[{name:'invalid.sfc'}];file.dispatchEvent({type:'change',target:file});assert.equal(bar.hidden,false);
  reject(Error('원본 확인 실패'));await wait();assert.equal(bar.hidden,true);assert.match(status.textContent,/원본 확인 실패/);
 });

@@ -1,8 +1,8 @@
 // Shared, bounded root-8 and purpose-text evidence. Reading a byte pattern
 // does not authorize a write; callers must authenticate the canonical body.
-import { F_NAME_MAP, FINAL_NAME_MAP } from './editor-name-map.mjs?v=20261106-part4';
-import { F_NAME_SUPPLEMENT } from './editor-pilot-name-map.mjs?v=20261106-part4';
-import { bytesEqual as same, bytesToHex, dataView as viewOf, scenarioRootOffsets as rootsOf } from './editor-bytes.mjs?v=20261106-part4';
+import { F_NAME_MAP, FINAL_NAME_MAP } from './editor-name-map.mjs?v=20261110-part1';
+import { F_NAME_SUPPLEMENT } from './editor-pilot-name-map.mjs?v=20261110-part1';
+import { bytesEqual as same, bytesToHex, dataView as viewOf, scenarioRootOffsets as rootsOf } from './editor-bytes.mjs?v=20261110-part1';
 // Match the existing F name/text codec: the accepted font also contains
 // supplemental cells such as F193 (맵), used by original F63 objectives.
 const F_OBJECTIVE_NAME_MAP=new Map([...F_NAME_SUPPLEMENT,...F_NAME_MAP]);

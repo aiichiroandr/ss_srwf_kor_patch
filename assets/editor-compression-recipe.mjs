@@ -1,7 +1,7 @@
 // A reversible description of an existing LZ stream. Literal bytes come from
 // its unchanged decoded data; the nearest matching reference recovers distance.
 // This is a source-recovery ledger, never a format executed by the game.
-import {bytesEqual as same} from './editor-bytes.mjs?v=20261106-part4';
+import {bytesEqual as same} from './editor-bytes.mjs?v=20261110-part1';
 function invalid(){const e=Error('전투 그림의 원본 압축 기록을 복원하지 못했습니다.');e.code='EDITOR_BATTLE_COMPONENT_INVALID';throw e;}
 function put(out,n){if(!Number.isInteger(n)||n<0||n>65535)invalid();do{out.push((n&127)|(n>=128?128:0));n>>>=7;}while(n);}
 function reader(bytes){let at=0,flag=0,bits=0,lastFlag=0;return {

@@ -1,7 +1,7 @@
 // Pure-data Ex-S beam geometry. Pixels and palettes come from a verified ROM.
 // Frame atlas geometry is reconstructed into a separate authenticated bank.
 // No runtime, file, disc, actor, or executable writes occur here.
-import {dataView as dv} from './editor-bytes.mjs?v=20261106-part4';
+import {dataView as dv} from './editor-bytes.mjs?v=20261110-part1';
 function bad(reason='structure') {
  const error=Error('4연장 빔 효과의 그림 구조를 확인하지 못했습니다.');
  error.code='EDITOR_BATTLE_COMPONENT_INVALID';error.details={component:'beam-geometry',reason};throw error;

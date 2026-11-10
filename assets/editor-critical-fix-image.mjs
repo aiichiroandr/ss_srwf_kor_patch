@@ -1,8 +1,8 @@
 // A fixed EXEC literal connects critical calculation to its existing display
 // table. Exact normalization precedes ordinary disc authentication; no writable
 // provenance masks or file allocation limits are changed.
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261106-part4';
-import {CRITICAL_FIX_PROFILES,inspectCriticalFix,setCriticalFix} from './editor-critical-fix.mjs?v=20261106-part4';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261110-part1';
+import {CRITICAL_FIX_PROFILES,inspectCriticalFix,setCriticalFix} from './editor-critical-fix.mjs?v=20261110-part1';
 
 const unavailable=()=>Object.freeze({available:false,enabled:false,identity:null});
 function unsupported(){const error=new Error('크리티컬 보정 코드가 확인된 F·완결편 실행 파일과 일치하지 않습니다.');error.code='EDITOR_CRITICAL_FIX_UNSUPPORTED';throw error;}

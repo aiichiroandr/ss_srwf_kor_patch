@@ -1,15 +1,15 @@
-import {validateAnimationRuntime} from './editor-animation.mjs?v=20261106-part4';
+import {validateAnimationRuntime} from './editor-animation.mjs?v=20261110-part1';
 // The preview runtime lives in weapon-preview/, which the public site does not carry
 // (editor-public-features.mjs runtimePreview). Load it only when a preview actually runs.
 function lazyPreviewRuntimeWorkerLoader(){
  let loader=null;
- return (...args)=>(loader??=import('../weapon-preview/runtime-worker-loader.mjs?v=20261106-part4')
+ return (...args)=>(loader??=import('../weapon-preview/runtime-worker-loader.mjs?v=20261110-part1')
   .then(module=>module.createPreviewRuntimeWorkerLoader())).then(load=>load(...args));
 }
 
 function verifyInWorker(blob,sha256,signal){
  return new Promise((resolve,reject)=>{
-  const worker=new Worker(new URL('./editor-preview-verifier.mjs?v=20261106-part4',import.meta.url),{type:'module'});let settled=false;
+  const worker=new Worker(new URL('./editor-preview-verifier.mjs?v=20261110-part1',import.meta.url),{type:'module'});let settled=false;
   const finish=(error,value)=>{if(settled)return;settled=true;clearTimeout(timer);signal.removeEventListener('abort',abort);worker.terminate();error?reject(error):resolve(value);};
   const abort=()=>finish(Error('미리보기 ROM 준비가 취소됐습니다.'));
   const timer=setTimeout(()=>finish(Error('미리보기 ROM 검증 시간이 초과됐습니다.')),60000);

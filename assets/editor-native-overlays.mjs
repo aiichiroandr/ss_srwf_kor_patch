@@ -1,14 +1,14 @@
 // Normalize the exact collection/critical edits before capacity's whole-EXEC
 // hash, then restore their authenticated states. Unknown modifications remain
 // errors; no writable hash mask is widened.
-import {applySpawnCapacity,normalizeSpawnCapacity,spawnCapacityInfo} from './editor-spawn-capacity.mjs?v=20261106-part4';
-import {inspectCollectionCode,setCollectionCode} from './editor-collection-unlock.mjs?v=20261106-part4';
-import {inspectCriticalFix,normalizeCriticalFix,setCriticalFix} from './editor-critical-fix.mjs?v=20261106-part4';
-import {ownData} from './editor-own.mjs?v=20261106-part4';
-import {dictionaryPortraitExecState,setDictionaryPortraitExec} from './editor-dictionary-portraits.mjs?v=20261106-part4';
-import {dictionaryAdditionsExecState,setDictionaryAdditionsExec} from './editor-dictionary-additions.mjs?v=20261106-part4';
-import {campaignSaveExecState,setCampaignSaveExec}from'./editor-v04-unsupported.mjs?v=20261106-part4';
-import {bytesEqual as same} from './editor-bytes.mjs?v=20261106-part4';
+import {applySpawnCapacity,normalizeSpawnCapacity,spawnCapacityInfo} from './editor-spawn-capacity.mjs?v=20261110-part1';
+import {inspectCollectionCode,setCollectionCode} from './editor-collection-unlock.mjs?v=20261110-part1';
+import {inspectCriticalFix,normalizeCriticalFix,setCriticalFix} from './editor-critical-fix.mjs?v=20261110-part1';
+import {ownData} from './editor-own.mjs?v=20261110-part1';
+import {dictionaryPortraitExecState,setDictionaryPortraitExec} from './editor-dictionary-portraits.mjs?v=20261110-part1';
+import {dictionaryAdditionsExecState,setDictionaryAdditionsExec} from './editor-dictionary-additions.mjs?v=20261110-part1';
+import {campaignSaveExecState,setCampaignSaveExec}from'./editor-v04-unsupported.mjs?v=20261110-part1';
+import {bytesEqual as same} from './editor-bytes.mjs?v=20261110-part1';
 // Trusted factory for non-game fixtures only. Production never takes a caller's
 // editor/profile and binds the accepted capacity implementation below.
 export function createNativeOverlayComposer(capacity){

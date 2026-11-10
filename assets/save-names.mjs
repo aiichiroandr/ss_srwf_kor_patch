@@ -1,4 +1,4 @@
-import {decodeEditorText,encodeEditorText} from './editor-text-codec.mjs?v=20261106-part4';
+import {decodeEditorText,encodeEditorText} from './editor-text-codec.mjs?v=20261110-part1';
 
 // Offsets are relative to the 0x1600 game payload, never the BUP container.
 // Stock restore/copy contracts and variant selection: docs/SAVE_EDITOR.md.

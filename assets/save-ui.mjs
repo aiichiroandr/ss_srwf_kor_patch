@@ -1,11 +1,11 @@
-import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261106-part4';
-import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261106-part4';
-import { requestEditorNotice } from './editor-notice.mjs?v=20261106-part4';
-import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261106-part4';
-import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261106-part4';
-import { openSave } from './save-core.mjs?v=20261106-part4';
-import { pageItems,fitPages } from './save-pages.mjs?v=20261106-part4';
-import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261106-part4';
+import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261110-part1';
+import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261110-part1';
+import { requestEditorNotice } from './editor-notice.mjs?v=20261110-part1';
+import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261110-part1';
+import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261110-part1';
+import { openSave } from './save-core.mjs?v=20261110-part1';
+import { pageItems,fitPages } from './save-pages.mjs?v=20261110-part1';
+import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261110-part1';
 
 export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}={}) {
   const $=id=>document.getElementById(id),dialog=$('saveEditorDialog');

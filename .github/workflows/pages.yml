@@ -1,0 +1,97 @@
+name: Publish reviewed static site
+
+# Manual execution is a separate authorized publication action.
+# Main, expected source commit and exact accepted lock are all required.
+on:
+  workflow_dispatch:
+    inputs:
+      expectedSourceCommit:
+        description: Reviewed workflow/source commit (40 lowercase hex)
+        required: true
+        type: string
+      expectedSiteLockSha256:
+        description: Reviewed payload lock SHA-256 (64 lowercase hex)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - name: Check out the reviewed workflow commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Require the accepted source commit
+        env:
+          EXPECTED_SOURCE_COMMIT: ${{ inputs.expectedSourceCommit }}
+        run: python3 scripts/pages_approval.py source
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Check repository and tests
+        run: |
+          npm test
+          python3 scripts/verify_repo.py
+      - name: Read Pages configuration
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Lock only the reviewed public files
+        env:
+          EXPECTED_LOCK_SHA256: ${{ inputs.expectedSiteLockSha256 }}
+        run: |
+          mkdir -p build
+          python3 scripts/build_site.py lock --root . --lock build/pages-lock.json
+          python3 scripts/pages_approval.py lock --file build/pages-lock.json
+      - name: Build and verify the accepted payload
+        run: |
+          python3 scripts/build_site.py build --root . --lock build/pages-lock.json --out build/pages --copy copy
+          python3 scripts/build_site.py verify --root . --lock build/pages-lock.json --out build/pages > build/pages-verification.json
+          git rev-parse HEAD > build/pages-source-commit.txt
+      - name: Upload only the verified payload directory
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: build/pages
+      - name: Verify the actual archive made by the upload action
+        run: python3 scripts/pages_archive.py verify --lock build/pages-lock.json --tar "$RUNNER_TEMP/artifact.tar" --report build/pages-archive-verification.json
+      - name: Preserve exact publication evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pages-evidence
+          path: |
+            build/pages-lock.json
+            build/pages-verification.json
+            build/pages-archive-verification.json
+            build/pages-source-commit.txt
+            scripts/site-policy.json
+          if-no-files-found: error
+          retention-days: 30
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the archive that passed payload verification
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

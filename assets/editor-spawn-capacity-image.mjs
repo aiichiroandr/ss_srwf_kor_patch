@@ -1,9 +1,9 @@
 // Exact native-query overlay for personal editor images. This does not enable
 // a reinforcement event or relax any immutable-disc mask. The core inspector
 // can hash the normalized image using its existing accepted profile.
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261106-part4';
-import {spawnCapacityInfo} from './editor-spawn-capacity.mjs?v=20261106-part4';
-import {normalizeSpawnCapacityWithOverlays as normalizeSpawnCapacity,applySpawnCapacityWithOverlays as applySpawnCapacity} from './editor-native-overlays.mjs?v=20261106-part4';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261110-part1';
+import {spawnCapacityInfo} from './editor-spawn-capacity.mjs?v=20261110-part1';
+import {normalizeSpawnCapacityWithOverlays as normalizeSpawnCapacity,applySpawnCapacityWithOverlays as applySpawnCapacity} from './editor-native-overlays.mjs?v=20261110-part1';
 
 // Discovery only; every matching image still needs exact file normalization
 // and the ordinary immutable-disc/TSR checks. This avoids opening EXEC in

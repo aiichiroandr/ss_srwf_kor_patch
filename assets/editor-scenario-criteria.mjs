@@ -1,13 +1,13 @@
 // Compile user conditions around the original root-8 action destinations.
 // Original guards, dialogue, flags and clear/failure actions stay in place.
-import { ownData, ownDataCopy as pilotBodyData, readDenseList } from './editor-own.mjs?v=20261106-part4';
-import { compileObjectiveBranches, compileEntityObjectiveBranches, compilePilotObjectiveBranches, compileRegionObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261106-part4';
-import { snapshotPilotObjectiveContext, encodePilotObjectiveRule, decodePilotObjectiveRule } from './editor-scenario-pilot-context.mjs?v=20261106-part4';
-import { bytesEqual as same, dataView as viewOf, hexToBytes, scenarioRootOffsets as rootsOf, sha256Digest } from './editor-bytes.mjs?v=20261106-part4';
-import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261106-part4';
-import { inspectPendingObjectiveHook, inspectClosedObjectiveCallback, readScenarioPurpose, encodeObjectiveText, OBJECTIVE_RAM_CAPACITY } from './editor-scenario-objective-base.mjs?v=20261106-part4';
+import { ownData, ownDataCopy as pilotBodyData, readDenseList } from './editor-own.mjs?v=20261110-part1';
+import { compileObjectiveBranches, compileEntityObjectiveBranches, compilePilotObjectiveBranches, compileRegionObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261110-part1';
+import { snapshotPilotObjectiveContext, encodePilotObjectiveRule, decodePilotObjectiveRule } from './editor-scenario-pilot-context.mjs?v=20261110-part1';
+import { bytesEqual as same, dataView as viewOf, hexToBytes, scenarioRootOffsets as rootsOf, sha256Digest } from './editor-bytes.mjs?v=20261110-part1';
+import { objectiveUnitIdLimit } from './editor-fields.mjs?v=20261110-part1';
+import { inspectPendingObjectiveHook, inspectClosedObjectiveCallback, readScenarioPurpose, encodeObjectiveText, OBJECTIVE_RAM_CAPACITY } from './editor-scenario-objective-base.mjs?v=20261110-part1';
 
-import {encodeRegionRule,decodeRegionRule,isRegionRuleWireValue,regionContextOf,regionContextDigest,objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261106-part4';
+import {encodeRegionRule,decodeRegionRule,isRegionRuleWireValue,regionContextOf,regionContextDigest,objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261110-part1';
 export const CRITERIA_FIELDS=Object.freeze(['objectivePriority','victoryJoin','defeatJoin',
   'victoryRule1','victoryRule2','victoryRule3','defeatRule1','defeatRule2','defeatRule3']);
 const MAGIC=Uint8Array.of(83,82,87,70,79,66,48,49),TRAILER=80; // SRWFOB01

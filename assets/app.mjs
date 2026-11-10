@@ -1,47 +1,47 @@
-import {createSaveNameAuthority} from './save-name-support.mjs?v=20261106-part4';
-import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261106-part4';
-import {editorReviewSupport} from './editor-review-support.mjs?v=20261106-part4';
-import {createMiscExamples} from './editor-misc-examples.mjs?v=20261106-part4';
-import {decodeMapIcon} from './editor-map-icons.mjs?v=20261106-part4';
-import {exSBeamCloneIds,freshExSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261106-part4';
-import {planSrw4UnusedImport,SRW4_UNUSED_PRESETS} from './editor-srw4-unused.mjs?v=20261106-part4';
-import {captureSrw4Import,pendingSrw4Import,rollbackSrw4Import} from './editor-srw4-undo.mjs?v=20261106-part4';
-import {decorateAlicePilot} from './editor-alice.mjs?v=20261106-part4';
-import {aliceEditorRow,aliceCrewRequest,ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261106-part4';
-import {createAliceCrewEditor} from './editor-alice-crew-ui.mjs?v=20261106-part4';
-import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261106-part4';
-import {criticalValues,criticalChoices,criticalPercentLabel,criticalAppliedText} from './editor-critical-values.mjs?v=20261106-part4';
-import {createSrw4SourcePanel} from './editor-srw4-source-ui.mjs?v=20261106-part4';
-import {createFCampaignSourcePanel,campaignCanonicalTracks,campaignDownloadCue,ingameCanonicalTracks,ingameDownloadCue} from './editor-v04-unsupported.mjs?v=20261106-part4';
-import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261106-part4';
-import {connectDefaultAlice,cancelDefaultAlice} from './editor-alice-construction.mjs?v=20261106-part4';
-import {requireMigrationIdentities} from './editor-migration.mjs?v=20261106-part4';
-import {createUnitUpgradeUI} from './editor-unit-upgrade-ui.mjs?v=20261106-part4';
-import {createEditorStorageUI} from './editor-storage-ui.mjs?v=20261106-part4';
-import {encodeEditorText,editorTextMetrics,nameMap} from './editor-text-codec.mjs?v=20261106-part4';
-import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261106-part4';
-import {afterDialogueText} from './editor-dialogue-sequence.mjs?v=20261106-part4';
-import {createBattleTimeline} from './editor-battle-timeline.mjs?v=20261106-part4';
-import {createWeaponNameControl} from './editor-name-control.mjs?v=20261106-part4';
-import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261106-part4';
-import {UNUSED_UNIT_PRESETS,UNIT_CONSTRUCTION_VISIBLE_PRESETS,constructUnitRow,replaceUnitRow,cancelUnitConstruction,unitConstructionPreset,UNIT_CONCEPTS,planConceptUnitConstruction,planExSCruiserConstruction,planSCruiserConstruction,pruneConstructionWeaponClones} from './editor-unit-construction.mjs?v=20261106-part4';
-import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261106-part4';
-import { createSaveEditor } from './save-ui.mjs?v=20261106-part4';
-import { UNIT_WEAPON_FIELDS, isUnitWeaponField, pendingUnitWeapons, unitWeaponFields,planUnitLoadouts } from './editor-loadout.mjs?v=20261106-part4';
-import { createUnitWeaponScroller } from './editor-loadout-ui.mjs?v=20261106-part4';
-import {createUnitWeaponEditor} from './editor-unit-weapon-ui.mjs?v=20261106-part4';
-import { unitsOfWeapon, weaponOwnership } from './editor-weapon-links.mjs?v=20261106-part4';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261106-part4';
-import { requestEditorNotice } from './editor-notice.mjs?v=20261106-part4';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261106-part4';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261106-part4";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261106-part4";
-import { createEntityArtwork } from './editor-entity-art.mjs?v=20261106-part4';
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261106-part4";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261106-part4";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261106-part4";
-import { animationChoices,animationDefaultPilot, createInlineAnimationPreview } from "./editor-animation.mjs?v=20261106-part4";
-import {createPreviewResources} from './editor-preview-resources.mjs?v=20261106-part4';
+import {createSaveNameAuthority} from './save-name-support.mjs?v=20261110-part1';
+import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261110-part1';
+import {editorReviewSupport} from './editor-review-support.mjs?v=20261110-part1';
+import {createMiscExamples} from './editor-misc-examples.mjs?v=20261110-part1';
+import {decodeMapIcon} from './editor-map-icons.mjs?v=20261110-part1';
+import {exSBeamCloneIds,freshExSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261110-part1';
+import {planSrw4UnusedImport,SRW4_UNUSED_PRESETS} from './editor-srw4-unused.mjs?v=20261110-part1';
+import {captureSrw4Import,pendingSrw4Import,rollbackSrw4Import} from './editor-srw4-undo.mjs?v=20261110-part1';
+import {decorateAlicePilot} from './editor-alice.mjs?v=20261110-part1';
+import {aliceEditorRow,aliceCrewRequest,ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261110-part1';
+import {createAliceCrewEditor} from './editor-alice-crew-ui.mjs?v=20261110-part1';
+import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261110-part1';
+import {criticalValues,criticalChoices,criticalPercentLabel,criticalAppliedText} from './editor-critical-values.mjs?v=20261110-part1';
+import {createSrw4SourcePanel} from './editor-srw4-source-ui.mjs?v=20261110-part1';
+import {createFCampaignSourcePanel,campaignCanonicalTracks,campaignDownloadCue,ingameCanonicalTracks,ingameDownloadCue} from './editor-v04-unsupported.mjs?v=20261110-part1';
+import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261110-part1';
+import {connectDefaultAlice,cancelDefaultAlice} from './editor-alice-construction.mjs?v=20261110-part1';
+import {requireMigrationIdentities} from './editor-migration.mjs?v=20261110-part1';
+import {createUnitUpgradeUI} from './editor-unit-upgrade-ui.mjs?v=20261110-part1';
+import {createEditorStorageUI} from './editor-storage-ui.mjs?v=20261110-part1';
+import {encodeEditorText,editorTextMetrics,nameMap} from './editor-text-codec.mjs?v=20261110-part1';
+import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261110-part1';
+import {afterDialogueText} from './editor-dialogue-sequence.mjs?v=20261110-part1';
+import {createBattleTimeline} from './editor-battle-timeline.mjs?v=20261110-part1';
+import {createWeaponNameControl} from './editor-name-control.mjs?v=20261110-part1';
+import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261110-part1';
+import {UNUSED_UNIT_PRESETS,UNIT_CONSTRUCTION_VISIBLE_PRESETS,constructUnitRow,replaceUnitRow,cancelUnitConstruction,unitConstructionPreset,UNIT_CONCEPTS,planConceptUnitConstruction,planExSCruiserConstruction,planSCruiserConstruction,pruneConstructionWeaponClones} from './editor-unit-construction.mjs?v=20261110-part1';
+import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261110-part1';
+import { createSaveEditor } from './save-ui.mjs?v=20261110-part1';
+import { UNIT_WEAPON_FIELDS, isUnitWeaponField, pendingUnitWeapons, unitWeaponFields,planUnitLoadouts } from './editor-loadout.mjs?v=20261110-part1';
+import { createUnitWeaponScroller } from './editor-loadout-ui.mjs?v=20261110-part1';
+import {createUnitWeaponEditor} from './editor-unit-weapon-ui.mjs?v=20261110-part1';
+import { unitsOfWeapon, weaponOwnership } from './editor-weapon-links.mjs?v=20261110-part1';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261110-part1';
+import { requestEditorNotice } from './editor-notice.mjs?v=20261110-part1';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261110-part1';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261110-part1";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261110-part1";
+import { createEntityArtwork } from './editor-entity-art.mjs?v=20261110-part1';
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261110-part1";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261110-part1";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261110-part1";
+import { animationChoices,animationDefaultPilot, createInlineAnimationPreview } from "./editor-animation.mjs?v=20261110-part1";
+import {createPreviewResources} from './editor-preview-resources.mjs?v=20261110-part1';
 import {
   canStep,
   filterRecords,
@@ -50,7 +50,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261106-part4";
+} from "./editor-list.mjs?v=20261110-part1";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -61,7 +61,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261106-part4";
+} from "./editor-grades.mjs?v=20261110-part1";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -95,28 +95,28 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261106-part4";
+} from "./editor-skill-list.mjs?v=20261110-part1";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261106-part4";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261106-part4";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261106-part4";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261106-part4";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261106-part4";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261106-part4";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261106-part4";
-import { createCostEditor } from "./editor-cost-ui.mjs?v=20261106-part4";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261106-part4";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261106-part4";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261106-part4";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261106-part4";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261106-part4";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261106-part4";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261106-part4";
+} from "./editor-facts.mjs?v=20261110-part1";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261110-part1";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261110-part1";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261110-part1";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261110-part1";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261110-part1";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261110-part1";
+import { createCostEditor } from "./editor-cost-ui.mjs?v=20261110-part1";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261110-part1";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261110-part1";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261110-part1";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261110-part1";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261110-part1";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261110-part1";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261110-part1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -124,14 +124,14 @@ import {
   groupFontReleases as groupPublicFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261106-part4";
+} from "./font-revisions.mjs?v=20261110-part1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261106-part4";
+} from "./release-notes.mjs?v=20261110-part1";
 
-const STATIC_ASSET_REVISION = "20261106-part4";
+const STATIC_ASSET_REVISION = "20261110-part1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -3159,7 +3159,7 @@ async function openEditorFromFolder(directoryHandle) {
   // Returning from a review image must also restore the public editor engine.
   if(patched&&localEditorSupport&&reviewSession()){
     try{
-      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261106-part4',import.meta.url).href,signal:controller.signal,
+      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261110-part1',import.meta.url).href,signal:controller.signal,
         onProgress:progress=>showEditorProgress({...EDITOR_STAGES.inspect,percent:progress.total?progress.processed/progress.total*100:null})});
       if(opened){state.workflowSourceHandles=sourceHandles;return;}
       endEditorJob();state.editorSource=previous;updateControls();return;
@@ -4609,7 +4609,7 @@ function commitSrw4UnusedImport(plan,catalog){
   }
   catalog.aliceRegistered=state.editorAliceRows[0]?.enabled===1;
   catalog.aliceHint=catalog.aliceRegistered?'ALICE 연결됨':state.editorAliceRows.length?'ALICE 동승 설정을 확인해 주세요.':'ALICE 자동 연결은 이 게임·기반 이미지에서 지원하지 않습니다.';
-  announce(`제4차 Rev 1 검증 완료 · 미사용 기체 ${plan.added.length}기 추가 · 블러드템플 F 아이콘 #62 연결. BIN 저장 시 적용됩니다.`);
+  announce(`제4차 Rev 1 검증 완료 · 기체 ${plan.added.length}형태 추가 · 블러드템플 F 아이콘 #62 연결. BIN 저장 시 적용됩니다.`);
 }
 function canUndoSrw4Import(){
   if(srw4ImportUndo)return true;
@@ -5355,6 +5355,10 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_REVISION_OUTDATED: ["이전 버전은 편집할 수 없습니다", "원본 게임 또는 최신 공개 패치 기반 BIN/CUE만 사용할 수 있습니다. 원본 폴더를 선택하면 최신 패치를 적용해 에디터를 엽니다."],
   EDITOR_CUSTOM_PROVENANCE: ["확인되지 않은 수정 BIN입니다", "이 브라우저의 에디터 출력 기록 또는 공개 패치와 비교한 편집 영역 검사가 필요합니다. 원본에서 패치를 만들거나, 이 에디터로 만든 BIN/CUE가 든 폴더를 선택해 주세요."],
   EDITOR_SRW4_MAP_INVALID: ["추가 기체 아이콘을 확인하지 못했습니다", "원본 아이콘이나 저장된 복원 기록이 맞지 않아 편집을 멈췄습니다. 검증된 원본에서 다시 편집해 주세요."],
+  EDITOR_SRW4_START_INVALID: ["새 게임 초기 편성을 확인하지 못했습니다", "초기 편성과 추가 기체의 구성이 맞지 않아 저장을 멈췄습니다. 지원되는 완결편 원본에서 다시 연결해 주세요."],
+  EDITOR_SRW4_START_ROSTER_INVALID: ["새 게임 등록 구성이 맞지 않습니다", "기본 기체와 변형 연결 또는 초기화 명령을 확인하지 못했습니다. 지원되는 완결편 원본에서 다시 편집해 주세요."],
+  EDITOR_SRW4_RETENTION_INVALID: ["후속 편성의 기체 보존을 확인하지 못했습니다", "추가 기체와 후속 편성 명령이 맞지 않아 저장을 멈췄습니다. 지원되는 완결편 원본에서 다시 편집해 주세요."],
+  EDITOR_SRW4_DEPARTURE_INVALID: ["파일럿 이탈 시 기체 보존을 확인하지 못했습니다", "추가 기체와 파일럿 이탈 명령이 맞지 않아 저장을 멈췄습니다. 지원되는 완결편 원본에서 다시 편집해 주세요."],
   EDITOR_IMAGE_READ_FAILED: ["BIN을 끝까지 읽지 못했습니다", "파일 접근을 허용하고 다른 앱에서 사용 중이지 않은지 확인해 주세요."],
   EDITOR_ISO_NOT_FOUND: ["디스크의 파일 목록을 찾지 못했습니다", "지원하는 공개 패치 BIN인지 확인해 주세요."],
   EDITOR_ISO_MALFORMED: ["디스크 구조가 올바르지 않습니다", "디스크의 파일 목록이 규칙과 맞지 않아 편집을 멈췄습니다. 공개 패치 BIN이거나 이 에디터로 만든 BIN인지 확인해 주세요."],

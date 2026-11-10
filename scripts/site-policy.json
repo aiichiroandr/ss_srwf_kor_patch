@@ -3,7 +3,11 @@
   "limitBytes": 1000000000,
   "publicDocs": [
     "docs/WEB_PORT_TEST.md",
-    "docs/EDITOR_FACTS.md"
+    "docs/EDITOR_FACTS.md",
+    "docs/WEB_PORT_CLIENT_RECOMP.md",
+    "docs/HISTORY_REWRITE_20261103.md",
+    "docs/RELEASE_ARCHIVE_20261011.json",
+    "docs/HISTORY_REWRITE_20261103.json"
   ],
   "files": [
     "NOTICE.md",
@@ -22,6 +26,7 @@
     "assets/editor-alice.mjs",
     "assets/editor-animation-roster-profiles.mjs",
     "assets/editor-animation.mjs",
+    "assets/editor-art-patch.mjs",
     "assets/editor-battle-beam-bank.mjs",
     "assets/editor-battle-components.mjs",
     "assets/editor-battle-dialogue.mjs",
@@ -30,6 +35,8 @@
     "assets/editor-battle-scene-labels.mjs",
     "assets/editor-battle-source-delta.mjs",
     "assets/editor-battle-timeline.mjs",
+    "assets/editor-byte-window.mjs",
+    "assets/editor-bytes.mjs",
     "assets/editor-changes.mjs",
     "assets/editor-collection-unlock.mjs",
     "assets/editor-compression-recipe.mjs",
@@ -43,6 +50,12 @@
     "assets/editor-deployments.mjs",
     "assets/editor-dialogue-sequence.mjs",
     "assets/editor-dialogue-speakers.mjs",
+    "assets/editor-dictionary-addition-image.mjs",
+    "assets/editor-dictionary-additions.mjs",
+    "assets/editor-dictionary-options.mjs",
+    "assets/editor-dictionary-portrait-data.mjs",
+    "assets/editor-dictionary-portrait-image.mjs",
+    "assets/editor-dictionary-portraits.mjs",
     "assets/editor-directory.mjs",
     "assets/editor-economy-profiles.mjs",
     "assets/editor-effect-list.mjs",
@@ -71,6 +84,7 @@
     "assets/editor-kill-experience-profiles.mjs",
     "assets/editor-kom-recovery.mjs",
     "assets/editor-layout.mjs",
+    "assets/editor-legacy-robot-cells.mjs",
     "assets/editor-list.mjs",
     "assets/editor-loadout-profiles.mjs",
     "assets/editor-loadout-ui.mjs",
@@ -93,6 +107,8 @@
     "assets/editor-native-overlays.mjs",
     "assets/editor-notice.mjs",
     "assets/editor-own.mjs",
+    "assets/editor-pilot-dialogue-profiles.mjs",
+    "assets/editor-pilot-dialogue.mjs",
     "assets/editor-pilot-layout-profiles.mjs",
     "assets/editor-pilot-layout.mjs",
     "assets/editor-pilot-name-map.mjs",
@@ -101,6 +117,7 @@
     "assets/editor-preview-verifier.mjs",
     "assets/editor-provenance-profiles.mjs",
     "assets/editor-provenance.mjs",
+    "assets/editor-public-features.mjs",
     "assets/editor-review-support.mjs",
     "assets/editor-reward-profiles.mjs",
     "assets/editor-reward-ui.mjs",
@@ -124,6 +141,7 @@
     "assets/editor-scenario-event-phase.mjs",
     "assets/editor-scenario-events.mjs",
     "assets/editor-scenario-f-event-phase.mjs",
+    "assets/editor-scenario-identities.mjs",
     "assets/editor-scenario-labels.mjs",
     "assets/editor-scenario-model.mjs",
     "assets/editor-scenario-objective-base.mjs",
@@ -159,8 +177,12 @@
     "assets/editor-srw4-file.mjs",
     "assets/editor-srw4-native-map.mjs",
     "assets/editor-srw4-rom.mjs",
+    "assets/editor-srw4-roster-departure.mjs",
+    "assets/editor-srw4-roster-retention.mjs",
     "assets/editor-srw4-source-ui.mjs",
     "assets/editor-srw4-source.mjs",
+    "assets/editor-srw4-start-image.mjs",
+    "assets/editor-srw4-start-roster.mjs",
     "assets/editor-srw4-undo.mjs",
     "assets/editor-srw4-unused.mjs",
     "assets/editor-stock-profiles.mjs",
@@ -171,6 +193,9 @@
     "assets/editor-terrain-ui.mjs",
     "assets/editor-terrain.mjs",
     "assets/editor-text-codec.mjs",
+    "assets/editor-title-logo-data.mjs",
+    "assets/editor-title-logo-image.mjs",
+    "assets/editor-title-logo.mjs",
     "assets/editor-unit-abilities.mjs",
     "assets/editor-unit-compact.mjs",
     "assets/editor-unit-construction.mjs",
@@ -253,10 +278,12 @@
     "assets/patch-worker.mjs",
     "assets/release-notes.mjs",
     "assets/runtime-panel-frame.svg",
+    "assets/save-check.mjs",
     "assets/save-compatibility.mjs",
     "assets/save-core.mjs",
     "assets/save-field-rules.mjs",
     "assets/save-metadata.mjs",
+    "assets/save-name-support.mjs",
     "assets/save-names.mjs",
     "assets/save-pages.mjs",
     "assets/save-ui.mjs",
@@ -302,6 +329,10 @@
     "assets/user-guide/weapon-terrain-desktop.png",
     "assets/user-guide/weapon-terrain-portrait.png",
     "docs/EDITOR_FACTS.md",
+    "docs/HISTORY_REWRITE_20261103.json",
+    "docs/HISTORY_REWRITE_20261103.md",
+    "docs/RELEASE_ARCHIVE_20261011.json",
+    "docs/WEB_PORT_CLIENT_RECOMP.md",
     "docs/WEB_PORT_TEST.md",
     "index.html",
     "manifest/releases.json",
@@ -346,44 +377,13 @@
     "schemas/patch-descriptor.schema.json",
     "schemas/release.schema.json",
     "schemas/releases.schema.json",
-    "weapon-preview/runtime/8f342dac2ee485198ad3/saturn.js",
-    "weapon-preview/runtime/8f342dac2ee485198ad3/saturn.wasm",
-    "weapon-preview/runtime/BUILD.md",
-    "weapon-preview/runtime/COPYING",
-    "weapon-preview/runtime/LICENSE",
-    "weapon-preview/runtime/THIRD_PARTY.md",
-    "weapon-preview/runtime/current.json",
-    "weapon-preview/runtime/f-current.json",
-    "weapon-preview/runtime/f003b342a3fe2894da1c/saturn.js",
-    "weapon-preview/runtime/f003b342a3fe2894da1c/saturn.wasm",
-    "weapon-preview/runtime/source-8f342dac2ee485198ad3.tar.gz",
-    "weapon-preview/runtime/source-f003b342a3fe2894da1c.tar.gz",
-    "weapon-preview/worker.js",
     "web-port/index.html",
     "web-port/isolation-sw.js",
     "web-port/ram-save-worker.mjs",
     "web-port/ram-save.mjs",
-    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.js",
-    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.wasm",
-    "web-port/runtime/1a0261ada40574cfb43d/saturn.js",
-    "web-port/runtime/1a0261ada40574cfb43d/saturn.wasm",
-    "web-port/runtime/3ca68ea2ef0dcecd0b86/saturn.js",
-    "web-port/runtime/3ca68ea2ef0dcecd0b86/saturn.wasm",
-    "web-port/runtime/BUILD.md",
-    "web-port/runtime/COPYING",
-    "web-port/runtime/THIRD_PARTY.md",
-    "web-port/runtime/b4d1a7de24a7aa2a98b5/saturn.js",
-    "web-port/runtime/b4d1a7de24a7aa2a98b5/saturn.wasm",
-    "web-port/runtime/current-mobile-v14.json",
-    "web-port/runtime/current-mobile.json",
-    "web-port/runtime/current.json",
-    "web-port/runtime/source-16f9cf9fde74c2d70e6b.tar.gz",
-    "web-port/runtime/source-1a0261ada40574cfb43d.tar.gz",
-    "web-port/runtime/source-3ca68ea2ef0dcecd0b86.tar.gz",
-    "web-port/runtime/source-b4d1a7de24a7aa2a98b5.tar.gz",
+    "web-port/save-rescue.mjs",
     "web-port/saves.mjs",
-    "web-port/style.css",
-    "web-port/worker.js"
+    "web-port/style.css"
   ],
   "pins": {
     "manifest/releases.json": {
@@ -554,149 +554,22 @@
       "bytes": 7711,
       "sha256": "f855b0d6609dec4fbb13dab70219c6e77332e9a125feb8f1ffabf822d6577358"
     },
-    "weapon-preview/runtime/8f342dac2ee485198ad3/saturn.js": {
-      "bytes": 116608,
-      "sha256": "54102fcdb67d89efe02025e1235386ec42d0a2071d7657381e55cecfc7fbc3f9"
+    "assets/editor-public-features.mjs": {
+      "bytes": 1260,
+      "sha256": "2d188b5d99f68053d1dde93fb9a495070f4b20fc382c54eca08b7f4260ce402d"
     },
-    "weapon-preview/runtime/8f342dac2ee485198ad3/saturn.wasm": {
-      "bytes": 38557979,
-      "sha256": "72914832ecd57779c5b443d9a6cbc8734e92465a6d55e0f1388d9b71dc62b4b0"
+    "assets/editor-animation.mjs": {
+      "bytes": 14016,
+      "sha256": "8856d6e5cad8c1966558f18f4d39de0bb002c7bf2e0e3fb91a51e13870404c55"
     },
-    "weapon-preview/runtime/BUILD.md": {
-      "bytes": 5048,
-      "sha256": "6455111a0de0179685312d7f69fce3d7c68b0f78ee46ad7153abed1ec1aece11"
-    },
-    "weapon-preview/runtime/COPYING": {
-      "bytes": 18092,
-      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
-    },
-    "weapon-preview/runtime/LICENSE": {
-      "bytes": 1105,
-      "sha256": "cb79a2792717a7ec6744ed54f6dd6de1d96c66910ac8c4cf4f929d45aef7f84f"
-    },
-    "weapon-preview/runtime/THIRD_PARTY.md": {
-      "bytes": 6872,
-      "sha256": "c3f1645c1a48a1218253a63a82c60ce6a63a26f6f4fc5e10b7fe936c546fce35"
-    },
-    "weapon-preview/runtime/source-8f342dac2ee485198ad3.tar.gz": {
-      "bytes": 7064450,
-      "sha256": "430bd65b1dcac318d3f547847c603e3b03fc7ce4c13315ae6f752ab00f62992f"
-    },
-    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.js": {
-      "bytes": 117249,
-      "sha256": "6f0365566a2f3ae17da67d229e30ed78bc2a15032d7d8fb7371a3bc49361551b"
-    },
-    "web-port/runtime/16f9cf9fde74c2d70e6b/saturn.wasm": {
-      "bytes": 39237002,
-      "sha256": "a7228c8f1de632ca0ac2a0e5193fec2d9effd3236d21182e869c31f5ce19e6df"
-    },
-    "web-port/runtime/1a0261ada40574cfb43d/saturn.js": {
-      "bytes": 116490,
-      "sha256": "d5bd1af01f4d0952466004f6948b89f17e313883385fbcd14dc1c702be1dd8a8"
-    },
-    "web-port/runtime/1a0261ada40574cfb43d/saturn.wasm": {
-      "bytes": 39233602,
-      "sha256": "41c1cbb6becd7887cfe9e756919be86d23fcbea30177f5544a76ce02257d9e65"
-    },
-    "web-port/runtime/3ca68ea2ef0dcecd0b86/saturn.js": {
-      "bytes": 282137,
-      "sha256": "8d28861202b43c524edb6ed1829c2ff7152d0389663cb3c9b8350d55b167e63d"
-    },
-    "web-port/runtime/3ca68ea2ef0dcecd0b86/saturn.wasm": {
-      "bytes": 93929475,
-      "sha256": "3ca68ea2ef0dcecd0b86bd8328ddee52d8b73830c4a373cd0066433c80408832"
-    },
-    "web-port/runtime/BUILD.md": {
-      "bytes": 2830,
-      "sha256": "964eb692b61fdad1b9d32e12af574ea38f612c539ae33e236d7f790d6b59b332"
-    },
-    "web-port/runtime/COPYING": {
-      "bytes": 18092,
-      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
-    },
-    "web-port/runtime/THIRD_PARTY.md": {
-      "bytes": 6872,
-      "sha256": "c3f1645c1a48a1218253a63a82c60ce6a63a26f6f4fc5e10b7fe936c546fce35"
-    },
-    "web-port/runtime/b4d1a7de24a7aa2a98b5/saturn.js": {
-      "bytes": 116143,
-      "sha256": "f42e6ee78bbb1b2a08f52ddf3ecba78baa0391b68db700974a00fc304ef4c400"
-    },
-    "web-port/runtime/b4d1a7de24a7aa2a98b5/saturn.wasm": {
-      "bytes": 39344701,
-      "sha256": "b4d1a7de24a7aa2a98b520944709b6f666eab4148d7d677102b8f2d0c0e087dd"
-    },
-    "web-port/runtime/source-16f9cf9fde74c2d70e6b.tar.gz": {
-      "bytes": 7104735,
-      "sha256": "5b0fe5a41ad8b017a0e5b64eb6fa0e693b5189fb013f678ae43dd06bd074e578"
-    },
-    "web-port/runtime/source-1a0261ada40574cfb43d.tar.gz": {
-      "bytes": 7106448,
-      "sha256": "1f99e113e791403cf8872634b33a9d12709b79c75dd8080b944d523fe0427a16"
-    },
-    "web-port/runtime/source-3ca68ea2ef0dcecd0b86.tar.gz": {
-      "bytes": 7162462,
-      "sha256": "1e0260b140d925f81fb43595a4f3bbe7a57a0bc48b1d5f9bbfa30b5c461ab773"
-    },
-    "web-port/runtime/source-b4d1a7de24a7aa2a98b5.tar.gz": {
-      "bytes": 7146767,
-      "sha256": "a15786b3847419965ff85611ade8c99366c234661acb77cc7e8563d0d9680c2f"
-    },
-    "weapon-preview/runtime/f003b342a3fe2894da1c/saturn.js": {
-      "bytes": 118967,
-      "sha256": "75459efe9b124a29dcbc3cc50435291371a3df8d6fc0bf27fe5cc7bd962769c9"
-    },
-    "weapon-preview/runtime/f003b342a3fe2894da1c/saturn.wasm": {
-      "bytes": 40052920,
-      "sha256": "f003b342a3fe2894da1c4879d93f1ba627359129c01ed0d68f08ae8872fb03b9"
-    },
-    "weapon-preview/runtime/source-f003b342a3fe2894da1c.tar.gz": {
-      "bytes": 7164040,
-      "sha256": "7c2c989818793b784a8e50804d595ce7613e22cc470475c1d380cc03ba039c2e"
+    "assets/editor-preview-resources.mjs": {
+      "bytes": 6306,
+      "sha256": "c23268b34a3e7c626d1cfe4fa021163a3fee37b8d2edc34ef5f8be9fecc7c57f"
     }
   },
-  "runtimeSets": [
-    {
-      "surface": "web-port",
-      "version": "3ca68ea2ef0dcecd0b86"
-    },
-    {
-      "surface": "web-port",
-      "version": "b4d1a7de24a7aa2a98b5"
-    },
-    {
-      "surface": "web-port",
-      "version": "16f9cf9fde74c2d70e6b"
-    },
-    {
-      "surface": "web-port",
-      "version": "1a0261ada40574cfb43d"
-    },
-    {
-      "surface": "weapon-preview",
-      "version": "f003b342a3fe2894da1c"
-    },
-    {
-      "surface": "weapon-preview",
-      "version": "8f342dac2ee485198ad3"
-    }
-  ],
-  "runtimeManifests": {
-    "web-port/runtime/current.json": "3ca68ea2ef0dcecd0b86",
-    "web-port/runtime/current-mobile.json": "16f9cf9fde74c2d70e6b",
-    "web-port/runtime/current-mobile-v14.json": "1a0261ada40574cfb43d",
-    "weapon-preview/runtime/current.json": "f003b342a3fe2894da1c",
-    "weapon-preview/runtime/f-current.json": "8f342dac2ee485198ad3"
-  },
-  "runtimeNotices": [
-    "weapon-preview/runtime/BUILD.md",
-    "weapon-preview/runtime/COPYING",
-    "weapon-preview/runtime/LICENSE",
-    "weapon-preview/runtime/THIRD_PARTY.md",
-    "web-port/runtime/BUILD.md",
-    "web-port/runtime/COPYING",
-    "web-port/runtime/THIRD_PARTY.md"
-  ],
+  "runtimeSets": [],
+  "runtimeManifests": {},
+  "runtimeNotices": [],
   "releaseIds": [
     "srwf-f-20260915-v0-4-a",
     "srwf-f-20260915-v0-4-b",
@@ -711,8 +584,14 @@
     "srwf-final-20261005-v0-3-b",
     "srwf-final-20261005-v0-3-c"
   ],
-  "runtimeWorkers": {
-    "web-port/worker.js": "web-port",
-    "weapon-preview/worker.js": "weapon-preview"
+  "runtimeWorkers": {},
+  "runtimeState": "WITHDRAWN",
+  "withdrawnPreviewReferences": {
+    "assets/editor-animation.mjs": [
+      "../weapon-preview/"
+    ],
+    "assets/editor-preview-resources.mjs": [
+      "../weapon-preview/runtime-worker-loader.mjs?v=20261110-part1"
+    ]
   }
 }

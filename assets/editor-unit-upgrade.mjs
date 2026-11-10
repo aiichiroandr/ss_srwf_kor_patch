@@ -1,6 +1,6 @@
-import {UNIT_CONCEPTS,CONSTRUCTION_WEAPON_ROLES,unitConstructionPreset,unitConstructionLoadout,unitConstructionStatsForRow,constructUnitUpgradeRow,planConceptUnitConstruction,replaceUnitRow} from './editor-unit-construction.mjs?v=20261106-part4';
-import {UNIT_WEAPON_FIELDS,pendingUnitWeapons,unitWeaponFields,planUnitLoadouts} from './editor-loadout.mjs?v=20261106-part4';
-import {isFieldValueInBounds} from './editor-fields.mjs?v=20261106-part4';
+import {UNIT_CONCEPTS,CONSTRUCTION_WEAPON_ROLES,unitConstructionPreset,unitConstructionLoadout,unitConstructionStatsForRow,constructUnitUpgradeRow,planConceptUnitConstruction,replaceUnitRow} from './editor-unit-construction.mjs?v=20261110-part1';
+import {UNIT_WEAPON_FIELDS,pendingUnitWeapons,unitWeaponFields,planUnitLoadouts} from './editor-loadout.mjs?v=20261110-part1';
+import {isFieldValueInBounds} from './editor-fields.mjs?v=20261110-part1';
 
 // Observed editable defaults of the accepted F v0.5 / Final v0.3 donor units.
 // Never use an already edited donor as evidence of an older user's baseline.
@@ -50,6 +50,12 @@ export function planUnitConceptUpgrade(session){
  const add=(item)=>{if(!same(item.current,item.next)||item.force){item.checked=!item.custom;items.push(item);}};
  for(const row of session.units.filter(u=>u.construction&&u.editable!==false)){
   const previous=previousUnitConcept(row,session.gameId),next={...UNIT_CONCEPTS[row.construction.preset],stats:unitConstructionStatsForRow(row)},unit=row.recordIndex;
+  // A linked cruiser uses its actual hull's HP/EN, including personal edits.
+  // Keep the historical baseline above for detecting user-edited values.
+  if(row.saveUnitForm===1&&['s-cruiser','ex-s-cruiser'].includes(row.constructionGroup)){
+   const hull=session.units.find(u=>u.recordIndex===row.constructionGroupRoot&&u.saveUnitForm===0&&u.constructionGroup===row.constructionGroup);
+   if(hull)next.stats={...next.stats,hp:hull.hp,en:hull.en};
+  }
   units.push({recordIndex:unit,name:row.name,version:row.construction.loadoutVersion??0,preset:row.construction.preset});
   for(const field of UNIT_UPGRADE_FIELDS)add({key:`unit:${unit}:${field}`,kind:'unit',unit,name:row.name,field,previous:previous.stats[field],current:row[field],next:next.stats[field],custom:!same(row[field],previous.stats[field])});
   add({key:`unit:${unit}:abilities`,kind:'unit',unit,name:row.name,field:'abilities',previous:pairs(previous.stats),current:pairs(row),next:pairs(next.stats),custom:!same(pairs(row),pairs(previous.stats))});

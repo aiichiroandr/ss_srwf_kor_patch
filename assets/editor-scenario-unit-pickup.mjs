@@ -1,9 +1,9 @@
 // Composes the native region query and hangar constructor. Installing this
 // program requires a separately authenticated, persistent event callback.
 // It is deliberately not a browser writer or a new story-flag allocator.
-import {compileRegionPresenceBranch,inspectDefaultObjective} from './editor-scenario-objectives.mjs?v=20261106-part4';
-import {compileHangarUnitRewardEffect} from './editor-scenario-unit-rewards.mjs?v=20261106-part4';
-import {ownData} from './editor-own.mjs?v=20261106-part4';
+import {compileRegionPresenceBranch,inspectDefaultObjective} from './editor-scenario-objectives.mjs?v=20261110-part1';
+import {compileHangarUnitRewardEffect} from './editor-scenario-unit-rewards.mjs?v=20261110-part1';
+import {ownData} from './editor-own.mjs?v=20261110-part1';
 
 export function compileHangarPickupProgram(input,{root,context}={}){
  const keys=['unitId','unitIdentity','x','y','baseOffset'];

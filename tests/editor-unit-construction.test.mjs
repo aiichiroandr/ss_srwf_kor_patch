@@ -5,7 +5,7 @@ import {installFakeDom,loadHtml} from './helpers/fake-dom.mjs';
 import {descriptorFor,trustFor} from './helpers/synthetic-game.mjs';
 import {buildDisc,packGreedy} from './helpers/synthetic-iso.mjs';
 import {createEditorInspector,exportEditedImage,previewEditorRecord,splitRootSegments,dataRecordOffsets} from '../assets/editor-core.mjs';
-import {UNUSED_UNIT_PRESETS,unitConstructionWeapons,constructUnitRow,replaceUnitRow,unitConstructionLoadout,planExSCruiserConstruction,UNIT_CONCEPTS,pruneConstructionWeaponClones} from '../assets/editor-unit-construction.mjs';
+import {UNUSED_UNIT_PRESETS,unitConstructionWeapons,constructUnitRow,replaceUnitRow,unitConstructionLoadout,planExSCruiserConstruction,planSCruiserConstruction,UNIT_CONCEPTS,pruneConstructionWeaponClones} from '../assets/editor-unit-construction.mjs';
 import {previousUnitConcept,planUnitConceptUpgrade,applyUnitConceptUpgrade} from '../assets/editor-unit-upgrade.mjs';
 import {constructionGame,CONSTRUCTION_TARGETS} from './helpers/synthetic-construction.mjs';
 import {syntheticSave} from './helpers/synthetic-save.mjs';
@@ -530,4 +530,35 @@ test('without a connected Rev 1 source the picker refuses both G-Cruiser variant
  assert.equal(h.state.editorUnits.filter(u=>['ex-s-cruiser','s-cruiser'].includes(u.constructionGroup)).length,0);
  // S Gundam and Ex-S themselves are still offered.
  for(const value of ['s-gundam','ex-s-gundam'])assert.equal([...select.options].find(o=>o.value===value).disabled,false,value);
+});
+
+for(const preset of ['s-g-cruiser','g-cruiser'])test(`${preset}: upgrade keeps paired HP/EN and repairs legacy defaults through export`,async()=>{
+ const base=await baseFor('srwf-final');install(base);
+ const built=(preset==='s-g-cruiser'?planSCruiserConstruction:planExSCruiserConstruction)(h.state.editorUnits,h.state.editorWeapons,'srwf-final');
+ for(const row of built.units)replaceUnitRow(h.state.editorUnits.find(u=>u.recordIndex===row.recordIndex),row);
+ for(const edit of built.weaponUpdates)replaceUnitRow(edit.target,edit.row);
+ const session=upgradeSession(),hull=session.units.find(u=>u.saveUnitForm===0&&u.constructionGroup),cruiser=session.units.find(u=>u.saveUnitForm===1&&u.constructionGroup);
+ let plan=planUnitConceptUpgrade(session);
+ assert.ok(!plan.items.some(i=>i.unit===cruiser.recordIndex&&['hp','en'].includes(i.field)));
+ // Reproduce the deployed upgrade's old independent cruiser defaults.
+ cruiser.hp=UNIT_CONCEPTS[preset].stats.hp;cruiser.en=UNIT_CONCEPTS[preset].stats.en;
+ hull.hp=43210;hull.en=321;
+ plan=planUnitConceptUpgrade(session);
+ for(const field of ['hp','en']){
+  const item=plan.items.find(i=>i.unit===cruiser.recordIndex&&i.field===field);
+  assert.equal(item.next,hull[field]);assert.equal(item.checked,true);
+ }
+ applyUnitConceptUpgrade(plan,session);h.refreshEditorAfterPreset();
+ assert.equal(cruiser.hp,43210);assert.equal(cruiser.en,321);assert.equal(hull.hp,43210);
+ if(preset==='s-g-cruiser'){
+ const output=await exportEditedImage(base.opened.session,constructionOnlyRequest());
+ const reopened=await base.full.inspectPatchedImage(output.outputBlob,descriptorFor(base.disc,{gameId:'srwf-final',imageKind:'local'}));
+ for(const row of [hull,cruiser]){
+  const read=reopened.view.units.find(u=>u.recordIndex===row.recordIndex);
+  assert.equal(read.hp,43210);assert.equal(read.en,321);
+ }
+ }else await assert.rejects(exportEditedImage(base.opened.session,constructionOnlyRequest()),{code:'EDITOR_BATTLE_COMPONENT_INVALID'});
+ cruiser.hp=12345;plan=planUnitConceptUpgrade(session);
+ assert.equal(plan.items.find(i=>i.unit===cruiser.recordIndex&&i.field==='hp').checked,false);
+ applyUnitConceptUpgrade(plan,session);assert.equal(cruiser.hp,12345,'explicit cruiser edits are not silently overwritten');
 });

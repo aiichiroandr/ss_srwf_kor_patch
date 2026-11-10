@@ -1,4 +1,4 @@
-import {ALLY_REINFORCEMENT_FIELDS,validateAllyReinforcement} from './editor-scenario-reinforcement-data.mjs?v=20261106-part4';
+import {ALLY_REINFORCEMENT_FIELDS,validateAllyReinforcement} from './editor-scenario-reinforcement-data.mjs?v=20261110-part1';
 const controlIds=Object.freeze({pilotId:'scenarioSpawnPilot',unitId:'scenarioSpawnUnit',level:'scenarioSpawnLevel',triggerX:'scenarioSpawnTriggerX',triggerY:'scenarioSpawnTriggerY',x:'scenarioSpawnX',y:'scenarioSpawnY'});
 export function createAllyReinforcementEditor(host){
  const $=host.el,controls=Object.fromEntries(Object.entries(controlIds).map(([field,id])=>[field,$(id)])),toggle=$('scenarioSpawnToggle'),reset=$('scenarioSpawnReset'),art=$('scenarioSpawnArt'),note=$('scenarioSpawnNote'),pickers=[$('scenarioSpawnTriggerPick'),$('scenarioSpawnPick')];

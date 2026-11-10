@@ -1,12 +1,12 @@
 // SP04 production writes require the exact source profile and local candidate
 // exclusions; the standalone byte codec never grants those permissions.
-import { ownData, readDenseList } from './editor-own.mjs?v=20261106-part4';
-import { compilePendingAllyReinforcementProgram } from './editor-scenario-reinforcement-program.mjs?v=20261106-part4';
-import { readReinforcementPairOptions } from './editor-scenario-reinforcement-pairs.mjs?v=20261106-part4';
-import { regionContextFor, regionContextOf, regionContextDigest } from './editor-scenario-region-context.mjs?v=20261106-part4';
-import { bytesEqual as equal, dataView as view, sha256Digest as digest } from './editor-bytes.mjs?v=20261106-part4';
-import {inspectReinforcementSourceProfile,readScenarioReinforcementCandidates,reinforcementSourceCapacity} from './editor-scenario-reinforcement-profile.mjs?v=20261106-part4';
-import { EDITOR_SPAWN_CAPACITY_INFO } from './editor-spawn-capacity.mjs?v=20261106-part4';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261110-part1';
+import { compilePendingAllyReinforcementProgram } from './editor-scenario-reinforcement-program.mjs?v=20261110-part1';
+import { readReinforcementPairOptions } from './editor-scenario-reinforcement-pairs.mjs?v=20261110-part1';
+import { regionContextFor, regionContextOf, regionContextDigest } from './editor-scenario-region-context.mjs?v=20261110-part1';
+import { bytesEqual as equal, dataView as view, sha256Digest as digest } from './editor-bytes.mjs?v=20261110-part1';
+import {inspectReinforcementSourceProfile,readScenarioReinforcementCandidates,reinforcementSourceCapacity} from './editor-scenario-reinforcement-profile.mjs?v=20261110-part1';
+import { EDITOR_SPAWN_CAPACITY_INFO } from './editor-spawn-capacity.mjs?v=20261110-part1';
 const MAGIC=Uint8Array.of(83,82,87,70,83,80,48,49),TRAILER=32;
 const OLD_CODEC_MAGIC=Uint8Array.of(83,82,87,70,83,80,48,50),OLD_CODEC_TRAILER=160;
 const PREVIOUS_CODEC_MAGIC=Uint8Array.of(83,82,87,70,83,80,48,51);

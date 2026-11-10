@@ -1,5 +1,5 @@
-import {alicePortrait} from './editor-alice.mjs?v=20261106-part4';
-import {decodeMapIcon} from './editor-map-icons.mjs?v=20261106-part4';
+import {alicePortrait} from './editor-alice.mjs?v=20261110-part1';
+import {decodeMapIcon} from './editor-map-icons.mjs?v=20261110-part1';
 const LABELS = {'s-gundam':'S건담','exs-gundam':'Ex-S건담',sirbine:'서바인',zwauss:'즈와우스','blood-temple':'블러드 템플','s-gcruiser':'S G크루저','exs-gcruiser':'Ex-S G크루저'};
 const node = (tag, text, className) => { const n=document.createElement(tag); if(text!==undefined)n.textContent=text; if(className)n.className=className; return n; };
 
@@ -14,10 +14,10 @@ export function createSrw4SourcePanel(root, host) {
   const undo=node('button','가져오기 취소','record-tool');undo.type='button';undo.hidden=true;undo.title='이번 가져오기로 추가된 형태를 함께 제거하고 기존 기체와 개인 편집은 유지합니다.';
   const cancel=node('button','중단','record-tool'); cancel.type='button'; cancel.hidden=true;
   const file=node('input'); file.type='file'; file.accept='.sfc,.smc,.zip'; file.hidden=true;
-  const status=node('p','제4차 SFC 일본판 Rev 1 원본(SFC/SMC/ZIP)을 검증하면 미사용 기체 7종을 자동 추가합니다. 기존 기체는 중복 추가하지 않습니다.');status.setAttribute('role','status');
+  const status=node('p','제4차 SFC 일본판 Rev 1 원본(SFC/SMC/ZIP)을 검증하면 기본 기체 5대와 변형 2형태를 추가합니다. 기존 기체는 중복 추가하지 않습니다.');status.setAttribute('role','status');
   status.id='srw4SourceStatus';
   const progress=node('progress',undefined,'srw4-source-progress');progress.max=1;progress.hidden=true;progress.setAttribute('aria-label','제4차 원본 읽기와 검증 진행 중');progress.setAttribute('aria-describedby',status.id);
-  const note=node('p','기체·빔포 자동 연결 · 기존 세이브는 별도 편집','srw4-source-note');note.title='G크루저 그림과 기체 아이콘을 연결하며 Ex-S 빔포 연출을 설정합니다. 기존 세이브에 기체를 넣으려면 세이브 편집이 필요합니다.';
+  const note=node('p','완결편 v0.3 새 게임: 기본 5대 초기 보유 · 기존 세이브는 별도 편집','srw4-source-note');note.title='BIN/CUE를 저장한 뒤 완결편 v0.3에서 세이브 인계 없이 새 게임을 시작하면 슈퍼계·리얼계 모두 기본 5대를 보유합니다. 두 G크루저는 변형으로 이용합니다. ALICE 동승을 켠 경우 전용 서브파일럿도 등록합니다. F 본편과 기존 세이브의 기체 지급은 별도 편집이 필요합니다.';
   const results=node('div',undefined,'srw4-source-results');results.hidden=true;
   tools.append(open,clear,undo,cancel,file);root.append(heading,tools,status,progress,note,results);
 
@@ -56,7 +56,7 @@ export function createSrw4SourcePanel(root, host) {
     working=true;refresh();progress.hidden=false;progress.removeAttribute('value');status.textContent=source?'제4차 원본을 읽고 있습니다…':undoImport?'가져오기 취소 중…':'연결 해제 중…';
     try {
       const next=await(undoImport?host.undo():host.connect(source));report=next;
-      status.textContent=report?`제4차 확인 · ${report.addedUnitCount??0}기 추가 · ${report.beamApplied?'Ex-S 빔포 자동 적용':'Ex-S 전용 빔포 연결 확인 필요'}${report.aliceHint?` · ${report.aliceHint}`:''}`:undoImport?'제4차 가져오기를 취소했습니다. 기존 기체와 개인 편집은 유지했습니다.':host.canUndo?.()?'원본 연결을 해제했습니다. 저장하려면 원본을 다시 연결하거나 가져오기를 취소해 주세요.':'제4차 자료 연결을 해제했습니다.';
+      status.textContent=report?`제4차 확인 · ${report.addedUnitCount??0}형태 추가 · ${report.beamApplied?'Ex-S 빔포 자동 적용':'Ex-S 전용 빔포 연결 확인 필요'}${report.aliceHint?` · ${report.aliceHint}`:''}`:undoImport?'제4차 가져오기를 취소했습니다. 기존 기체와 개인 편집은 유지했습니다.':host.canUndo?.()?'원본 연결을 해제했습니다. 저장하려면 원본을 다시 연결하거나 가져오기를 취소해 주세요.':'제4차 자료 연결을 해제했습니다.';
       status.title=report?`${report.identity.title??'제4차 Rev 1'} · SHA-256 ${report.identity.sha256}`:'';
       render();
     } catch(error) {
@@ -69,7 +69,7 @@ export function createSrw4SourcePanel(root, host) {
   cancel.addEventListener('click',()=>host.cancel?.());
   file.addEventListener('change',()=>{if(file.files?.[0])void run(file.files[0]);});
   refresh();
-  return Object.freeze({refresh,reset(){report=null;progress.hidden=true;status.textContent='제4차 SFC 일본판 Rev 1 원본(SFC/SMC/ZIP)을 검증하면 미사용 기체 7종을 자동 추가합니다. 기존 기체는 중복 추가하지 않습니다.';render();refresh();},progress(value){
+  return Object.freeze({refresh,reset(){report=null;progress.hidden=true;status.textContent='제4차 SFC 일본판 Rev 1 원본(SFC/SMC/ZIP)을 검증하면 기본 기체 5대와 변형 2형태를 추가합니다. 기존 기체는 중복 추가하지 않습니다.';render();refresh();},progress(value){
     if(!working)return;
     if(value?.phase==='srw4-read')status.textContent='제4차 원본을 읽고 있습니다…';
     else if(value?.phase==='srw4-source')status.textContent=value.processed>=value.total?'검증 완료 · 기체 추가를 준비하고 있습니다…':'원본 파일을 검증하고 있습니다…';

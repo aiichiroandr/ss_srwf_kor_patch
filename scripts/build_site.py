@@ -82,20 +82,36 @@ def load_policy(path):
     for name, pin in policy['pins'].items():
         require(name in files and type(pin.get('bytes')) is int and pin['bytes'] >= 0
                 and re.fullmatch('[a-f0-9]{64}', pin.get('sha256', '')), f'Invalid immutable pin: {name}')
-    sets = policy.get('runtimeSets', [])
-    require(len(sets) == 6 and len({(x['surface'], x['version']) for x in sets}) == 6, 'Exactly six retained runtime sets are required')
-    for item in sets:
-        require(item['surface'] in {'web-port', 'weapon-preview'} and re.fullmatch('[a-f0-9]{20}', item['version']), 'Invalid runtime identity')
-        prefix = f"{item['surface']}/runtime/"
-        for name in [prefix+item['version']+'/saturn.js', prefix+item['version']+'/saturn.wasm', prefix+'source-'+item['version']+'.tar.gz']:
-            require(name in files and name in policy['pins'], f'Runtime/source is not pinned: {name}')
-    require(sum(x['surface']=='web-port' for x in sets)==4 and sum(x['surface']=='weapon-preview' for x in sets)==2, 'Runtime surface retention mismatch')
-    require(set(policy.get('runtimeManifests', {})) == {'web-port/runtime/current.json','web-port/runtime/current-mobile.json','web-port/runtime/current-mobile-v14.json','weapon-preview/runtime/current.json','weapon-preview/runtime/f-current.json'}, 'Runtime manifest routes are incomplete')
-    for surface in ['web-port','weapon-preview']:
-        for notice in ['BUILD.md','COPYING','THIRD_PARTY.md']:
-            require(f'{surface}/runtime/{notice}' in policy.get('runtimeNotices', []), 'Required runtime notices are omitted')
-    for name in policy.get('runtimeNotices', []):
-        require(name in files and name in policy['pins'], f'Runtime license/notice is missing: {name}')
+    require(policy.get('runtimeState') in {None, 'WITHDRAWN'}, 'Unknown runtime state')
+    if policy.get('runtimeState') == 'WITHDRAWN':
+        require(not any(policy.get(k) for k in ('runtimeSets', 'runtimeManifests', 'runtimeNotices', 'runtimeWorkers')), 'Withdrawn runtime registrations must be empty')
+        require(not any('/runtime/' in name or name in {'web-port/worker.js', 'weapon-preview/worker.js'} for name in files), 'Withdrawn runtimes cannot be packaged')
+    else:
+        sets = policy.get('runtimeSets', [])
+        require(len(sets) == 6 and len({(x['surface'], x['version']) for x in sets}) == 6, 'Exactly six retained runtime sets are required')
+        for item in sets:
+            require(item['surface'] in {'web-port', 'weapon-preview'} and re.fullmatch('[a-f0-9]{20}', item['version']), 'Invalid runtime identity')
+            prefix = f"{item['surface']}/runtime/"
+            for name in [prefix+item['version']+'/saturn.js', prefix+item['version']+'/saturn.wasm', prefix+'source-'+item['version']+'.tar.gz']:
+                require(name in files and name in policy['pins'], f'Runtime/source is not pinned: {name}')
+        require(sum(x['surface']=='web-port' for x in sets)==4 and sum(x['surface']=='weapon-preview' for x in sets)==2, 'Runtime surface retention mismatch')
+        require(set(policy.get('runtimeManifests', {})) == {'web-port/runtime/current.json','web-port/runtime/current-mobile.json','web-port/runtime/current-mobile-v14.json','weapon-preview/runtime/current.json','weapon-preview/runtime/f-current.json'}, 'Runtime manifest routes are incomplete')
+        for surface in ['web-port','weapon-preview']:
+            for notice in ['BUILD.md','COPYING','THIRD_PARTY.md']:
+                require(f'{surface}/runtime/{notice}' in policy.get('runtimeNotices', []), 'Required runtime notices are omitted')
+        for name in policy.get('runtimeNotices', []):
+            require(name in files and name in policy['pins'], f'Runtime license/notice is missing: {name}')
+    inactive = policy.get('withdrawnPreviewReferences', {})
+    known = {'assets/editor-animation.mjs': '../weapon-preview/',
+             'assets/editor-preview-resources.mjs': '../weapon-preview/runtime-worker-loader.mjs'}
+    require(isinstance(inactive, dict), 'Invalid withdrawn preview references')
+    if inactive:
+        require(policy.get('runtimeState') == 'WITHDRAWN', 'Preview exceptions require withdrawn runtime state')
+        require('assets/editor-public-features.mjs' in policy['pins'], 'Withdrawn preview gate must be pinned')
+        for name, refs in inactive.items():
+            require(name in known and name in policy['pins'] and isinstance(refs, list) and len(refs) == 1
+                    and isinstance(refs[0], str) and urlsplit(refs[0]).path == known[name],
+                    'Unknown withdrawn preview reference')
     require(len(policy.get('releaseIds', [])) == 12 and len(set(policy['releaseIds'])) == 12, 'Exactly twelve approved releases are required')
     return policy
 
@@ -198,6 +214,10 @@ def literal_refs(name, text, policy):
 
 def check_references(root, policy):
     names = set(policy['files']); count = 0
+    inactive = policy.get('withdrawnPreviewReferences', {})
+    if inactive:
+        gate = safe_file(root, 'assets/editor-public-features.mjs').read_text(encoding='utf-8')
+        require(bool(re.search(r'\bruntimePreview\s*:\s*false\b', gate)), 'Public runtime preview must stay disabled')
     for name in policy['files']:
         if not name.endswith(('.html', '.mjs', '.js', '.css', '.md', '.svg', '.json')):
             continue
@@ -206,6 +226,9 @@ def check_references(root, policy):
         if re.search(r'/runtime/[a-f0-9]{20}/saturn\.js$', name):
             continue
         for ref, base in literal_refs(name, safe_file(root, name).read_text(encoding='utf-8'), policy):
+            if ref in inactive.get(name, []):
+                count += 1
+                continue
             require('\\' not in ref, f'Backslash URL: {name}: {ref}')
             parsed = urlsplit(ref)
             if parsed.scheme or parsed.netloc:

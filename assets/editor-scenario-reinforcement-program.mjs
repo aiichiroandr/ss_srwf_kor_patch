@@ -1,11 +1,11 @@
 // Bytecode composition only. The event writer must authorize the callback,
 // the pilot lifetime and the corresponding exact native preflight overlay.
-import {compileNewPilotPresenceBranch,compileReinforcementPairEntry} from './editor-scenario-reinforcement-pairs.mjs?v=20261106-part4';
-import {compileRegionPresenceBranch} from './editor-scenario-objectives.mjs?v=20261106-part4';
-import {regionContextOf} from './editor-scenario-region-context.mjs?v=20261106-part4';
-import {ownData} from './editor-own.mjs?v=20261106-part4';
-import {EDITOR_SPAWN_CAPACITY_INFO} from './editor-spawn-capacity.mjs?v=20261106-part4';
-import {inspectPendingObjectiveHook} from './editor-scenario-objective-base.mjs?v=20261106-part4';
+import {compileNewPilotPresenceBranch,compileReinforcementPairEntry} from './editor-scenario-reinforcement-pairs.mjs?v=20261110-part1';
+import {compileRegionPresenceBranch} from './editor-scenario-objectives.mjs?v=20261110-part1';
+import {regionContextOf} from './editor-scenario-region-context.mjs?v=20261110-part1';
+import {ownData} from './editor-own.mjs?v=20261110-part1';
+import {EDITOR_SPAWN_CAPACITY_INFO} from './editor-spawn-capacity.mjs?v=20261110-part1';
+import {inspectPendingObjectiveHook} from './editor-scenario-objective-base.mjs?v=20261110-part1';
 
 // Existing F maps have flag prefixes and nontrivial result actions. Hook only
 // their authenticated pending loop; never replace the original result paths
