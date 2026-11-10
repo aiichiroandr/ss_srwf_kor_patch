@@ -1,5 +1,5 @@
-import {planSCruiserConstruction,planExSCruiserConstruction,planConceptUnitConstruction,replaceUnitRow,linkExSCruiserRows} from './editor-unit-construction.mjs?v=20261110-part1';
-import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261110-part1';
+import {planSCruiserConstruction,planExSCruiserConstruction,planConceptUnitConstruction,replaceUnitRow,linkExSCruiserRows} from './editor-unit-construction.mjs?v=20261110-part2';
+import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261110-part2';
 export const SRW4_UNUSED_PRESETS=Object.freeze(['s-gundam','s-g-cruiser','ex-s-gundam','g-cruiser','sirbine','zwauss','blood-temple']);
 // Work on detached rows, including cloned weapon slots. No partial application
 // reaches the editor when a later pair, source or free slot check fails.

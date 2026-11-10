@@ -1,8 +1,8 @@
 // Fixed Rev 1 source map, checked on the user's authenticated cartridge.
 // No cartridge pixels are shipped. Pointer tables, source chunks and rendered
 // results are independently pinned; an input's JSON flags grant no authority.
-import {sha256Hex} from './sha256.mjs?v=20261110-part1';
-import {SRW4_ROM_BYTES,decodeSrw4Lz,decodeSnes4bpp} from './editor-srw4-rom.mjs?v=20261110-part1';
+import {sha256Hex} from './sha256.mjs?v=20261110-part2';
+import {SRW4_ROM_BYTES,decodeSrw4Lz,decodeSnes4bpp} from './editor-srw4-rom.mjs?v=20261110-part2';
 export const SRW4_CRUISER_SOURCE=Object.freeze({tilesTable:0x160000,assemblyTable:0x640c0,paletteTable:0x608b2,bank:0x60000,
  packedOffset:0x19ebfc,packedBytes:1621,tileBytes:2624,packedSha256:'ddb32c39a60e4c47e230a94f594f7a4674d6e9868c020a5ef8295838bf6961a6',
  paletteOffset:0x622d8,paletteBytes:30,paletteSha256:'887fe505374895bf7e95d4a60be675b0d5f7defb0e5cf85a8f6c0a04fcfa1eb7'});

@@ -1,7 +1,7 @@
 // Exact IP/EXEC overlay for a local personal image. Strip it before the
 // existing capacity overlay / whole-disc verification; no mask is widened.
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261110-part1';
-import {normalizeAliceCrewNative,applyAliceCrewNative,ALICE_CREW_NATIVE} from './editor-alice-crew-native.mjs?v=20261110-part1';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261110-part2';
+import {normalizeAliceCrewNative,applyAliceCrewNative,ALICE_CREW_NATIVE} from './editor-alice-crew-native.mjs?v=20261110-part2';
 export async function hasAliceCrewImage(blob,gameId){
  if(gameId!=='srwf-final')return false;
  const at=ALICE_CREW_NATIVE.ipOffset,lba=Math.floor(at/2048),raw=lba*2352+16+at%2048;

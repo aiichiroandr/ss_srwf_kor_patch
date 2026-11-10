@@ -1,7 +1,7 @@
 // Final v0.3a's EA font cell is not O. In b/c the same EA alias correctly
 // contains O, so preserve those source variants. This a-only workaround
 // changes three source-bound strings, never a font cell, pointer or mask.
-import {ACCEPTED_EDITOR_TARGETS} from './editor-provenance-profiles.mjs?v=20261110-part1';
+import {ACCEPTED_EDITOR_TARGETS} from './editor-provenance-profiles.mjs?v=20261110-part2';
 const bases=new Set(Object.entries(ACCEPTED_EDITOR_TARGETS)
   .filter(([,v])=>/^srwf-final-20261005-v0-3-[abc]$/.test(v.releaseId)).map(([hash])=>hash));
 const repairBases=new Set(Object.entries(ACCEPTED_EDITOR_TARGETS)

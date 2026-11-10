@@ -7,7 +7,7 @@
 // follows the new archive; these six cells must follow it too, or the ability
 // screen of graphics 61/62/200/201/207/208 (사이버스터·사이버드·밧슈·아톨·
 // 진겟타1·진겟타2) reads from a stale offset.
-import {bytesEqual,dataView} from './editor-bytes.mjs?v=20261110-part1';
+import {bytesEqual,dataView} from './editor-bytes.mjs?v=20261110-part2';
 
 export const LEGACY_ROBOT_CELLS=Object.freeze({
  ids:Object.freeze([61,62,200,201,207,208]),

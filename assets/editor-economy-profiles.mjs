@@ -1,7 +1,7 @@
 // Verified sparse-patch reconstruction against every parent immutable digest.
 // Extend the pinned unit flag cells: +11 = record+20 (reward u16),
 // +16 = record+25 bits 4..5 (part slots). Costs remain in two fixed spans.
-import { HERO_EDITOR_PROFILES } from './editor-hero-profiles.mjs?v=20261110-part1';
+import { HERO_EDITOR_PROFILES } from './editor-hero-profiles.mjs?v=20261110-part2';
 const pins=[
   {
     "baseTargetSha256": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",

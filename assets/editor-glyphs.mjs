@@ -1,11 +1,11 @@
 // Newly entered Hangul only. Existing game glyphs never leave the supplied TSR.
 // The authenticated pools contain no known consumer references in accepted a/b/c.
-import { sha256Hex } from './sha256.mjs?v=20261110-part1';
-import { base64UrlToBytes, bytesEqual as equal, bytesToHex as hex, hexToBytes as unhex } from './editor-bytes.mjs?v=20261110-part1';
-import { ownData, readDenseList } from './editor-own.mjs?v=20261110-part1';
-import {requireTsrRuntimeSize,requireTsrInspectionSize,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261110-part1';
-import { EDITOR_GLYPH_PROFILES } from './editor-glyph-pools.mjs?v=20261110-part1';
-import { EDITOR_HANGUL_PACKED, EDITOR_HANGUL_BITMAP_SHA256 } from './editor-hangul-bitmap-data.mjs?v=20261110-part1';
+import { sha256Hex } from './sha256.mjs?v=20261110-part2';
+import { base64UrlToBytes, bytesEqual as equal, bytesToHex as hex, hexToBytes as unhex } from './editor-bytes.mjs?v=20261110-part2';
+import { ownData, readDenseList } from './editor-own.mjs?v=20261110-part2';
+import {requireTsrRuntimeSize,requireTsrInspectionSize,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261110-part2';
+import { EDITOR_GLYPH_PROFILES } from './editor-glyph-pools.mjs?v=20261110-part2';
+import { EDITOR_HANGUL_PACKED, EDITOR_HANGUL_BITMAP_SHA256 } from './editor-hangul-bitmap-data.mjs?v=20261110-part2';
 
 const MAGIC = 'SRWGLY01', FOOTER = 16, MAX_PAYLOAD = 32 * 1024;
 const COMPACT_MAGIC='SRWGLY02';

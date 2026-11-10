@@ -1,14 +1,14 @@
 // Bounded decoded changes accompany the compressed carrier masks. A carrier
 // mask alone never authorizes scenario code, map headers or graphic-bank edits.
-import { readScenarioArchive } from './editor-scenario-archive.mjs?v=20261110-part1';
-import { readMapArchive, readMapBankArchive } from './editor-map-archive.mjs?v=20261110-part1';
-import { readScenarioDeployments, deploymentDecodedMasks, validateScenarioReinforcements } from './editor-deployments.mjs?v=20261110-part1';
-import { immutableBytesHash } from './editor-provenance.mjs?v=20261110-part1';
-import { Sha256 } from './sha256.mjs?v=20261110-part1';
-import { normalizeScenarioDeadlines } from './editor-scenario-deadlines.mjs?v=20261110-part1';
-import { normalizeScenarioDialogues } from './editor-scenario-dialogue.mjs?v=20261110-part1';
+import { readScenarioArchive } from './editor-scenario-archive.mjs?v=20261110-part2';
+import { readMapArchive, readMapBankArchive } from './editor-map-archive.mjs?v=20261110-part2';
+import { readScenarioDeployments, deploymentDecodedMasks, validateScenarioReinforcements } from './editor-deployments.mjs?v=20261110-part2';
+import { immutableBytesHash } from './editor-provenance.mjs?v=20261110-part2';
+import { Sha256 } from './sha256.mjs?v=20261110-part2';
+import { normalizeScenarioDeadlines } from './editor-scenario-deadlines.mjs?v=20261110-part2';
+import { normalizeScenarioDialogues } from './editor-scenario-dialogue.mjs?v=20261110-part2';
 
-import {buildRegionContexts} from './editor-scenario-region-context.mjs?v=20261110-part1';
+import {buildRegionContexts} from './editor-scenario-region-context.mjs?v=20261110-part2';
 const digestJson = value => new Sha256().update(new TextEncoder().encode(JSON.stringify(value))).hex();
 export function mergeFullByteMasks(ranges) {
   const output = [];

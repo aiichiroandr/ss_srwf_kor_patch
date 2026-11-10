@@ -16,7 +16,7 @@ export function constructionGame(gameId,{clones=false,cannonAnimation=1317}={}){
   47:[{slot:1,weapon:2}],209:[{slot:4,weapon:1,ammo:1,flag:92}],
  }});
  const root=splitRootSegments(source),parts=Object.fromEntries(root.map((part,i)=>[i,part.bytes]));
- const ammunition=new Map([[1,12],[467,20],[470,8],[474,6],[757,10]]);
+ const ammunition=new Map([[1,12],[397,10],[467,20],[470,8],[474,6],[757,10]]);
  const cloneIds=new Set(weaponCloneIds(gameId));
  const weapons=Array.from({length:clones?(gameId==='srwf-f'?1280:1408):786},(_,id)=>{
   if(clones&&cloneIds.has(id))return weaponClonePreimage(gameId);
@@ -24,6 +24,7 @@ export function constructionGame(gameId,{clones=false,cannonAnimation=1317}={}){
   // This generated fixture models the immutable identity of the cannon donor,
   // not its proprietary VM or graphics bank. Its real animation selector is
   // 1317; using the generic zero selector would test a foreign donor instead.
+  if(id===397){record[3]=4;record[4]=26;record[16]=33;}
   if(id===511){record[3]=cannonAnimation>>>8;record[4]=cannonAnimation&255;}
   return record;
  });

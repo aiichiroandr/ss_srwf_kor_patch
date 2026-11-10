@@ -1,8 +1,8 @@
 // The artwork remains on the user's disc. Specifications start from a known
 // unit in that same session; these are not recovered original unused specs.
-import {UNIT_WEAPON_FIELDS,unitWeaponFields,planUnitWeaponAdditions} from './editor-loadout.mjs?v=20261110-part1';
-import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261110-part1';
-import {unitAbilityLocks} from './editor-locks.mjs?v=20261110-part1';
+import {UNIT_WEAPON_FIELDS,unitWeaponFields,planUnitWeaponAdditions} from './editor-loadout.mjs?v=20261110-part2';
+import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261110-part2';
+import {unitAbilityLocks} from './editor-locks.mjs?v=20261110-part2';
 // Record ids were checked independently in accepted F v0.5 / Final v0.3.
 // These are configurations using existing shared weapons, not recovered F specs.
 const researched=(ids,note)=>Object.freeze({version:1,weapons:Object.freeze(ids),note});
@@ -74,7 +74,7 @@ export const UNIT_CONCEPTS=Object.freeze({
 export const CONSTRUCTION_WEAPON_ROLES=Object.freeze([
  Object.freeze({role:'four-cannon',source:511,name:'4연장빔캐논',fields:Object.freeze({attack:2800,hit:10,minRange:2,maxRange:7,energy:40,requiredMorale:110}),slots:Object.freeze({'ex-s-gundam':7})}),
  Object.freeze({role:'smart-gun',source:475,name:'빔스마트건',fields:Object.freeze({attack:2600,hit:10,minRange:2,maxRange:8,energy:30}),slots:Object.freeze({'s-gundam':5,'ex-s-gundam':5,'g-cruiser':2,'s-g-cruiser':2,'g-bomber':2})}),
- Object.freeze({role:'reflector-incom',source:474,name:'리플렉터인컴',fields:Object.freeze({attack:2400,hit:30,minRange:2,maxRange:8,ammo:4,requiredMorale:110}),slots:Object.freeze({'ex-s-gundam':6})}),
+ Object.freeze({role:'reflector-incom',source:397,name:'리플렉터인컴',fields:Object.freeze({attack:2400,hit:30,minRange:2,maxRange:8,ammo:4,requiredMorale:110,requiredSkill:0}),slots:Object.freeze({'ex-s-gundam':6})}),
 ]);
 export function unitConstructionLoadout(presetId,version=1){
  const p=unitConstructionPreset(presetId);if(!p||![1,2].includes(version))throw new RangeError('Unavailable construction configuration');

@@ -72,6 +72,10 @@ for(const gameId of ['srwf-f','srwf-final']){
   const weaponRoot=splitRootSegments(opened.session.decoded)[29].bytes,weaponOffsets=dataRecordOffsets(weaponRoot,17).offsets,weaponView=new DataView(weaponRoot.buffer,weaponRoot.byteOffset,weaponRoot.byteLength);
   assert.equal(weaponView.getUint16(weaponOffsets[511]+3),1317,'The original cannon donor keeps its authenticated animation selector');
   for(const clone of opened.session.weaponClones.filter(e=>e.sourceRecordIndex===511))assert.equal(weaponView.getUint16(weaponOffsets[clone.recordIndex]+3),1317,'Explicit animation OFF preserves the source selector in cloned weapons');
+  const reflector=opened.session.weaponClones.find(e=>e.sourceRecordIndex===397);
+  assert.ok(reflector);
+  assert.equal(weaponView.getUint16(weaponOffsets[reflector.recordIndex]+3),1050);
+  assert.equal(weaponRoot[weaponOffsets[reflector.recordIndex]+16],0);
   assert.deepEqual(opened.view.units.filter(r=>r.construction).map(r=>r.imageIndex),[305,306,308,309,302]);
   assert.equal(opened.view.units.find(r=>r.recordIndex===50).hp,43210);
   assert.equal(opened.view.units.find(r=>r.recordIndex===51).weaponList.entries.length,8);

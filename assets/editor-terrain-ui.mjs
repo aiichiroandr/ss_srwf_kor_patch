@@ -1,6 +1,6 @@
-import { createEffectList, fitEffectPanel } from './editor-effect-list.mjs?v=20261110-part1';
-import { TERRAIN_FIELDS, TERRAIN_LABELS, terrainValueAllowed } from "./editor-terrain.mjs?v=20261110-part1";
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261110-part1';
+import { createEffectList, fitEffectPanel } from './editor-effect-list.mjs?v=20261110-part2';
+import { TERRAIN_FIELDS, TERRAIN_LABELS, terrainValueAllowed } from "./editor-terrain.mjs?v=20261110-part2";
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261110-part2';
 
 export function createTerrainEditor(host) {
   const panel = document.getElementById("terrainEditorPanel");

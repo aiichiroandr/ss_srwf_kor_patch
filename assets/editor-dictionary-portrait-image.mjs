@@ -1,5 +1,5 @@
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261110-part1';
-import {dictionaryPortraitExecState,setDictionaryPortraitExec,inspectDictionaryPortraitSlot,changeDictionaryPortraitSlot,dictionaryPortraitAllocation} from './editor-dictionary-portraits.mjs?v=20261110-part1';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261110-part2';
+import {dictionaryPortraitExecState,setDictionaryPortraitExec,inspectDictionaryPortraitSlot,changeDictionaryPortraitSlot,dictionaryPortraitAllocation} from './editor-dictionary-portraits.mjs?v=20261110-part2';
 
 function invalid(){const e=Error('인물사전 초상화의 연결과 사전 데이터가 일치하지 않습니다.');e.code='EDITOR_DICTIONARY_PORTRAIT_INVALID';throw e;}
 async function readImage(blob,{gameId,signal}){

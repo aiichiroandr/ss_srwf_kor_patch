@@ -1,4 +1,4 @@
-import {saveNameFields,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261110-part1';
+import {saveNameFields,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261110-part2';
 export function checkSaveCompatibility(records,source,target){
  const issues=[],names=[];let unitCount=0;
  const add=(record,code,message)=>issues.push({save:record.name,code,message});

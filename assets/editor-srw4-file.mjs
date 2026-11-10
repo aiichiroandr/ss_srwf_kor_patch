@@ -1,6 +1,6 @@
 // Local, bounded ZIP wrapper for a user's single SFC/SMC. No archive contents
 // are executed or persisted. The cartridge's whole hash is still checked later.
-import {SRW4_ROM_BYTES,srw4Crc32} from './editor-srw4-rom.mjs?v=20261110-part1';
+import {SRW4_ROM_BYTES,srw4Crc32} from './editor-srw4-rom.mjs?v=20261110-part2';
 function fail(){const e=Error('제4차 Rev 1 SFC/SMC 원본 또는 원본 한 개가 담긴 ZIP을 선택해 주세요.');e.code='SRW4_ROM_SIZE';throw e;}
 export async function readSrw4RomFile(blob,{signal}={}){
  signal?.throwIfAborted();if(!(blob instanceof Blob))fail();if([SRW4_ROM_BYTES,SRW4_ROM_BYTES+512].includes(blob.size))return blob;

@@ -1,83 +1,83 @@
-import {normalizeSrw4StartScenario,changeSrw4StartImage} from './editor-srw4-start-image.mjs?v=20261110-part1';
-import {makeSrw4StartRosterConfig} from './editor-srw4-start-roster.mjs?v=20261110-part1';
-import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261110-part1';
-import {normalizeFinalTitleLogoImage} from './editor-title-logo-image.mjs?v=20261110-part1';
-import {LEGACY_ROBOT_CELLS,syncLegacyRobotCells,normalizeLegacyRobotCells} from './editor-legacy-robot-cells.mjs?v=20261110-part1';
-import {normalizeDictionaryPortraitImage} from './editor-dictionary-portrait-image.mjs?v=20261110-part1';
-import {changeDictionaryAdditionImage} from './editor-dictionary-addition-image.mjs?v=20261110-part1';
-import {inspectFinalOutputSwitches,requestedFinalOutputSwitch,writeDictionaryOutputSwitch,writeTitleOutputSwitch} from './editor-dictionary-options.mjs?v=20261110-part1';
-import {changeCampaignSaveImage,createFCampaignSourceStore,createFCampaignOwner,createIngameOwner} from './editor-v04-unsupported.mjs?v=20261110-part1';
-import {scenarioIdentityAliases} from './editor-scenario-identities.mjs?v=20261110-part1';
-import {createSrw4NativeMapCodec,srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261110-part1';
-import {createPreviewMediaCache} from './editor-media-cache.mjs?v=20261110-part1';
-import {inspectDebugEntry,debugEntryRows,setDebugEntry,normalizeDebugEntry} from './editor-debug-entry.mjs?v=20261110-part1';
-import {criticalFixRows} from './editor-critical-fix.mjs?v=20261110-part1';
-import {inspectCriticalFixImage,criticalFixImage} from './editor-critical-fix-image.mjs?v=20261110-part1';
-import {collectionImage,hasCollectionImage,collectionEditorRow} from './editor-collection-unlock.mjs?v=20261110-part1';
-import {readAlicePilot,writeAlicePilot,aliceAvailable,alicePortrait,decorateAlicePilot,inspectAliceFace,aliceFaceMasks,createAliceFaceBuilder,ALICE_ART} from './editor-alice.mjs?v=20261110-part1';
-import {ALICE_CREW_DEFAULTS,aliceCrewConfig,aliceEditorRow} from './editor-alice-crew-data.mjs?v=20261110-part1';
-import {hasAliceCrewImage,normalizeAliceCrewImage,applyAliceCrewImage} from './editor-alice-crew-image.mjs?v=20261110-part1';
-import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261110-part1';
-import {readGlyphAdditions,writeGlyphAdditions} from './editor-glyphs.mjs?v=20261110-part1';
-import {readWeaponNames,writeWeaponNames} from './editor-weapon-names.mjs?v=20261110-part1';
-import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261110-part1';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261110-part1';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261110-part1';
-import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261110-part1";
-import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261110-part1";
-import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261110-part1";
-import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261110-part1";
-import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261110-part1";
+import {normalizeSrw4StartScenario,changeSrw4StartImage} from './editor-srw4-start-image.mjs?v=20261110-part2';
+import {makeSrw4StartRosterConfig} from './editor-srw4-start-roster.mjs?v=20261110-part2';
+import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261110-part2';
+import {normalizeFinalTitleLogoImage} from './editor-title-logo-image.mjs?v=20261110-part2';
+import {LEGACY_ROBOT_CELLS,syncLegacyRobotCells,normalizeLegacyRobotCells} from './editor-legacy-robot-cells.mjs?v=20261110-part2';
+import {normalizeDictionaryPortraitImage} from './editor-dictionary-portrait-image.mjs?v=20261110-part2';
+import {changeDictionaryAdditionImage} from './editor-dictionary-addition-image.mjs?v=20261110-part2';
+import {inspectFinalOutputSwitches,requestedFinalOutputSwitch,writeDictionaryOutputSwitch,writeTitleOutputSwitch} from './editor-dictionary-options.mjs?v=20261110-part2';
+import {changeCampaignSaveImage,createFCampaignSourceStore,createFCampaignOwner,createIngameOwner} from './editor-v04-unsupported.mjs?v=20261110-part2';
+import {scenarioIdentityAliases} from './editor-scenario-identities.mjs?v=20261110-part2';
+import {createSrw4NativeMapCodec,srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261110-part2';
+import {createPreviewMediaCache} from './editor-media-cache.mjs?v=20261110-part2';
+import {inspectDebugEntry,debugEntryRows,setDebugEntry,normalizeDebugEntry} from './editor-debug-entry.mjs?v=20261110-part2';
+import {criticalFixRows} from './editor-critical-fix.mjs?v=20261110-part2';
+import {inspectCriticalFixImage,criticalFixImage} from './editor-critical-fix-image.mjs?v=20261110-part2';
+import {collectionImage,hasCollectionImage,collectionEditorRow} from './editor-collection-unlock.mjs?v=20261110-part2';
+import {readAlicePilot,writeAlicePilot,aliceAvailable,alicePortrait,decorateAlicePilot,inspectAliceFace,aliceFaceMasks,createAliceFaceBuilder,ALICE_ART} from './editor-alice.mjs?v=20261110-part2';
+import {ALICE_CREW_DEFAULTS,aliceCrewConfig,aliceEditorRow} from './editor-alice-crew-data.mjs?v=20261110-part2';
+import {hasAliceCrewImage,normalizeAliceCrewImage,applyAliceCrewImage} from './editor-alice-crew-image.mjs?v=20261110-part2';
+import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261110-part2';
+import {readGlyphAdditions,writeGlyphAdditions} from './editor-glyphs.mjs?v=20261110-part2';
+import {readWeaponNames,writeWeaponNames} from './editor-weapon-names.mjs?v=20261110-part2';
+import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261110-part2';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261110-part2';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261110-part2';
+import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261110-part2";
+import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261110-part2";
+import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261110-part2";
+import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261110-part2";
+import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261110-part2";
 // Review overlay seam (scripts/editor-review-overlay.json). The public module is
 // empty; only the isolated local review workspace overrides it with its own
 // review candidates. They are never accepted releases or release approval.
-import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261110-part1";
-import { Sha256 } from "./sha256.mjs?v=20261110-part1";
-import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261110-part1";
-import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261110-part1";
-import { localizeUnitNameFields } from "./editor-unit-name-labels.mjs?v=20261110-part1";
-import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261110-part1";
-import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261110-part1";
-import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261110-part1";
-import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261110-part1";
-import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261110-part1";
-import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261110-part1";
-import { EDITOR_FIELD_BOUNDS, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261110-part1";
-import { PUBLIC_EDITOR_FEATURES } from "./editor-public-features.mjs?v=20261110-part1";
-import { readUpgradeCosts, updateUpgradeCosts, upgradeCostDecodedMasks } from "./editor-costs.mjs?v=20261110-part1";
-import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261110-part1";
-import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261110-part1";
-import { ECONOMY_EDITOR_PROFILES } from "./editor-economy-profiles.mjs?v=20261110-part1";
-import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261110-part1";
-import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261110-part1";
-import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261110-part1";
-import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261110-part1";
-import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261110-part1";
-import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261110-part1";
-import { UNIT_WEAPON_FIELDS, planUnitWeapons, unitWeaponFields, unitWeaponMasks,unitWeaponReservations } from './editor-loadout.mjs?v=20261110-part1';
-import { LOADOUT_EDITOR_PROFILES } from './editor-loadout-profiles.mjs?v=20261110-part1';
-import {WEAPON_VOICE_PROFILES} from './editor-weapon-voice-profiles.mjs?v=20261110-part1';
-import {KILL_EXPERIENCE_PROFILES} from './editor-kill-experience-profiles.mjs?v=20261110-part1';
-import {readMapIcons} from './editor-map-icons.mjs?v=20261110-part1';
-import {createSrw4SourceStore} from './editor-srw4-source.mjs?v=20261110-part1';
-import { createUnitStorage, normalizeUnitStorage, repackUnitAdditions } from './editor-unit-storage.mjs?v=20261110-part1';
-import { UNIT_STORAGE_PROFILES } from './editor-unit-storage-profiles.mjs?v=20261110-part1';
-import {normalizeUnitRestorations,repackUnitRestorations,appendConstructedUnitTable,UNUSED_UNIT_PRESETS} from './editor-unit-restoration.mjs?v=20261110-part1';
-import {hasSpawnCapacityImage,normalizeSpawnCapacityImage,applySpawnCapacityImage} from './editor-spawn-capacity-image.mjs?v=20261110-part1';
-import {spawnCapacityInfo} from './editor-spawn-capacity.mjs?v=20261110-part1';
-import {requireTsrExportSize,requireTsrInspectionSize,requireTsrRuntimeSize,requireFixedTsrRoots,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261110-part1';
-import {compactUnitStorage,expandCompactUnitStorage,isFinalInlineUnitStorage,isFinalReferenceInlineUnitStorage} from './editor-unit-compact.mjs?v=20261110-part1';
-import {packFInlineAuxiliary,expandFInlineAuxiliary} from './editor-f-inline.mjs?v=20261110-part1';
-import {packFinalInlineAuxiliary,expandFinalInlineAuxiliary} from './editor-final-inline-aux.mjs?v=20261110-part1';
-import {readWeaponCloneManifest,writeWeaponCloneManifest,markWeaponClones,applyWeaponCloneRecords,normalizeWeaponClones,isWeaponClonePreimage,requireWeaponCloneScreenFields} from './editor-weapon-clone.mjs?v=20261110-part1';
-import {repairBattleSceneLabels,normalizeBattleSceneLabels,requireSingleByteFontPreserved} from './editor-battle-scene-labels.mjs?v=20261110-part1';
-import {editorStorageBudget,withDiskBudget} from './editor-storage-budget.mjs?v=20261110-part1';
-import {createBattleComponentCodec} from './editor-battle-components.mjs?v=20261110-part1';
-import {createBattleHandPointCodec} from './editor-battle-handpoints.mjs?v=20261110-part1';
-import {createBattleMotionCodec} from './editor-battle-motion.mjs?v=20261110-part1';
-import {createBattleBeamBankCodec} from './editor-battle-beam-bank.mjs?v=20261110-part1';
-import {transformExSBeamBank} from './editor-exs-beam-geometry.mjs?v=20261110-part1';
-import {exSCruiserRole,cruiserRole,cruiserGroup} from './editor-unit-construction.mjs?v=20261110-part1';
+import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261110-part2";
+import { Sha256 } from "./sha256.mjs?v=20261110-part2";
+import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261110-part2";
+import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261110-part2";
+import { localizeUnitNameFields } from "./editor-unit-name-labels.mjs?v=20261110-part2";
+import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261110-part2";
+import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261110-part2";
+import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261110-part2";
+import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261110-part2";
+import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261110-part2";
+import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261110-part2";
+import { EDITOR_FIELD_BOUNDS, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261110-part2";
+import { PUBLIC_EDITOR_FEATURES } from "./editor-public-features.mjs?v=20261110-part2";
+import { readUpgradeCosts, updateUpgradeCosts, upgradeCostDecodedMasks } from "./editor-costs.mjs?v=20261110-part2";
+import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261110-part2";
+import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261110-part2";
+import { ECONOMY_EDITOR_PROFILES } from "./editor-economy-profiles.mjs?v=20261110-part2";
+import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261110-part2";
+import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261110-part2";
+import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261110-part2";
+import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261110-part2";
+import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261110-part2";
+import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261110-part2";
+import { UNIT_WEAPON_FIELDS, planUnitWeapons, unitWeaponFields, unitWeaponMasks,unitWeaponReservations } from './editor-loadout.mjs?v=20261110-part2';
+import { LOADOUT_EDITOR_PROFILES } from './editor-loadout-profiles.mjs?v=20261110-part2';
+import {WEAPON_VOICE_PROFILES} from './editor-weapon-voice-profiles.mjs?v=20261110-part2';
+import {KILL_EXPERIENCE_PROFILES} from './editor-kill-experience-profiles.mjs?v=20261110-part2';
+import {readMapIcons} from './editor-map-icons.mjs?v=20261110-part2';
+import {createSrw4SourceStore} from './editor-srw4-source.mjs?v=20261110-part2';
+import { createUnitStorage, normalizeUnitStorage, repackUnitAdditions } from './editor-unit-storage.mjs?v=20261110-part2';
+import { UNIT_STORAGE_PROFILES } from './editor-unit-storage-profiles.mjs?v=20261110-part2';
+import {normalizeUnitRestorations,repackUnitRestorations,appendConstructedUnitTable,UNUSED_UNIT_PRESETS} from './editor-unit-restoration.mjs?v=20261110-part2';
+import {hasSpawnCapacityImage,normalizeSpawnCapacityImage,applySpawnCapacityImage} from './editor-spawn-capacity-image.mjs?v=20261110-part2';
+import {spawnCapacityInfo} from './editor-spawn-capacity.mjs?v=20261110-part2';
+import {requireTsrExportSize,requireTsrInspectionSize,requireTsrRuntimeSize,requireFixedTsrRoots,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261110-part2';
+import {compactUnitStorage,expandCompactUnitStorage,isFinalInlineUnitStorage,isFinalReferenceInlineUnitStorage} from './editor-unit-compact.mjs?v=20261110-part2';
+import {packFInlineAuxiliary,expandFInlineAuxiliary} from './editor-f-inline.mjs?v=20261110-part2';
+import {packFinalInlineAuxiliary,expandFinalInlineAuxiliary} from './editor-final-inline-aux.mjs?v=20261110-part2';
+import {readWeaponCloneManifest,writeWeaponCloneManifest,markWeaponClones,applyWeaponCloneRecords,normalizeWeaponClones,isWeaponClonePreimage,requireWeaponCloneScreenFields} from './editor-weapon-clone.mjs?v=20261110-part2';
+import {repairBattleSceneLabels,normalizeBattleSceneLabels,requireSingleByteFontPreserved} from './editor-battle-scene-labels.mjs?v=20261110-part2';
+import {editorStorageBudget,withDiskBudget} from './editor-storage-budget.mjs?v=20261110-part2';
+import {createBattleComponentCodec} from './editor-battle-components.mjs?v=20261110-part2';
+import {createBattleHandPointCodec} from './editor-battle-handpoints.mjs?v=20261110-part2';
+import {createBattleMotionCodec} from './editor-battle-motion.mjs?v=20261110-part2';
+import {createBattleBeamBankCodec} from './editor-battle-beam-bank.mjs?v=20261110-part2';
+import {transformExSBeamBank} from './editor-exs-beam-geometry.mjs?v=20261110-part2';
+import {exSCruiserRole,cruiserRole,cruiserGroup} from './editor-unit-construction.mjs?v=20261110-part2';
 
 const battleComponentCodec=createBattleComponentCodec({decode:decompressTsr,encode:compressTsr});
 const aliceFaceBuilder=createAliceFaceBuilder({decode:decompressTsr,encode:compressTsr});
@@ -3036,7 +3036,7 @@ async function createProfile(trust, session, options = {}) {
   rawMasks.push([file.recordLba * SECTOR_SIZE + MODE1_EDC_OFFSET, SECTOR_SIZE - MODE1_EDC_OFFSET, 255]);
   rawMasks.sort((a, b) => a[0] - b[0]);
   const scenario = session.scenario;
-  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261110-part1') : null;
+  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261110-part2') : null;
   const completeRawMasks = scenario ? scenarioModule.mergeFullByteMasks([...rawMasks,
     ...scenarioModule.scenarioRawMasks(scenario.files, scenario.inspected)]) : rawMasks;
   const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId);
@@ -3256,7 +3256,7 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
         if (referenceFiles.scedata.extentLba !== scenario.files.scedata.extentLba || referenceFiles.scedata.byteLength !== scenario.files.scedata.byteLength) continue;
         const reference = await readCdUserExtent(options.tailReferenceBlob, referenceFiles.scedata.extentLba, referenceFiles.scedata.byteLength,
           { mode: scenario.inspected.scope.scenario.sectorMode, signal: options.signal, checksum: true });
-        const { validateScenarioRebase } = await import('./editor-scenario-archive.mjs?v=20261110-part1');
+        const { validateScenarioRebase } = await import('./editor-scenario-archive.mjs?v=20261110-part2');
         try { validateScenarioRebase(reference, scenario.scenarioBytes, profile.scenarioScopes, scenario.inspected.scope, descriptor.gameId, scenario.inspected.archive.scenarioLayout); }
         catch (error) { if (options.signal?.aborted) throw error; continue; }
         rebasedScenario = true;
@@ -3272,7 +3272,7 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
       // carrier additionally masked; its entire decoded scope was checked above.
       // Cross-feature combinations need their own reference-mask proof.
       if (aliceMask) continue;
-      const { cdCarrierRawMasks, mergeFullByteMasks } = await import('./editor-scenario-provenance.mjs?v=20261110-part1');
+      const { cdCarrierRawMasks, mergeFullByteMasks } = await import('./editor-scenario-provenance.mjs?v=20261110-part2');
       const masks = mergeFullByteMasks([...profile.rawMasks, ...cdCarrierRawMasks(scenario.files.scedata,
         scenario.inspected.scope.scenario.sectorMode, [[0, scenario.files.scedata.byteLength, 255]])]);
       if (await immutableImageHash(canonicalImage, masks, options) !== await immutableImageHash(options.tailReferenceBlob, masks, options)) continue;
@@ -3591,7 +3591,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
   if (scenarioEnabled) onProgress?.({ phase: "scenario-data", indeterminate: true });
   let dialogueSpeakers={speakerOptions:[],diagnostics:null};
   if(scenarioEnabled){
-    const {readDialogueSpeakerOptions}=await import('./editor-dialogue-speakers.mjs?v=20261110-part1');
+    const {readDialogueSpeakerOptions}=await import('./editor-dialogue-speakers.mjs?v=20261110-part2');
     const faceBytes=inspectedFaceBytes??(files.face?await readMode1UserExtent(blob,files.face.extentLba,files.face.byteLength,{signal,checksum:false}):null);
     inspectedFaceBytes=faceBytes;
     try{dialogueSpeakers=readDialogueSpeakerOptions(root,faceBytes,{gameId:descriptor.gameId});}
@@ -3710,7 +3710,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
       scenarioLabelScope, scenarioTitles), scenarioLabelScope, scenarioTitles) : [];
   let rosterCatalog=null;
   if(scenario){
-    const {readScenarioRosterCatalog}=await import('./editor-scenario-roster-catalog.mjs?v=20261110-part1');
+    const {readScenarioRosterCatalog}=await import('./editor-scenario-roster-catalog.mjs?v=20261110-part2');
     const catalog=readScenarioRosterCatalog(scenario.inspected.archive,scenario.tables);
     // Keep full callback graphs in the reader; the editor only needs the
     // selected join's evidence, linked calls and repeated recruitment sites.
@@ -3853,7 +3853,7 @@ function scenarioFileIdentity(files) {
 }
 
 async function inspectDiscScenario(trust, blob, actualHash, gameId, files, units, pilots, signal, glyphMap=new Map(), speakerOptions=[], reinforcementRoot=null) {
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261110-part1');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261110-part2');
   const identity = scenarioFileIdentity(files), target = ownEntry(trust.targets, actualHash);
   let scenarioLayout;
   if (target) scenarioLayout = target.kind === 'stock' ? 'stock' : 'latest';
@@ -4590,7 +4590,7 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
   if (session.scenario && (deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || dialogueEdits.length || rosterLevelEdits.length || mapEdits.length)) {
     const current = session.scenario, gameId = session.descriptor.gameId;
     const [{ repackScenarioDeployments }, { repackMapTiles }] = await Promise.all([
-      import('./editor-deployments.mjs?v=20261110-part1'), import('./editor-map-archive.mjs?v=20261110-part1'),
+      import('./editor-deployments.mjs?v=20261110-part2'), import('./editor-map-archive.mjs?v=20261110-part2'),
     ]);
     [scenarioChange, mapChange] = await Promise.all([
       deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || dialogueEdits.length || rosterLevelEdits.length ? repackScenarioDeployments(current.scenarioBytes, gameId, current.inspected.maps, current.tables,
@@ -4672,7 +4672,7 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
   // actual output tables, including the TSR-only export path.
   if(tsrChanged&&session.scenario&&(session.scenario.inspected.reinforcements.some(row=>row.enabled===1)||reinforcementEdits.some(row=>row.enabled===1))){
     const current=session.scenario;
-    const {inspectScenarioScopes}=await import('./editor-scenario-provenance.mjs?v=20261110-part1');
+    const {inspectScenarioScopes}=await import('./editor-scenario-provenance.mjs?v=20261110-part2');
     inspectScenarioScopes({gameId:session.descriptor.gameId,
       scenarioBytes:scenarioChange?.bytes??current.scenarioBytes,mapBytes:mapChange?.bytes??current.mapBytes,
       // The authenticated type census includes independent unused slots.
@@ -4688,7 +4688,7 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
   if(handPointPlan?.entries.length)storageBudget=Object.freeze({...storageBudget,rows:Object.freeze([...storageBudget.rows,Object.freeze({id:'battle-handpoints',label:'기체별 무기 부착 좌표',usedBytes:handPointPlan.limitBytes-handPointPlan.remaining,limitBytes:handPointPlan.limitBytes,remainingBytes:handPointPlan.remaining,fixed:false})])});
   if(motionPlan?.enabled)storageBudget=Object.freeze({...storageBudget,rows:Object.freeze([...storageBudget.rows,Object.freeze({id:'battle-motion',label:'전투 사출 연출',usedBytes:motionPlan.bytes.length-motionPlan.remaining,limitBytes:motionPlan.bytes.length,remainingBytes:motionPlan.remaining,fixed:false})])});
   if(scenarioChanged){
-    const {readScenarioArchive}=await import('./editor-scenario-archive.mjs?v=20261110-part1');
+    const {readScenarioArchive}=await import('./editor-scenario-archive.mjs?v=20261110-part2');
     const archive=readScenarioArchive(scenarioChange.bytes,session.descriptor.gameId,{scenarioLayout:session.scenario.inspected.archive.scenarioLayout});
     const rows=archive.bodies.filter(b=>scenarioChange.changedBodies.includes(b.physicalIndex)).map(b=>Object.freeze({id:`scenario-${b.physicalIndex}`,label:`시나리오 슬롯 ${b.slots.map(n=>n+1).join('/')} 압축`,usedBytes:b.streamEnd,limitBytes:b.end-b.start,remainingBytes:b.end-b.start-b.streamEnd,fixed:false}));
     storageBudget=Object.freeze({...storageBudget,rows:Object.freeze([...storageBudget.rows,...rows]),scenarioBodies:rows.length});
@@ -4720,13 +4720,13 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
     const graphics=await writeBattleComponents(outputBlob);
     outputBlob=graphics.outputBlob;bytesChanged+=graphics.changedSectors.length*SECTOR_SIZE;
   }
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261110-part1');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261110-part2');
   const checked = inspectScenarioScopes({ gameId: session.descriptor.gameId,
     scenarioBytes: scenarioChange?.bytes ?? current.scenarioBytes, mapBytes: mapChange?.bytes ?? current.mapBytes,
     bankBytes: current.bankBytes, tables: current.tables, sectorMode: current.inspected.scope.scenario.sectorMode,
     scenarioLayout: current.inspected.archive.scenarioLayout,glyphMap });
   if (stableScopeJson(checked.scope) !== stableScopeJson(current.inspected.scope)) {
-    const { validateScenarioRebase } = await import('./editor-scenario-archive.mjs?v=20261110-part1');
+    const { validateScenarioRebase } = await import('./editor-scenario-archive.mjs?v=20261110-part2');
     try { validateScenarioRebase(current.scenarioBytes, scenarioChange?.bytes, current.inspected.scope, checked.scope,
       session.descriptor.gameId, current.inspected.archive.scenarioLayout); }
     catch { fail('EDITOR_OUTPUT_INTERNAL', 'Scenario/map output changed an immutable byte or editable range.'); }

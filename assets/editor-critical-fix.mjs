@@ -2,7 +2,7 @@
 // the existing display table. The shared original table is never overwritten.
 // Evidence: build/critical-audit-20261027/{CALC_AUDIT.md,calc.json,review.json}.
 // Bounded checks here supplement the inspector's whole-image provenance checks.
-import {matchesByteWindow} from './editor-byte-window.mjs?v=20261110-part1';
+import {matchesByteWindow} from './editor-byte-window.mjs?v=20261110-part2';
 
 // No original routine/table bytes are distributed. Each user's bounded window
 // is authenticated by its digest; only the existing literal pointer is writable.

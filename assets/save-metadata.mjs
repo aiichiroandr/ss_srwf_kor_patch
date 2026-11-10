@@ -1,5 +1,5 @@
-import { SCENARIO_CHAPTER_BINDINGS } from './editor-scenario-chapter-data.mjs?v=20261110-part1';
-import { decodeEditorText } from './editor-text-codec.mjs?v=20261110-part1';
+import { SCENARIO_CHAPTER_BINDINGS } from './editor-scenario-chapter-data.mjs?v=20261110-part2';
+import { decodeEditorText } from './editor-text-codec.mjs?v=20261110-part2';
 export function saveHeroName(row,field='heroName',{glyphMap=row.glyphMap}={}){
   const bytes=row[field+'Bytes']??[];
   if(!bytes.length)return '이름 미기록';

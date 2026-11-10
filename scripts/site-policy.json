@@ -560,11 +560,11 @@
     },
     "assets/editor-animation.mjs": {
       "bytes": 14016,
-      "sha256": "8856d6e5cad8c1966558f18f4d39de0bb002c7bf2e0e3fb91a51e13870404c55"
+      "sha256": "a1a6d0017fae84256c7a4425aad1645bf07fc05e238ecfe0385276b0349e7ad0"
     },
     "assets/editor-preview-resources.mjs": {
       "bytes": 6306,
-      "sha256": "c23268b34a3e7c626d1cfe4fa021163a3fee37b8d2edc34ef5f8be9fecc7c57f"
+      "sha256": "ac72dd421af887298bf0dc22f033c51980917ccc23958ff63f56fc01a74fd0a6"
     }
   },
   "runtimeSets": [],
@@ -591,7 +591,7 @@
       "../weapon-preview/"
     ],
     "assets/editor-preview-resources.mjs": [
-      "../weapon-preview/runtime-worker-loader.mjs?v=20261110-part1"
+      "../weapon-preview/runtime-worker-loader.mjs?v=20261110-part2"
     ]
   }
 }

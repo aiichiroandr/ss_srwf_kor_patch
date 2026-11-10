@@ -1,8 +1,8 @@
-import {createWeaponNameControl} from './editor-name-control.mjs?v=20261110-part1';
-import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261110-part1';
-import {EDITOR_FIELD_BOUNDS,isFieldValueInBounds} from './editor-fields.mjs?v=20261110-part1';
-import {criticalChoices,criticalValues,criticalAppliedText} from './editor-critical-values.mjs?v=20261110-part1';
-import {WEAPON_GRADE_CHOICES,TERRAIN_SCREEN_ORDER,TERRAIN_LABELS,splitWeaponTerrain,joinWeaponTerrain} from './editor-grades.mjs?v=20261110-part1';
+import {createWeaponNameControl} from './editor-name-control.mjs?v=20261110-part2';
+import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261110-part2';
+import {EDITOR_FIELD_BOUNDS,isFieldValueInBounds} from './editor-fields.mjs?v=20261110-part2';
+import {criticalChoices,criticalValues,criticalAppliedText} from './editor-critical-values.mjs?v=20261110-part2';
+import {WEAPON_GRADE_CHOICES,TERRAIN_SCREEN_ORDER,TERRAIN_LABELS,splitWeaponTerrain,joinWeaponTerrain} from './editor-grades.mjs?v=20261110-part2';
 
 const fields=Object.freeze([
  ['attack','공격력',0,65535],['hit','명중',...EDITOR_FIELD_BOUNDS.weapon.hit],
