@@ -1,9 +1,9 @@
 // Ex-S-only D_ANIME clone. Retain every source program and original wait;
 // align the firing banks without enlarging the original map reservation.
 // The optional second bank keeps the defender shot in its original geometry.
-import {patchFourBeamLaunch} from './editor-battle-motion.mjs?v=20261110-part2';
-import {sha256Hex} from './sha256.mjs?v=20261110-part2';
-import {dataView as view} from './editor-bytes.mjs?v=20261110-part2';
+import {patchFourBeamLaunch} from './editor-battle-motion.mjs?v=20261113-froster1';
+import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
+import {dataView as view} from './editor-bytes.mjs?v=20261113-froster1';
 
 export const EXS_ALIGNED_BEAM_MOTION=0x057f;
 export const EXS_ALIGNED_BEAM_BANK=0x053f;

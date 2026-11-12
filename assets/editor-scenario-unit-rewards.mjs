@@ -1,10 +1,10 @@
 // Hangar-only creation effect. C2.04 creates an unassigned unit instance and
 // reports success in the VM predicate. This module does not choose an event
 // hook, authorize a map, allocate a story flag or create an actor/pilot.
-import {dataRecordOffsets} from './editor-core.mjs?v=20261110-part2';
-import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261110-part2';
-import {ownData} from './editor-own.mjs?v=20261110-part2';
-import {Sha256} from './sha256.mjs?v=20261110-part2';
+import {dataRecordOffsets} from './editor-core.mjs?v=20261113-froster1';
+import {weaponsOfUnit} from './editor-weapon-links.mjs?v=20261113-froster1';
+import {ownData} from './editor-own.mjs?v=20261113-froster1';
+import {Sha256} from './sha256.mjs?v=20261113-froster1';
 
 const encoder=new TextEncoder(),word=(b,p)=>b[p]*256+b[p+1],FAMILY_TYPES=new Set([6,8,9]);
 const SUPPORTED_GAMES=new Set(['srwf-f','srwf-final']);

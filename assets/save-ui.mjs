@@ -1,11 +1,13 @@
-import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261110-part2';
-import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261110-part2';
-import { requestEditorNotice } from './editor-notice.mjs?v=20261110-part2';
-import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261110-part2';
-import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261110-part2';
-import { openSave } from './save-core.mjs?v=20261110-part2';
-import { pageItems,fitPages } from './save-pages.mjs?v=20261110-part2';
-import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261110-part2';
+import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261113-froster1';
+import {canAddSavePilots} from './save-pilot-support.mjs?v=20261113-froster1';
+import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261113-froster1';
+import { requestEditorNotice } from './editor-notice.mjs?v=20261113-froster1';
+import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261113-froster1';
+import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261113-froster1';
+import { openSave } from './save-core.mjs?v=20261113-froster1';
+import { pageItems,fitPages } from './save-pages.mjs?v=20261113-froster1';
+import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261113-froster1';
+import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-froster1';
 
 export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}={}) {
   const $=id=>document.getElementById(id),dialog=$('saveEditorDialog');
@@ -18,9 +20,10 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     $(prefix+'Prev').disabled=busy||page===0;$(prefix+'Next').disabled=busy||page>=count-1;
     $(prefix+'PageLabel').textContent=`${page+1} / ${count}`;
   }
-  const labels={...Object.fromEntries(SAVE_NAME_FIELDS.map(s=>[s.field,s.label])),money:'자금',level:'레벨',experience:'다음 레벨까지 EXP',hpUpgrade:'HP 개조',enUpgrade:'EN 개조',armorUpgrade:'장갑 개조',limitUpgrade:'한계 개조',mobilityUpgrade:'운동성 개조',weaponUpgrades:'무기 개조',parts:'장착 파츠',upgradeLimit:'게임 개조 상한',unitAdded:'기체 추가',unitRemoved:'깨진 기체 칸 비움',pilotRemoved:'깨진 파일럿 칸 비움',pilotSlot:'탑승 파일럿 칸',linkedSlot:'연결 기체 칸'};
+  const labels={...Object.fromEntries(SAVE_NAME_FIELDS.map(s=>[s.field,s.label])),money:'자금',pilotAdded:'파일럿 추가',level:'레벨',experience:'다음 레벨까지 EXP',hpUpgrade:'HP 개조',enUpgrade:'EN 개조',armorUpgrade:'장갑 개조',limitUpgrade:'한계 개조',mobilityUpgrade:'운동성 개조',weaponUpgrades:'무기 개조',parts:'장착 파츠',upgradeLimit:'게임 개조 상한',unitAdded:'기체 추가',unitRemoved:'깨진 기체 칸 비움',pilotRemoved:'깨진 파일럿 칸 비움',pilotSlot:'탑승 파일럿 칸',linkedSlot:'연결 기체 칸'};
   const records=()=>session?.list().filter(r=>r.gameId===context().gameId)??[];
   const active=()=>records().find(r=>r.key===key);
+  const addRowsOpen=()=>$('saveAddPilotRow').open||$('saveAddUnitRow').open;
   const changeSignature=()=>JSON.stringify(session?.diff()??[]);
   const hasUnsavedEdits=()=>{const changes=session?.diff()??[];return drafts.size>0||(changes.length>0&&JSON.stringify(changes)!==downloadedChanges);};
   const summary=r=>saveSummary(r,context().saveTitles??[],{glyphMap:context().glyphMap??r.glyphMap});
@@ -62,7 +65,11 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
       if(text)return text;
     }
     const match=names?.find(r=>r.recordIndex===row.id);
-    return match?.name||match?.alias||`${type==='pilot'?'파일럿':'기체'} #${row.id}`;
+    // Added Final rows may be absent from the ordinary inspected pilot list
+    // (notably ALICE).  Use their authenticated save catalog only as a display
+    // fallback; add/write authorization remains in save-core.
+    const addedPilot=type==='pilot'&&canAddSavePilots(c)?c.savePilotCatalog?.pilots.find(p=>p.id===row.id):null;
+    return match?.name||match?.alias||addedPilot?.name||`${type==='pilot'?'파일럿':'기체'} #${row.id}`;
   }
   function message(text,error=false){$('saveEditorStatus').textContent=text;$('saveEditorStatus').classList.toggle('is-error',error);}
   function controls(){
@@ -142,8 +149,15 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     $('saveUnitNamesPanel').hidden=commonTab!=='unitNames';$('saveCommonUnitNamesTab').hidden=r?.gameId!=='srwf-final';$('saveCommonUnitNamesTab').setAttribute('aria-pressed',String(commonTab==='unitNames'));
     $('saveMoneyPanel').hidden=commonTab!=='money';$('saveUpgradePanel').hidden=commonTab!=='upgrade';
     $('saveCommonMoneyTab').setAttribute('aria-pressed',String(commonTab==='money'));$('saveCommonUpgradeTab').setAttribute('aria-pressed',String(commonTab==='upgrade'));
-    $('saveRecordLayout').hidden=kind==='common'||$('saveAddUnitRow').open;$('saveCommonFields').hidden=kind!=='common';
+    const addOpen=addRowsOpen();dialog.dataset.addOpen=String(addOpen);
+    $('saveRecordLayout').hidden=kind==='common'||addOpen;$('saveCommonFields').hidden=kind!=='common';
     if(!r){controls();return;}
+    $('saveAddPilotRow').hidden=kind!=='pilot';
+    const pilotOptions=$('saveAddPilotSelect'),pilotSelected=pilotOptions.value;pilotOptions.replaceChildren();
+    const pilotQuery=$('saveAddPilotSearch').value.trim().normalize('NFKC').toLowerCase(),pilotProof=canAddSavePilots(context());
+    for(const pilot of context().savePilotCatalog?.pilots??[]){if(!`${pilot.name} ${pilot.id}`.normalize('NFKC').toLowerCase().includes(pilotQuery)||r.pilots.some(p=>p.id===pilot.id))continue;const option=document.createElement('option');option.value=String(pilot.id);option.textContent=`${pilot.name} #${pilot.id}${pilot.subpilot?' · 서브파일럿':''}`;pilotOptions.append(option);}
+    if(Array.from(pilotOptions.options).some(o=>o.value===pilotSelected))pilotOptions.value=pilotSelected;
+    $('saveAddPilotLevel').disabled=busy||!r.editable||!pilotProof;$('saveAddPilotSelect').disabled=busy||!r.editable||!pilotProof;$('saveAddPilotButton').disabled=busy||!r.editable||!pilotProof||!pilotOptions.options.length||r.pilots.length>=128||!$('saveAddPilotLevel').validity.valid;
     $('saveAddUnitRow').hidden=kind!=='unit';
     const options=$('saveAddUnitSelect'),selected=options.value;options.replaceChildren();
     const unitQuery=$('saveAddUnitSearch').value.trim().normalize('NFKC').toLowerCase();
@@ -151,6 +165,10 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
       if($('saveAddUnitFilter').value==='unused'&&unit.recordKind==='regular')continue;
       if(!`${unit.name??''} ${unit.recordIndex}`.normalize('NFKC').toLowerCase().includes(unitQuery))continue;
       if(!Number.isInteger(unit.hp)||!Number.isInteger(unit.en)||r.units.some(u=>u.id===unit.recordIndex))continue;
+      // Do not advertise SRW4 cruiser alternates (or an already represented
+      // cruiser family). Core repeats this check before writing.
+      let group;try{group=saveUnitGroup(unit.recordIndex,context().units??[],r.units.map(u=>u.id));}catch{continue;}
+      if(group.familyMembers&&r.units.some(u=>group.familyMembers.includes(u.id)))continue;
       const option=document.createElement('option');option.value=String(unit.recordIndex);option.textContent=`${unit.name||'이름 없는 기체'} #${unit.recordIndex}${unit.construction?' · 추가 기체':unit.recordKind==='regular'?'':' · 빈/미완성 레코드'}`;options.append(option);
     }
     if(Array.from(options.options).some(o=>o.value===selected))options.value=selected;
@@ -361,10 +379,10 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
   $('saveRecordSelect').addEventListener('change',()=>selectRecord(Number($('saveRecordSelect').value)));
   $('saveSlotSearch').addEventListener('input',()=>{slotsPage=0;slotCards();});$('saveSlotSort').addEventListener('change',()=>{slotsPage=0;slotCards();});
   $('saveSlotBrowser').addEventListener('toggle',()=>{$('saveEditorBody').hidden=$('saveSlotBrowser').open||!active();requestLayout();});
-  $('saveAddUnitRow').addEventListener('toggle',()=>{dialog.dataset.addOpen=String($('saveAddUnitRow').open);render();requestLayout();});
+  for(const id of ['saveAddPilotRow','saveAddUnitRow'])$(id).addEventListener('toggle',()=>{dialog.dataset.addOpen=String(addRowsOpen());render();requestLayout();});
   $('saveBackToList').addEventListener('click',()=>{$('saveRecordLayout').dataset.mobileView='list';$('saveRecordList').querySelector('[aria-pressed=true]')?.focus({preventScroll:true});});
   $('saveSearch').addEventListener('input',()=>{listPage=0;unitPage=0;invalid=false;render();});
-  for(const [id,type] of [['savePilotTab','pilot'],['saveUnitTab','unit'],['saveCommonTab','common']])$(id).addEventListener('click',()=>{kind=type;slot=null;listPage=unitPage=0;invalid=false;$('saveAddUnitRow').open=false;$('saveSearch').value='';$('saveRecordLayout').dataset.mobileView='list';render();});
+  for(const [id,type] of [['savePilotTab','pilot'],['saveUnitTab','unit'],['saveCommonTab','common']])$(id).addEventListener('click',()=>{kind=type;slot=null;listPage=unitPage=0;invalid=false;$('saveAddUnitRow').open=false;$('saveAddPilotRow').open=false;$('saveSearch').value='';$('saveRecordLayout').dataset.mobileView='list';render();});
   for(const [id,field] of [['saveMoney','money'],['saveLevel','level'],['saveExperience','experience']]){
     const rule=SAVE_SCALAR_RULES[field];$(id).min=String(rule.min);$(id).max=String(rule.max);$(id).step='1';
     $(id).addEventListener('input',()=>numericEdit($(id),field,field==='money'?null:slot));
@@ -398,6 +416,9 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     catch(e){syncSaveGlyphTexts();drafts.set(dk,{value:input.value,error:e.message});fieldError(input,e.message);message(e.message,true);}
     nameCount(input,field);controls();
   });}
+  $('saveAddPilotSearch').addEventListener('input',render);
+  $('saveAddPilotLevel').addEventListener('input',render);
+  $('saveAddPilotButton').addEventListener('click',()=>{if(busy||!context().verified)return;try{const result=session.addPilot(key,Number($('saveAddPilotSelect').value),Number($('saveAddPilotLevel').value));slot=result.slot;$('saveSearch').value='';$('saveAddPilotRow').open=false;$('saveRecordLayout').dataset.mobileView='detail';render();message('파일럿을 추가했습니다. 수정본을 저장하면 적용됩니다.');}catch(e){message(e.message,true);}});
   $('saveAddUnitFilter').addEventListener('change',render);
   $('saveAddUnitSearch').addEventListener('input',render);
   $('saveAddUnitButton').addEventListener('click',()=>{

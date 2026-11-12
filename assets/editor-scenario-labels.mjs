@@ -1,5 +1,5 @@
-import { bindCompletionScenarioTitleHints, completionTitleHintText } from './editor-scenario-completion-title-hints.mjs?v=20261110-part2';
-import {rosterLevelSourceBodyPin} from './editor-scenario-roster-level-pins.mjs?v=20261110-part2';
+import { bindCompletionScenarioTitleHints, completionTitleHintText } from './editor-scenario-completion-title-hints.mjs?v=20261113-froster1';
+import {rosterLevelSourceBodyPin} from './editor-scenario-roster-level-pins.mjs?v=20261113-froster1';
 // Read-only labels. Selector numbers, physical bodies and displayed episode
 // numbers are different coordinates; this module never derives an episode.
 const TITLE_CELLS = Object.freeze({ 'srwf-f': 74, 'srwf-final': 192 });

@@ -1,47 +1,48 @@
-import {createSaveNameAuthority} from './save-name-support.mjs?v=20261110-part2';
-import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261110-part2';
-import {editorReviewSupport} from './editor-review-support.mjs?v=20261110-part2';
-import {createMiscExamples} from './editor-misc-examples.mjs?v=20261110-part2';
-import {decodeMapIcon} from './editor-map-icons.mjs?v=20261110-part2';
-import {exSBeamCloneIds,freshExSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261110-part2';
-import {planSrw4UnusedImport,SRW4_UNUSED_PRESETS} from './editor-srw4-unused.mjs?v=20261110-part2';
-import {captureSrw4Import,pendingSrw4Import,rollbackSrw4Import} from './editor-srw4-undo.mjs?v=20261110-part2';
-import {decorateAlicePilot} from './editor-alice.mjs?v=20261110-part2';
-import {aliceEditorRow,aliceCrewRequest,ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261110-part2';
-import {createAliceCrewEditor} from './editor-alice-crew-ui.mjs?v=20261110-part2';
-import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261110-part2';
-import {criticalValues,criticalChoices,criticalPercentLabel,criticalAppliedText} from './editor-critical-values.mjs?v=20261110-part2';
-import {createSrw4SourcePanel} from './editor-srw4-source-ui.mjs?v=20261110-part2';
-import {createFCampaignSourcePanel,campaignCanonicalTracks,campaignDownloadCue,ingameCanonicalTracks,ingameDownloadCue} from './editor-v04-unsupported.mjs?v=20261110-part2';
-import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261110-part2';
-import {connectDefaultAlice,cancelDefaultAlice} from './editor-alice-construction.mjs?v=20261110-part2';
-import {requireMigrationIdentities} from './editor-migration.mjs?v=20261110-part2';
-import {createUnitUpgradeUI} from './editor-unit-upgrade-ui.mjs?v=20261110-part2';
-import {createEditorStorageUI} from './editor-storage-ui.mjs?v=20261110-part2';
-import {encodeEditorText,editorTextMetrics,nameMap} from './editor-text-codec.mjs?v=20261110-part2';
-import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261110-part2';
-import {afterDialogueText} from './editor-dialogue-sequence.mjs?v=20261110-part2';
-import {createBattleTimeline} from './editor-battle-timeline.mjs?v=20261110-part2';
-import {createWeaponNameControl} from './editor-name-control.mjs?v=20261110-part2';
-import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261110-part2';
-import {UNUSED_UNIT_PRESETS,UNIT_CONSTRUCTION_VISIBLE_PRESETS,constructUnitRow,replaceUnitRow,cancelUnitConstruction,unitConstructionPreset,UNIT_CONCEPTS,planConceptUnitConstruction,planExSCruiserConstruction,planSCruiserConstruction,pruneConstructionWeaponClones} from './editor-unit-construction.mjs?v=20261110-part2';
-import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261110-part2';
-import { createSaveEditor } from './save-ui.mjs?v=20261110-part2';
-import { UNIT_WEAPON_FIELDS, isUnitWeaponField, pendingUnitWeapons, unitWeaponFields,planUnitLoadouts } from './editor-loadout.mjs?v=20261110-part2';
-import { createUnitWeaponScroller } from './editor-loadout-ui.mjs?v=20261110-part2';
-import {createUnitWeaponEditor} from './editor-unit-weapon-ui.mjs?v=20261110-part2';
-import { unitsOfWeapon, weaponOwnership } from './editor-weapon-links.mjs?v=20261110-part2';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261110-part2';
-import { requestEditorNotice } from './editor-notice.mjs?v=20261110-part2';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261110-part2';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261110-part2";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261110-part2";
-import { createEntityArtwork } from './editor-entity-art.mjs?v=20261110-part2';
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261110-part2";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261110-part2";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261110-part2";
-import { animationChoices,animationDefaultPilot, createInlineAnimationPreview } from "./editor-animation.mjs?v=20261110-part2";
-import {createPreviewResources} from './editor-preview-resources.mjs?v=20261110-part2';
+import {createSaveNameAuthority} from './save-name-support.mjs?v=20261113-froster1';
+import {createSavePilotAuthority} from './save-pilot-support.mjs?v=20261113-froster1';
+import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261113-froster1';
+import {editorReviewSupport} from './editor-review-support.mjs?v=20261113-froster1';
+import {createMiscExamples} from './editor-misc-examples.mjs?v=20261113-froster1';
+import {decodeMapIcon} from './editor-map-icons.mjs?v=20261113-froster1';
+import {exSBeamCloneIds,freshExSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261113-froster1';
+import {planSrw4UnusedImport,SRW4_UNUSED_PRESETS} from './editor-srw4-unused.mjs?v=20261113-froster1';
+import {captureSrw4Import,pendingSrw4Import,rollbackSrw4Import} from './editor-srw4-undo.mjs?v=20261113-froster1';
+import {decorateAlicePilot} from './editor-alice.mjs?v=20261113-froster1';
+import {aliceEditorRow,aliceCrewRequest,ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261113-froster1';
+import {createAliceCrewEditor} from './editor-alice-crew-ui.mjs?v=20261113-froster1';
+import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261113-froster1';
+import {criticalValues,criticalChoices,criticalPercentLabel,criticalAppliedText} from './editor-critical-values.mjs?v=20261113-froster1';
+import {createSrw4SourcePanel} from './editor-srw4-source-ui.mjs?v=20261113-froster1';
+import {createFCampaignSourcePanel,campaignCanonicalTracks,campaignDownloadCue,ingameCanonicalTracks,ingameDownloadCue} from './editor-v04-unsupported.mjs?v=20261113-froster1';
+import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261113-froster1';
+import {connectDefaultAlice,cancelDefaultAlice} from './editor-alice-construction.mjs?v=20261113-froster1';
+import {requireMigrationIdentities} from './editor-migration.mjs?v=20261113-froster1';
+import {createUnitUpgradeUI} from './editor-unit-upgrade-ui.mjs?v=20261113-froster1';
+import {createEditorStorageUI} from './editor-storage-ui.mjs?v=20261113-froster1';
+import {encodeEditorText,editorTextMetrics,nameMap} from './editor-text-codec.mjs?v=20261113-froster1';
+import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261113-froster1';
+import {afterDialogueText} from './editor-dialogue-sequence.mjs?v=20261113-froster1';
+import {createBattleTimeline} from './editor-battle-timeline.mjs?v=20261113-froster1';
+import {createWeaponNameControl} from './editor-name-control.mjs?v=20261113-froster1';
+import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261113-froster1';
+import {UNUSED_UNIT_PRESETS,UNIT_CONSTRUCTION_VISIBLE_PRESETS,constructUnitRow,replaceUnitRow,cancelUnitConstruction,unitConstructionPreset,UNIT_CONCEPTS,planConceptUnitConstruction,planExSCruiserConstruction,planSCruiserConstruction,pruneConstructionWeaponClones} from './editor-unit-construction.mjs?v=20261113-froster1';
+import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261113-froster1';
+import { createSaveEditor } from './save-ui.mjs?v=20261113-froster1';
+import { UNIT_WEAPON_FIELDS, isUnitWeaponField, pendingUnitWeapons, unitWeaponFields,planUnitLoadouts } from './editor-loadout.mjs?v=20261113-froster1';
+import { createUnitWeaponScroller } from './editor-loadout-ui.mjs?v=20261113-froster1';
+import {createUnitWeaponEditor} from './editor-unit-weapon-ui.mjs?v=20261113-froster1';
+import { unitsOfWeapon, weaponOwnership } from './editor-weapon-links.mjs?v=20261113-froster1';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261113-froster1';
+import { requestEditorNotice } from './editor-notice.mjs?v=20261113-froster1';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261113-froster1';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261113-froster1";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261113-froster1";
+import { createEntityArtwork } from './editor-entity-art.mjs?v=20261113-froster1';
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261113-froster1";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261113-froster1";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261113-froster1";
+import { animationChoices,animationDefaultPilot, createInlineAnimationPreview } from "./editor-animation.mjs?v=20261113-froster1";
+import {createPreviewResources} from './editor-preview-resources.mjs?v=20261113-froster1';
 import {
   canStep,
   filterRecords,
@@ -50,7 +51,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261110-part2";
+} from "./editor-list.mjs?v=20261113-froster1";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -61,7 +62,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261110-part2";
+} from "./editor-grades.mjs?v=20261113-froster1";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -95,28 +96,28 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261110-part2";
+} from "./editor-skill-list.mjs?v=20261113-froster1";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261110-part2";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261110-part2";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261110-part2";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261110-part2";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261110-part2";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261110-part2";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261110-part2";
-import { createCostEditor } from "./editor-cost-ui.mjs?v=20261110-part2";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261110-part2";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261110-part2";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261110-part2";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261110-part2";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261110-part2";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261110-part2";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261110-part2";
+} from "./editor-facts.mjs?v=20261113-froster1";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261113-froster1";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261113-froster1";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261113-froster1";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261113-froster1";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261113-froster1";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261113-froster1";
+import { createCostEditor } from "./editor-cost-ui.mjs?v=20261113-froster1";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261113-froster1";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261113-froster1";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261113-froster1";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261113-froster1";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261113-froster1";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261113-froster1";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261113-froster1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -124,14 +125,14 @@ import {
   groupFontReleases as groupPublicFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261110-part2";
+} from "./font-revisions.mjs?v=20261113-froster1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261110-part2";
+} from "./release-notes.mjs?v=20261113-froster1";
 
-const STATIC_ASSET_REVISION = "20261110-part2";
+const STATIC_ASSET_REVISION = "20261113-froster1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -755,9 +756,9 @@ elements.cancelButton.addEventListener("click", cancelActiveJob);
 elements.cueButton.addEventListener("click", saveCueFile);
 elements.modePatchButton.addEventListener("click", () => setMode("patch"));
 elements.modeEditorButton.addEventListener("click", () => setMode("editor"));
-let saveNameAuthority=null;
+let saveNameAuthority=null,savePilotAuthority=null;
 let saveCatalogSnapshot=null,saveCatalogPreparation=null;
-const saveEditor = createSaveEditor(() => ({ verified: Boolean(state.editorSessionToken) && !anyJobBusy(), gameId: state.editorGameId, pilots: state.editorPilots, units: saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.units:state.editorUnits.filter(row=>!row.pendingConstruction), weapons: state.editorWeapons, partNames: state.editorPartNames, saveTitles: state.editorSaveTitles, sessionToken: state.editorSessionToken, saveNameSupport:state.editorSaveNameSupport, preview: requestSaveEditorPreview, glyphMap:state.editorGlyphMap,glyphPending:state.editorGlyphRows.some(row=>row.characters!==row.original.characters),encodeText:encodeEditorInput,syncSaveGlyphTexts:texts=>{state.editorSaveNameTexts=new Map(texts);try{commitEditorGlyphPlan(editorGlyphPlan());updateEditorStatus('glyph',state.editorGlyphRows[0]);}catch(error){showEditorError('추가 글자를 적용할 수 없습니다',error.message);}},reserveGlyphCodes:codes=>{state.editorGlyphReserved=new Set(codes);} }), {prepare:()=>prepareWorkflow('save-editor'),verifyOutputCatalog:prepareSaveEditorCatalog});
+const saveEditor = createSaveEditor(() => ({ verified: Boolean(state.editorSessionToken) && !anyJobBusy(), gameId: state.editorGameId, pilots: saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.pilots:state.editorPilots, units: saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.units:state.editorUnits.filter(row=>!row.pendingConstruction), weapons: state.editorWeapons, partNames: state.editorPartNames, saveTitles: state.editorSaveTitles, sessionToken: state.editorSessionToken, saveNameSupport:state.editorSaveNameSupport, savePilotSupport:saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.pilotSupport:null, savePilotCatalog:saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.savePilotCatalog:null, preview: requestSaveEditorPreview, glyphMap:state.editorGlyphMap,glyphPending:state.editorGlyphRows.some(row=>row.characters!==row.original.characters),encodeText:encodeEditorInput,syncSaveGlyphTexts:texts=>{state.editorSaveNameTexts=new Map(texts);try{commitEditorGlyphPlan(editorGlyphPlan());updateEditorStatus('glyph',state.editorGlyphRows[0]);}catch(error){showEditorError('추가 글자를 적용할 수 없습니다',error.message);}},reserveGlyphCodes:codes=>{state.editorGlyphReserved=new Set(codes);} }), {prepare:()=>prepareWorkflow('save-editor'),verifyOutputCatalog:prepareSaveEditorCatalog});
 let srw4SourceJob=null,srw4ImportUndo=null,srw4BaseMapIcons=null,srw4BasePending=false;
 let fCampaignSourceJob=null;
 const fCampaignSourcePanel=createFCampaignSourcePanel(byId('fCampaignSourcePanel'),{
@@ -907,7 +908,8 @@ function requestEditorOutputSource({signal,includeSaveCatalog=false}={}) {
     let settled=false;
     const timer = setTimeout(() => finish(Error("ROM 연결 시간이 초과됐습니다.")), includeSaveCatalog?120000:30000);
     const abort=()=>finish(signal.reason??new DOMException('검사를 취소했습니다.','AbortError'));
-    const receive = ({ data }) => {
+    const receive = (event) => {
+      const data=event.data;
       if (data?.previewId !== previewId) return;
       if(worker!==state.editorWorker)return finish(Error('ROM 작업 스레드가 바뀌었습니다. 다시 열어 주세요.'));
       if (sessionToken !== state.editorSessionToken) return finish(Error("ROM 세션이 바뀌었습니다. 다시 열어 주세요."));
@@ -927,7 +929,7 @@ function requestEditorOutputSource({signal,includeSaveCatalog=false}={}) {
         return finish(Error('미리보기 ROM 검증 정보를 확인하지 못했습니다.'));
       if(includeSaveCatalog&&(data.saveCatalog?.targetHash!==descriptor.targetSha256||!Array.isArray(data.saveCatalog?.units)))
         return finish(Error('저장할 BIN의 기체 정보를 확인하지 못했습니다.'));
-      finish(null,data);
+      finish(null,{...data,event});
     };
     function finish(error, value) {
       if(settled)return;settled=true;
@@ -941,7 +943,7 @@ function requestEditorOutputSource({signal,includeSaveCatalog=false}={}) {
       try{
         const source=Object.freeze({blob:value.blob,descriptor:Object.freeze({...value.descriptor})});
         const verified=currentPreviewResources().rememberVerifiedSource(source);
-        resolve(includeSaveCatalog?Object.freeze({...verified,saveCatalog:value.saveCatalog}):verified);
+        resolve(includeSaveCatalog?Object.freeze({...verified,saveCatalog:value.saveCatalog,event:value.event}):verified);
       }catch(error){reject(error);}
     }
     worker.addEventListener("message", receive);
@@ -1139,8 +1141,10 @@ async function prepareSaveEditorCatalog({signal}={}){
   pending.promise=(async()=>{
     const source=await requestEditorOutputSource({signal,includeSaveCatalog:true});
     if(token!==state.editorSessionToken||revision!==state.editorEditRevision)throw Error('ROM 편집 내용이 바뀌었습니다. 세이브를 다시 열어 주세요.');
-    saveCatalogSnapshot={token,revision,view:source.saveCatalog};
-    return source.saveCatalog;
+    const view=source.saveCatalog;
+    const pilotSupport=savePilotAuthority?.accept(source.event,{gameId:view.gameId,sessionToken:token,sourceSessionToken:view.sessionToken,targetHash:view.targetHash,baseTargetSha256:view.baseTargetSha256})??null;
+    saveCatalogSnapshot={token,revision,view,pilotSupport};
+    return view;
   })().finally(()=>{if(saveCatalogPreparation===pending){saveCatalogPreparation=null;state.editorSaveCatalogPreparing=false;updateControls();}});
   saveCatalogPreparation=pending;updateControls();return pending.promise;
 }
@@ -3159,7 +3163,7 @@ async function openEditorFromFolder(directoryHandle) {
   // Returning from a review image must also restore the public editor engine.
   if(patched&&localEditorSupport&&reviewSession()){
     try{
-      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261110-part2',import.meta.url).href,signal:controller.signal,
+      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-froster1',import.meta.url).href,signal:controller.signal,
         onProgress:progress=>showEditorProgress({...EDITOR_STAGES.inspect,percent:progress.total?progress.processed/progress.total*100:null})});
       if(opened){state.workflowSourceHandles=sourceHandles;return;}
       endEditorJob();state.editorSource=previous;updateControls();return;
@@ -3917,6 +3921,8 @@ function clearEditorState() {
   state.editorDisc = null;
   state.editorCueTracks = null;
   state.editorSetupOpen = false;
+  saveNameAuthority?.clear();
+  savePilotAuthority?.clear();
   if (state.editorWorker) {
     try {
       state.editorWorker.postMessage({ type: "RESET" });
@@ -4513,15 +4519,15 @@ function handleWorkerMessage(event) {
 
 function getEditorWorker(release = null) {
   const profile=release ? (localEditorSupport?.isTarget(release.target.sha256) ? 'review' : 'public') : state.editorWorkerProfile??'public';
-  if(state.editorWorker&&state.editorWorkerProfile&&state.editorWorkerProfile!==profile){state.editorWorker.terminate();state.editorWorker=null;}
+  if(state.editorWorker&&state.editorWorkerProfile&&state.editorWorkerProfile!==profile){saveNameAuthority?.clear();savePilotAuthority?.clear();state.editorWorker.terminate();state.editorWorker=null;}
   if (state.editorWorker) return state.editorWorker;
   state.editorWorkerProfile=profile;
   const worker = new Worker(
     profile==='review'?localEditorSupport.workerUrl:new URL(`./editor-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url),
     { type: "module", name: "srwf-local-data-editor" },
   );
-  saveNameAuthority?.dispose();
-  saveNameAuthority=createSaveNameAuthority(worker);
+  saveNameAuthority?.dispose();savePilotAuthority?.dispose();
+  saveNameAuthority=createSaveNameAuthority(worker);savePilotAuthority=createSavePilotAuthority(worker);
   worker.addEventListener("message", handleEditorWorkerMessage);
   worker.addEventListener("error", handleEditorWorkerCrash);
   worker.addEventListener("messageerror", handleEditorWorkerCrash);
@@ -5170,7 +5176,10 @@ function installEditorRows(view) {
   const sourceAlice=state.editorPilots.find(row=>row.recordIndex===399);
   state.editorAliceSource=sourceAlice?{...sourceAlice,aliceIdentity:false}:null;
   if(view.alice?.enabled&&state.editorAliceSource)Object.assign(state.editorAliceSource,{name:'',shortName:'',statsValid:true,recordKind:'unused-filler',defaultVisible:false,readOnlyReason:'unused-filler',nameStatus:'empty',imageIndex:null,faceId:0});
-  if(view.alice?.version<3&&!view.alice?.enabled){const targets=state.editorUnits.filter(u=>['s-gundam','s-g-cruiser','ex-s-gundam','g-cruiser'].includes(u.construction?.preset));if(targets.length)state.editorAliceConstructionDefault=connectDefaultAlice(state.editorAliceRows[0],targets[0].recordIndex,{explicitChoice:false});}
+  // F presents its pinned face-338/Fv2 identity even before its first carrier is
+  // installed. Keep the same proposed Ex-S default connection for that disabled
+  // source state; identity version is not a user opt-out.
+  if((view.gameId==='srwf-f'||view.alice?.version<3)&&!view.alice?.enabled){const targets=state.editorUnits.filter(u=>['s-gundam','s-g-cruiser','ex-s-gundam','g-cruiser'].includes(u.construction?.preset));if(targets.length)state.editorAliceConstructionDefault=connectDefaultAlice(state.editorAliceRows[0],targets[0].recordIndex,{explicitChoice:false});}
   syncAlicePilotView();
   syncPilotExpansionBudget(state.editorPilots);
   state.editorWeapons = prepareEditorRows(view.weapons, "weapon");
@@ -5292,6 +5301,8 @@ function handleEditorWorkerCrash(event) {
   const wasBusy = state.editorBusy;
   const operation = state.editorOperation;
   const context = state.editorInspectContext;
+  saveNameAuthority?.clear();
+  savePilotAuthority?.clear();
   state.editorWorker?.terminate();
   state.editorWorker = null;
   dropEditorSession();
@@ -5388,7 +5399,11 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_MAP_ICON_PATCH_INVALID: ["기체 아이콘을 적용할 수 없습니다", "검증한 원본 자료와 아이콘·기체 연결이 맞는지 확인해 주세요. 사용 중인 그림이나 팔레트를 덮어쓰는 변경은 저장하지 않습니다."],
   EDITOR_MAP_ICON_UNIT_INVALID: ["기체 아이콘 연결이 맞지 않습니다", "선택한 기체의 현재 아이콘 번호와 독립된 데이터 자리인지 확인해 주세요. 다른 기체까지 함께 바뀌는 연결은 적용하지 않습니다."],
   EDITOR_AIRCRAFT_GRAPHIC_COLLISION: ["기체 그림 자리가 겹칩니다", "추가하려는 두 기체가 같은 전투 그림 자리를 사용합니다. 겹치는 구성을 하나 취소한 뒤 다시 적용해 주세요."],
-  EDITOR_ALICE_INVALID: ["인공지능 파일럿을 등록할 수 없습니다", "지원하는 완결편 기반 이미지와 빈 파일럿 자리·초상 데이터를 확인해 주세요. 이름·초상 등록 정보가 맞지 않으면 수정본을 만들지 않습니다."],
+  EDITOR_ALICE_INVALID: ["인공지능 파일럿 등록 구성을 확인할 수 없습니다", "파일럿 #399는 실제 설치 상태를 확인한 리더에서만 등록합니다. 지원하는 기반·파일럿 자리·초상 데이터가 맞지 않으면 수정본을 만들지 않습니다."],
+  EDITOR_ALICE_F_INVALID: ["F 앨리스 구성을 확인할 수 없습니다", "F 앨리스 출력은 검증한 최신 F v0.5 a/b/c의 리비전 1 구성에서만 만듭니다. 설치 상태·데이터·시나리오 구성이 맞지 않으면 수정본을 만들지 않습니다."],
+  EDITOR_ALICE_F_DEPARTURE_INVALID: ["F 출격 이탈 데이터를 확인할 수 없습니다", "F용 앨리스의 출격·이탈 데이터 구조가 확인된 상태와 다릅니다. 수정본을 만들지 않았습니다."],
+  EDITOR_ALICE_F_FIRST_CLEAR_INVALID: ["F 첫 클리어 구성을 확인할 수 없습니다", "F의 두 경로와 일곱 정의로 짝지은 첫 클리어 구성이 맞지 않거나 다른 스토리 편집과 충돌합니다. 충돌한 편집은 버리지 않고 수정본 생성을 멈춥니다."],
+  EDITOR_ALICE_F_SCENARIO_INVALID: ["F 시나리오 데이터를 확인할 수 없습니다", "F용 앨리스의 시나리오 데이터 구조가 확인된 상태와 다릅니다. 수정본을 만들지 않았습니다."],
   EDITOR_TSR_TAIL_FOREIGN: ["게임 데이터 뒤의 여백이 원본과 다릅니다", "수정본의 게임 데이터 뒤 공간에 0도 아니고 공개 패치에서 남은 값도 아닌 바이트가 있어 열지 않았습니다. 원본에서 최신 패치를 다시 만들어 주세요."],
   EDITOR_SECTOR_CHECKSUM: ["디스크 섹터 검증에 실패했습니다", "원본 이미지의 섹터 무결성을 확인할 수 없어 수정본을 만들지 않았습니다."],
   EDITOR_SECTOR_UNSUPPORTED: ["지원하지 않는 섹터 형식입니다", "게임 데이터가 지원하는 데이터 섹터 형식인지 확인하지 못했습니다. 지원하는 원본 또는 최신 공개 패치 BIN인지 확인해 주세요."],

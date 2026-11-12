@@ -1,5 +1,5 @@
-import {alicePortrait} from './editor-alice.mjs?v=20261110-part2';
-import {decodeMapIcon} from './editor-map-icons.mjs?v=20261110-part2';
+import {alicePortrait} from './editor-alice.mjs?v=20261113-froster1';
+import {decodeMapIcon} from './editor-map-icons.mjs?v=20261113-froster1';
 const LABELS = {'s-gundam':'S건담','exs-gundam':'Ex-S건담',sirbine:'서바인',zwauss:'즈와우스','blood-temple':'블러드 템플','s-gcruiser':'S G크루저','exs-gcruiser':'Ex-S G크루저'};
 const node = (tag, text, className) => { const n=document.createElement(tag); if(text!==undefined)n.textContent=text; if(className)n.className=className; return n; };
 
@@ -7,7 +7,7 @@ const node = (tag, text, className) => { const n=document.createElement(tag); if
 // as imported graphics and a refused replacement keeps the previous catalogue.
 export function createSrw4SourcePanel(root, host) {
   let report=null, working=false;
-  const heading=node('h3','제4차 Rev 1 · 미사용 기체 추가');
+  const heading=node('h3','제4차 Rev 1 연동 · F/F완결편 기체 추가');
   const tools=node('div',undefined,'srw4-source-tools');
   const open=node('button','제4차 ROM 연결','record-tool'); open.type='button';open.id='srw4SourceOpen';
   const clear=node('button','연결 해제','record-tool'); clear.type='button'; clear.hidden=true;
@@ -17,9 +17,10 @@ export function createSrw4SourcePanel(root, host) {
   const status=node('p','제4차 SFC 일본판 Rev 1 원본(SFC/SMC/ZIP)을 검증하면 기본 기체 5대와 변형 2형태를 추가합니다. 기존 기체는 중복 추가하지 않습니다.');status.setAttribute('role','status');
   status.id='srw4SourceStatus';
   const progress=node('progress',undefined,'srw4-source-progress');progress.max=1;progress.hidden=true;progress.setAttribute('aria-label','제4차 원본 읽기와 검증 진행 중');progress.setAttribute('aria-describedby',status.id);
-  const note=node('p','완결편 v0.3 새 게임: 기본 5대 초기 보유 · 기존 세이브는 별도 편집','srw4-source-note');note.title='BIN/CUE를 저장한 뒤 완결편 v0.3에서 세이브 인계 없이 새 게임을 시작하면 슈퍼계·리얼계 모두 기본 5대를 보유합니다. 두 G크루저는 변형으로 이용합니다. ALICE 동승을 켠 경우 전용 서브파일럿도 등록합니다. F 본편과 기존 세이브의 기체 지급은 별도 편집이 필요합니다.';
+  const note=node('p','F: 슈퍼계·리얼계 모두 1화 클리어 뒤 첫 인터미션에서 기본 5기가 사용 가능해집니다. F완결편: 세이브 인계 없는 새 게임의 시작 인터미션에서 기본 5기가 바로 사용 가능해집니다.','srw4-source-note');
+  const saveNote=node('p','두 G크루저는 독립 추가 기체가 아닌 변형입니다. ALICE는 동승을 켠 전용 서브파일럿만 등록합니다. 기존 세이브는 검증된 Rev1 연결 후 세이브 에디터에서 같은 게임 세이브를 열고 기체 → ＋ 기체 추가에서 연결된 카탈로그를 고르세요. 수정한 BIN/CUE와 세이브를 함께 저장해 사용하세요.','srw4-source-note');
   const results=node('div',undefined,'srw4-source-results');results.hidden=true;
-  tools.append(open,clear,undo,cancel,file);root.append(heading,tools,status,progress,note,results);
+  tools.append(open,clear,undo,cancel,file);root.append(heading,tools,status,progress,note,saveNote,results);
 
   function refresh() {
     const ready=host.canConnect();open.disabled=working||!ready;clear.disabled=working||!ready;

@@ -36,3 +36,17 @@ test('source progress stays indeterminate during reading and verification, then 
  file.files=[{name:'invalid.sfc'}];file.dispatchEvent({type:'change',target:file});assert.equal(bar.hidden,false);
  reject(Error('원본 확인 실패'));await wait();assert.equal(bar.hidden,true);assert.match(status.textContent,/원본 확인 실패/);
 });
+
+test('source panel publishes both game timings and the connected same-game save path',()=>{
+ const root=document.createElement('section');document.body.append(root);
+ createSrw4SourcePanel(root,{canConnect:()=>true,canUndo:()=>false});
+ const guidance=root.querySelectorAll('.srw4-source-note').map(node=>node.textContent).join(' ');
+ assert.match(root.querySelector('h3').textContent,/F\/F완결편/);
+ assert.match(guidance,/슈퍼계·리얼계/);assert.match(guidance,/1화 클리어 뒤 첫 인터미션/);
+ assert.match(guidance,/세이브 인계 없는 새 게임의 시작 인터미션/);
+ assert.match(guidance,/두 G크루저는 독립 추가 기체가 아닌 변형/);
+ assert.match(guidance,/전용 서브파일럿만 등록/);
+ assert.match(guidance,/검증된 Rev1 연결 후 세이브 에디터/);assert.match(guidance,/같은 게임 세이브/);assert.match(guidance,/기체 → ＋ 기체 추가/);
+ assert.match(guidance,/수정한 BIN\/CUE와 세이브를 함께 저장/);
+ assert.doesNotMatch(guidance,/F 본편과 기존 세이브의 기체 지급은 별도 편집/);
+});

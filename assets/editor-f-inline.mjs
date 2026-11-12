@@ -1,10 +1,12 @@
 // F's original installation tail is transient. Auxiliary editor records live
 // only in the zero gap recovered by SRUCMP06/07 inside the original unit region.
 // Names/glyph/construction codecs keep their canonical logical representation;
-// only root11/root14 string pointers into that tail move for the game.
-import {tsrRuntimeLimit,requireTsrInspectionSize,writeRelative32} from './editor-storage-safety.mjs?v=20261110-part2';
-import {repackFUnitOffsetLedger,fUnitOffsetLedgerDiagnostics} from './editor-unit-compact.mjs?v=20261110-part2';
-import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261110-part2';
+// root11/root14 string pointers (and, only for an authenticated ALICE envelope,
+// its four owned TSR pointers) move for the game.
+import {tsrRuntimeLimit,requireTsrInspectionSize,writeRelative32} from './editor-storage-safety.mjs?v=20261113-froster1';
+import {repackFUnitOffsetLedger,fUnitOffsetLedgerDiagnostics} from './editor-unit-compact.mjs?v=20261113-froster1';
+import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261113-froster1';
+import {hasAliceFInlineEnvelope,relocateAliceFInlineEnvelope} from './editor-alice-f-data.mjs?v=20261113-froster1';
 const UNIT='SRUCMP06',UNIT7='SRUCMP07',MAGIC='SRFAUX01',HEADER=16;
 const marker=(b,at,s)=>at>=0&&at+s.length<=b.length&&[...s].every((c,i)=>b[at+i]===c.charCodeAt(0));
 function fail(reason,details={}){const e=Error('F의 이름·글자·복원 기록을 원래 기체 표의 안전한 빈 공간에 저장할 수 없습니다.');e.code='EDITOR_STORAGE_INVALID';e.details={reason,...details};throw e;}
@@ -12,8 +14,21 @@ function area(bytes){
  if(!(bytes instanceof Uint8Array)||bytes.length<164)return null;
  const d=view(bytes),rootSize=d.getUint32(0),start=108+d.getInt32(108);
  if(rootSize<144||rootSize>512||rootSize%4||start<rootSize||start>=bytes.length)return null;
- let end=bytes.length;for(let cell=0;cell<rootSize;cell+=4){const at=cell+d.getInt32(cell);if(at>start&&at<end)end=at;}
- const footer=end-32;if(!marker(bytes,footer,UNIT)&&!marker(bytes,footer,UNIT7))return null;
+ // A canonical ALICE envelope moves root2/12/13/28 into the staged tail.
+ // Those are payload roots, not a boundary of root27's original safe span.
+ const alice=hasAliceFInlineEnvelope(bytes),payloadCells=alice?new Set([8,48,52,112]):null;
+ let end=bytes.length;for(let cell=0;cell<rootSize;cell+=4){if(payloadCells?.has(cell))continue;const at=cell+d.getInt32(cell);if(at>start&&at<end)end=at;}
+ let footer=end-32;
+ // Stored inline ALICE has not been expanded yet, so its root2 target is in
+ // the gap and cannot itself authenticate as canonical. Recover root27's
+ // immutable span from its self-describing SRUCMP footer instead of treating
+ // that payload target as a new root boundary.
+ if(!marker(bytes,footer,UNIT)&&!marker(bytes,footer,UNIT7)){
+  const candidates=[];for(let at=start;at+32<=Math.min(bytes.length,tsrRuntimeLimit('srwf-f'));at++)if(marker(bytes,at,UNIT)||marker(bytes,at,UNIT7)){
+   const unitStart=d.getUint32(at+16),unitLength=d.getUint32(at+20);if(unitStart===start&&unitStart+unitLength===at+32)candidates.push(at);
+  }
+  if(candidates.length!==1)return null;footer=candidates[0];end=footer+32;
+ }
  const baseLength=d.getUint32(footer+8),unitStart=d.getUint32(footer+16),unitLength=d.getUint32(footer+20),used=d.getUint32(footer+28);
  if(unitStart!==start||unitStart+unitLength!==end||end>tsrRuntimeLimit('srwf-f')||baseLength<end||used<8||used+34>unitLength)fail('f-inline-layout');
  return {baseLength,begin:start+used+2,footer};
@@ -46,10 +61,13 @@ export function packFInlineAuxiliary(staged,gameId,originalLength=null){
  out.set(staged.subarray(base),payloadStart);out.set(new TextEncoder().encode(MAGIC),a.begin);
  d.setUint32(a.begin+8,payloadBytes);d.setUint32(a.begin+12,base);
  namePointers(out,(cell,target)=>{if(target>=base&&target<staged.length)writeRelative32(out,cell,payloadStart+target-base);},base<a.baseLength);
+ // This is intentionally after all staged writers: names, glyphs, and the
+ // complete ALICE envelope are one payload and are packed exactly once.
+ relocateAliceFInlineEnvelope(out,{mode:'pack',source:staged,tailStart:base,payloadStart});
  return out;
 }
-// Must run before glyph/name readers and before F06/F07 is expanded. Those readers
-// and immutable provenance still authenticate all records and original bytes.
+// Must run before ALICE, glyph/name readers and before F06/F07 is expanded.
+// The ALICE bridge restores its canonical prefix before ordinary readers run.
 export function expandFInlineAuxiliary(stored,gameId){
  if(gameId!=='srwf-f')return stored;
  const a=area(stored);if(!a||!marker(stored,a.begin,MAGIC))return stored;
@@ -57,6 +75,7 @@ export function expandFInlineAuxiliary(stored,gameId){
  if(base!==stored.length||a.baseLength<base||a.baseLength>base+length||!length||end>a.footer)fail('f-inline-aux-layout');
  const out=new Uint8Array(base+length);requireTsrInspectionSize(out,gameId);
  out.set(stored);out.fill(0,a.begin,end);out.set(stored.subarray(payloadStart,end),base);
+ relocateAliceFInlineEnvelope(out,{mode:'expand',tailStart:base,payloadStart,payloadEnd:end});
  namePointers(out,(cell,target)=>{if(target>=payloadStart&&target<end)writeRelative32(out,cell,base+target-payloadStart);},base<a.baseLength);
  if(!equal(packFInlineAuxiliary(out,gameId,base),stored))fail('f-inline-aux-noncanonical');
  return out;

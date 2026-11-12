@@ -1,8 +1,8 @@
 // Fixed, reversible title edits. This changes only the user's authenticated
 // graphic slots; it adds no resource, pointer, record or archive allocation.
-import {FINAL_TITLE_LOGO_DATA as DATA} from './editor-title-logo-data.mjs?v=20261110-part2';
-import {sha256Hex} from './sha256.mjs?v=20261110-part2';
-import {base64UrlToBytes,bytesEqual as same} from './editor-bytes.mjs?v=20261110-part2';
+import {FINAL_TITLE_LOGO_DATA as DATA} from './editor-title-logo-data.mjs?v=20261113-froster1';
+import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
+import {base64UrlToBytes,bytesEqual as same} from './editor-bytes.mjs?v=20261113-froster1';
 
 function invalid(){const e=Error('완결편 타이틀의 원본 또는 보정 데이터가 일치하지 않습니다.');e.code='EDITOR_TITLE_LOGO_INVALID';throw e;}
 function slots(bytes){

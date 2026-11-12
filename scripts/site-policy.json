@@ -20,6 +20,22 @@
     "assets/editor-alice-crew-native.mjs",
     "assets/editor-alice-crew-ui.mjs",
     "assets/editor-alice-crew-v4.mjs",
+    "assets/editor-alice-f-code.mjs",
+    "assets/editor-alice-f-data.mjs",
+    "assets/editor-alice-f-departure-profiles.mjs",
+    "assets/editor-alice-f-departure.mjs",
+    "assets/editor-alice-f-face-masks.mjs",
+    "assets/editor-alice-f-face.mjs",
+    "assets/editor-alice-f-first-clear-scenario.mjs",
+    "assets/editor-alice-f-first-clear.mjs",
+    "assets/editor-alice-f-image.mjs",
+    "assets/editor-alice-f-loader-profile.mjs",
+    "assets/editor-alice-f-profile.mjs",
+    "assets/editor-alice-f-scenario-profile.mjs",
+    "assets/editor-alice-f-scenario.mjs",
+    "assets/editor-alice-f-storage.mjs",
+    "assets/editor-alice-f-v2-code.mjs",
+    "assets/editor-alice-f-v2-image.mjs",
     "assets/editor-alice-face-copies.mjs",
     "assets/editor-alice-multi-code.mjs",
     "assets/editor-alice-targets.mjs",
@@ -124,6 +140,7 @@
     "assets/editor-rewards.mjs",
     "assets/editor-runtime.css",
     "assets/editor-save-name-defaults.mjs",
+    "assets/editor-save-pilot-init.mjs",
     "assets/editor-scenario-appearance.mjs",
     "assets/editor-scenario-archive.mjs",
     "assets/editor-scenario-chapter-data.mjs",
@@ -286,6 +303,7 @@
     "assets/save-name-support.mjs",
     "assets/save-names.mjs",
     "assets/save-pages.mjs",
+    "assets/save-pilot-support.mjs",
     "assets/save-ui.mjs",
     "assets/save-unit-groups.mjs",
     "assets/save-upgrade-bar.mjs",
@@ -559,12 +577,12 @@
       "sha256": "2d188b5d99f68053d1dde93fb9a495070f4b20fc382c54eca08b7f4260ce402d"
     },
     "assets/editor-animation.mjs": {
-      "bytes": 14016,
-      "sha256": "a1a6d0017fae84256c7a4425aad1645bf07fc05e238ecfe0385276b0349e7ad0"
+      "bytes": 14019,
+      "sha256": "863b12b3a730e43a00b90bfe354daeec8642726d5611c0aa0d25cad2f2918391"
     },
     "assets/editor-preview-resources.mjs": {
-      "bytes": 6306,
-      "sha256": "ac72dd421af887298bf0dc22f033c51980917ccc23958ff63f56fc01a74fd0a6"
+      "bytes": 6315,
+      "sha256": "85218c445c666a44dd84ded94adc87e1897f09086c2684668bb15771b06248f5"
     }
   },
   "runtimeSets": [],
@@ -591,7 +609,7 @@
       "../weapon-preview/"
     ],
     "assets/editor-preview-resources.mjs": [
-      "../weapon-preview/runtime-worker-loader.mjs?v=20261110-part2"
+      "../weapon-preview/runtime-worker-loader.mjs?v=20261113-froster1"
     ]
   }
 }

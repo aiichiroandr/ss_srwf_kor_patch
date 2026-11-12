@@ -14,11 +14,20 @@ def unit_id(value):
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--out',type=Path,required=True,help='Output directory for the authored code and labels')
 parser.add_argument('--unit-ids',default='430,431,432,433')
+parser.add_argument('--game-profile',choices=('final','f-v05-a-research'),default='final',
+  help='Authored target constants: final (default) or f-v05-a-research (development research only; IP lifetime/face/hook/first-clear/runtime remain unverified and this does not establish F support)')
 parser.add_argument('--runtime-prefix-bytes',type=int,choices=(0,32),default=32,
  help='32 avoids the Saturn initialization scratch bytes; 0 reproduces legacy ALCCREW3')
-parser.add_argument('--base',type=lambda s:int(s,0),default=0x06003300,
+parser.add_argument('--base',type=lambda s:int(s,0),
  help='Explicit, caller-owned HWRAM placement for development linking; does not allocate RAM')
+parser.add_argument('--development-only',action='store_true',
+  help='Acknowledge that f-v05-a-research only emits uninstalled authored research code, not F runtime support')
 args=parser.parse_args();ids=[unit_id(x)for x in args.unit_ids.split(',')]
+if args.game_profile=='f-v05-a-research':
+ if args.base is None:parser.error('f-v05-a-research requires explicit --base')
+ if not args.development_only:parser.error('f-v05-a-research requires --development-only acknowledgment')
+ if args.runtime_prefix_bytes!=32:parser.error('f-v05-a-research requires --runtime-prefix-bytes 32')
+elif args.base is None:args.base=0x06003300
 if not 1<=len(ids)<=4 or len(set(ids))!=len(ids):parser.error('one to four distinct unit IDs required')
 if args.base%4 or not 0x06000000<=args.base<=0x060ffc00:parser.error('base must be word-aligned inside HWRAM with a full 1 KiB slot')
 ids+= [0]*(4-len(ids))
@@ -105,7 +114,16 @@ a.e(0x402b);a.e(9)
 a.mark('stubActor');a.lit(0,'continueActor');a.e(0x402b);a.e(9)
 a.mark('stubPilot');a.lit(0,'continuePilot');a.e(0x402b);a.e(9)
 while len(a.w)%2:a.e(9)
-constants={'units':0x060b8568,'pilots':0x060b856c,**{'unit'+str(i):v for i,v in enumerate(ids)},'alice':399,'create':0x0602d7b4,'fillSP':0x0602c840,'replayPilot':BASE+a.labels['stubPilot'],'replayActor':BASE+a.labels['stubActor'],'continueActor':0x06053560,'continuePilot':0x0602cbd0}
+if args.game_profile=='final':
+ constants={'units':0x060b8568,'pilots':0x060b856c,**{'unit'+str(i):v for i,v in enumerate(ids)},'alice':399,'create':0x0602d7b4,'fillSP':0x0602c840,'replayPilot':BASE+a.labels['stubPilot'],'replayActor':BASE+a.labels['stubActor'],'continueActor':0x06053560,'continuePilot':0x0602cbd0}
+else:
+ # Verified F globals and call targets only; these are not extracted instructions.
+ constants={'units':0x060b2088,'pilots':0x060b208c,**{'unit'+str(i):v for i,v in enumerate(ids)},'alice':399,'create':0x0602a208,'fillSP':0x06029370,'replayPilot':BASE+a.labels['stubPilot'],'replayActor':BASE+a.labels['stubActor'],'continueActor':0x0604db50,'continuePilot':0x06029700}
 for k,v in constants.items():a.mark(k);a.e(v>>16);a.e(v&65535)
 code=a.finish();assert len(code)<=1016,len(code)
-out=args.out;out.mkdir(parents=True,exist_ok=True);(out/'crew-code.bin').write_bytes(code);(out/'crew-labels.json').write_text(json.dumps({'base':BASE,'bytes':len(code),'labels':{k:BASE+v for k,v in a.labels.items()}},indent=2));print('MULTI_CREW_CODE',len(code))
+out=args.out;out.mkdir(parents=True,exist_ok=True);(out/'crew-code.bin').write_bytes(code)
+metadata={'base':BASE,'bytes':len(code),'labels':{k:BASE+v for k,v in a.labels.items()}}
+if args.game_profile=='f-v05-a-research':
+ metadata['gameProfile']='f-v05-a-research'
+ metadata['researchLimitations']='IP lifetime, face, hook, first-clear, and runtime behavior remain unverified; generated code does not establish F support.'
+(out/'crew-labels.json').write_text(json.dumps(metadata,indent=2));print('MULTI_CREW_CODE',len(code))

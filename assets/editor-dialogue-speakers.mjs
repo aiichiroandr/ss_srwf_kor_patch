@@ -1,8 +1,8 @@
 // A dialogue descriptor selects a pilot, not a FACE cell. Derive the choice
 // from the authenticated pilot head and the actual image blocks of that disc.
 // No name-based, reference-portrait or hero-placeholder fallback is allowed.
-import {dataRecordOffsets,decodeFramedLz,isTailOnlyBlock,MAX_PILOT_RECORD_BYTES,readCdUserExtent} from './editor-core.mjs?v=20261110-part2';
-import {Sha256} from './sha256.mjs?v=20261110-part2';
+import {dataRecordOffsets,decodeFramedLz,isTailOnlyBlock,MAX_PILOT_RECORD_BYTES,readCdUserExtent} from './editor-core.mjs?v=20261113-froster1';
+import {Sha256} from './sha256.mjs?v=20261113-froster1';
 
 const encoder=new TextEncoder(),MAX_FACE_BYTES=16*1024*1024,MAX_FACE_BLOCK_BYTES=256*1024;
 function fail(message){const error=new Error(message);error.code='EDITOR_DIALOGUE_SPEAKERS_INVALID';throw error;}

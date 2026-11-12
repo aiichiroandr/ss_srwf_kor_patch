@@ -1,4 +1,4 @@
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261110-part2';
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261113-froster1';
 
 const TILE_COUNT = 1024;
 const option = (document, value, text) => {

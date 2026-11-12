@@ -1,8 +1,10 @@
-import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261110-part2';
-import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261110-part2';
-import { requireSaveScalar } from './save-field-rules.mjs?v=20261110-part2';
-import { saveUnitGroup } from './save-unit-groups.mjs?v=20261110-part2';
-import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261110-part2';
+import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261113-froster1';
+import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261113-froster1';
+import { requireSaveScalar } from './save-field-rules.mjs?v=20261113-froster1';
+import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-froster1';
+import {initializeSavePilotRow} from './editor-save-pilot-init.mjs?v=20261113-froster1';
+import {getSavePilotDefinitions} from './save-pilot-support.mjs?v=20261113-froster1';
+import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261113-froster1';
 // Saturn backup RAM containers; original bytes and unrelated saves stay private.
 // Contracts and source references: docs/SAVE_EDITOR.md.
 const MAGIC = new TextEncoder().encode('BackUpRam Format');
@@ -101,9 +103,16 @@ export async function openSave(input, catalog={}) {
     for(let i=0;i<raw.length;i+=2)need(raw[i]===255,'인터리브의 빈 바이트가 예상과 다릅니다.');
     interleaved=true;raw=Uint8Array.from({length:raw.length/2},(_,i)=>raw[2*i+1]);
   }
-  const records=parse(raw),changes=new Map(),models=new WeakMap(),addedBindings=new Map();
+  const records=parse(raw),changes=new Map(),models=new WeakMap(),addedBindings=new Map(),addedPilotBindings=new Map();
   const unitBinding=unit=>JSON.stringify([unit.recordIndex,unit.identity??null,unit.construction?.preset??null,
     unit.saveUnitKind??null,unit.saveUnitForm??null,unit.constructionGroupRoot??null]);
+  function validateAddedPilots(){
+    for(const [key,bindings]of addedPilotBindings){
+      const defs=getSavePilotDefinitions(catalog.savePilotSupport,{gameId:catalog.gameId,sessionToken:catalog.sessionToken,catalog:catalog.savePilotCatalog});
+      need(defs&&catalog.gameId===get(key).gameId,'추가 파일럿의 검증된 ROM 정보가 바뀌었습니다.');
+      for(const [id,binding]of bindings){const row=defs.pilots.find(p=>p.id===id);need(row&&JSON.stringify([row.id,row.identity,row.subpilot])===binding,'추가한 파일럿의 ROM 구성 또는 ALICE 동승 상태가 바뀌었습니다.');}
+    }
+  }
   function validateAddedUnits(){
     for(const [key,bindings]of addedBindings){
       need(catalog.gameId===get(key).gameId,'추가 기체와 현재 ROM의 게임이 다릅니다.');
@@ -187,6 +196,10 @@ export async function openSave(input, catalog={}) {
     const b=current(r).slice(),before=model(r,b);
     need(!before.units.some(u=>u.id===id),'이미 보유한 기체입니다.');
     const group=saveUnitGroup(id,[...unitCatalog.values()],before.units.map(u=>u.id));
+    // A verified SRW4 cruiser pair has one save identity. Refuse a base grant
+    // when either ROM form is already present, including saves made before
+    // this guard existed.
+    if(group.familyMembers)need(!before.units.some(u=>group.familyMembers.includes(u.id)),'이미 보유한 제4차 S/Ex-S 변형 기체입니다.');
     const slots=new Map(before.units.map(u=>[u.id,u.slot])),added=[];
     const empty=Array.from({length:128},(_,i)=>i).filter(i=>u16(b,0x100+i*30)===0);
     const missing=group.members.filter(member=>!slots.has(member));need(empty.length>=missing.length,`연결 기체를 포함해 빈 칸 ${missing.length}개가 필요합니다.`);
@@ -204,6 +217,18 @@ export async function openSave(input, catalog={}) {
     for(const member of missing)bindings.set(member,unitBinding(unitCatalog.get(member)));
     addedBindings.set(key,bindings);
     return {record:model(r,b),slot:slots.get(id),added:added.length};
+  }
+  function addPilot(key,id,level=31){
+    const r=get(key);need(r.editable,r.reason);integer(id,1,511);integer(level,1,99);
+    const defs=getSavePilotDefinitions(catalog.savePilotSupport,{gameId:catalog.gameId,sessionToken:catalog.sessionToken,catalog:catalog.savePilotCatalog});
+    need(defs&&catalog.gameId===r.gameId,'검증된 게임 파일럿 정보가 필요합니다.');
+    const pilot=defs.pilots.find(p=>p.id===id);need(pilot,'추가할 수 없는 파일럿입니다.');
+    const b=current(r).slice(),before=model(r,b);need(!before.pilots.some(p=>p.id===id),'이미 보유한 파일럿입니다.');
+    const slot=Array.from({length:128},(_,i)=>i).find(i=>u16(b,0x1000+i*12)===0);need(slot!==undefined,'빈 파일럿 칸이 없습니다.');
+    const row=initializeSavePilotRow({id,level,mp:pilot.mp,mindGrowth:pilot.mindGrowth,subpilot:pilot.subpilot},defs.growth,defs.gameId);
+    b.set(row,0x1000+slot*12);put(b,0,saveChecksum(b),4);changes.set(key,b);
+    const bindings=new Map(addedPilotBindings.get(key));bindings.set(id,JSON.stringify([pilot.id,pilot.identity,pilot.subpilot]));addedPilotBindings.set(key,bindings);
+    return {record:model(r,b),slot};
   }
   function setUpgradeMode(key,mode){
     const r=get(key);need(r.editable,r.reason);need(r.gameId==='srwf-final','10단 조기 해금은 완결편에서만 지원합니다.');
@@ -242,6 +267,7 @@ export async function openSave(input, catalog={}) {
       out.push({key:r.key,name:r.name,field,before:decodeSaveName(a,field,{glyphMap:catalog.glyphMap})??'해독 불가',after:decodeSaveName(z,field,{glyphMap:catalog.glyphMap})??'해독 불가'});
     }
     if(a.money!==z.money)out.push({key:r.key,name:r.name,field:'money',before:a.money,after:z.money});
+    for(const next of z.pilots)if(!a.pilots.some(p=>p.slot===next.slot))out.push({key:r.key,name:r.name,slot:next.slot,id:next.id,field:'pilotAdded',before:0,after:next.id});
     for(const before of a.pilots){const after=z.pilots.find(p=>p.slot===before.slot);
       if(!after){out.push({key:r.key,name:r.name,slot:before.slot,id:before.id,field:'pilotRemoved',before:before.id,after:0});continue;}
       for(const field of ['level','experience'])if(before[field]!==after[field])out.push({key:r.key,name:r.name,slot:before.slot,id:before.id,field,before:before[field],after:after[field]});}
@@ -259,11 +285,14 @@ export async function openSave(input, catalog={}) {
     const r=get(key);need(r.editable,r.reason);
     const b=current(r).slice(),fixed=repairSaveBytes(b,{gameId:r.gameId,upgradeLimit:model(r,b).upgradeLimit},catalog);
     if(!fixed)return 0;
+    // A repair may remove an added row; its proof must not survive that removal.
+    const bindings=addedPilotBindings.get(key);if(bindings)for(const id of [...bindings.keys()])if(!model(r,b).pilots.some(p=>p.id===id))bindings.delete(id);if(bindings?.size===0)addedPilotBindings.delete(key);
     put(b,0,saveChecksum(b),4);
     if(b.every((v,i)=>v===r.payload[i]))changes.delete(key);else changes.set(key,b);
     return fixed;
   }
   async function exportFile(){
+    validateAddedPilots();
     validateAddedUnits();
     if(!changes.size)return original.slice();
     for(const r of records)if(!canEditSaveNames(catalog,r.gameId)){
@@ -283,8 +312,8 @@ export async function openSave(input, catalog={}) {
     need(delivered.length===wrapped.length&&delivered.every((v,i)=>v===wrapped[i]),'출력 파일의 압축·배치 재검사에 실패했습니다.');
     return result;
   }
-  return Object.freeze({format:Object.freeze({bytes:raw.length,blockSize:SIZES.get(raw.length),gzipLayers:layers,interleaved}),list,edit,editName,editNames,editUnit,addUnit,setUpgradeMode,diff,check,repair,
+  return Object.freeze({format:Object.freeze({bytes:raw.length,blockSize:SIZES.get(raw.length),gzipLayers:layers,interleaved}),list,edit,editName,editNames,editUnit,addUnit,addPilot,setUpgradeMode,diff,check,repair,
     canEditNames:key=>{const r=records.find(r=>r.key===key);return !!r&&r.editable&&canEditSaveNames(catalog,r.gameId);},
     updateCatalog:next=>{const units=new Map((next.units??[]).map(u=>[u.recordIndex,structuredClone(u)]));catalog={...next};unitCatalog=units;},
-    reset:key=>{if(key===undefined){changes.clear();addedBindings.clear();}else{get(key);changes.delete(key);addedBindings.delete(key);}},exportFile});
+    reset:key=>{if(key===undefined){changes.clear();addedBindings.clear();addedPilotBindings.clear();}else{get(key);changes.delete(key);addedBindings.delete(key);addedPilotBindings.delete(key);}},exportFile});
 }

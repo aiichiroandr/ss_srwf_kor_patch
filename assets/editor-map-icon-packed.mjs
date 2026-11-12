@@ -2,10 +2,10 @@
 // retained through a token boundary where the next token reads a fresh flag.
 // This low-level codec does NOT authorize the decoded icon edits; callers must
 // also validate them with editor-map-icon-patch and the verified source pack.
-import {sha256Hex} from './sha256.mjs?v=20261110-part2';
-import {bytesEqual as equal,dataView as dv} from './editor-bytes.mjs?v=20261110-part2';
-import {ownData,ownEntry} from './editor-own.mjs?v=20261110-part2';
-import {MAP_ICON_PATCH_BYTES,MAP_ICON_PATCH_MAX_RECOVERY_BYTES} from './editor-map-icon-patch.mjs?v=20261110-part2';
+import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
+import {bytesEqual as equal,dataView as dv} from './editor-bytes.mjs?v=20261113-froster1';
+import {ownData,ownEntry} from './editor-own.mjs?v=20261113-froster1';
+import {MAP_ICON_PATCH_BYTES,MAP_ICON_PATCH_MAX_RECOVERY_BYTES} from './editor-map-icon-patch.mjs?v=20261113-froster1';
 
 export const MAP_ICON_PACKED_PROFILES=Object.freeze({
  'srwf-f':Object.freeze({bytes:27001,sha256:'1c344d294b0647ef24ddeba2db5a059bde83a0ec17433027e014e95b68947228',decodedSha256:'1742d0d093c787b8a58cff6b97a6caa4aff9a2b61b45ca5b99b62df62aa23aad'}),

@@ -4,10 +4,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 const args = Object.fromEntries(process.argv.slice(2).map(arg => { const i=arg.indexOf('='); return [arg.slice(0,i),arg.slice(i+1)]; }));
 if (!args['--bin'] || !args['--out']) throw Error('Usage: node scripts/editor-probe.cjs --bin=/absolute/file.bin --out=/tmp/captures [--game=srwf-f] [--playwright=/path/to/playwright] [--browser=/path/to/browser] [--url=http://127.0.0.1:8000/]');
+const game=args['--game']||'srwf-f';
+if(!['srwf-f','srwf-final'].includes(game))throw Error(`지원하지 않는 게임입니다: ${game}`);
+const bin=path.resolve(args['--bin']);
+let binStat;try{binStat=fs.statSync(bin);}catch{throw Error(`BIN을 찾을 수 없습니다: ${bin}`);}
+if(!binStat.isFile()||binStat.size<=0)throw Error(`비어 있거나 일반 파일이 아닌 BIN입니다: ${bin}`);
 const {chromium} = require(args['--playwright'] || 'playwright');
 const out=path.resolve(args['--out']); fs.mkdirSync(out,{recursive:true});
-const report={game:args['--game']||'srwf-f', errors:[], screens:[]};
+const report={game, errors:[], screens:[]};
 const stage=s=>console.log(new Date().toISOString(),s);
+async function waitForPagePredicate(page,predicate,{timeout=30000,interval=100,argument}={}){
+ const deadline=Date.now()+timeout;
+ while(Date.now()<deadline){if(await page.evaluate(predicate,argument))return;await new Promise(resolve=>setTimeout(resolve,interval));}
+ throw Error(`페이지 조건을 ${timeout}ms 안에 확인하지 못했습니다.`);
+}
 (async()=>{
  stage('launch');
  const browser=await chromium.launch({headless:true,...(args['--browser']?{executablePath:args['--browser']}:{})});
@@ -15,16 +25,23 @@ const stage=s=>console.log(new Date().toISOString(),s);
  page.on('pageerror',e=>report.errors.push(e.message));
  try {
   stage('open'); await page.goto(args['--url']||'http://127.0.0.1:8000/',{waitUntil:'domcontentloaded'});
-  await page.waitForFunction(()=>!document.querySelector('#gameSelect')?.disabled,null,{timeout:60000});
-  await page.waitForFunction(()=>document.querySelector('#releaseState')?.textContent==='ACCEPTED');
+  await waitForPagePredicate(page,game=>{const select=document.querySelector('#gameSelect');return !select?.disabled&&[...select.options].some(option=>option.value===game);},{timeout:60000,argument:game});
+  await page.evaluate(game=>{const select=document.querySelector('#gameSelect');select.value=game;select.dispatchEvent(new Event('change',{bubbles:true}));},game);
+  await waitForPagePredicate(page,game=>document.querySelector('#gameSelect')?.value===game,{argument:game});
+  await waitForPagePredicate(page,()=>document.querySelector('#releaseState')?.textContent==='ACCEPTED');
+  await waitForPagePredicate(page,game=>document.querySelector('#gameSelect')?.value===game,{argument:game});
   // The page opens folders, not files. Hand it a one-file folder built from the BIN supplied on the command line.
   await page.evaluate(()=>{const input=document.createElement('input');input.type='file';input.hidden=true;input.id='probeBinInput';document.body.append(input);});
-  await page.locator('#probeBinInput').setInputFiles(args['--bin']);
-  await page.evaluate(()=>{const input=document.getElementById('probeBinInput');window.showDirectoryPicker=async()=>({kind:'directory',name:'probe',async*values(){const file=input.files[0];yield {kind:'file',name:file.name,async getFile(){return file;}};}});});
+  await page.locator('#probeBinInput').setInputFiles(bin);
+  await page.evaluate(()=>{const input=document.getElementById('probeBinInput');window.showDirectoryPicker=async()=>{const file=input.files[0],entry={kind:'file',name:file.name,async getFile(){return file;}};return {kind:'directory',name:'probe',async*entries(){yield [entry.name,entry];},async*values(){yield entry;}};};});
 
   stage('load and verify real BIN'); await page.locator('#editorSourceButton').click();
-  await page.waitForFunction(()=>!document.getElementById('workflowOpenEditor').disabled,null,{timeout:120000});
+  await waitForPagePredicate(page,()=>!document.getElementById('workflowOpenEditor').disabled,{timeout:120000});
   await page.locator('#workflowOpenEditor').click();
+   const editorNotice=page.locator('dialog.editor-notice[open]');
+   await editorNotice.waitFor({state:'visible',timeout:30000});
+   report.editorNotice=await editorNotice.locator('#editorNoticeText').innerText();
+   await editorNotice.locator('button.is-primary').click();
   await page.locator('#editorWorkspace').waitFor({state:'visible',timeout:120000});
   report.loadedStatus=await page.locator('#editorState').innerText();
   await page.evaluate(()=>document.fonts.ready);
@@ -39,7 +56,7 @@ const stage=s=>console.log(new Date().toISOString(),s);
      if(await option.count()) await option.click();
     }
     if(type !== 'weapon') {
-     await page.waitForFunction(type => !document.getElementById(`${type}PreviewCaption`)?.textContent.includes('이미지 불러오는 중'), type, {timeout:30000});
+     await waitForPagePredicate(page,type=>!document.getElementById(`${type}PreviewCaption`)?.textContent.includes('이미지 불러오는 중'),{timeout:30000,interval:100,argument:type});
     }
     const root=page.locator('.editor-data-panel:not([hidden]) .editor-game-screen');
     await root.screenshot({path:path.join(out,`${report.game}-${width}-${type}.png`)});
@@ -49,7 +66,7 @@ const stage=s=>console.log(new Date().toISOString(),s);
   report.previewReturn=[];
   for(const type of ['unit','pilot']) {
    await page.locator(`#${type}TabButton`).click();
-   await page.waitForFunction(type => !document.getElementById(`${type}PreviewCaption`)?.textContent.includes('이미지 불러오는 중'), type);
+   await waitForPagePredicate(page,type=>!document.getElementById(`${type}PreviewCaption`)?.textContent.includes('이미지 불러오는 중'),{argument:type});
    for(let pass=0;pass<3;pass++) {
     await page.locator(`#${type}EditorPanel [data-editor-page="list"]`).click();
     await page.locator(`#${type}EditorPanel [data-editor-page="main"]`).click();

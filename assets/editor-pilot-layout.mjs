@@ -1,6 +1,6 @@
-import { PILOT_LAYOUT_PROFILES } from './editor-pilot-layout-profiles.mjs?v=20261110-part2';
-import { ownEntry } from './editor-own.mjs?v=20261110-part2';
-import {writeRelative32} from './editor-storage-safety.mjs?v=20261110-part2';
+import { PILOT_LAYOUT_PROFILES } from './editor-pilot-layout-profiles.mjs?v=20261113-froster1';
+import { ownEntry } from './editor-own.mjs?v=20261113-froster1';
+import {writeRelative32} from './editor-storage-safety.mjs?v=20261113-froster1';
 
 const HEAD = 23;
 const MAX_RECORD = 256;

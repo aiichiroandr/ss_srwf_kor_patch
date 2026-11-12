@@ -4,12 +4,12 @@
 // control tokens, ambiguous glyphs and every detected interior entry stay
 // fixed. A reversible trailer restores the body before existing provenance
 // validation. This module does not grant scenario/archive write authority.
-import {readScenarioDialogueOwners} from '../../assets/editor-scenario-display.mjs?v=20261110-part2';
-import {nameMap} from '../../assets/editor-text-codec.mjs?v=20261110-part2';
+import {readScenarioDialogueOwners} from '../../assets/editor-scenario-display.mjs?v=20261113-froster1';
+import {nameMap} from '../../assets/editor-text-codec.mjs?v=20261113-froster1';
 import {Sha256} from '../../assets/sha256.mjs';
-import {ownData,readDenseList} from '../../assets/editor-own.mjs?v=20261110-part2';
-import {readAfterDialogueJson} from '../../assets/editor-dialogue-sequence.mjs?v=20261110-part2';
-import {normalizeScenarioDeadlineBody} from '../../assets/editor-scenario-deadlines.mjs?v=20261110-part2';
+import {ownData,readDenseList} from '../../assets/editor-own.mjs?v=20261113-froster1';
+import {readAfterDialogueJson} from '../../assets/editor-dialogue-sequence.mjs?v=20261113-froster1';
+import {normalizeScenarioDeadlineBody} from '../../assets/editor-scenario-deadlines.mjs?v=20261113-froster1';
 
 const MAGIC=Uint8Array.of(83,82,87,68,73,65,48,49),MAGIC2=Uint8Array.of(83,82,87,68,73,65,48,50),MAGIC3=Uint8Array.of(83,82,87,68,73,65,48,51),MAGIC4=Uint8Array.of(83,82,87,68,73,65,48,52),MAGIC5=Uint8Array.of(83,82,87,68,73,65,48,53),FOOTER=32;
 const PAGE_BUDGET=108,MAX_PAGES=4;

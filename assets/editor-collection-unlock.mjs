@@ -1,6 +1,6 @@
 // FIN native collection getter (character / robot / demo registration).
 // The overlay writes no save file. Native alias registration may persist on a later game save.
-import {matchesByteWindow} from './editor-byte-window.mjs?v=20261110-part2';
+import {matchesByteWindow} from './editor-byte-window.mjs?v=20261113-froster1';
 
 // The two MOV opcodes are the reversible edit itself. All surrounding code
 // comes only from the user's file and is verified by its masked digest.
@@ -37,7 +37,7 @@ export function setCollectionCode(bytes,enabled){
 }
 export async function collectionImage(blob,gameId,{enabled,signal}={}){
  if(gameId!==COLLECTION_UNLOCK.gameId){if(enabled===true)fail();return {outputBlob:blob,enabled:false,supported:false,changedSectors:[]};}
- const {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent}=await import('./editor-core.mjs?v=20261110-part2');
+ const {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent}=await import('./editor-core.mjs?v=20261113-froster1');
  const file=(await locateIsoFiles(blob,signal,['0']))['0'];
  if(file.extentLba!==24||file.byteLength!==COLLECTION_UNLOCK.execBytes)fail();
  const bytes=await readCdUserExtent(blob,file.extentLba,file.byteLength,{signal}),before=inspectCollectionCode(bytes);

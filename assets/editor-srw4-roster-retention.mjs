@@ -1,13 +1,13 @@
 // Final's original slot185 cleanup discards unassigned player units unless
 // C2.13 lists their current form. Extend that one authenticated list; preserve
 // its original entries, the following pilot cleanup and every other scenario.
-import {Sha256} from './sha256.mjs?v=20261110-part2';
+import {Sha256} from './sha256.mjs?v=20261113-froster1';
 
 const AT=2477,END=2507,MIN_BYTES=19498,LIMIT=0x9000;
 const PREFIX=Uint8Array.of(0xc2,0x13,0);
 const COMMAND_HASH='c614c6b257f73dca24ce984acbdaec359771b87be464d3e7d9e859ee238c1570';
 const MAGIC=new TextEncoder().encode('SRW4RET1'),FOOTER_BYTES=26,PROGRAM_BYTES=47;
-import {bytesEqual as same} from './editor-bytes.mjs?v=20261110-part2';
+import {bytesEqual as same} from './editor-bytes.mjs?v=20261113-froster1';
 function fail(){const e=new Error('제4차 기체의 완결편 보유 목록 보존 구성을 확인하지 못했습니다.');e.code='EDITOR_SRW4_RETENTION_INVALID';throw e;}
 function eligible(body,gameId){return gameId==='srwf-final'&&body?.physicalIndex===88&&body.slots?.length===1&&body.slots[0]===185;}
 function idsOf(config){

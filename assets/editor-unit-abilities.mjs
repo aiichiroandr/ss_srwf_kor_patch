@@ -1,4 +1,4 @@
-import { findUnitAbilityLockViolation, reachedUnitAbilitySlots } from "./editor-locks.mjs?v=20261110-part2";
+import { findUnitAbilityLockViolation, reachedUnitAbilitySlots } from "./editor-locks.mjs?v=20261113-froster1";
 
 export function unitAbilityPairs(row) {
   return Array.from({ length: 4 }, (_, slot) => ({ id: row[`ability${slot + 1}`], aux: row[`abilityValue${slot + 1}`] }));

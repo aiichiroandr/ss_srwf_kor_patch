@@ -1,9 +1,9 @@
 // Original F palettes stay byte-identical. These fixed blank KOM slots carry
 // the Rev 1 native index roles, with F's own faction colors at runtime.
-import {sha256Hex} from './sha256.mjs?v=20261110-part2';
-import {MAP_ICON_PACKED_PROFILES} from './editor-map-icon-packed.mjs?v=20261110-part2';
-import {makeKomRecovery,restoreKomRecovery} from './editor-kom-recovery.mjs?v=20261110-part2';
-import {bytesEqual as equal} from './editor-bytes.mjs?v=20261110-part2';
+import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
+import {MAP_ICON_PACKED_PROFILES} from './editor-map-icon-packed.mjs?v=20261113-froster1';
+import {makeKomRecovery,restoreKomRecovery} from './editor-kom-recovery.mjs?v=20261113-froster1';
+import {bytesEqual as equal} from './editor-bytes.mjs?v=20261113-froster1';
 export const SRW4_NATIVE_ICON_HASHES=Object.freeze({"s-gundam": "87aaacb2d08638ad639e295d164439278170641d46ed961b010392c8ad76a711", "exs-gundam": "e615eef79853af8d659f9a633993c67378d924ec58887e1c4f3dc6da9c600fdd", "sirbine": "15811fad3641d7d8dfba784628b6e7b9594108ed658a8ddc07ed16bfbd4169d4", "zwauss": "5398b4895fd98eec12db61f3840396e6937021b444bdc342befd98b630ee7437", "s-gcruiser": "2d9cfad1eff49fd4a28c0f3f6ff891284419808b0108b72e49dc3816c48362b3", "exs-gcruiser": "579541d5d4e72fd6b0218e4821684e228e915022741583a6d71e45b77054396e"});
 const KEYS=Object.keys(SRW4_NATIVE_ICON_HASHES),PRESETS={'s-gundam':'s-gundam','ex-s-gundam':'exs-gundam',sirbine:'sirbine',zwauss:'zwauss','s-g-cruiser':'s-gcruiser','g-cruiser':'exs-gcruiser'};
 function fail(){const e=Error('제4차 맵 아이콘의 원본·빈 슬롯·압축 복원을 확인하지 못했습니다.');e.code='EDITOR_SRW4_MAP_INVALID';throw e;}

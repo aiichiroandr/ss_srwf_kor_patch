@@ -1,7 +1,7 @@
 // One packed 0x70 portrait/battle-graphic record (FACE.BIN and battle archives
 // share this layout). Kept separate so ALICE registration does not load the
 // battle-component, SRW4 or unused-art modules just to read a FACE record.
-import {dataView as v} from './editor-bytes.mjs?v=20261110-part2';
+import {dataView as v} from './editor-bytes.mjs?v=20261113-froster1';
 function invalid(message){const e=new Error(message);e.code='EDITOR_BATTLE_COMPONENT_INVALID';throw e;}
 function need(b,at,n){if(!Number.isSafeInteger(at)||!Number.isSafeInteger(n)||at<0||n<0||at+n>b.length)invalid('전투 그림 범위를 확인하지 못했습니다.');}
 export function readPackedGraphicRecord(archive,id,decode){

@@ -1,0 +1,3 @@
+// Deterministic canonical compression of authenticated F v0.5 scenario bodies.
+export const ALICE_F_SCENARIO_PROFILE=Object.freeze({"sourceSha256":"26a3c66a55987323b2c47dd5214f9a2267c724d53f48ca79b16ebc538b091671","canonicalSha256":"b369133dc456b305c5f96450ac1952728b7da0197fa8476451e72ab10a56b194","byteLength":409628,"extentLba":244748,"physicalBodies":[1,2,3,4,5,6,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51]});
+export const ALICE_F_SCENARIO_REBASE_PROFILE=Object.freeze({"left":{"physical":17,"start":139764,"end":144673,"slots":[17]},"right":{"physical":18,"start":144676,"end":149684,"slots":[18]},"endCellBias":4,"alignment":4});
