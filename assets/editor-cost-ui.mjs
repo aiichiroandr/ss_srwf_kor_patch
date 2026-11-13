@@ -1,4 +1,4 @@
-import { costValueAllowed } from './editor-costs.mjs?v=20261113-froster1';
+import { costValueAllowed } from './editor-costs.mjs?v=20261113-alicecopies1';
 export function createCostEditor(host) {
   const buttons = [...document.querySelectorAll('[data-upgrade-cost-open]')];
   let dialog, select, scope, fields, status, pageLabel, prev, next, group = 'unit:0', page = 0;

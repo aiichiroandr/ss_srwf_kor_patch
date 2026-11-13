@@ -45,8 +45,8 @@ export const ALICE_F_TEMPLATE_SHA256="4db266bc8bb6fcbb9038c9f24d33433a1b814b73ac
 
 // Development-only F native overlay mechanics. This is authored glue around the
 // template above, not a claim about the IP scratch area's runtime lifetime.
-import {ALICE_F_PROFILE,isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-froster1';
-import {bytesEqual,dataView,sha256Digest,bytesToHex} from './editor-bytes.mjs?v=20261113-froster1';
+import {ALICE_F_PROFILE,isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
+import {bytesEqual,dataView,sha256Digest,bytesToHex} from './editor-bytes.mjs?v=20261113-alicecopies1';
 const F_IP_BYTES=0x1800,F_SLOT_AT=0x1300,F_SLOT_BYTES=1024,F_EXEC_BYTES=731504;
 const F_SIGNATURE=new TextEncoder().encode('ALICEF01');
 const F_PILOT_OFFSETS=Object.freeze([111028,135624,135944,146388,149168,149268,150576,150736,151688,162944,170092,170552,173316,295112,296112,303100,303268,304252,307368,307712,323880,324372,325672,327612,342548,342684,345816,346052,352988,361820,373056,373432,377892,381376,388164,389316,390492,391012,397964,406828,411516,412896,413364,414668,419152,420728,421584,422808,424020,424464,437280,439876,440184,440728,468684,479964,480768,485416]);

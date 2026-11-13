@@ -1,10 +1,10 @@
 // Development-only Fv2 CD-image carrier. It deliberately has no editor/UI path.
-import {compressTsr,decompressTsr,locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-froster1';
-import {bytesEqual} from './editor-bytes.mjs?v=20261113-froster1';
-import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-froster1';
-import {createAliceFV2FaceBuilder,readAliceFV2Storage,writeAliceFV2Storage} from './editor-alice-f-storage.mjs?v=20261113-froster1';
-import {aliceCrewConfig} from './editor-alice-crew-data.mjs?v=20261113-froster1';
-import {normalizeAliceFV2Native} from './editor-alice-f-v2-code.mjs?v=20261113-froster1';
+import {compressTsr,decompressTsr,locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1';
+import {bytesEqual} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
+import {createAliceFV2FaceBuilder,readAliceFV2Storage,writeAliceFV2Storage} from './editor-alice-f-storage.mjs?v=20261113-alicecopies1';
+import {aliceCrewConfig} from './editor-alice-crew-data.mjs?v=20261113-alicecopies1';
+import {normalizeAliceFV2Native} from './editor-alice-f-v2-code.mjs?v=20261113-alicecopies1';
 const IP_BYTES=6144,EXEC_LBA=24,EXEC_BYTES=731504,FACE_LBA=692,FACE_BYTES=343462,TSR_LBA=860,TSR_BYTES=202438,TSR_DECODED_BYTES=409836;
 const fail=(message='Fv2 CD 이미지는 지원되는 개발용 원본과 일치하지 않습니다.')=>{const error=Error(message);error.code='EDITOR_ALICE_F_INVALID';throw error;};
 const same=(a,b)=>a instanceof Uint8Array&&b instanceof Uint8Array&&bytesEqual(a,b),abort=signal=>signal?.throwIfAborted?.();

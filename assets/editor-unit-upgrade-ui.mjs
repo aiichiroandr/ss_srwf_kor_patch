@@ -1,6 +1,6 @@
-import {planUnitConceptUpgrade,applyUnitConceptUpgrade} from './editor-unit-upgrade.mjs?v=20261113-froster1';
-import {CONSTRUCTION_WEAPON_ROLES} from './editor-unit-construction.mjs?v=20261113-froster1';
-import {GRADE_CHOICES} from './editor-grades.mjs?v=20261113-froster1';
+import {planUnitConceptUpgrade,applyUnitConceptUpgrade} from './editor-unit-upgrade.mjs?v=20261113-alicecopies1';
+import {CONSTRUCTION_WEAPON_ROLES} from './editor-unit-construction.mjs?v=20261113-alicecopies1';
+import {GRADE_CHOICES} from './editor-grades.mjs?v=20261113-alicecopies1';
 
 export function createUnitUpgradeUI(host){
  const $=id=>document.getElementById(id),dialog=$('unitUpgradeDialog');let plan=null,selected=new Set(),checks=new Map();

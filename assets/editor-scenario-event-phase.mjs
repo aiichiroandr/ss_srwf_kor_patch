@@ -2,12 +2,12 @@
 // Metadata restores source bytes; it grants no profile or runtime authority.
 // PH01 is outside TE02: restore this wrapper before any existing normalizer.
 // Source/code hashes authenticate reversibility, never an accepted profile.
-import { ownData, ownDataCopy as ownCopy, readDenseList } from './editor-own.mjs?v=20261113-froster1';
-import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261113-froster1';
+import { ownData, ownDataCopy as ownCopy, readDenseList } from './editor-own.mjs?v=20261113-alicecopies1';
+import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261113-alicecopies1';
 import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria, inspectEventCriteriaHook,
-  normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261113-froster1';
+  normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261113-alicecopies1';
 import { snapshotFPhaseEvent, inspectFPhaseEventHook, normalizeScenarioFEventPhaseBody,
-  updateScenarioFEventPhaseBody } from './editor-scenario-f-event-phase.mjs?v=20261113-froster1';
+  updateScenarioFEventPhaseBody } from './editor-scenario-f-event-phase.mjs?v=20261113-alicecopies1';
 
 export const EVENT_PHASE_FIELDS=Object.freeze(['eventPhase',...EVENT_CRITERIA_FIELDS]);
 const MAGIC=Uint8Array.of(83,82,87,70,80,72,48,49),TRAILER=96,CODE_LENGTH=14;

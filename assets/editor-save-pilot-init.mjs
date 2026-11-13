@@ -6,10 +6,12 @@ const CATEGORY_COUNT = 8;
 const GROWTH_COUNT = 16;
 const CURVE_COUNT = 99;
 
-import { ALICE_EDITOR_IDENTITY } from './editor-alice-crew-data.mjs?v=20261113-froster1';
-import { ALICE_F_PROFILE } from './editor-alice-f-profile.mjs?v=20261113-froster1';
-import { getAliceFSavePilotState } from './editor-alice-f-data.mjs?v=20261113-froster1';
-import { getAliceFV2SavePilotState } from './editor-alice-f-storage.mjs?v=20261113-froster1';
+import { ALICE_EDITOR_IDENTITY } from './editor-alice-crew-data.mjs?v=20261113-alicecopies1';
+import { ALICE_F_PROFILE } from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
+import { getAliceFSavePilotState } from './editor-alice-f-data.mjs?v=20261113-alicecopies1';
+import { getAliceFV2SavePilotState } from './editor-alice-f-storage.mjs?v=20261113-alicecopies1';
+import { aliceUnitTargets } from './editor-alice-targets.mjs?v=20261113-alicecopies1';
+import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
 
 // This is deliberately distinct from Final's face-342 identity.  The F profile
 // pins face 338; a catalog cannot silently turn a Final ALICE into an F ALICE.
@@ -44,9 +46,30 @@ export function readSavePilotGrowth(segments, { gameId } = {}) {
 function requireInteger(name, value, minimum, maximum) { if (!Number.isInteger(value) || value < minimum || value > maximum) throw new RangeError(`${name} must be an integer from ${minimum} to ${maximum}.`); }
 function requireGrowth(growth) { if (!growth || !Array.isArray(growth.experience) || growth.experience.length !== EXP_COUNT || !Array.isArray(growth.spCurves) || growth.spCurves.length !== GROWTH_COUNT) throw new TypeError('A supported save-pilot growth model is required.'); for (const value of growth.experience) requireInteger('experience value', value, 0, 0xffff); for (const curve of growth.spCurves) { if (!Array.isArray(curve) || curve.length !== CURVE_COUNT) throw new TypeError('Invalid SP growth curve shape.'); for (const value of curve) requireInteger('SP growth value', value, 0, 0xff); } }
 function savePilot(row, { id = row?.recordIndex, name = row?.name, identity = row?.identity, mp = row?.mp, mindGrowth = row?.mindGrowth, subpilot = false } = {}) { if (!row || typeof row !== 'object' || typeof name !== 'string' || !name.length || name.length > 128 || typeof identity !== 'string' || !identity.length || identity.length > 256) return null; if (!Number.isInteger(id) || id < 1 || id > 511 || !Number.isInteger(mp) || mp < 0 || mp > 999 || !Number.isInteger(mindGrowth) || mindGrowth < 0 || mindGrowth > 15 || typeof subpilot !== 'boolean') return null; return Object.freeze({ id, name, identity, mp, mindGrowth, subpilot }); }
+const targetIdsValid=value=>Array.isArray(value)&&value.length>=2&&value.length<=4&&value.every(id=>Number.isInteger(id)&&id>=1&&id<=511)&&new Set(value).size===value.length;
+// A #399 catalog entry remains backwards compatible with prior authenticated
+// catalogs. Automatic S/Ex-S preparation, however, needs this narrower proof:
+// the installed crew IDs must exactly be the inspected base/cruiser family.
+function aliceDependentTargets(crew, units) {
+  if (crew?.enabled !== true || !targetIdsValid(crew.unitIds) || !Array.isArray(units)) return null;
+  let targetIds; try { targetIds=aliceUnitTargets(units); } catch { return null; }
+  if (JSON.stringify(targetIds)!==JSON.stringify(crew.unitIds)) return null;
+  const roots=[],families=[];
+  try {
+   const byId=new Map(units.map(unit=>[unit.recordIndex,unit]));
+   for (const id of targetIds) {
+    const root=byId.get(id)?.constructionGroupRoot,group=saveUnitGroup(root,units);
+    if (!group.familyMembers || !targetIds.includes(group.root) || !group.familyMembers.every(member=>targetIds.includes(member))) return null;
+    if (!roots.includes(group.root)) { roots.push(group.root);families.push(Object.freeze({root:group.root,members:Object.freeze([...group.familyMembers])})); }
+   }
+  } catch { return null; }
+  if (!roots.length || roots.length>2 || new Set(families.flatMap(family=>family.members)).size!==targetIds.length) return null;
+  roots.sort((a,b)=>a-b);families.sort((a,b)=>a.root-b.root);
+  return Object.freeze({pilotId:399,targetIds:Object.freeze([...targetIds]),roots:Object.freeze(roots),families:Object.freeze(families)});
+}
 
 /** Build optional definitions only from an inspected game root. F ALICE needs its separate authenticated data result. */
-export function createSavePilotCatalog(segments, pilots, { gameId, alice, authenticatedFdata, baseSha256 } = {}) {
+export function createSavePilotCatalog(segments, pilots, { gameId, alice, authenticatedFdata, baseSha256, units } = {}) {
   const growth = readSavePilotGrowth(segments, { gameId });
   if (!growth.supported || !Array.isArray(pilots)) return null;
   const entries = [];
@@ -60,13 +83,14 @@ export function createSavePilotCatalog(segments, pilots, { gameId, alice, authen
     ? (getAliceFV2SavePilotState(authenticatedFdata, { gameId, baseSha256 })
       ?? getAliceFSavePilotState(authenticatedFdata, { gameId, baseSha256 }))
     : alice;
+  const dependent=aliceData?.enabled === true && aliceData?.crew?.enabled === true ? aliceDependentTargets(aliceData.crew,units) : null;
   if (aliceData?.enabled === true && aliceData?.crew?.enabled === true) {
     const donor = pilots.find(row => row?.recordIndex === 246 && row?.recordKind === 'regular');
     const entry = savePilot(donor, { id: 399, name: 'ALICE', identity: gameId === 'srwf-f' ? ALICE_F_EDITOR_IDENTITY : ALICE_EDITOR_IDENTITY, mp: aliceData.crew.spBase, mindGrowth: donor?.mindGrowth, subpilot: true });
     if (entry) entries.push(entry);
   }
   if (new Set(entries.map(entry => entry.id)).size !== entries.length) return null;
-  return Object.freeze({ version: 1, gameId, growth: Object.freeze(growth), pilots: Object.freeze(entries) });
+  return Object.freeze({ version: 1, gameId, growth: Object.freeze(growth), pilots: Object.freeze(entries), ...(dependent?{aliceDependent:dependent}:{}) });
 }
 
 export function initializeSavePilotRow({ id, level, mp, mindGrowth, subpilot = false } = {}, growth, gameId = 'srwf-final') {

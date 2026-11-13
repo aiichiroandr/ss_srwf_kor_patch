@@ -1,8 +1,8 @@
-import {tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261113-froster1';
-import {unitStorageUsage,fUnitOffsetLedgerDiagnostics,finalInlineLedgerBytes,isFinalReferenceInlineUnitStorage,isFinalInlineUnitStorage} from './editor-unit-compact.mjs?v=20261113-froster1';
-import {fInlineAuxiliaryUsage} from './editor-f-inline.mjs?v=20261113-froster1';
-import {finalInlineAuxiliaryUsage} from './editor-final-inline-aux.mjs?v=20261113-froster1';
-import {pilotLayout,pilotPaddingPairs} from './editor-pilot-layout.mjs?v=20261113-froster1';
+import {tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261113-alicecopies1';
+import {unitStorageUsage,fUnitOffsetLedgerDiagnostics,finalInlineLedgerBytes,isFinalReferenceInlineUnitStorage,isFinalInlineUnitStorage} from './editor-unit-compact.mjs?v=20261113-alicecopies1';
+import {fInlineAuxiliaryUsage} from './editor-f-inline.mjs?v=20261113-alicecopies1';
+import {finalInlineAuxiliaryUsage} from './editor-final-inline-aux.mjs?v=20261113-alicecopies1';
+import {pilotLayout,pilotPaddingPairs} from './editor-pilot-layout.mjs?v=20261113-alicecopies1';
 
 const row=(id,label,usedBytes,limitBytes,fixed=false)=>Object.freeze({id,label,usedBytes,limitBytes,remainingBytes:limitBytes-usedBytes,fixed});
 function pilotPools(segment,rows,gameId){

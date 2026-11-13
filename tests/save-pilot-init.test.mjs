@@ -132,3 +132,16 @@ test('invalid initializer values and malformed supplied growth throw rather than
   ]) assert.throws(() => initializeSavePilotRow(pilot, parsed));
   assert.throws(() => initializeSavePilotRow({ id: 1, level: 1, mp: 0, mindGrowth: 0 }, { experience: [], spCurves: [] }));
 });
+
+test('dependent catalog binds both transform forms to each inspected family coordinate',()=>{
+ const source=fixture().segments,rows=[{recordIndex:246,recordKind:'regular',name:'donor',identity:'pilot:246',mp:25,mindGrowth:1}];
+ const units=[
+  {recordIndex:300,srw4Native:true,construction:{preset:'s-gundam'},constructionGroup:'s-cruiser',constructionGroupRoot:300,saveUnitKind:1,saveUnitForm:0},
+  {recordIndex:301,srw4Native:true,construction:{preset:'s-g-cruiser'},constructionGroup:'s-cruiser',constructionGroupRoot:300,saveUnitKind:1,saveUnitForm:1},
+  {recordIndex:310,srw4Native:true,construction:{preset:'ex-s-gundam'},constructionGroup:'ex-s-cruiser',constructionGroupRoot:310,saveUnitKind:1,saveUnitForm:0},
+  {recordIndex:311,srw4Native:true,construction:{preset:'g-cruiser'},constructionGroup:'ex-s-cruiser',constructionGroupRoot:310,saveUnitKind:1,saveUnitForm:1},
+ ];
+ const result=createSavePilotCatalog(source,rows,{gameId:'srwf-final',units,alice:{enabled:true,crew:{enabled:true,spBase:25,unitIds:[300,301,310,311]}}});
+ assert.deepEqual(result.aliceDependent,{pilotId:399,targetIds:[300,301,310,311],roots:[300,310],families:[{root:300,members:[300,301]},{root:310,members:[310,311]}]});
+ const incomplete=createSavePilotCatalog(source,rows,{gameId:'srwf-final',units,alice:{enabled:true,crew:{enabled:true,spBase:25,unitIds:[300,310]}}});assert.equal(incomplete.aliceDependent,undefined);
+});

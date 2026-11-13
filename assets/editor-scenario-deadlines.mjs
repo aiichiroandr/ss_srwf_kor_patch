@@ -2,16 +2,16 @@
 // victory/defeat actions execute first; this hook does not replace those paths.
 // The generated tail is authenticated by exact regeneration, then removed for
 // comparison with the original immutable scenario profile.
-import { inspectPendingObjectiveHook as hookOf, readScenarioPurpose, encodeObjectiveText as encodeText } from './editor-scenario-objective-base.mjs?v=20261113-froster1';
-export { readScenarioPurpose } from './editor-scenario-objective-base.mjs?v=20261113-froster1';
-import { CRITERIA_FIELDS, inspectScenarioCriteria, normalizeScenarioCriteriaBody, updateScenarioCriteriaBody, snapshotScenarioCriteria } from './editor-scenario-criteria.mjs?v=20261113-froster1';
-import { normalizeScenarioReinforcementBody, inspectScenarioReinforcement, updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261113-froster1';
-import { normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261113-froster1';
-import { EVENT_PHASE_FIELDS, normalizeScenarioEventPhaseBody, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261113-froster1';
-import { ownData } from './editor-own.mjs?v=20261113-froster1';
+import { inspectPendingObjectiveHook as hookOf, readScenarioPurpose, encodeObjectiveText as encodeText } from './editor-scenario-objective-base.mjs?v=20261113-alicecopies1';
+export { readScenarioPurpose } from './editor-scenario-objective-base.mjs?v=20261113-alicecopies1';
+import { CRITERIA_FIELDS, inspectScenarioCriteria, normalizeScenarioCriteriaBody, updateScenarioCriteriaBody, snapshotScenarioCriteria } from './editor-scenario-criteria.mjs?v=20261113-alicecopies1';
+import { normalizeScenarioReinforcementBody, inspectScenarioReinforcement, updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261113-alicecopies1';
+import { normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261113-alicecopies1';
+import { EVENT_PHASE_FIELDS, normalizeScenarioEventPhaseBody, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261113-alicecopies1';
+import { ownData } from './editor-own.mjs?v=20261113-alicecopies1';
 
-import {objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261113-froster1';
-import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf } from './editor-bytes.mjs?v=20261113-froster1';
+import {objectiveContextFor} from './editor-scenario-region-context.mjs?v=20261113-alicecopies1';
+import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf } from './editor-bytes.mjs?v=20261113-alicecopies1';
 const MAGIC = Uint8Array.of(83,82,87,70,68,76,48,49); // SRWFDL01
 const TRAILER = 24;
 const CAPACITY = Object.freeze({ 'srwf-f': 0x8000, 'srwf-final': 0x9000 });

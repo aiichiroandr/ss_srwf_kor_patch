@@ -1,7 +1,7 @@
-import {locateIsoFiles,readCdUserExtent} from './editor-core.mjs?v=20261113-froster1';
-import {nameMap} from './editor-text-codec.mjs?v=20261113-froster1';
-import {decodeBattleText} from './editor-battle-timeline.mjs?v=20261113-froster1';
-import {buildPilotDialoguePreview,previewPilotDialogueInfo} from './editor-pilot-dialogue.mjs?v=20261113-froster1';
+import {locateIsoFiles,readCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1';
+import {nameMap} from './editor-text-codec.mjs?v=20261113-alicecopies1';
+import {decodeBattleText} from './editor-battle-timeline.mjs?v=20261113-alicecopies1';
+import {buildPilotDialoguePreview,previewPilotDialogueInfo} from './editor-pilot-dialogue.mjs?v=20261113-alicecopies1';
 const cache=new WeakMap();
 const fail=()=>{throw Error('기존 전투대사의 범위·명령을 확인하지 못했습니다.');};
 

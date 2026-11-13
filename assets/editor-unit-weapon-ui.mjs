@@ -1,8 +1,8 @@
-import {createWeaponNameControl} from './editor-name-control.mjs?v=20261113-froster1';
-import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261113-froster1';
-import {EDITOR_FIELD_BOUNDS,isFieldValueInBounds} from './editor-fields.mjs?v=20261113-froster1';
-import {criticalChoices,criticalValues,criticalAppliedText} from './editor-critical-values.mjs?v=20261113-froster1';
-import {WEAPON_GRADE_CHOICES,TERRAIN_SCREEN_ORDER,TERRAIN_LABELS,splitWeaponTerrain,joinWeaponTerrain} from './editor-grades.mjs?v=20261113-froster1';
+import {createWeaponNameControl} from './editor-name-control.mjs?v=20261113-alicecopies1';
+import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261113-alicecopies1';
+import {EDITOR_FIELD_BOUNDS,isFieldValueInBounds} from './editor-fields.mjs?v=20261113-alicecopies1';
+import {criticalChoices,criticalValues,criticalAppliedText} from './editor-critical-values.mjs?v=20261113-alicecopies1';
+import {WEAPON_GRADE_CHOICES,TERRAIN_SCREEN_ORDER,TERRAIN_LABELS,splitWeaponTerrain,joinWeaponTerrain} from './editor-grades.mjs?v=20261113-alicecopies1';
 
 const fields=Object.freeze([
  ['attack','공격력',0,65535],['hit','명중',...EDITOR_FIELD_BOUNDS.weapon.hit],

@@ -3,9 +3,9 @@
 // Each is an explicit switch, OFF unless the user turns it on or the input
 // image already carries it. An omitted request value never flips the input's
 // own state, and presets carry neither switch.
-import {normalizeDictionaryPortraitImage,applyDictionaryPortraitImage,inspectDictionaryPortraitImage} from './editor-dictionary-portrait-image.mjs?v=20261113-froster1';
-import {changeDictionaryAdditionImage} from './editor-dictionary-addition-image.mjs?v=20261113-froster1';
-import {normalizeFinalTitleLogoImage,applyStandaloneFinalTitleLogoImage,inspectFinalTitleLogoImage} from './editor-title-logo-image.mjs?v=20261113-froster1';
+import {normalizeDictionaryPortraitImage,applyDictionaryPortraitImage,inspectDictionaryPortraitImage} from './editor-dictionary-portrait-image.mjs?v=20261113-alicecopies1';
+import {changeDictionaryAdditionImage} from './editor-dictionary-addition-image.mjs?v=20261113-alicecopies1';
+import {normalizeFinalTitleLogoImage,applyStandaloneFinalTitleLogoImage,inspectFinalTitleLogoImage} from './editor-title-logo-image.mjs?v=20261113-alicecopies1';
 
 const SECTOR_SIZE=2352;
 export const FINAL_OUTPUT_SWITCHES=Object.freeze({

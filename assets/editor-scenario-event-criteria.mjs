@@ -2,10 +2,10 @@
 // The writer changes its skip branch only. It preserves the original action,
 // E9, saved resume, roots and all other script bytes. Carrier/provenance checks
 // must still authenticate the fully normalized source against its profile.
-import { ownData, ownDataCopy as dataCopy, readDenseList } from './editor-own.mjs?v=20261113-froster1';
-import { compileObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261113-froster1';
-import { encodeObjectiveRule, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261113-froster1';
-import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261113-froster1';
+import { ownData, ownDataCopy as dataCopy, readDenseList } from './editor-own.mjs?v=20261113-alicecopies1';
+import { compileObjectiveBranches } from './editor-scenario-objectives.mjs?v=20261113-alicecopies1';
+import { encodeObjectiveRule, decodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261113-alicecopies1';
+import { bytesEqual as same, dataView as viewOf, scenarioRootOffsets as rootsOf, sha256Digest as digest } from './editor-bytes.mjs?v=20261113-alicecopies1';
 
 export const EVENT_CRITERIA_FIELDS=Object.freeze(['eventJoin','eventRule1','eventRule2','eventRule3']);
 const MAGIC=Uint8Array.of(83,82,87,70,84,69,48,50),TRAILER=80; // SRWFTE02

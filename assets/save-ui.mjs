@@ -1,13 +1,13 @@
-import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261113-froster1';
-import {canAddSavePilots} from './save-pilot-support.mjs?v=20261113-froster1';
-import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261113-froster1';
-import { requestEditorNotice } from './editor-notice.mjs?v=20261113-froster1';
-import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261113-froster1';
-import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261113-froster1';
-import { openSave } from './save-core.mjs?v=20261113-froster1';
-import { pageItems,fitPages } from './save-pages.mjs?v=20261113-froster1';
-import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261113-froster1';
-import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-froster1';
+import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261113-alicecopies1';
+import {canAddSavePilots} from './save-pilot-support.mjs?v=20261113-alicecopies1';
+import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261113-alicecopies1';
+import { requestEditorNotice } from './editor-notice.mjs?v=20261113-alicecopies1';
+import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies1';
+import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261113-alicecopies1';
+import { openSave } from './save-core.mjs?v=20261113-alicecopies1';
+import { pageItems,fitPages } from './save-pages.mjs?v=20261113-alicecopies1';
+import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261113-alicecopies1';
+import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
 
 export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}={}) {
   const $=id=>document.getElementById(id),dialog=$('saveEditorDialog');
@@ -164,14 +164,18 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     for(const unit of context().units??[]){
       if($('saveAddUnitFilter').value==='unused'&&unit.recordKind==='regular')continue;
       if(!`${unit.name??''} ${unit.recordIndex}`.normalize('NFKC').toLowerCase().includes(unitQuery))continue;
-      if(!Number.isInteger(unit.hp)||!Number.isInteger(unit.en)||r.units.some(u=>u.id===unit.recordIndex))continue;
-      // Do not advertise SRW4 cruiser alternates (or an already represented
-      // cruiser family). Core repeats this check before writing.
-      let group;try{group=saveUnitGroup(unit.recordIndex,context().units??[],r.units.map(u=>u.id));}catch{continue;}
-      if(group.familyMembers&&r.units.some(u=>group.familyMembers.includes(u.id)))continue;
-      const option=document.createElement('option');option.value=String(unit.recordIndex);option.textContent=`${unit.name||'이름 없는 기체'} #${unit.recordIndex}${unit.construction?' · 추가 기체':unit.recordKind==='regular'?'':' · 빈/미완성 레코드'}`;options.append(option);
+      if(!Number.isInteger(unit.hp)||!Number.isInteger(unit.en))continue;
+      // saveUnitGroup rejects malformed topology and the S/Ex-S cruiser form;
+      // do not hide an owned definition or one of its additional physical copies.
+      let group;try{group=saveUnitGroup(unit.recordIndex,context().units??[]);}catch{continue;}
+      const selectedFormCount=r.units.filter(row=>row.id===unit.recordIndex).length;
+      const option=document.createElement('option');option.value=String(unit.recordIndex);
+      option.textContent=`${unit.name||'이름 없는 기체'} #${unit.recordIndex}${unit.construction?' · 추가 기체':unit.recordKind==='regular'?'':' · 빈/미완성 레코드'} · 추가시 ${group.members.length}칸 · 선택 형태 ${selectedFormCount}기`;
+      options.append(option);
     }
     if(Array.from(options.options).some(o=>o.value===selected))options.value=selected;
+    const selectedUnit=(context().units??[]).find(unit=>unit.recordIndex===Number(options.value));
+    try{const group=selectedUnit&&saveUnitGroup(selectedUnit.recordIndex,context().units??[]);$('saveAddUnitNote').textContent=group?`선택한 추가는 기체 저장 칸 ${group.members.length}개를 사용합니다. 현재 선택 형태는 ${r.units.filter(row=>row.id===selectedUnit.recordIndex).length}기이며 기존 행은 숨기거나 재사용하지 않습니다. 수정한 BIN/CUE와 세이브를 함께 저장해 사용하세요.`:'기체 저장 형식을 확인하지 못했습니다.';}catch{$('saveAddUnitNote').textContent='선택한 기체의 저장 구조를 확인하지 못했습니다.';}
     options.disabled=busy||!r.editable;$('saveAddUnitButton').disabled=busy||!r.editable||!options.options.length||r.units.length>=128;
     listRows();const row=(kind==='pilot'?r.pilots:kind==='unit'?r.units:[]).find(v=>v.slot===slot);
     $('saveRecordTitle').textContent=row?name(row,kind):'선택할 데이터가 없습니다';
@@ -418,12 +422,13 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
   });}
   $('saveAddPilotSearch').addEventListener('input',render);
   $('saveAddPilotLevel').addEventListener('input',render);
-  $('saveAddPilotButton').addEventListener('click',()=>{if(busy||!context().verified)return;try{const result=session.addPilot(key,Number($('saveAddPilotSelect').value),Number($('saveAddPilotLevel').value));slot=result.slot;$('saveSearch').value='';$('saveAddPilotRow').open=false;$('saveRecordLayout').dataset.mobileView='detail';render();message('파일럿을 추가했습니다. 수정본을 저장하면 적용됩니다.');}catch(e){message(e.message,true);}});
+  $('saveAddPilotButton').addEventListener('click',()=>{if(busy||!context().verified)return;try{const id=Number($('saveAddPilotSelect').value),result=session.addPilot(key,id,Number($('saveAddPilotLevel').value));slot=result.slot;$('saveSearch').value='';$('saveAddPilotRow').open=false;$('saveRecordLayout').dataset.mobileView='detail';render();message(`파일럿을 추가했습니다. 수정본을 저장하면 적용됩니다.${id===399?' ALICE 직접 추가는 확인된 설치 상태에서만 허용됩니다.':''}`);}catch(e){message(e.message,true);}});
   $('saveAddUnitFilter').addEventListener('change',render);
   $('saveAddUnitSearch').addEventListener('input',render);
+  $('saveAddUnitSelect').addEventListener('change',render);
   $('saveAddUnitButton').addEventListener('click',()=>{
     if(busy||!context().verified)return;
-    try{const result=session.addUnit(key,Number($('saveAddUnitSelect').value));slot=result.slot;$('saveSearch').value='';$('saveAddUnitRow').open=false;$('saveRecordLayout').dataset.mobileView='detail';render();message(`연결 기체를 포함해 ${result.added}기를 추가했습니다. 게임에서 탑승·변형·합체를 확인하세요.`);}
+    try{const result=session.addUnit(key,Number($('saveAddUnitSelect').value));slot=result.slot;$('saveSearch').value='';$('saveAddUnitRow').open=false;$('saveRecordLayout').dataset.mobileView='detail';render();const alice=result.alicePrepared===null?'':` ALICE 필요 ${result.aliceRequired}명 · 새 준비 ${result.alicePrepared}명 · 준비 후 전체 ${result.aliceTotal}명 · 남은 파일럿 칸 ${result.freePilotSlots}칸${result.aliceReclaimable?` · 기존 다른 기체 연결 ${result.aliceReclaimable}명은 게임 동기화가 재사용합니다`:''}입니다. 실제 게임에서 인간 파일럿이 탑승해야 연결됩니다.`;message(`연결·합체 구성용 행을 포함해 기체 저장 칸 ${result.added}개를 추가했습니다. 남은 기체 칸 ${result.freeUnitSlots}칸입니다. 게임에서 탑승·변형·합체를 확인하세요.${alice}`);}
     catch(e){message(e.message,true);}
   });
   $('saveUpgradeMode').addEventListener('change',()=>{

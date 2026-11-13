@@ -1,6 +1,6 @@
-import { createEffectList, fitEffectPanel } from './editor-effect-list.mjs?v=20261113-froster1';
-import { TERRAIN_FIELDS, TERRAIN_LABELS, terrainValueAllowed } from "./editor-terrain.mjs?v=20261113-froster1";
-import { paintTilePreview } from './editor-map-graphics.mjs?v=20261113-froster1';
+import { createEffectList, fitEffectPanel } from './editor-effect-list.mjs?v=20261113-alicecopies1';
+import { TERRAIN_FIELDS, TERRAIN_LABELS, terrainValueAllowed } from "./editor-terrain.mjs?v=20261113-alicecopies1";
+import { paintTilePreview } from './editor-map-graphics.mjs?v=20261113-alicecopies1';
 
 export function createTerrainEditor(host) {
   const panel = document.getElementById("terrainEditorPanel");

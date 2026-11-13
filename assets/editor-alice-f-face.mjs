@@ -1,9 +1,9 @@
 // Standalone F FACE.BIN repacker.  This module never enables the F editor.
-import {ALICE_ART} from './editor-alice-art.mjs?v=20261113-froster1';
-import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
-import {base64ToBytes,bytesEqual,dataView} from './editor-bytes.mjs?v=20261113-froster1';
-import {readPackedGraphicRecord} from './editor-face-record.mjs?v=20261113-froster1';
-import {ALICE_F_PROFILE} from './editor-alice-f-profile.mjs?v=20261113-froster1';
+import {ALICE_ART} from './editor-alice-art.mjs?v=20261113-alicecopies1';
+import {sha256Hex} from './sha256.mjs?v=20261113-alicecopies1';
+import {base64ToBytes,bytesEqual,dataView} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {readPackedGraphicRecord} from './editor-face-record.mjs?v=20261113-alicecopies1';
+import {ALICE_F_PROFILE} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
 const fail=(message='F ALICE FACE data is invalid.')=>{const e=Error(message);e.code='EDITOR_ALICE_F_INVALID';throw e;};
 const outOf=value=>value instanceof Uint8Array?value:value?.output instanceof Uint8Array?value.output:fail('F FACE codec output is invalid.');
 const rawDecode=decode=>bytes=>outOf(decode(bytes));

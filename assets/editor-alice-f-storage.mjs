@@ -1,14 +1,14 @@
 // Trusted, reversible Fv2 ALICE storage.  This module has no catalog/UI path.
-import {bytesEqual,dataView} from './editor-bytes.mjs?v=20261113-froster1';
-import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
-import {ALICE_F_PROFILE,isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-froster1';
-import {ALICE_F_LOADER_PROFILE} from './editor-alice-f-loader-profile.mjs?v=20261113-froster1';
-import {ALICE_CREW_DEFAULTS,aliceCrewConfig,isAliceReservedPilot} from './editor-alice-crew-data.mjs?v=20261113-froster1';
-import {planAliceFData} from './editor-alice-f-data.mjs?v=20261113-froster1';
-import {createAliceFFaceBuilder} from './editor-alice-f-face.mjs?v=20261113-froster1';
-import {ALICE_F_V2_NATIVE,applyAliceFV2Native,normalizeAliceFV2Native} from './editor-alice-f-v2-code.mjs?v=20261113-froster1';
-import {normalizeCriticalFix} from './editor-critical-fix.mjs?v=20261113-froster1';
-import {normalizeSpawnCapacity} from './editor-spawn-capacity.mjs?v=20261113-froster1';
+import {bytesEqual,dataView} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {sha256Hex} from './sha256.mjs?v=20261113-alicecopies1';
+import {ALICE_F_PROFILE,isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
+import {ALICE_F_LOADER_PROFILE} from './editor-alice-f-loader-profile.mjs?v=20261113-alicecopies1';
+import {ALICE_CREW_DEFAULTS,aliceCrewConfig,isAliceReservedPilot} from './editor-alice-crew-data.mjs?v=20261113-alicecopies1';
+import {planAliceFData} from './editor-alice-f-data.mjs?v=20261113-alicecopies1';
+import {createAliceFFaceBuilder} from './editor-alice-f-face.mjs?v=20261113-alicecopies1';
+import {ALICE_F_V2_NATIVE,applyAliceFV2Native,normalizeAliceFV2Native} from './editor-alice-f-v2-code.mjs?v=20261113-alicecopies1';
+import {normalizeCriticalFix} from './editor-critical-fix.mjs?v=20261113-alicecopies1';
+import {normalizeSpawnCapacity} from './editor-spawn-capacity.mjs?v=20261113-alicecopies1';
 
 const fail=(message='F ALICE v2 storage is invalid.')=>{const error=Error(message);error.code='EDITOR_ALICE_F_INVALID';throw error;};
 const NAME=Uint8Array.of(0x16,0x21,0x1e,0x18,0x1a,255),states=new WeakMap();

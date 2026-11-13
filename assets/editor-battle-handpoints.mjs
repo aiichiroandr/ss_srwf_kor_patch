@@ -1,10 +1,10 @@
 // Native 06038FFC uses the unit record id (not its picture id) in BTSR's
 // signed-byte attachment lists. Missing units reach FFFF,00,50: below the hand.
 // Share only byte-identical lists to add entries without growing the file.
-import {sha256Hex as hash} from './sha256.mjs?v=20261113-froster1';
-import {bytesEqual as equal,dataView as dv} from './editor-bytes.mjs?v=20261113-froster1';
-import {makeCompressionRecipe,restoreCompressionRecipe} from './editor-compression-recipe.mjs?v=20261113-froster1';
-import {EXS_ALIGNED_CHARGE_POINTS} from './editor-exs-beam-motion.mjs?v=20261113-froster1';
+import {sha256Hex as hash} from './sha256.mjs?v=20261113-alicecopies1';
+import {bytesEqual as equal,dataView as dv} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {makeCompressionRecipe,restoreCompressionRecipe} from './editor-compression-recipe.mjs?v=20261113-alicecopies1';
+import {EXS_ALIGNED_CHARGE_POINTS} from './editor-exs-beam-motion.mjs?v=20261113-alicecopies1';
 const profiles=Object.freeze({
  'srwf-f':{size:80100,base:75254,end:77550,nested:{cell:80,page:21,offset:16},sha256:'d0ffd6cc2d8ca3c5a08391916483505b3224cfa51c12738c4a019e01a22322eb',sourceSha256s:['eab03ac56d57abf539e27e13d1c09f61b1f28a108c31f7396ca60290f06841fe'],lengths:[200,196,140,16,72,88,28,24,24,424,24,448,212,20,56,12,28,16,28,20,60,44,12,8,4,4,4,4,4,4,4,4]},
  'srwf-final':{size:80807,base:75409,end:78257,nested:{cell:80,page:22,offset:0},sha256:'1a1b8dcb680982abdb891386d2cf2ba2e1df12e59df736d9bfd7b9e152b0f14b',sourceSha256s:['223becf9b0f6dbc9341f5c3ff4fff60d35805e968e273077eaa6bb69632ae29a'],lengths:[228,236,148,16,80,88,28,28,24,528,24,624,292,28,64,16,36,16,36,20,92,52,12,36,4,4,4,4,4,4,4,4]},

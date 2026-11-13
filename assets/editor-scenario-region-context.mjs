@@ -1,7 +1,7 @@
 // RG01 is a separate wire domain. A syntactic tag never authenticates a map.
-import {ownData,readDenseList} from './editor-own.mjs?v=20261113-froster1';
-import {Sha256} from './sha256.mjs?v=20261113-froster1';
-import {immutableBytesHash} from './editor-provenance.mjs?v=20261113-froster1';
+import {ownData,readDenseList} from './editor-own.mjs?v=20261113-alicecopies1';
+import {Sha256} from './sha256.mjs?v=20261113-alicecopies1';
+import {immutableBytesHash} from './editor-provenance.mjs?v=20261113-alicecopies1';
 export const REGION_RULE_TAG=0x10000000;
 const KEYS=['gameId','physicalIndex','scenarioSlots','mapIndex','mapPhysicalIndex','mapSlots','width','height','identity'];
 // Geometry is shared by map-bound editors. It does not authorize the game's

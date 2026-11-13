@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
-import { createSavePilotAuthority, getSavePilotDefinitions } from '../assets/save-pilot-support.mjs?v=20261113-froster1';
+import { createSavePilotAuthority, getSavePilotDefinitions } from '../assets/save-pilot-support.mjs?v=20261113-alicecopies1';
 import { openSave } from '../assets/save-core.mjs';
 import { createSaveEditor } from '../assets/save-ui.mjs';
 import { FakeElement, installFakeDom, loadHtml } from './helpers/fake-dom.mjs';
@@ -69,6 +69,7 @@ test('generic pilot UI hides the record view while adding, uses the authenticate
   globalThis.requestAnimationFrame=fn=>{queueMicrotask(fn);return 1;};
   const $=id=>doc.getElementById(id),live=context(auth),fixture=syntheticSave(),ui=createSaveEditor(()=>live);
   await ui.load({name:'pilot.bcr',size:fixture.raw.length,arrayBuffer:async()=>fixture.raw.buffer});
+  assert.match($('saveEditorEmpty').textContent,/저장 선택 → 파일럿 탭 → ＋ 파일럿 추가/);assert.match($('saveEditorEmpty').textContent,/저장 선택 → 보유 기체 탭 → ＋ 기체 추가/);assert.match($('saveEditorEmpty').textContent,/자동으로 준비합니다/);
   assert.equal($('saveAddPilotRow').hidden,false);assert.equal($('saveAddPilotLevel').getAttribute('value'),'31');
   $('saveAddPilotRow').open=true;$('saveAddPilotRow').dispatchEvent({type:'toggle'});
   assert.equal($('saveRecordLayout').hidden,true);assert.equal($('saveEditorDialog').dataset.addOpen,'true');
@@ -79,7 +80,7 @@ test('generic pilot UI hides the record view while adding, uses the authenticate
   assert.equal($('saveAddPilotRow').open,false);assert.equal($('saveAddUnitRow').open,false);assert.equal($('saveRecordLayout').hidden,false);assert.equal($('saveEditorDialog').dataset.addOpen,'false');
   $('savePilotTab').click();$('saveAddPilotLevel').value='31';$('saveAddPilotRow').open=true;$('saveAddPilotRow').dispatchEvent({type:'toggle'});
   assert.equal($('saveAddPilotButton').disabled,false);$('saveAddPilotSelect').value='399';$('saveAddPilotLevel').value='2';$('saveAddPilotLevel').dispatchEvent({type:'input'});$('saveAddPilotButton').click();
-  assert.match($('saveRecordTitle').textContent,/ALICE/);assert.equal(ui.hasUnsavedEdits(),true);
+  assert.match($('saveRecordTitle').textContent,/ALICE/);assert.match($('saveEditorStatus').textContent,/확인된 설치 상태/);assert.equal(ui.hasUnsavedEdits(),true);
   live.savePilotCatalog=Object.freeze({...catalog,pilots:[catalog.pilots[0]]});
   $('savePilotTab').click();assert.equal($('saveAddPilotButton').disabled,true);
 });

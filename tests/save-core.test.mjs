@@ -131,11 +131,11 @@ test('early 10-stage unlock changes only its bit and checksum, original mode pre
 test('add unit uses empty slot, leaves pilots and existing units untouched, supports subsequent edits/reset',async()=>{
   const f=syntheticSave(),catalog=unitCatalog('srwf-final');
   catalog.units.push({recordIndex:100,name:'sample',editable:true,recordKind:'regular',saveUnitKind:0,saveUnitForm:0,hp:3300,en:120,partSlots:2,weaponList:{status:'known',entries:[{slot:1}]}});
-  const s=await openSave(f.raw,catalog),added=s.addUnit(2,100);assert.equal(added.slot,1);
-  assert.equal(s.diff()[0].field,'unitAdded');assert.throws(()=>s.addUnit(2,100));
+  const s=await openSave(f.raw,catalog),added=s.addUnit(2,100),second=s.addUnit(2,100);assert.equal(added.slot,1);assert.equal(second.slot,2);
+  assert.equal(s.diff().filter(change=>change.field==='unitAdded').length,2);assert.deepEqual(s.list()[0].units.filter(unit=>unit.id===100).map(unit=>unit.slot),[1,2]);
   s.editUnit(2,'hpUpgrade',5,1);s.editUnit(2,'parts',1,1,0);
-  assert.equal(s.diff().length,3);const out=await s.exportFile();
-  const allowed=new Set([...f.payloadPositions.slice(0,4),...f.payloadPositions.slice(0x11e,0x13c)]);
+  assert.equal(s.diff().length,4);const out=await s.exportFile();
+  const allowed=new Set([...f.payloadPositions.slice(0,4),...f.payloadPositions.slice(0x11e,0x158)]);
   out.forEach((v,i)=>{if(!allowed.has(i))assert.equal(v,f.raw[i]);});
   const bytes=Uint8Array.from(f.payloadPositions,p=>out[p]),p=0x11e;
   assert.equal(bytes[p+2],64);assert.equal(bytes[p+15],255);assert.equal(bytes[p+16],255);assert.equal(bytes[p+26],255);

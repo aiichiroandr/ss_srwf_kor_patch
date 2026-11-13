@@ -4,9 +4,9 @@
 // Exact v1 AQ01 and v2 AQ01/AQ02 bytes remain readable only for normalization.
 // No game code is bundled here. The exact original IP/EXEC identities and the
 // two generated replacements are verified together; partial installs fail.
-import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
-import {ownData,readDenseList} from './editor-own.mjs?v=20261113-froster1';
-import {bytesEqual as same,dataView as view} from './editor-bytes.mjs?v=20261113-froster1';
+import {sha256Hex} from './sha256.mjs?v=20261113-alicecopies1';
+import {ownData,readDenseList} from './editor-own.mjs?v=20261113-alicecopies1';
+import {bytesEqual as same,dataView as view} from './editor-bytes.mjs?v=20261113-alicecopies1';
 
 const GAME='srwf-f',IP_BYTES=0x1800,EXEC_BYTES=731504,IP_OFFSET=0x1700,CODE_BYTES=256;
 const ADDRESS=0x06003700,EXEC_BASE=0x06004000,DISPATCH=0x060b25ac-EXEC_BASE;

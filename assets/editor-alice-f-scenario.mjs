@@ -1,12 +1,12 @@
 // Development-only combined F scenario adapter. It is intentionally not wired into
 // editor availability, product UI, or runtime paths.
-import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-froster1';
-import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-froster1';
-import {bytesEqual,bytesToHex,sha256Digest} from './editor-bytes.mjs?v=20261113-froster1';
-import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-froster1';
-import {ALICE_F_SCENARIO_PROFILE,ALICE_F_SCENARIO_REBASE_PROFILE} from './editor-alice-f-scenario-profile.mjs?v=20261113-froster1';
-import {ALICE_F_DEPARTURE,applyAliceFDepartureBody,normalizeAliceFDepartureBody,hasAliceFDepartureBodyCandidate} from './editor-alice-f-departure.mjs?v=20261113-froster1';
-import {applyAliceFFirstClearBody,normalizeAliceFFirstClearBody,hasAliceFFirstClearBodyCandidate} from './editor-alice-f-first-clear.mjs?v=20261113-froster1';
+import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1';
+import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-alicecopies1';
+import {bytesEqual,bytesToHex,sha256Digest} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
+import {ALICE_F_SCENARIO_PROFILE,ALICE_F_SCENARIO_REBASE_PROFILE} from './editor-alice-f-scenario-profile.mjs?v=20261113-alicecopies1';
+import {ALICE_F_DEPARTURE,applyAliceFDepartureBody,normalizeAliceFDepartureBody,hasAliceFDepartureBodyCandidate} from './editor-alice-f-departure.mjs?v=20261113-alicecopies1';
+import {applyAliceFFirstClearBody,normalizeAliceFFirstClearBody,hasAliceFFirstClearBodyCandidate} from './editor-alice-f-first-clear.mjs?v=20261113-alicecopies1';
 
 const PROFILE=ALICE_F_SCENARIO_PROFILE, REBASE=ALICE_F_SCENARIO_REBASE_PROFILE;
 const FIRST=Object.freeze([1,31]), PHYSICAL=PROFILE.physicalBodies;

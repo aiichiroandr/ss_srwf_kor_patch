@@ -1,10 +1,10 @@
-import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261113-froster1';
-import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261113-froster1';
-import { requireSaveScalar } from './save-field-rules.mjs?v=20261113-froster1';
-import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-froster1';
-import {initializeSavePilotRow} from './editor-save-pilot-init.mjs?v=20261113-froster1';
-import {getSavePilotDefinitions} from './save-pilot-support.mjs?v=20261113-froster1';
-import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261113-froster1';
+import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261113-alicecopies1';
+import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261113-alicecopies1';
+import { requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies1';
+import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
+import {initializeSavePilotRow} from './editor-save-pilot-init.mjs?v=20261113-alicecopies1';
+import {getSavePilotDefinitions} from './save-pilot-support.mjs?v=20261113-alicecopies1';
+import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261113-alicecopies1';
 // Saturn backup RAM containers; original bytes and unrelated saves stay private.
 // Contracts and source references: docs/SAVE_EDITOR.md.
 const MAGIC = new TextEncoder().encode('BackUpRam Format');
@@ -15,6 +15,56 @@ const u32 = (b,p) => (b[p]*0x1000000+b[p+1]*65536+b[p+2]*256+b[p+3])>>>0;
 function put(b,p,v,n) { for(let i=n-1;i>=0;i--) { b[p+i]=v&255; v=Math.floor(v/256); } }
 function need(ok,message) { if(!ok) throw new Error(message); }
 function integer(v,min,max) { need(Number.isSafeInteger(v)&&v>=min&&v<=max,`${min}~${max} 사이의 정수를 입력하세요.`); }
+const SAME=value=>JSON.stringify(value);
+function sameAliceDependent(left,right){return !!left&&!!right&&left.pilotId===399&&right.pilotId===399&&SAME(left.targetIds)===SAME(right.targetIds)&&SAME(left.roots)===SAME(right.roots);}
+// Existing #399 rows are never rewritten.  A prepared row is an orphan; an
+// attached row must end one unambiguous human crew chain. Empty table entries
+// have no outgoing links even when their unused next byte happens to be zero.
+function inspectAliceRows(bytes){
+  const rows=Array.from({length:128},(_,slot)=>{const at=0x1000+slot*12;return {slot,id:u16(bytes,at),level:bytes[at+2],flags:bytes[at+3],next:bytes[at+8]};});
+  const active=new Set(rows.filter(row=>row.id!==0).map(row=>row.slot)),incoming=Array.from({length:128},()=>[]);
+  for(const row of rows){
+    if(!row.id||row.next===255)continue;
+    if(row.id===399)throw new Error('ALICE가 파일럿 뒤에 연결되어 있어 안전하게 준비할 수 없습니다.');
+    if(row.next>=128||!active.has(row.next))continue;
+    incoming[row.next].push(row);
+  }
+  const eligible=[],companionByHuman=new Map(),headByHuman=new Map();
+  for(const row of rows.filter(row=>row.id===399)){
+    need(row.level>=1&&row.level<=99&&(row.flags&8)!==0&&row.next===255,'ALICE 연결 상태가 안전하지 않아 준비하지 않았습니다.');
+    let cursor=row.slot,owner=null;const seen=new Set([cursor]),chain=[];
+    for(let depth=0;;depth++){
+      const parents=incoming[cursor];
+      need(parents.length<=1,'ALICE 연결이 둘 이상으로 갈려 준비하지 않았습니다.');
+      if(!parents.length)break;
+      const parent=parents[0];
+      // The native walker visits five rows including ALICE, hence at most
+      // four preceding humans. Longer chains are unsafe to reuse.
+      need(depth<4&&parent.id!==399&&!seen.has(parent.slot),'ALICE 앞의 파일럿 연결 상태가 안전하지 않아 준비하지 않았습니다.');
+      seen.add(parent.slot);chain.push(parent.slot);owner=parent;cursor=parent.slot;
+    }
+    if(owner){
+      need(!companionByHuman.has(owner.slot),'한 인간 파일럿에 ALICE가 둘 이상 연결되어 있어 준비하지 않았습니다.');
+      companionByHuman.set(owner.slot,row);
+      for(const slot of chain)headByHuman.set(slot,owner.slot);
+    }
+    eligible.push({...row,ownerSlot:owner?.slot??null});
+  }
+  function humanHead(slot){
+    const row=rows[slot];need(row&&row.id!==0&&row.id!==399,'ALICE를 주 파일럿으로 쓰는 기체가 있어 안전하게 준비할 수 없습니다.');
+    if(headByHuman.has(slot))return headByHuman.get(slot);
+    let cursor=slot,depth=0;const seen=new Set([slot]);
+    for(;;){
+      const parents=incoming[cursor];
+      need(parents.length<=1,'대상 기체의 인간 파일럿 연결이 둘 이상으로 갈려 준비하지 않았습니다.');
+      if(!parents.length)return cursor;
+      const parent=parents[0];
+      need(depth++<3&&parent.id!==399&&!seen.has(parent.slot),'대상 기체의 인간 파일럿 연결 상태가 안전하지 않아 준비하지 않았습니다.');
+      seen.add(parent.slot);cursor=parent.slot;
+    }
+  }
+  return {rows,eligible,companionByHuman,humanHead,empty:rows.filter(row=>row.id===0).map(row=>row.slot)};
+}
 export function saveChecksum(b) { let n=0; for(let i=4;i<b.length-4;i++) n=(n+b[i])>>>0; return n; }
 async function transform(bytes,kind) {
   const C=kind==='decode'?globalThis.DecompressionStream:globalThis.CompressionStream;
@@ -103,15 +153,19 @@ export async function openSave(input, catalog={}) {
     for(let i=0;i<raw.length;i+=2)need(raw[i]===255,'인터리브의 빈 바이트가 예상과 다릅니다.');
     interleaved=true;raw=Uint8Array.from({length:raw.length/2},(_,i)=>raw[2*i+1]);
   }
-  const records=parse(raw),changes=new Map(),models=new WeakMap(),addedBindings=new Map(),addedPilotBindings=new Map();
+  const records=parse(raw),changes=new Map(),models=new WeakMap(),addedBindings=new Map(),addedPilotBindings=new Map(),aliceDependentBindings=new Map();
   const unitBinding=unit=>JSON.stringify([unit.recordIndex,unit.identity??null,unit.construction?.preset??null,
     unit.saveUnitKind??null,unit.saveUnitForm??null,unit.constructionGroupRoot??null]);
+  const pilotBinding=(row,defs)=>JSON.stringify([row.id,row.identity,row.subpilot,row.id===399?defs.aliceDependent??null:null]);
+  function currentPilotDefinitions(key){const defs=getSavePilotDefinitions(catalog.savePilotSupport,{gameId:catalog.gameId,sessionToken:catalog.sessionToken,catalog:catalog.savePilotCatalog});need(defs&&catalog.gameId===get(key).gameId,'추가 파일럿의 검증된 ROM 정보가 바뀌었습니다.');return defs;}
   function validateAddedPilots(){
     for(const [key,bindings]of addedPilotBindings){
-      const defs=getSavePilotDefinitions(catalog.savePilotSupport,{gameId:catalog.gameId,sessionToken:catalog.sessionToken,catalog:catalog.savePilotCatalog});
-      need(defs&&catalog.gameId===get(key).gameId,'추가 파일럿의 검증된 ROM 정보가 바뀌었습니다.');
-      for(const [id,binding]of bindings){const row=defs.pilots.find(p=>p.id===id);need(row&&JSON.stringify([row.id,row.identity,row.subpilot])===binding,'추가한 파일럿의 ROM 구성 또는 ALICE 동승 상태가 바뀌었습니다.');}
+      const defs=currentPilotDefinitions(key);
+      for(const [id,binding]of bindings){const row=defs.pilots.find(p=>p.id===id);need(row&&pilotBinding(row,defs)===binding,'추가한 파일럿의 ROM 구성 또는 ALICE 동승 상태가 바뀌었습니다.');}
     }
+  }
+  function validateAliceDependent(){
+    for(const [key,binding]of aliceDependentBindings){const defs=currentPilotDefinitions(key);need(sameAliceDependent(defs.aliceDependent,binding),'ALICE 지원 기체 구성이 바뀌어 이 저장을 내보낼 수 없습니다.');}
   }
   function validateAddedUnits(){
     for(const [key,bindings]of addedBindings){
@@ -194,15 +248,59 @@ export async function openSave(input, catalog={}) {
     const r=get(key);need(r.editable,r.reason);integer(id,1,65535);
     need(catalog.gameId===r.gameId,'검증한 ROM과 같은 게임의 저장만 편집할 수 있습니다.');
     const b=current(r).slice(),before=model(r,b);
-    need(!before.units.some(u=>u.id===id),'이미 보유한 기체입니다.');
-    const group=saveUnitGroup(id,[...unitCatalog.values()],before.units.map(u=>u.id));
-    // A verified SRW4 cruiser pair has one save identity. Refuse a base grant
-    // when either ROM form is already present, including saves made before
-    // this guard existed.
-    if(group.familyMembers)need(!before.units.some(u=>group.familyMembers.includes(u.id)),'이미 보유한 제4차 S/Ex-S 변형 기체입니다.');
-    const slots=new Map(before.units.map(u=>[u.id,u.slot])),added=[];
+    // Definitions and save rows are deliberately separate: a save may own more
+    // than one copy of a definition.  Every add receives a complete fresh group;
+    // never borrow a similarly numbered legacy row as a component.
+    const group=saveUnitGroup(id,[...unitCatalog.values()]);
+    const slots=new Map(),added=[];
+    const missing=[...group.members];
     const empty=Array.from({length:128},(_,i)=>i).filter(i=>u16(b,0x100+i*30)===0);
-    const missing=group.members.filter(member=>!slots.has(member));need(empty.length>=missing.length,`연결 기체를 포함해 빈 칸 ${missing.length}개가 필요합니다.`);
+    let alice=null,aliceRows=[],aliceDefs=null;
+    const availableDefs=getSavePilotDefinitions(catalog.savePilotSupport,{gameId:catalog.gameId,sessionToken:catalog.sessionToken,catalog:catalog.savePilotCatalog});
+    if(group.familyMembers){
+      // A known S/Ex-S family is never added as a misleading unit-only grant:
+      // both transform coordinates and the inspected ALICE capability are needed.
+      need(availableDefs,'이 S/Ex-S 기체는 ALICE 동승 패치를 확인하지 못해 추가할 수 없습니다.');
+      aliceDefs=availableDefs;const dependent=aliceDefs.aliceDependent;
+      need(dependent&&dependent.pilotId===399&&Array.isArray(dependent.families),'이 S/Ex-S 기체에는 확인된 ALICE 동승 설정과 지원 기체 정보가 필요합니다.');
+      for(const proof of dependent.families){
+        const verified=saveUnitGroup(proof.root,[...unitCatalog.values()]);
+        need(verified.familyMembers&&verified.root===proof.root&&JSON.stringify(verified.familyMembers)===JSON.stringify(proof.members)&&proof.members.every(member=>dependent.targetIds.includes(member)),'ALICE 지원 기체의 변형 좌표가 현재 ROM과 다릅니다.');
+      }
+      const requested=dependent.families.find(proof=>proof.root===group.root);
+      need(requested&&JSON.stringify(requested.members)===JSON.stringify(group.familyMembers),'이 S/Ex-S 기체에는 확인된 ALICE 동승 설정과 지원 기체 정보가 필요합니다.');
+      const inspected=inspectAliceRows(b),hulls=[];
+      for(const proof of dependent.families){
+        // Save rows are physical hulls. A base/cruiser row and duplicate ids are
+        // independent only when their human heads are distinct.
+        for(const unit of before.units.filter(row=>proof.members.includes(row.id)))hulls.push({proof,unit,existing:true});
+        if(proof.root===group.root)hulls.push({proof,unit:{id:proof.root,pilotSlot:255,added:true},existing:false});
+      }
+      const attachedByHull=new Map(),heads=new Map(),attachedAlice=new Set();
+      for(const hull of hulls){
+        if(hull.unit.pilotSlot===255)continue;
+        const head=inspected.humanHead(hull.unit.pilotSlot);
+        need(!heads.has(head),'같은 인간 파일럿(또는 동승자 체인)이 S/Ex-S 기체 둘에 배정되어 ALICE SP 소유권이 모호합니다.');
+        heads.set(head,hull);
+        const companion=inspected.companionByHuman.get(head);
+        if(companion){need(!attachedAlice.has(companion.slot),'같은 ALICE가 S/Ex-S 기체 둘에 연결되어 있어 준비하지 않았습니다.');attachedAlice.add(companion.slot);attachedByHull.set(hull,companion);}
+      }
+      // The native sync releases a terminal #399 attached to a human that is
+      // outside every target hull before it allocates standby rows.  That row is
+      // therefore available without touching its bytes here.  A row attached to
+      // a target head remains owned progress and is not reusable.  This is not
+      // a permanent hull ownership pairing: runtime may choose a support row.
+      const unbound=hulls.filter(hull=>!attachedByHull.has(hull)).sort((a,b)=>Number(b.existing)-Number(a.existing)||a.proof.root-b.proof.root);
+      const reusable=inspected.eligible.filter(row=>row.ownerSlot===null||!heads.has(row.ownerSlot));
+      const reclaimable=reusable.filter(row=>row.ownerSlot!==null);
+      const prepareFor=unbound.slice(Math.min(reusable.length,unbound.length));
+      const needed=prepareFor.length;
+      need(empty.length>=missing.length,`연결 기체를 포함해 빈 칸 ${missing.length}개가 필요합니다.`);
+      need(inspected.empty.length>=needed,`ALICE 준비에 빈 파일럿 칸 ${needed}개가 필요합니다.`);
+      const alicePilot=aliceDefs.pilots.find(pilot=>pilot.id===399&&pilot.subpilot===true);need(alicePilot,'ALICE 파일럿 정보를 확인하지 못했습니다.');
+      const levelFor=hull=>{const slot=hull.unit.pilotSlot,pilot=slot===255?null:inspected.rows[slot];return pilot&&pilot.id!==399&&pilot.level>=1&&pilot.level<=99?pilot.level:1;};
+      alice={dependent,required:hulls.length,needed,prepareFor,levelFor,pilot:alicePilot,empty:inspected.empty,totalBefore:inspected.eligible.length,reusable:reusable.length,reclaimable:reclaimable.length};aliceRows=inspected.eligible;
+    }else need(empty.length>=missing.length,`연결 기체를 포함해 빈 칸 ${missing.length}개가 필요합니다.`);
     for(const member of missing){
       const unit=unitCatalog.get(member);need(unit,'연결할 기체가 ROM에 없습니다.');
       integer(unit.hp,0,65535);integer(unit.en,0,65535);
@@ -212,11 +310,18 @@ export async function openSave(input, catalog={}) {
     }
     for(const [child,parent] of group.links)b[0x100+slots.get(child)*30+16]=slots.get(parent);
     if(group.pilotSource&&added.includes(slots.get(group.root)))b[0x100+slots.get(group.root)*30+15]=b[0x100+slots.get(group.pilotSource)*30+15];
+    if(alice){for(let index=0;index<alice.needed;index++){const family=alice.prepareFor[index],row=initializeSavePilotRow({id:399,level:alice.levelFor(family),mp:alice.pilot.mp,mindGrowth:alice.pilot.mindGrowth,subpilot:true},aliceDefs.growth,aliceDefs.gameId),slot=alice.empty[index];b.set(row,0x1000+slot*12);aliceRows.push({slot,id:399});}}
     put(b,0,saveChecksum(b),4);changes.set(key,b);
     const bindings=new Map(addedBindings.get(key));
     for(const member of missing)bindings.set(member,unitBinding(unitCatalog.get(member)));
     addedBindings.set(key,bindings);
-    return {record:model(r,b),slot:slots.get(id),added:added.length};
+    if(alice){aliceDependentBindings.set(key,alice.dependent);if(alice.needed){const pilotBindings=new Map(addedPilotBindings.get(key));pilotBindings.set(399,pilotBinding(alice.pilot,aliceDefs));addedPilotBindings.set(key,pilotBindings);}}
+    return {record:model(r,b),slot:slots.get(id),added:added.length,
+      aliceRequired:alice?.required??null,alicePrepared:alice?.needed??null,
+      aliceTotal:alice?alice.totalBefore+alice.needed:null,
+      aliceReusable:alice?.reusable??null,aliceReclaimable:alice?.reclaimable??null,
+      freePilotSlots:alice?alice.empty.length-alice.needed:null,
+      freeUnitSlots:empty.length};
   }
   function addPilot(key,id,level=31){
     const r=get(key);need(r.editable,r.reason);integer(id,1,511);integer(level,1,99);
@@ -227,7 +332,7 @@ export async function openSave(input, catalog={}) {
     const slot=Array.from({length:128},(_,i)=>i).find(i=>u16(b,0x1000+i*12)===0);need(slot!==undefined,'빈 파일럿 칸이 없습니다.');
     const row=initializeSavePilotRow({id,level,mp:pilot.mp,mindGrowth:pilot.mindGrowth,subpilot:pilot.subpilot},defs.growth,defs.gameId);
     b.set(row,0x1000+slot*12);put(b,0,saveChecksum(b),4);changes.set(key,b);
-    const bindings=new Map(addedPilotBindings.get(key));bindings.set(id,JSON.stringify([pilot.id,pilot.identity,pilot.subpilot]));addedPilotBindings.set(key,bindings);
+    const bindings=new Map(addedPilotBindings.get(key));bindings.set(id,pilotBinding(pilot,defs));addedPilotBindings.set(key,bindings);
     return {record:model(r,b),slot};
   }
   function setUpgradeMode(key,mode){
@@ -279,11 +384,27 @@ export async function openSave(input, catalog={}) {
       for(const field of ['weaponUpgrades','parts'])for(let index=0;index<old[field].length;index++)if(old[field][index]!==next[field][index])out.push({key:r.key,name:r.name,type:'unit',slot:old.slot,id:old.id,field,index,before:old[field][index],after:next[field][index]});
     }
   }return out;}
+  // Structural repair must see authenticated #399 too: the ordinary display
+  // catalog deliberately omits this special pilot, but a valid prepared row is
+  // neither an error nor disposable progress.
+  function checkedCatalog(r,b=current(r)){
+    const known=new Map((catalog.pilots??[]).map(row=>[row.recordIndex,row]));
+    // #399 is intentionally absent from ordinary display catalogs.  Preserve a
+    // structurally valid special row even after a catalog/session loss; an
+    // unsafe special chain is not silently cleared by the generic repairer.
+    if(Array.from({length:128},(_,slot)=>u16(b,0x1000+slot*12)).includes(399)){
+      try{inspectAliceRows(b);}catch(error){throw new Error(`ALICE 상태를 확인하지 못해 안전한 수리를 중단했습니다: ${error.message}`);}
+      known.set(399,{recordIndex:399});
+    }
+    const defs=getSavePilotDefinitions(catalog.savePilotSupport,{gameId:catalog.gameId,sessionToken:catalog.sessionToken,catalog:catalog.savePilotCatalog});
+    if(defs&&catalog.gameId===r.gameId)for(const pilot of defs.pilots){const authenticatedSubpilot=pilot.id===399&&pilot.subpilot===true;known.set(pilot.id,{recordIndex:pilot.id,...(authenticatedSubpilot?{subpilot:true,authenticatedSubpilot:true}:{})});}
+    return {...catalog,pilots:[...known.values()]};
+  }
   // Structural check against the verified ROM; repair only makes broken references safe.
-  function check(key){const r=get(key),b=current(r);return checkSaveBytes(b,{gameId:r.gameId,upgradeLimit:model(r,b).upgradeLimit},catalog);}
+  function check(key){const r=get(key),b=current(r);return checkSaveBytes(b,{gameId:r.gameId,upgradeLimit:model(r,b).upgradeLimit},checkedCatalog(r,b));}
   function repair(key){
     const r=get(key);need(r.editable,r.reason);
-    const b=current(r).slice(),fixed=repairSaveBytes(b,{gameId:r.gameId,upgradeLimit:model(r,b).upgradeLimit},catalog);
+    const b=current(r).slice(),fixed=repairSaveBytes(b,{gameId:r.gameId,upgradeLimit:model(r,b).upgradeLimit},checkedCatalog(r,b));
     if(!fixed)return 0;
     // A repair may remove an added row; its proof must not survive that removal.
     const bindings=addedPilotBindings.get(key);if(bindings)for(const id of [...bindings.keys()])if(!model(r,b).pilots.some(p=>p.id===id))bindings.delete(id);if(bindings?.size===0)addedPilotBindings.delete(key);
@@ -293,6 +414,7 @@ export async function openSave(input, catalog={}) {
   }
   async function exportFile(){
     validateAddedPilots();
+    validateAliceDependent();
     validateAddedUnits();
     if(!changes.size)return original.slice();
     for(const r of records)if(!canEditSaveNames(catalog,r.gameId)){
@@ -315,5 +437,5 @@ export async function openSave(input, catalog={}) {
   return Object.freeze({format:Object.freeze({bytes:raw.length,blockSize:SIZES.get(raw.length),gzipLayers:layers,interleaved}),list,edit,editName,editNames,editUnit,addUnit,addPilot,setUpgradeMode,diff,check,repair,
     canEditNames:key=>{const r=records.find(r=>r.key===key);return !!r&&r.editable&&canEditSaveNames(catalog,r.gameId);},
     updateCatalog:next=>{const units=new Map((next.units??[]).map(u=>[u.recordIndex,structuredClone(u)]));catalog={...next};unitCatalog=units;},
-    reset:key=>{if(key===undefined){changes.clear();addedBindings.clear();addedPilotBindings.clear();}else{get(key);changes.delete(key);addedBindings.delete(key);addedPilotBindings.delete(key);}},exportFile});
+    reset:key=>{if(key===undefined){changes.clear();addedBindings.clear();addedPilotBindings.clear();aliceDependentBindings.clear();}else{get(key);changes.delete(key);addedBindings.delete(key);addedPilotBindings.delete(key);aliceDependentBindings.delete(key);}},exportFile});
 }

@@ -2,7 +2,7 @@
 // Guard only the authenticated Four/Camille/Fa commands. C0.0B reads the
 // boarded form; only a successful lookup matching an authored form enables
 // C1.02 bit15, which keeps the unit and still removes its deployed actor.
-import {Sha256} from './sha256.mjs?v=20261113-froster1';
+import {Sha256} from './sha256.mjs?v=20261113-alicecopies1';
 
 const MAGIC=new TextEncoder().encode('SRW4DEP1'),FOOTER=26,PROGRAM=60,LIMIT=0x9000;
 const PROFILES=[
@@ -11,7 +11,7 @@ const PROFILES=[
   [3768,3812,'3500e62cc618ede5d38f1472b19a2f77e765bc59c0201f253600fba5473289bc'],
   [3868,3883,'54be638797f30cf8ff4b89166b58f61269ae73bdf1ea25755446fb22835e6d6e'],
   [3201,3274,'ff9ae1f99ec3909108d8fb18a27b2a9aec95b8706b2042872f1154aae2b92f08']]}];
-import {bytesEqual as same} from './editor-bytes.mjs?v=20261113-froster1';
+import {bytesEqual as same} from './editor-bytes.mjs?v=20261113-alicecopies1';
 function fail(){const e=new Error('제4차 기체의 파일럿 이탈 시 보유 보존 구성을 확인하지 못했습니다.');e.code='EDITOR_SRW4_DEPARTURE_INVALID';throw e;}
 function profile(body,gameId){return gameId==='srwf-final'&&PROFILES.find(p=>body?.physicalIndex===p.physical&&body.slots?.length===1&&body.slots[0]===p.slot);}
 function idsOf(config){const ids=config?.unitIds;if(!Array.isArray(ids)||ids.length!==7||ids.some((n,i)=>!Number.isInteger(n)||n<1||n>511||i>0&&ids[i-1]>=n))fail();return ids.slice();}

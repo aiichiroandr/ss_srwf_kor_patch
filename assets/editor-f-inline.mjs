@@ -3,10 +3,10 @@
 // Names/glyph/construction codecs keep their canonical logical representation;
 // root11/root14 string pointers (and, only for an authenticated ALICE envelope,
 // its four owned TSR pointers) move for the game.
-import {tsrRuntimeLimit,requireTsrInspectionSize,writeRelative32} from './editor-storage-safety.mjs?v=20261113-froster1';
-import {repackFUnitOffsetLedger,fUnitOffsetLedgerDiagnostics} from './editor-unit-compact.mjs?v=20261113-froster1';
-import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261113-froster1';
-import {hasAliceFInlineEnvelope,relocateAliceFInlineEnvelope} from './editor-alice-f-data.mjs?v=20261113-froster1';
+import {tsrRuntimeLimit,requireTsrInspectionSize,writeRelative32} from './editor-storage-safety.mjs?v=20261113-alicecopies1';
+import {repackFUnitOffsetLedger,fUnitOffsetLedgerDiagnostics} from './editor-unit-compact.mjs?v=20261113-alicecopies1';
+import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {hasAliceFInlineEnvelope,relocateAliceFInlineEnvelope} from './editor-alice-f-data.mjs?v=20261113-alicecopies1';
 const UNIT='SRUCMP06',UNIT7='SRUCMP07',MAGIC='SRFAUX01',HEADER=16;
 const marker=(b,at,s)=>at>=0&&at+s.length<=b.length&&[...s].every((c,i)=>b[at+i]===c.charCodeAt(0));
 function fail(reason,details={}){const e=Error('F의 이름·글자·복원 기록을 원래 기체 표의 안전한 빈 공간에 저장할 수 없습니다.');e.code='EDITOR_STORAGE_INVALID';e.details={reason,...details};throw e;}

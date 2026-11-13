@@ -2,9 +2,9 @@
 // name pointers are restored before the portrait draw (detail header) and,
 // from revision 4, before the person-list interpreter call returns; saved
 // pilot data and the root-12 table stay intact.
-import {DICTIONARY_PORTRAIT_DATA} from './editor-dictionary-portrait-data.mjs?v=20261113-froster1';
-import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
-import {base64UrlToBytes} from './editor-bytes.mjs?v=20261113-froster1';
+import {DICTIONARY_PORTRAIT_DATA} from './editor-dictionary-portrait-data.mjs?v=20261113-alicecopies1';
+import {sha256Hex} from './sha256.mjs?v=20261113-alicecopies1';
+import {base64UrlToBytes} from './editor-bytes.mjs?v=20261113-alicecopies1';
 const LATEST=4,REVISIONS=Object.freeze([0,1,2,3,4]);
 // Code and data must be the same revision (the site-wide ?v= revision is bumped only at deploy). An older
 // (cached or uncopied) data module would label the revision-3 recipe as revision 4 and pair it with the

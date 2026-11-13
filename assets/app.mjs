@@ -1,48 +1,48 @@
-import {createSaveNameAuthority} from './save-name-support.mjs?v=20261113-froster1';
-import {createSavePilotAuthority} from './save-pilot-support.mjs?v=20261113-froster1';
-import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261113-froster1';
-import {editorReviewSupport} from './editor-review-support.mjs?v=20261113-froster1';
-import {createMiscExamples} from './editor-misc-examples.mjs?v=20261113-froster1';
-import {decodeMapIcon} from './editor-map-icons.mjs?v=20261113-froster1';
-import {exSBeamCloneIds,freshExSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261113-froster1';
-import {planSrw4UnusedImport,SRW4_UNUSED_PRESETS} from './editor-srw4-unused.mjs?v=20261113-froster1';
-import {captureSrw4Import,pendingSrw4Import,rollbackSrw4Import} from './editor-srw4-undo.mjs?v=20261113-froster1';
-import {decorateAlicePilot} from './editor-alice.mjs?v=20261113-froster1';
-import {aliceEditorRow,aliceCrewRequest,ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261113-froster1';
-import {createAliceCrewEditor} from './editor-alice-crew-ui.mjs?v=20261113-froster1';
-import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261113-froster1';
-import {criticalValues,criticalChoices,criticalPercentLabel,criticalAppliedText} from './editor-critical-values.mjs?v=20261113-froster1';
-import {createSrw4SourcePanel} from './editor-srw4-source-ui.mjs?v=20261113-froster1';
-import {createFCampaignSourcePanel,campaignCanonicalTracks,campaignDownloadCue,ingameCanonicalTracks,ingameDownloadCue} from './editor-v04-unsupported.mjs?v=20261113-froster1';
-import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261113-froster1';
-import {connectDefaultAlice,cancelDefaultAlice} from './editor-alice-construction.mjs?v=20261113-froster1';
-import {requireMigrationIdentities} from './editor-migration.mjs?v=20261113-froster1';
-import {createUnitUpgradeUI} from './editor-unit-upgrade-ui.mjs?v=20261113-froster1';
-import {createEditorStorageUI} from './editor-storage-ui.mjs?v=20261113-froster1';
-import {encodeEditorText,editorTextMetrics,nameMap} from './editor-text-codec.mjs?v=20261113-froster1';
-import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261113-froster1';
-import {afterDialogueText} from './editor-dialogue-sequence.mjs?v=20261113-froster1';
-import {createBattleTimeline} from './editor-battle-timeline.mjs?v=20261113-froster1';
-import {createWeaponNameControl} from './editor-name-control.mjs?v=20261113-froster1';
-import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261113-froster1';
-import {UNUSED_UNIT_PRESETS,UNIT_CONSTRUCTION_VISIBLE_PRESETS,constructUnitRow,replaceUnitRow,cancelUnitConstruction,unitConstructionPreset,UNIT_CONCEPTS,planConceptUnitConstruction,planExSCruiserConstruction,planSCruiserConstruction,pruneConstructionWeaponClones} from './editor-unit-construction.mjs?v=20261113-froster1';
-import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261113-froster1';
-import { createSaveEditor } from './save-ui.mjs?v=20261113-froster1';
-import { UNIT_WEAPON_FIELDS, isUnitWeaponField, pendingUnitWeapons, unitWeaponFields,planUnitLoadouts } from './editor-loadout.mjs?v=20261113-froster1';
-import { createUnitWeaponScroller } from './editor-loadout-ui.mjs?v=20261113-froster1';
-import {createUnitWeaponEditor} from './editor-unit-weapon-ui.mjs?v=20261113-froster1';
-import { unitsOfWeapon, weaponOwnership } from './editor-weapon-links.mjs?v=20261113-froster1';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261113-froster1';
-import { requestEditorNotice } from './editor-notice.mjs?v=20261113-froster1';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261113-froster1';
-import { directoryForGame } from "./mixed-game-folder.mjs?v=20261113-froster1";
-import { createEditorLayout } from "./editor-layout.mjs?v=20261113-froster1";
-import { createEntityArtwork } from './editor-entity-art.mjs?v=20261113-froster1';
-import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261113-froster1";
-import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261113-froster1";
-import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261113-froster1";
-import { animationChoices,animationDefaultPilot, createInlineAnimationPreview } from "./editor-animation.mjs?v=20261113-froster1";
-import {createPreviewResources} from './editor-preview-resources.mjs?v=20261113-froster1';
+import {createSaveNameAuthority} from './save-name-support.mjs?v=20261113-alicecopies1';
+import {createSavePilotAuthority} from './save-pilot-support.mjs?v=20261113-alicecopies1';
+import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261113-alicecopies1';
+import {editorReviewSupport} from './editor-review-support.mjs?v=20261113-alicecopies1';
+import {createMiscExamples} from './editor-misc-examples.mjs?v=20261113-alicecopies1';
+import {decodeMapIcon} from './editor-map-icons.mjs?v=20261113-alicecopies1';
+import {exSBeamCloneIds,freshExSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261113-alicecopies1';
+import {planSrw4UnusedImport,SRW4_UNUSED_PRESETS} from './editor-srw4-unused.mjs?v=20261113-alicecopies1';
+import {captureSrw4Import,pendingSrw4Import,rollbackSrw4Import} from './editor-srw4-undo.mjs?v=20261113-alicecopies1';
+import {decorateAlicePilot} from './editor-alice.mjs?v=20261113-alicecopies1';
+import {aliceEditorRow,aliceCrewRequest,ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261113-alicecopies1';
+import {createAliceCrewEditor} from './editor-alice-crew-ui.mjs?v=20261113-alicecopies1';
+import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261113-alicecopies1';
+import {criticalValues,criticalChoices,criticalPercentLabel,criticalAppliedText} from './editor-critical-values.mjs?v=20261113-alicecopies1';
+import {createSrw4SourcePanel} from './editor-srw4-source-ui.mjs?v=20261113-alicecopies1';
+import {createFCampaignSourcePanel,campaignCanonicalTracks,campaignDownloadCue,ingameCanonicalTracks,ingameDownloadCue} from './editor-v04-unsupported.mjs?v=20261113-alicecopies1';
+import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261113-alicecopies1';
+import {connectDefaultAlice,cancelDefaultAlice} from './editor-alice-construction.mjs?v=20261113-alicecopies1';
+import {requireMigrationIdentities} from './editor-migration.mjs?v=20261113-alicecopies1';
+import {createUnitUpgradeUI} from './editor-unit-upgrade-ui.mjs?v=20261113-alicecopies1';
+import {createEditorStorageUI} from './editor-storage-ui.mjs?v=20261113-alicecopies1';
+import {encodeEditorText,editorTextMetrics,nameMap} from './editor-text-codec.mjs?v=20261113-alicecopies1';
+import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1';
+import {afterDialogueText} from './editor-dialogue-sequence.mjs?v=20261113-alicecopies1';
+import {createBattleTimeline} from './editor-battle-timeline.mjs?v=20261113-alicecopies1';
+import {createWeaponNameControl} from './editor-name-control.mjs?v=20261113-alicecopies1';
+import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261113-alicecopies1';
+import {UNUSED_UNIT_PRESETS,UNIT_CONSTRUCTION_VISIBLE_PRESETS,constructUnitRow,replaceUnitRow,cancelUnitConstruction,unitConstructionPreset,UNIT_CONCEPTS,planConceptUnitConstruction,planExSCruiserConstruction,planSCruiserConstruction,pruneConstructionWeaponClones} from './editor-unit-construction.mjs?v=20261113-alicecopies1';
+import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261113-alicecopies1';
+import { createSaveEditor } from './save-ui.mjs?v=20261113-alicecopies1';
+import { UNIT_WEAPON_FIELDS, isUnitWeaponField, pendingUnitWeapons, unitWeaponFields,planUnitLoadouts } from './editor-loadout.mjs?v=20261113-alicecopies1';
+import { createUnitWeaponScroller } from './editor-loadout-ui.mjs?v=20261113-alicecopies1';
+import {createUnitWeaponEditor} from './editor-unit-weapon-ui.mjs?v=20261113-alicecopies1';
+import { unitsOfWeapon, weaponOwnership } from './editor-weapon-links.mjs?v=20261113-alicecopies1';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261113-alicecopies1';
+import { requestEditorNotice } from './editor-notice.mjs?v=20261113-alicecopies1';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261113-alicecopies1';
+import { directoryForGame } from "./mixed-game-folder.mjs?v=20261113-alicecopies1";
+import { createEditorLayout } from "./editor-layout.mjs?v=20261113-alicecopies1";
+import { createEntityArtwork } from './editor-entity-art.mjs?v=20261113-alicecopies1';
+import { createSkillPagination } from "./editor-skill-pagination.mjs?v=20261113-alicecopies1";
+import { gameplayHelp, fieldHelp } from "./editor-help.mjs?v=20261113-alicecopies1";
+import { eventFlagInfo } from "./editor-event-flags.mjs?v=20261113-alicecopies1";
+import { animationChoices,animationDefaultPilot, createInlineAnimationPreview } from "./editor-animation.mjs?v=20261113-alicecopies1";
+import {createPreviewResources} from './editor-preview-resources.mjs?v=20261113-alicecopies1';
 import {
   canStep,
   filterRecords,
@@ -51,7 +51,7 @@ import {
   positionLabel,
   scrollTopToReveal,
   stepPosition,
-} from "./editor-list.mjs?v=20261113-froster1";
+} from "./editor-list.mjs?v=20261113-alicecopies1";
 import {
   GRADE_CHOICES,
   TERRAIN_LABELS,
@@ -62,7 +62,7 @@ import {
   pilotGradeScreenCaveat,
   splitWeaponTerrain,
   weaponPositionVerification,
-} from "./editor-grades.mjs?v=20261113-froster1";
+} from "./editor-grades.mjs?v=20261113-alicecopies1";
 import {
   SKILL_LEVEL_MAX,
   SKILL_LEVEL_MIN,
@@ -96,28 +96,28 @@ import {
   spiritRemoveBlock,
   spiritRequest,
   spiritSummary,
-} from "./editor-skill-list.mjs?v=20261113-froster1";
+} from "./editor-skill-list.mjs?v=20261113-alicecopies1";
 import {
   FACT_BADGE_LABELS,
   RULE_FACTS,
   WEAPON_REQUIRED_SKILL_EDIT_IDS,
   pilotSkillFamily as factsPilotSkillFamily,
   weakestBadge,
-} from "./editor-facts.mjs?v=20261113-froster1";
-import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261113-froster1";
-import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261113-froster1";
-import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261113-froster1";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261113-froster1";
-import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261113-froster1";
-import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261113-froster1";
-import { createCostEditor } from "./editor-cost-ui.mjs?v=20261113-froster1";
-import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261113-froster1";
-import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261113-froster1";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261113-froster1";
-import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261113-froster1";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261113-froster1";
-import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261113-froster1";
-import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261113-froster1";
+} from "./editor-facts.mjs?v=20261113-alicecopies1";
+import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261113-alicecopies1";
+import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261113-alicecopies1";
+import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261113-alicecopies1";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261113-alicecopies1";
+import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261113-alicecopies1";
+import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261113-alicecopies1";
+import { createCostEditor } from "./editor-cost-ui.mjs?v=20261113-alicecopies1";
+import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261113-alicecopies1";
+import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261113-alicecopies1";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261113-alicecopies1";
+import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261113-alicecopies1";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261113-alicecopies1";
+import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261113-alicecopies1";
+import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261113-alicecopies1";
 import {
   FONT_REVISIONS,
   fontPreviewSrc,
@@ -125,14 +125,14 @@ import {
   groupFontReleases as groupPublicFontReleases,
   pickFontPreviewSample,
   selectFontRelease,
-} from "./font-revisions.mjs?v=20261113-froster1";
+} from "./font-revisions.mjs?v=20261113-alicecopies1";
 import {
   getPatchNotesForRelease,
   isSummaryOnlyPatchNotesRelease,
   isSafePatchNoteAssetPath,
-} from "./release-notes.mjs?v=20261113-froster1";
+} from "./release-notes.mjs?v=20261113-alicecopies1";
 
-const STATIC_ASSET_REVISION = "20261113-froster1";
+const STATIC_ASSET_REVISION = "20261113-alicecopies1";
 const FONT_PREVIEW_SAMPLE = pickFontPreviewSample();
 const RELEASE_INDEX_URL = new URL("../manifest/releases.json", import.meta.url);
 const SITE_ROOT_URL = new URL("../", RELEASE_INDEX_URL);
@@ -3163,7 +3163,7 @@ async function openEditorFromFolder(directoryHandle) {
   // Returning from a review image must also restore the public editor engine.
   if(patched&&localEditorSupport&&reviewSession()){
     try{
-      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-froster1',import.meta.url).href,signal:controller.signal,
+      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-alicecopies1',import.meta.url).href,signal:controller.signal,
         onProgress:progress=>showEditorProgress({...EDITOR_STAGES.inspect,percent:progress.total?progress.processed/progress.total*100:null})});
       if(opened){state.workflowSourceHandles=sourceHandles;return;}
       endEditorJob();state.editorSource=previous;updateControls();return;
@@ -4806,7 +4806,7 @@ function handleEditorWorkerMessage(event) {
   }
   if(message.type==='PREFLIGHT_COMPLETE'){
     finishEditorOperation();elements.editorProgressPanel.hidden=true;
-    try{editorStorageUI.show(message.budget,state.editorEditRevision);}catch(error){editorStorageUI.failed();showEditorError('공간 결과를 읽지 못했습니다',error.message);}
+    try{editorStorageUI.show(message.budget,state.editorEditRevision);if(Array.isArray(message.safetyWarnings)&&message.safetyWarnings.length)setEditorStatus(`공간 검사 완료 · 주의: ${message.safetyWarnings.join(' ')}`);}catch(error){editorStorageUI.failed();showEditorError('공간 결과를 읽지 못했습니다',error.message);}
     updateControls();return;
   }
   if (message.type === "CANCELLED") {
@@ -4958,7 +4958,7 @@ function handleEditorWorkerMessage(event) {
     elements.editorProgressPanel.hidden = true;
     try {
       installEditorDownload(message.result);
-      setEditorStatus("수치가 조정된 BIN 준비 완료 · 공개 릴리스가 아닙니다");
+      setEditorStatus(message.result?.safetyWarnings?.length?`수치가 조정된 BIN 준비 완료 · 주의: ${message.result.safetyWarnings.join(' ')}`:"수치가 조정된 BIN 준비 완료 · 공개 릴리스가 아닙니다");
     } catch (error) {
       showEditorError("수정본 다운로드를 준비하지 못했습니다", koreanMessage(error, "결과 파일을 확인하지 못했습니다."));
     }
@@ -5414,6 +5414,11 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_PREVIEW_INVALID: ["그림을 불러오지 못했습니다", "선택한 항목의 그림 정보를 확인할 수 없습니다. 다른 항목을 골랐다가 다시 선택해 주세요."],
   EDITOR_OUTPUT_INTERNAL: ["만든 이미지 확인에 실패했습니다", "수정본을 다시 읽어 확인하는 단계에서 문제가 생겨 결과를 제공하지 않았습니다. 디스크를 다시 열어 처음부터 시도해 주세요."],
   EDITOR_STORAGE_INVALID: ["편집 데이터를 안전하게 저장할 수 없습니다", "추가한 무장·기체·이름·글자가 게임의 데이터 한도를 넘거나 이설 참조가 맞지 않습니다. 추가 내용을 줄인 뒤 다시 저장해 주세요."],
+  EDITOR_EXPORT_SAFETY_INVALID: ["출력 안전 요청을 확인할 수 없습니다", "현재 열린 디스크의 편집 목록과 파일 좌표를 다시 확인해 주세요. 안전하지 않은 요청은 저장하지 않았습니다."],
+  EDITOR_OUTPUT_STORAGE_INVALID: ["최종 BIN 저장 공간을 확인하지 못했습니다", "출력 디스크의 원시 섹터 구성이나 변경 범위를 다시 확인하지 못했습니다. 기존 다운로드는 유지하고 편집을 줄인 뒤 다시 시도해 주세요."],
+  EDITOR_OUTPUT_RECEIPT_INVALID: ["최종 BIN 영수증을 확인하지 못했습니다", "출력 해시와 영수증이 일치하지 않습니다. 새 다운로드를 제공하지 않았으니 디스크를 다시 열어 주세요."],
+  EDITOR_OUTPUT_ALLOCATION_INVALID: ["출력 파일 할당이 겹칩니다", "기체·시나리오·전투 데이터가 다른 실제 파일 영역을 침범합니다. 충돌한 편집을 되돌리고 다시 저장해 주세요."],
+  EDITOR_OUTPUT_STRUCTURE_INVALID: ["최종 게임 데이터 구조를 다시 확인하지 못했습니다", "압축 해제한 최종 데이터의 기체·파일럿·무기 연결 또는 보조 기록이 맞지 않습니다. 문제 행을 다시 확인해 주세요."],
   EDITOR_SESSION_MISSING: ["에디터 세션이 만료되었습니다", "디스크를 다시 열어 주세요."],
   EDITOR_COST_INVALID: ["개조 비용을 저장할 수 없습니다", "금액 범위와 입력 단위를 확인하세요."],
   EDITOR_TERRAIN_INVALID: ["지형 효과를 반영할 수 없습니다", "명중·방어 보정은 -100~100, HP·EN 회복은 0~100의 정수여야 합니다. 지형 표의 구조도 확인해주세요."],
@@ -9017,7 +9022,8 @@ async function startEditorOutputJob(type) {
     showEditorValidationError(type==='PREFLIGHT'?'저장 공간을 확인할 수 없습니다':'저장할 수 없습니다');
     return;
   }
-  if(type==='EXPORT')clearEditorDownloads();
+  // Keep a previously verified download while this request is being checked.
+  // A failed/cancelled export must not erase it or make it look like this request.
   const request = buildEditorExportRequest();
   const jobId = `editor-${Date.now()}-${++state.editorSequence}-${Math.random().toString(16).slice(2, 10)}`;
   state.editorJobId = jobId;
@@ -9080,7 +9086,6 @@ function installEditorDownload(result) {
     :buildPatchedImageCue(imageName, state.editorTargetHash, state.editorCueTracks);
   const cueBlob = new Blob([cueText], { type: "application/x-cue;charset=utf-8" });
 
-  clearEditorDownloads();
   let binUrl = null;
   let cueUrl = null;
   try {
@@ -9091,6 +9096,9 @@ function installEditorDownload(result) {
     if (cueUrl) globalThis.URL.revokeObjectURL(cueUrl);
     throw new PatcherError("EDITOR_DOWNLOAD_FAILED", error?.message ?? "다운로드 링크를 만들지 못했습니다.");
   }
+  // URLs for the new authenticated result exist before the old result is
+  // revoked, so a failed allocation above leaves the prior download intact.
+  clearEditorDownloads();
   state.workflowOutput = {bin: result.outputBlob, cue: cueBlob, imageName, cueName, sha256: result.sha256};
   rememberEditorOutputReceipt(result.receipt);
   state.editorDownloadUrls = [binUrl, cueUrl];
@@ -9099,7 +9107,7 @@ function installEditorDownload(result) {
   elements.editorDownloadCueLink.href = cueUrl;
   elements.editorDownloadCueLink.download = cueName;
   const summary = `${formatBytes(result.size)} · SHA-256 ${result.sha256} · ${state.workflowBaseKind === "stock" ? "원본 언어 유지" : releaseTag(state.editorBaseReleaseId) + " 기반"} · 개인용 BIN · 공개 릴리스가 아닙니다.`;
-  elements.editorDownloadSummary.textContent = `${formatBytes(result.size)} · 전체 검증 완료`;
+  elements.editorDownloadSummary.textContent = `${formatBytes(result.size)} · 구조·무결성 검사 완료`;
   elements.editorDownloadSummary.title = summary;
   elements.editorDownloadBinLink.title = summary;
   elements.editorDownloadCueLink.title = summary;

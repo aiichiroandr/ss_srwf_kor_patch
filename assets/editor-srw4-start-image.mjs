@@ -1,12 +1,12 @@
 // The new-game roster is a bounded Final74 script extension. The ordinary
 // scenario provenance still authenticates every canonical decoded byte.
-import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-froster1';
-import {compressTsr,decodeFramedLz,locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-froster1';
-import {applySrw4StartRosterBody,normalizeSrw4StartRosterBody} from './editor-srw4-start-roster.mjs?v=20261113-froster1';
-import {applySrw4RosterRetentionBody,normalizeSrw4RosterRetentionBody} from './editor-srw4-roster-retention.mjs?v=20261113-froster1';
-import {applySrw4RosterDepartureBody,normalizeSrw4RosterDepartureBody} from './editor-srw4-roster-departure.mjs?v=20261113-froster1';
+import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1';
+import {compressTsr,decodeFramedLz,locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1';
+import {applySrw4StartRosterBody,normalizeSrw4StartRosterBody} from './editor-srw4-start-roster.mjs?v=20261113-alicecopies1';
+import {applySrw4RosterRetentionBody,normalizeSrw4RosterRetentionBody} from './editor-srw4-roster-retention.mjs?v=20261113-alicecopies1';
+import {applySrw4RosterDepartureBody,normalizeSrw4RosterDepartureBody} from './editor-srw4-roster-departure.mjs?v=20261113-alicecopies1';
 
-import {bytesEqual as equal} from './editor-bytes.mjs?v=20261113-froster1';
+import {bytesEqual as equal} from './editor-bytes.mjs?v=20261113-alicecopies1';
 function fail(message){const e=Error(message);e.code='EDITOR_SRW4_START_INVALID';throw e;}
 
 async function replaceBody(bytes,body,decoded,{signal}={}){

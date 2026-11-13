@@ -1,6 +1,6 @@
 // Existing join commands only: each control edits its original initial-level
 // operand. No actor, event, join date or story flag is created here.
-import {formatRosterContext} from './editor-scenario-roster-context.mjs?v=20261113-froster1';
+import {formatRosterContext} from './editor-scenario-roster-context.mjs?v=20261113-alicecopies1';
 export function createScenarioRosterEditor(host){
  const panel=host.el('scenarioRosterList'),count=host.el('scenarioRosterCount');
  let controls=new Map(),source=null,observer=null,expanded=null;

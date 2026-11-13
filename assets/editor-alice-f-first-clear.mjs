@@ -1,7 +1,7 @@
 // Development-only F first-victory prototype. It is deliberately not wired into
 // the editor, product, or runtime path; a local disc test is still required.
-import {bytesEqual as same,bytesToHex,sha256Digest,dataView,scenarioRootOffsets} from './editor-bytes.mjs?v=20261113-froster1';
-import {ALICE_F_PROFILE,isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-froster1';
+import {bytesEqual as same,bytesToHex,sha256Digest,dataView,scenarioRootOffsets} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {ALICE_F_PROFILE,isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
 
 const MAGIC=new TextEncoder().encode('ALCFF001'), VERSION=1, FOOTER=64;
 const SCEDATA_SHA256='26a3c66a55987323b2c47dd5214f9a2267c724d53f48ca79b16ebc538b091671';

@@ -1,8 +1,8 @@
 // F-only v2 ALICE native selector. The first 876 bytes are the authored Fv1
 // template; the remaining append room holds only this independently authored hook/data.
-import {ALICE_F_CODE_BASE,ALICE_F_CODE_WORDS,ALICE_F_CODE_LABELS,ALICE_F_NATIVE,aliceFNativeCode} from './editor-alice-f-code.mjs?v=20261113-froster1';
-import {bytesEqual,dataView} from './editor-bytes.mjs?v=20261113-froster1';
-import {ALICE_F_LOADER_PROFILE} from './editor-alice-f-loader-profile.mjs?v=20261113-froster1';
+import {ALICE_F_CODE_BASE,ALICE_F_CODE_WORDS,ALICE_F_CODE_LABELS,ALICE_F_NATIVE,aliceFNativeCode} from './editor-alice-f-code.mjs?v=20261113-alicecopies1';
+import {bytesEqual,dataView} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {ALICE_F_LOADER_PROFILE} from './editor-alice-f-loader-profile.mjs?v=20261113-alicecopies1';
 const fail=()=>{const e=Error('F ALICE v2 native slot is invalid.');e.code='EDITOR_ALICE_F_INVALID';throw e;};
 const text=new TextEncoder(),SIG=text.encode('ALICEF02'),I32_MIN=-0x80000000,I32_MAX=0x7fffffff;
 export const ALICE_F_V2_NATIVE=Object.freeze({slotOffset:0x1300,slotBytes:1024,codeBytes:876,prefixBytes:32,appendRoomBytes:140,signatureOffset:1016,hookOffset:876,hookInstructionBytes:32,hookBytes:40,literalOffset:908,literalBytes:8,dataOffset:916,faceEntryOffset:984,loaderOffset:ALICE_F_LOADER_PROFILE.loader.rootGetterHookLiteralOffset,oldLoader:Number(ALICE_F_LOADER_PROFILE.loader.originalRootGetter),hookAddress:ALICE_F_CODE_BASE+876,faceId:338,indexBias:2704});

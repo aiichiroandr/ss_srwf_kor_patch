@@ -2,8 +2,8 @@
 // No ROM bytes, extracted sprites or web sprite sheets are embedded here.
 // IMPORTANT: identifying a dump does not establish its sprite addresses. The
 // per-unit extraction map is deliberately unavailable until checked on a dump.
-import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
-import {bytesToHex as hex} from './editor-bytes.mjs?v=20261113-froster1';
+import {sha256Hex} from './sha256.mjs?v=20261113-alicecopies1';
+import {bytesToHex as hex} from './editor-bytes.mjs?v=20261113-alicecopies1';
 
 export const SRW4_ROM_BYTES=0x300000;
 export const SRW4_ROM_IDENTITY_SOURCE='libretro/libretro-database@9a899f5b13ed1c355491e342203be29bc573323b:metadat/no-intro/Nintendo - Super Nintendo Entertainment System.dat';

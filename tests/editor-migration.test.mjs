@@ -19,7 +19,7 @@ test('save migration exports remapped custom names while preserving added units,
  source.pilots=[{recordIndex:74,identity:'pilot:74:stable'}];
  source.weapons=[{recordIndex:10,identity:'weapon:10:stable'}];
  source.partNames={3:'파츠'};
- source.units=[23,24].map(recordIndex=>({recordIndex,identity:`unit:${recordIndex}:stable`,hp:4000,en:150,partSlots:2,
+ source.units=[23,24].map(recordIndex=>({recordIndex,identity:`unit:${recordIndex}:stable`,hp:4000,en:150,partSlots:2,saveUnitKind:0,saveUnitForm:0,
   construction:recordIndex===24?{preset:'restored-unit'}:undefined,
   weaponList:{status:'known',entries:[{slot:1,weaponIndex:10}]}}));
  const fixture=syntheticSave({upgradeUnlocked:true}),original=fixture.raw.slice();

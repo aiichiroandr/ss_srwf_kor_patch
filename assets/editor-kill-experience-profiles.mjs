@@ -1,5 +1,5 @@
 // Adds only unit record +19 (base battle EXP) to the pinned mutable domain.
-import {WEAPON_VOICE_PROFILES} from './editor-weapon-voice-profiles.mjs?v=20261113-froster1';
+import {WEAPON_VOICE_PROFILES} from './editor-weapon-voice-profiles.mjs?v=20261113-alicecopies1';
 const pins=[
   {
     "base": "b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9",

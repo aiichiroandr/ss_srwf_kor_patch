@@ -1,9 +1,9 @@
 // Conditions inspect the current editor rows. Bulk edits use the preset planner's writer-domain checks;
 // no second binary writer and no game data. Unit/pilot and weapon grade encodings remain distinct.
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261113-froster1";
-import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261113-froster1";
-import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261113-froster1";
-import { criticalChoices, criticalValues } from "./editor-critical-values.mjs?v=20261113-froster1";
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261113-alicecopies1";
+import { GRADE_CHOICES, WEAPON_GRADE_CHOICES, gradeLabel, weaponGradeLabel, splitWeaponTerrain, joinWeaponTerrain } from "./editor-grades.mjs?v=20261113-alicecopies1";
+import { planPresetApplication, applyPresetPlan } from "./editor-preset.mjs?v=20261113-alicecopies1";
+import { criticalChoices, criticalValues } from "./editor-critical-values.mjs?v=20261113-alicecopies1";
 
 const TYPES = ["unit", "pilot", "weapon"];
 const TABLES = { unit: "units", pilot: "pilots", weapon: "weapons" };

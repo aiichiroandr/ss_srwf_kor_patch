@@ -77,6 +77,7 @@
     "assets/editor-effect-list.mjs",
     "assets/editor-entity-art.mjs",
     "assets/editor-event-flags.mjs",
+    "assets/editor-export-safety.mjs",
     "assets/editor-exs-aimed-art.mjs",
     "assets/editor-exs-aimed-pose.mjs",
     "assets/editor-exs-beam-geometry.mjs",
@@ -577,12 +578,12 @@
       "sha256": "2d188b5d99f68053d1dde93fb9a495070f4b20fc382c54eca08b7f4260ce402d"
     },
     "assets/editor-animation.mjs": {
-      "bytes": 14019,
-      "sha256": "863b12b3a730e43a00b90bfe354daeec8642726d5611c0aa0d25cad2f2918391"
+      "bytes": 14023,
+      "sha256": "b2577094d2bd908a0ef4ce4cdd986656f4a95dddb6055565edf0727926fb5a88"
     },
     "assets/editor-preview-resources.mjs": {
-      "bytes": 6315,
-      "sha256": "85218c445c666a44dd84ded94adc87e1897f09086c2684668bb15771b06248f5"
+      "bytes": 6327,
+      "sha256": "9b5c9ce31e4608608c69ab2cc83c79baf3334ac50be30caba592406316b09261"
     }
   },
   "runtimeSets": [],
@@ -609,7 +610,7 @@
       "../weapon-preview/"
     ],
     "assets/editor-preview-resources.mjs": [
-      "../weapon-preview/runtime-worker-loader.mjs?v=20261113-froster1"
+      "../weapon-preview/runtime-worker-loader.mjs?v=20261113-alicecopies1"
     ]
   }
 }

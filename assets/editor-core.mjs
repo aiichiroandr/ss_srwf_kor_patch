@@ -1,91 +1,92 @@
-import {normalizeSrw4StartScenario,changeSrw4StartImage} from './editor-srw4-start-image.mjs?v=20261113-froster1';
-import {makeSrw4StartRosterConfig} from './editor-srw4-start-roster.mjs?v=20261113-froster1';
-import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261113-froster1';
-import {normalizeFinalTitleLogoImage} from './editor-title-logo-image.mjs?v=20261113-froster1';
-import {LEGACY_ROBOT_CELLS,syncLegacyRobotCells,normalizeLegacyRobotCells} from './editor-legacy-robot-cells.mjs?v=20261113-froster1';
-import {normalizeDictionaryPortraitImage} from './editor-dictionary-portrait-image.mjs?v=20261113-froster1';
-import {changeDictionaryAdditionImage} from './editor-dictionary-addition-image.mjs?v=20261113-froster1';
-import {inspectFinalOutputSwitches,requestedFinalOutputSwitch,writeDictionaryOutputSwitch,writeTitleOutputSwitch} from './editor-dictionary-options.mjs?v=20261113-froster1';
-import {changeCampaignSaveImage,createFCampaignSourceStore,createFCampaignOwner,createIngameOwner} from './editor-v04-unsupported.mjs?v=20261113-froster1';
-import {scenarioIdentityAliases} from './editor-scenario-identities.mjs?v=20261113-froster1';
-import {createSrw4NativeMapCodec,srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261113-froster1';
-import {createPreviewMediaCache} from './editor-media-cache.mjs?v=20261113-froster1';
-import {inspectDebugEntry,debugEntryRows,setDebugEntry,normalizeDebugEntry} from './editor-debug-entry.mjs?v=20261113-froster1';
-import {criticalFixRows} from './editor-critical-fix.mjs?v=20261113-froster1';
-import {inspectCriticalFixImage,criticalFixImage} from './editor-critical-fix-image.mjs?v=20261113-froster1';
-import {collectionImage,hasCollectionImage,collectionEditorRow} from './editor-collection-unlock.mjs?v=20261113-froster1';
-import {readAlicePilot,writeAlicePilot,aliceAvailable,alicePortrait,decorateAlicePilot,inspectAliceFace,aliceFaceMasks,createAliceFaceBuilder,ALICE_ART} from './editor-alice.mjs?v=20261113-froster1';
-import {ALICE_CREW_DEFAULTS,aliceCrewConfig,aliceEditorRow} from './editor-alice-crew-data.mjs?v=20261113-froster1';
-import {ALICE_F_PROFILE,aliceFAvailable,isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-froster1';
-import {readAliceFV2Storage} from './editor-alice-f-storage.mjs?v=20261113-froster1';
-import {prepareAliceFV2Export,finalizeAliceFV2Export} from './editor-alice-f-v2-image.mjs?v=20261113-froster1';
-import {changeAliceFImage} from './editor-alice-f-image.mjs?v=20261113-froster1';
-import {normalizeAliceFV2Native} from './editor-alice-f-v2-code.mjs?v=20261113-froster1';
-import {aliceFFaceMasks} from './editor-alice-f-face-masks.mjs?v=20261113-froster1';
-import {makeAliceFFirstClearConfig} from './editor-alice-f-first-clear.mjs?v=20261113-froster1';
-import {createSavePilotCatalog} from './editor-save-pilot-init.mjs?v=20261113-froster1';
-import {hasAliceCrewImage,normalizeAliceCrewImage,applyAliceCrewImage} from './editor-alice-crew-image.mjs?v=20261113-froster1';
-import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261113-froster1';
-import {readGlyphAdditions,writeGlyphAdditions} from './editor-glyphs.mjs?v=20261113-froster1';
-import {readWeaponNames,writeWeaponNames} from './editor-weapon-names.mjs?v=20261113-froster1';
-import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261113-froster1';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261113-froster1';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261113-froster1';
-import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261113-froster1";
-import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261113-froster1";
-import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261113-froster1";
-import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261113-froster1";
-import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261113-froster1";
+import {normalizeSrw4StartScenario,changeSrw4StartImage} from './editor-srw4-start-image.mjs?v=20261113-alicecopies1';
+import {makeSrw4StartRosterConfig} from './editor-srw4-start-roster.mjs?v=20261113-alicecopies1';
+import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261113-alicecopies1';
+import {normalizeFinalTitleLogoImage} from './editor-title-logo-image.mjs?v=20261113-alicecopies1';
+import {LEGACY_ROBOT_CELLS,syncLegacyRobotCells,normalizeLegacyRobotCells} from './editor-legacy-robot-cells.mjs?v=20261113-alicecopies1';
+import {normalizeDictionaryPortraitImage} from './editor-dictionary-portrait-image.mjs?v=20261113-alicecopies1';
+import {changeDictionaryAdditionImage} from './editor-dictionary-addition-image.mjs?v=20261113-alicecopies1';
+import {inspectFinalOutputSwitches,requestedFinalOutputSwitch,writeDictionaryOutputSwitch,writeTitleOutputSwitch} from './editor-dictionary-options.mjs?v=20261113-alicecopies1';
+import {changeCampaignSaveImage,createFCampaignSourceStore,createFCampaignOwner,createIngameOwner} from './editor-v04-unsupported.mjs?v=20261113-alicecopies1';
+import {scenarioIdentityAliases} from './editor-scenario-identities.mjs?v=20261113-alicecopies1';
+import {createSrw4NativeMapCodec,srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261113-alicecopies1';
+import {createPreviewMediaCache} from './editor-media-cache.mjs?v=20261113-alicecopies1';
+import {inspectDebugEntry,debugEntryRows,setDebugEntry,normalizeDebugEntry} from './editor-debug-entry.mjs?v=20261113-alicecopies1';
+import {criticalFixRows} from './editor-critical-fix.mjs?v=20261113-alicecopies1';
+import {inspectCriticalFixImage,criticalFixImage} from './editor-critical-fix-image.mjs?v=20261113-alicecopies1';
+import {collectionImage,hasCollectionImage,collectionEditorRow} from './editor-collection-unlock.mjs?v=20261113-alicecopies1';
+import {readAlicePilot,writeAlicePilot,aliceAvailable,alicePortrait,decorateAlicePilot,inspectAliceFace,aliceFaceMasks,createAliceFaceBuilder,ALICE_ART} from './editor-alice.mjs?v=20261113-alicecopies1';
+import {ALICE_CREW_DEFAULTS,aliceCrewConfig,aliceEditorRow} from './editor-alice-crew-data.mjs?v=20261113-alicecopies1';
+import {ALICE_F_PROFILE,aliceFAvailable,isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
+import {readAliceFV2Storage} from './editor-alice-f-storage.mjs?v=20261113-alicecopies1';
+import {prepareAliceFV2Export,finalizeAliceFV2Export} from './editor-alice-f-v2-image.mjs?v=20261113-alicecopies1';
+import {changeAliceFImage} from './editor-alice-f-image.mjs?v=20261113-alicecopies1';
+import {normalizeAliceFV2Native} from './editor-alice-f-v2-code.mjs?v=20261113-alicecopies1';
+import {aliceFFaceMasks} from './editor-alice-f-face-masks.mjs?v=20261113-alicecopies1';
+import {makeAliceFFirstClearConfig} from './editor-alice-f-first-clear.mjs?v=20261113-alicecopies1';
+import {createSavePilotCatalog} from './editor-save-pilot-init.mjs?v=20261113-alicecopies1';
+import {hasAliceCrewImage,normalizeAliceCrewImage,applyAliceCrewImage} from './editor-alice-crew-image.mjs?v=20261113-alicecopies1';
+import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1';
+import {readGlyphAdditions,writeGlyphAdditions} from './editor-glyphs.mjs?v=20261113-alicecopies1';
+import {readWeaponNames,writeWeaponNames} from './editor-weapon-names.mjs?v=20261113-alicecopies1';
+import { snapshotPilotObjectiveContext } from './editor-scenario-pilot-context.mjs?v=20261113-alicecopies1';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261113-alicecopies1';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261113-alicecopies1';
+import { STOCK_EDITOR_TARGETS, STOCK_EDITOR_PROFILES } from "./editor-stock-profiles.mjs?v=20261113-alicecopies1";
+import { TERRAIN_EDITOR_PROFILES } from "./editor-terrain-profiles.mjs?v=20261113-alicecopies1";
+import { readTerrainTable, terrainDecodedMasks, updateTerrainRecords } from "./editor-terrain.mjs?v=20261113-alicecopies1";
+import { REWARD_EDITOR_PROFILES } from "./editor-reward-profiles.mjs?v=20261113-alicecopies1";
+import { ACCEPTED_EDITOR_TARGETS, EDITOR_PROVENANCE_PROFILES } from "./editor-provenance-profiles.mjs?v=20261113-alicecopies1";
 // Review overlay seam (scripts/editor-review-overlay.json). The public module is
 // empty; only the isolated local review workspace overrides it with its own
 // review candidates. They are never accepted releases or release approval.
-import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261113-froster1";
-import { Sha256 } from "./sha256.mjs?v=20261113-froster1";
-import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261113-froster1";
-import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261113-froster1";
-import { localizeUnitNameFields } from "./editor-unit-name-labels.mjs?v=20261113-froster1";
-import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261113-froster1";
-import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261113-froster1";
-import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261113-froster1";
-import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261113-froster1";
-import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261113-froster1";
-import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261113-froster1";
-import { EDITOR_FIELD_BOUNDS, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261113-froster1";
-import { PUBLIC_EDITOR_FEATURES } from "./editor-public-features.mjs?v=20261113-froster1";
-import { readUpgradeCosts, updateUpgradeCosts, upgradeCostDecodedMasks } from "./editor-costs.mjs?v=20261113-froster1";
-import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261113-froster1";
-import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261113-froster1";
-import { ECONOMY_EDITOR_PROFILES } from "./editor-economy-profiles.mjs?v=20261113-froster1";
-import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261113-froster1";
-import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261113-froster1";
-import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261113-froster1";
-import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261113-froster1";
-import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261113-froster1";
-import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261113-froster1";
-import { UNIT_WEAPON_FIELDS, planUnitWeapons, unitWeaponFields, unitWeaponMasks,unitWeaponReservations } from './editor-loadout.mjs?v=20261113-froster1';
-import { LOADOUT_EDITOR_PROFILES } from './editor-loadout-profiles.mjs?v=20261113-froster1';
-import {WEAPON_VOICE_PROFILES} from './editor-weapon-voice-profiles.mjs?v=20261113-froster1';
-import {KILL_EXPERIENCE_PROFILES} from './editor-kill-experience-profiles.mjs?v=20261113-froster1';
-import {readMapIcons} from './editor-map-icons.mjs?v=20261113-froster1';
-import {createSrw4SourceStore} from './editor-srw4-source.mjs?v=20261113-froster1';
-import { createUnitStorage, normalizeUnitStorage, repackUnitAdditions } from './editor-unit-storage.mjs?v=20261113-froster1';
-import { UNIT_STORAGE_PROFILES } from './editor-unit-storage-profiles.mjs?v=20261113-froster1';
-import {normalizeUnitRestorations,repackUnitRestorations,appendConstructedUnitTable,UNUSED_UNIT_PRESETS} from './editor-unit-restoration.mjs?v=20261113-froster1';
-import {hasSpawnCapacityImage,normalizeSpawnCapacityImage,applySpawnCapacityImage} from './editor-spawn-capacity-image.mjs?v=20261113-froster1';
-import {spawnCapacityInfo} from './editor-spawn-capacity.mjs?v=20261113-froster1';
-import {requireTsrExportSize,requireTsrInspectionSize,requireTsrRuntimeSize,requireFixedTsrRoots,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261113-froster1';
-import {compactUnitStorage,expandCompactUnitStorage,isFinalInlineUnitStorage,isFinalReferenceInlineUnitStorage} from './editor-unit-compact.mjs?v=20261113-froster1';
-import {packFInlineAuxiliary,expandFInlineAuxiliary} from './editor-f-inline.mjs?v=20261113-froster1';
-import {packFinalInlineAuxiliary,expandFinalInlineAuxiliary} from './editor-final-inline-aux.mjs?v=20261113-froster1';
-import {readWeaponCloneManifest,writeWeaponCloneManifest,markWeaponClones,applyWeaponCloneRecords,normalizeWeaponClones,isWeaponClonePreimage,requireWeaponCloneScreenFields} from './editor-weapon-clone.mjs?v=20261113-froster1';
-import {repairBattleSceneLabels,normalizeBattleSceneLabels,requireSingleByteFontPreserved} from './editor-battle-scene-labels.mjs?v=20261113-froster1';
-import {editorStorageBudget,withDiskBudget} from './editor-storage-budget.mjs?v=20261113-froster1';
-import {createBattleComponentCodec} from './editor-battle-components.mjs?v=20261113-froster1';
-import {createBattleHandPointCodec} from './editor-battle-handpoints.mjs?v=20261113-froster1';
-import {createBattleMotionCodec} from './editor-battle-motion.mjs?v=20261113-froster1';
-import {createBattleBeamBankCodec} from './editor-battle-beam-bank.mjs?v=20261113-froster1';
-import {transformExSBeamBank} from './editor-exs-beam-geometry.mjs?v=20261113-froster1';
-import {exSCruiserRole,cruiserRole,cruiserGroup} from './editor-unit-construction.mjs?v=20261113-froster1';
+import { immutableBytesHash, immutableImageHash } from "./editor-provenance.mjs?v=20261113-alicecopies1";
+import { Sha256 } from "./sha256.mjs?v=20261113-alicecopies1";
+import { FINAL_PILOT_NAME_MAP, F_NAME_SUPPLEMENT } from "./editor-pilot-name-map.mjs?v=20261113-alicecopies1";
+import { F_NAME_MAP, FINAL_NAME_MAP } from "./editor-name-map.mjs?v=20261113-alicecopies1";
+import { localizeUnitNameFields } from "./editor-unit-name-labels.mjs?v=20261113-alicecopies1";
+import { GRADE_EDIT_MAX, TERRAIN_DATA_ORDER, isGradeEditAllowed, splitTerrainWord } from "./editor-grades.mjs?v=20261113-alicecopies1";
+import { unavailableWeaponList, unitsOfWeapon, weaponOwnership, weaponsOfUnit } from "./editor-weapon-links.mjs?v=20261113-alicecopies1";
+import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily, pilotSkillLevel, weaponSkillRequirement } from "./editor-facts.mjs?v=20261113-alicecopies1";
+import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261113-alicecopies1";
+import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261113-alicecopies1";
+import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261113-alicecopies1";
+import { EDITOR_FIELD_BOUNDS, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261113-alicecopies1";
+import { PUBLIC_EDITOR_FEATURES } from "./editor-public-features.mjs?v=20261113-alicecopies1";
+import { readUpgradeCosts, updateUpgradeCosts, upgradeCostDecodedMasks } from "./editor-costs.mjs?v=20261113-alicecopies1";
+import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261113-alicecopies1";
+import { SCENARIO_EDITOR_PROFILES } from "./editor-scenario-profiles.mjs?v=20261113-alicecopies1";
+import { ECONOMY_EDITOR_PROFILES } from "./editor-economy-profiles.mjs?v=20261113-alicecopies1";
+import { HERO_EDITOR_PROFILES } from "./editor-hero-profiles.mjs?v=20261113-alicecopies1";
+import { bindVerifiedScenarioTitles, readScenarioTitleTable } from "./editor-scenario-labels.mjs?v=20261113-alicecopies1";
+import { bindScenarioChapters } from "./editor-scenario-chapters.mjs?v=20261113-alicecopies1";
+import { F_STOCK_SCENARIO_NAME_MAP, FINAL_STOCK_SCENARIO_NAME_MAP } from "./editor-scenario-stock-name-map.mjs?v=20261113-alicecopies1";
+import { pilotLayout, pilotExpansionMetadata, repackPilotLayout, normalizePilotLayout } from "./editor-pilot-layout.mjs?v=20261113-alicecopies1";
+import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261113-alicecopies1";
+import { UNIT_WEAPON_FIELDS, planUnitWeapons, unitWeaponFields, unitWeaponMasks,unitWeaponReservations } from './editor-loadout.mjs?v=20261113-alicecopies1';
+import { LOADOUT_EDITOR_PROFILES } from './editor-loadout-profiles.mjs?v=20261113-alicecopies1';
+import {WEAPON_VOICE_PROFILES} from './editor-weapon-voice-profiles.mjs?v=20261113-alicecopies1';
+import {KILL_EXPERIENCE_PROFILES} from './editor-kill-experience-profiles.mjs?v=20261113-alicecopies1';
+import {readMapIcons} from './editor-map-icons.mjs?v=20261113-alicecopies1';
+import {createSrw4SourceStore} from './editor-srw4-source.mjs?v=20261113-alicecopies1';
+import { createUnitStorage, normalizeUnitStorage, repackUnitAdditions } from './editor-unit-storage.mjs?v=20261113-alicecopies1';
+import { UNIT_STORAGE_PROFILES } from './editor-unit-storage-profiles.mjs?v=20261113-alicecopies1';
+import {normalizeUnitRestorations,repackUnitRestorations,appendConstructedUnitTable,UNUSED_UNIT_PRESETS} from './editor-unit-restoration.mjs?v=20261113-alicecopies1';
+import {hasSpawnCapacityImage,normalizeSpawnCapacityImage,applySpawnCapacityImage} from './editor-spawn-capacity-image.mjs?v=20261113-alicecopies1';
+import {spawnCapacityInfo} from './editor-spawn-capacity.mjs?v=20261113-alicecopies1';
+import {requireTsrExportSize,requireTsrInspectionSize,requireTsrRuntimeSize,requireFixedTsrRoots,tsrRuntimeLimit} from './editor-storage-safety.mjs?v=20261113-alicecopies1';
+import {compactUnitStorage,expandCompactUnitStorage,isFinalInlineUnitStorage,isFinalReferenceInlineUnitStorage} from './editor-unit-compact.mjs?v=20261113-alicecopies1';
+import {packFInlineAuxiliary,expandFInlineAuxiliary} from './editor-f-inline.mjs?v=20261113-alicecopies1';
+import {packFinalInlineAuxiliary,expandFinalInlineAuxiliary} from './editor-final-inline-aux.mjs?v=20261113-alicecopies1';
+import {readWeaponCloneManifest,writeWeaponCloneManifest,markWeaponClones,applyWeaponCloneRecords,normalizeWeaponClones,isWeaponClonePreimage,requireWeaponCloneScreenFields} from './editor-weapon-clone.mjs?v=20261113-alicecopies1';
+import {repairBattleSceneLabels,normalizeBattleSceneLabels,requireSingleByteFontPreserved} from './editor-battle-scene-labels.mjs?v=20261113-alicecopies1';
+import {editorStorageBudget,withDiskBudget} from './editor-storage-budget.mjs?v=20261113-alicecopies1';
+import {createBattleComponentCodec} from './editor-battle-components.mjs?v=20261113-alicecopies1';
+import {createBattleHandPointCodec} from './editor-battle-handpoints.mjs?v=20261113-alicecopies1';
+import {createBattleMotionCodec} from './editor-battle-motion.mjs?v=20261113-alicecopies1';
+import {createBattleBeamBankCodec} from './editor-battle-beam-bank.mjs?v=20261113-alicecopies1';
+import {transformExSBeamBank} from './editor-exs-beam-geometry.mjs?v=20261113-alicecopies1';
+import {exSCruiserRole,cruiserRole,cruiserGroup} from './editor-unit-construction.mjs?v=20261113-alicecopies1';
+import {validateEditorExportSafety,validateEditorOutputSafety} from './editor-export-safety.mjs?v=20261113-alicecopies1';
 
 const battleComponentCodec=createBattleComponentCodec({decode:decompressTsr,encode:compressTsr});
 const aliceFaceBuilder=createAliceFaceBuilder({decode:decompressTsr,encode:compressTsr});
@@ -3058,7 +3059,7 @@ async function createProfile(trust, session, options = {}) {
   rawMasks.push([file.recordLba * SECTOR_SIZE + MODE1_EDC_OFFSET, SECTOR_SIZE - MODE1_EDC_OFFSET, 255]);
   rawMasks.sort((a, b) => a[0] - b[0]);
   const scenario = session.scenario;
-  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261113-froster1') : null;
+  const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261113-alicecopies1') : null;
   const completeRawMasks = scenario ? scenarioModule.mergeFullByteMasks([...rawMasks,
     ...scenarioModule.scenarioRawMasks(scenario.files, scenario.inspected)]) : rawMasks;
   const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId);
@@ -3299,7 +3300,7 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
         if (referenceFiles.scedata.extentLba !== scenario.files.scedata.extentLba || referenceFiles.scedata.byteLength !== scenario.files.scedata.byteLength) continue;
         const reference = await readCdUserExtent(options.tailReferenceBlob, referenceFiles.scedata.extentLba, referenceFiles.scedata.byteLength,
           { mode: scenario.inspected.scope.scenario.sectorMode, signal: options.signal, checksum: true });
-        const { validateScenarioRebase } = await import('./editor-scenario-archive.mjs?v=20261113-froster1');
+        const { validateScenarioRebase } = await import('./editor-scenario-archive.mjs?v=20261113-alicecopies1');
         try { validateScenarioRebase(reference, scenario.scenarioBytes, profile.scenarioScopes, scenario.inspected.scope, descriptor.gameId, scenario.inspected.archive.scenarioLayout); }
         catch (error) { if (options.signal?.aborted) throw error; continue; }
         rebasedScenario = true;
@@ -3318,7 +3319,7 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
       // carrier additionally masked; its entire decoded scope was checked above.
       // Cross-feature combinations need their own reference-mask proof.
       if (faceMask) continue;
-      const { cdCarrierRawMasks, mergeFullByteMasks } = await import('./editor-scenario-provenance.mjs?v=20261113-froster1');
+      const { cdCarrierRawMasks, mergeFullByteMasks } = await import('./editor-scenario-provenance.mjs?v=20261113-alicecopies1');
       const masks = mergeFullByteMasks([...profile.rawMasks, ...cdCarrierRawMasks(scenario.files.scedata,
         scenario.inspected.scope.scenario.sectorMode, [[0, scenario.files.scedata.byteLength, 255]])]);
       if (await immutableImageHash(canonicalImage, masks, options) !== await immutableImageHash(options.tailReferenceBlob, masks, options)) continue;
@@ -3525,6 +3526,19 @@ export function createEditorInspector(trust) {
   });
 }
 
+// The physical TSR carrier is normalized in one production path. Both opening
+// and final-output read-back use it; callers can supply neither profiles nor a
+// base pin because those are held by the inspector session/trust.
+function normalizeStoredTsrLayout(storedDecoded,{gameId,profiles,glyphBaseSha256,aliceRead}){
+ const fExpanded=expandFInlineAuxiliary(aliceRead.decoded,gameId),finalExpanded=expandFinalInlineAuxiliary(fExpanded,gameId);
+ if(finalExpanded!==fExpanded)requireTsrRuntimeSize(storedDecoded,gameId);
+ const glyphState=readGlyphAdditions(finalExpanded,{gameId,baseSha256:glyphBaseSha256});
+ const names=readWeaponNames(glyphState.decoded,gameId,{glyphMap:glyphState.glyphMap});
+ const cloneState=readWeaponCloneManifest(names.decoded,gameId,{staging:finalExpanded!==fExpanded});
+ const decoded=expandCompactUnitStorage(cloneState.decoded,gameId,{profiles,inlineAuxiliary:finalExpanded!==fExpanded});
+ return {decoded,fExpanded,finalExpanded,glyphState,weaponNames:names.entries,cloneState};
+}
+
 async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, tailReferenceBlob } = {}) {
   requireBlob(blob);
   if (!descriptor || !Number.isSafeInteger(descriptor.targetSize) || descriptor.targetSize <= 0) {
@@ -3607,13 +3621,9 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
   const aliceRead=fv2State
     ? {decoded:fv2State.decoded,enabled:fv2State.registered,faceInstalled:true,version:4,crew:fv2State.crew,faceId:338,faceCopiesNeedFix:false}
     : readAlicePilot(storedDecoded,descriptor.gameId,{faceBytes:earlyFaceBytes});
-  const fExpanded=expandFInlineAuxiliary(aliceRead.decoded,descriptor.gameId),finalExpanded=expandFinalInlineAuxiliary(fExpanded,descriptor.gameId);
   const qaGlyphBase=ownEntry(trust.targets,descriptor.targetSha256)?.kind==='private-candidate'?descriptor.targetSha256:undefined;
-  if(finalExpanded!==fExpanded)requireTsrRuntimeSize(storedDecoded,descriptor.gameId);
-  const glyphState=readGlyphAdditions(finalExpanded,{gameId:descriptor.gameId,baseSha256:qaGlyphBase});
-  const {decoded:compactDecoded,entries:weaponNames}=readWeaponNames(glyphState.decoded,descriptor.gameId,{glyphMap:glyphState.glyphMap});
-  const cloneState=readWeaponCloneManifest(compactDecoded,descriptor.gameId,{staging:finalExpanded!==fExpanded});
-  const decoded=expandCompactUnitStorage(cloneState.decoded,descriptor.gameId,{profiles:trust.profiles,inlineAuxiliary:finalExpanded!==fExpanded});
+  const {decoded,fExpanded,finalExpanded,glyphState,weaponNames,cloneState}=normalizeStoredTsrLayout(storedDecoded,{gameId:descriptor.gameId,
+    profiles:trust.profiles,glyphBaseSha256:qaGlyphBase,aliceRead});
   if (decoded.length > MAX_DECOMPRESSED_TSR_BYTES) {
     fail("EDITOR_TSR_SIZE_UNSUPPORTED", "The decoded TSR data exceeds the local editing limit.");
   }
@@ -3674,7 +3684,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
   if (scenarioEnabled) onProgress?.({ phase: "scenario-data", indeterminate: true });
   let dialogueSpeakers={speakerOptions:[],diagnostics:null};
   if(scenarioEnabled){
-    const {readDialogueSpeakerOptions}=await import('./editor-dialogue-speakers.mjs?v=20261113-froster1');
+    const {readDialogueSpeakerOptions}=await import('./editor-dialogue-speakers.mjs?v=20261113-alicecopies1');
     const faceBytes=inspectedFaceBytes??(files.face?await readMode1UserExtent(blob,files.face.extentLba,files.face.byteLength,{signal,checksum:false}):null);
     inspectedFaceBytes=faceBytes;
     try{dialogueSpeakers=readDialogueSpeakerOptions(root,faceBytes,{gameId:descriptor.gameId});}
@@ -3781,6 +3791,9 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
     compressedTsr,
     storedDecoded,
     glyphEntries:Object.freeze(glyphState.entries.map(e=>Object.freeze({...e}))),
+    // The private-candidate glyph pin is inspector-derived; final read-back must
+    // use this authenticated value rather than accept a request-supplied base.
+    glyphBaseSha256:qaGlyphBase,
     glyphMap:glyphState.glyphMap,
     weaponNames:Object.freeze(weaponNames.map(e=>Object.freeze({...e}))),
     weaponClones:Object.freeze(cloneState.entries.map(e=>Object.freeze({...e}))),
@@ -3817,7 +3830,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
       scenarioLabelScope, scenarioTitles), scenarioLabelScope, scenarioTitles) : [];
   let rosterCatalog=null;
   if(scenario){
-    const {readScenarioRosterCatalog}=await import('./editor-scenario-roster-catalog.mjs?v=20261113-froster1');
+    const {readScenarioRosterCatalog}=await import('./editor-scenario-roster-catalog.mjs?v=20261113-alicecopies1');
     const catalog=readScenarioRosterCatalog(scenario.inspected.archive,scenario.tables);
     // Keep full callback graphs in the reader; the editor only needs the
     // selected join's evidence, linked calls and repeated recruitment sites.
@@ -3848,7 +3861,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
       alice:Object.freeze({enabled:aliceState.enabled,legacy:aliceState.legacy,available:aliceState.available,pilotId:399,faceId:aliceState.faceId,version:aliceState.version,crew:aliceState.crew}),
       aiPilots:Object.freeze(aliceState.available?[aliceEditorRow(aliceState)]:[]),
       savePilotCatalog:createSavePilotCatalog(root,pilots,{gameId:descriptor.gameId,alice:aliceState,
-        authenticatedFdata:fv2State,baseSha256:provenance.baseTargetSha256}),
+        authenticatedFdata:fv2State,baseSha256:provenance.baseTargetSha256,units}),
       gameId: descriptor.gameId,
       targetHash: actualHash,
       acceptedReleaseMatch: provenance.mode === "accepted" && actualHash === descriptor.targetSha256,
@@ -3962,7 +3975,7 @@ function scenarioFileIdentity(files) {
 }
 
 async function inspectDiscScenario(trust, blob, actualHash, gameId, files, units, pilots, signal, aliceFInspection, glyphMap=new Map(), speakerOptions=[], reinforcementRoot=null) {
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261113-froster1');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261113-alicecopies1');
   const identity = scenarioFileIdentity(files), target = ownEntry(trust.targets, actualHash);
   let scenarioLayout;
   if (target) scenarioLayout = target.kind === 'stock' ? 'stock' : 'latest';
@@ -3982,7 +3995,7 @@ async function inspectDiscScenario(trust, blob, actualHash, gameId, files, units
   ]);
   let aliceF=null,scenarioInput=storedScenarioBytes;
   if(aliceFInspection){
-    const {normalizeAliceFScenario}=await import('./editor-alice-f-scenario.mjs?v=20261113-froster1');
+    const {normalizeAliceFScenario}=await import('./editor-alice-f-scenario.mjs?v=20261113-alicecopies1');
     aliceF=await normalizeAliceFScenario(storedScenarioBytes,{gameId:'srwf-f',developmentOnly:true,baseSha256:ALICE_F_PROFILE.baseSha256[0],signal});
     scenarioInput=aliceF.bytes;
   }
@@ -4546,6 +4559,120 @@ function requireAuthenticatedEditorSession(session,request){
     fail("EDITOR_SESSION_MISSING","The authenticated editor session is no longer available.");
   }
 }
+function requireExportSessionStructure(session){
+ if(!session?.readOnly?.unit||!session.readOnly.pilot||!session.readOnly.weapon)
+   fail('EDITOR_SESSION_MISSING','The authenticated editor session has no record classification.');
+ const root=splitRootSegments(session.decoded);
+ if(root.length<=29)fail('EDITOR_TSR_STRUCTURE_UNSUPPORTED','The authenticated editor session no longer has the expected tables.');
+}
+
+// Checks the effective, losslessly-expanded data that will be packed. This is
+// intentionally built on the production root splitter and record readers, not
+// an invented export parser. Authenticated odd source rows stay legal unless
+// the effective record changed; record zero, pointer aliases and the hero
+// head/list layouts keep their established exceptions.
+function requireEffectiveDataTopology(session, decoded, {strictChanged=true}={}){
+ const root=splitRootSegments(decoded),source=splitRootSegments(session.decoded);
+ if(root.length<=29)fail('EDITOR_OUTPUT_STRUCTURE_INVALID','출력 TSR에 필수 기체·파일럿·무기 표가 없습니다. 새 BIN을 만들지 않았습니다.');
+ const units=dataRecordOffsets(root[27].bytes,48),weapons=dataRecordOffsets(root[29].bytes,17),pilots=pilotRecordOffsets(root[28].bytes);
+ const sourceUnits=dataRecordOffsets(source[27].bytes,48),sourceWeapons=dataRecordOffsets(source[29].bytes,17);
+ for(const row of units.records){
+   const list=weaponsOfUnit(root[27].bytes,row.start,row.end,weapons.offsets.length);
+   const sourceRow=sourceUnits.records.find(entry=>entry.recordIndex===row.recordIndex);
+   const sourceList=sourceRow?weaponsOfUnit(source[27].bytes,sourceRow.start,sourceRow.end,sourceWeapons.offsets.length):null;
+   // Do not newly reject an authenticated legacy/incomplete row. A previously
+   // closed list (or every newly allocated record) must remain fully closed and
+   // reference the post-clone weapon table.
+   if((!strictChanged||!sourceList||sourceList.status==='known')&&list.status!=='known')
+     fail('EDITOR_OUTPUT_STRUCTURE_INVALID',`기체 #${row.recordIndex}의 무기 목록이 종료·길이·무기 참조 규칙과 맞지 않습니다. 해당 기체/복원 구성을 다시 확인하세요.`,{details:{kind:'unit',recordIndex:row.recordIndex,problems:list.problems}});
+ }
+ // The normal row builder checks bounded pilot records while preserving the
+ // intentional 302/303/304..319 and 312..319 forms.
+ const rows=buildEditorRows(root,decoded,session.descriptor.gameId),sourceRows=buildEditorRows(source,session.decoded,session.descriptor.gameId),sourcePilotRows=new Map(sourceRows.pilots.map(row=>[row.recordIndex,row]));
+ for(const row of rows.pilots){const prior=sourcePilotRows.get(row.recordIndex);if((!strictChanged||!prior||prior.tailClosed!==false)&&row.recordKind!=='hero-list'&&row.tailClosed===false)
+   fail('EDITOR_OUTPUT_STRUCTURE_INVALID',`파일럿 #${row.recordIndex}의 습득/능력 목록이 종료되지 않았습니다. 해당 파일럿 편집을 다시 열어 주세요.`,{details:{kind:'pilot',recordIndex:row.recordIndex}});
+ }
+ return Object.freeze({root,units,weapons,pilots});
+}
+
+// File extents are physical ISO allocations, not decoded/staging offsets.
+// Planned writers must fit their authenticated allocation and cannot overlap a
+// different live file. Exact aliases are one final owner only; distinct final
+// bytes for the same extent are rejected before any writer runs.
+async function liveIsoFileExtents(blob,signal){
+ const pvdSector=await readMode1Sector(blob,16,{signal}),pvd=pvdSector.subarray(SECTOR_USER_OFFSET,SECTOR_USER_OFFSET+SECTOR_USER_SIZE);
+ if(pvd[0]!==1||String.fromCharCode(...pvd.subarray(1,6))!=='CD001'||pvd[6]!==1)fail('EDITOR_ISO_NOT_FOUND','출력 ISO9660 디렉터리를 다시 읽지 못했습니다.');
+ const root=readIsoRecord(pvd,156,16,'ISO9660 root directory'),queue=[{extent:root,depth:0,seen:new Set()}],budget={count:0},files=[];
+ while(queue.length){const current=queue.shift(),key=`${current.extent.extentLba}:${current.extent.byteLength}`;if(current.seen.has(key))continue;const seen=new Set(current.seen);seen.add(key);
+  for(const entry of await readDirectoryRecords(blob,current.extent,current.depth,budget,signal)){
+   if(entry.identifier==='.'||entry.identifier==='..')continue;
+   if(entry.directory&&!entry.multiExtent)queue.push({extent:entry,depth:current.depth+1,seen});
+   else if(!entry.directory){if(entry.multiExtent)fail('EDITOR_ISO_UNSUPPORTED','다중 extent 파일은 출력 안전 검사를 통과할 수 없습니다.');files.push(entry);}
+  }
+ }
+ return files;
+}
+function physicalInterval(file,label,bytes){
+ const lba=ownData(file,'extentLba'),length=ownData(file,'byteLength'),sectors=Math.ceil(length/SECTOR_USER_SIZE);
+ if(!Number.isSafeInteger(lba)||lba<0||!Number.isSafeInteger(length)||length<1||(bytes instanceof Uint8Array&&bytes.length!==length))
+  fail('EDITOR_OUTPUT_ALLOCATION_INVALID',`${label}의 인증된 파일 길이와 작성 계획이 일치하지 않습니다. 새 BIN을 만들지 않았습니다.`);
+ return {label,file,start:lba,end:lba+sectors,bytes};
+}
+export async function requirePhysicalResourcePlans(blob,plans,{signal}={}){
+ const requested=plans.filter(Boolean).map(plan=>physicalInterval(plan.file,plan.label,plan.bytes)),owners=[];
+ for(const plan of requested){const same=owners.find(owner=>owner.start===plan.start&&owner.end===plan.end);if(same){
+   if(same.bytes instanceof Uint8Array&&plan.bytes instanceof Uint8Array&&!sameBytes(same.bytes,plan.bytes))fail('EDITOR_OUTPUT_ALLOCATION_INVALID',`${plan.label}과 ${same.label}이 같은 ISO 파일에 서로 다른 최종 바이트를 쓰려고 합니다. 구성을 다시 확인하세요.`);
+   continue;
+  }owners.push(plan);}
+ const live=await liveIsoFileExtents(blob,signal);
+ for(const plan of owners)for(const file of live){const other=physicalInterval(file,file.identifier);if(plan.start<other.end&&other.start<plan.end&&!(plan.start===other.start&&plan.end===other.end))
+   fail('EDITOR_OUTPUT_ALLOCATION_INVALID',`${plan.label}의 ISO 할당이 ${file.identifier} 파일 영역과 겹칩니다. 확장 출력은 지원하지 않습니다.`,{details:{resource:plan.label,conflict:file.identifier}});
+ }
+ return Object.freeze(owners);
+}
+
+// Reuse the inspector's stored-TSR normalization order for the final physical
+// candidate. A TSR extent is a carrier: compact units, F/Final inline auxiliary
+// data, names, clone manifests, and Fv2 are not logical root data by themselves.
+// Every option below comes from the authenticated session, never the request.
+async function normalizeFinalStoredTsr(session,blob,files,stored,{signal,expectedFv2}={}){
+ const {output:storedDecoded}=decodeTsrStream(stored);
+ requireTsrInspectionSize(storedDecoded,session.descriptor.gameId);
+ let faceBytes=null,aliceRead;
+ if(expectedFv2||session.aliceFV2State){
+   const ipFile={extentLba:0,byteLength:0x1800},execFile=(await locateIsoFiles(blob,signal,['0']))['0'];
+   const [ip,exec,face]=await Promise.all([
+     readMode1UserExtent(blob,ipFile.extentLba,ipFile.byteLength,{signal,checksum:true}),
+     readMode1UserExtent(blob,execFile.extentLba,execFile.byteLength,{signal,checksum:true}),
+     readMode1UserExtent(blob,files.face.extentLba,files.face.byteLength,{signal,checksum:true}),
+   ]);
+   const state=readAliceFV2Storage({ip,exec,decoded:storedDecoded,face},{gameId:'srwf-f',baseSha256:session.descriptor.baseTargetSha256,developmentOnly:true}),native=normalizeAliceFV2Native(ip,exec),expected=expectedFv2??session.aliceFV2State;
+   if(!state||!native.installed||native.registered!==state.registered||JSON.stringify(native.unitIds)!==JSON.stringify(state.crew.unitIds)
+     ||state.registered!==expected?.registered||JSON.stringify(state.crew)!==JSON.stringify(expected?.crew))
+     fail('EDITOR_ALICE_INVALID','최종 Fv2 TSR·FACE·IP·EXEC 동승 구성을 다시 확인하지 못했습니다.');
+   aliceRead={decoded:state.decoded,enabled:state.registered,faceInstalled:true,version:4,crew:state.crew};
+ }else{
+   if(files.face)faceBytes=await readMode1UserExtent(blob,files.face.extentLba,files.face.byteLength,{signal,checksum:true});
+   aliceRead=readAlicePilot(storedDecoded,session.descriptor.gameId,{faceBytes});
+ }
+ return normalizeStoredTsrLayout(storedDecoded,{gameId:session.descriptor.gameId,glyphBaseSha256:session.glyphBaseSha256,aliceRead,
+   profiles:[{gameId:session.descriptor.gameId,baseTargetSha256:session.descriptor.baseTargetSha256,decodedLength:session.baseDecodedLength,unitStorage:session.unitStorage}]}).decoded;
+}
+async function validateFinalOutputReadBack(session,written,{signal}={}){
+ const blob=written?.outputBlob;
+ if(!(blob instanceof Blob)||blob.size%SECTOR_SIZE!==0)fail('EDITOR_OUTPUT_STORAGE_INVALID','최종 BIN의 원시 섹터 구성을 다시 읽지 못했습니다. 새 다운로드를 만들지 않았습니다.');
+ const files=await locateIsoFiles(blob,signal,['TSR.BIN','FACE.BIN']);
+ const stored=await readMode1UserExtent(blob,files.tsr.extentLba,files.tsr.byteLength,{signal,checksum:true});
+ let decoded;try{decoded=await normalizeFinalStoredTsr(session,blob,files,stored,{signal,expectedFv2:written?.aliceFV2});}catch(error){
+   // Preserve a field-specific reader/normalizer refusal instead of hiding it
+   // behind one generic final-output error. Only an unexpected exception is
+   // translated to the final structural safety boundary.
+   if(error?.code)throw error;
+   fail('EDITOR_OUTPUT_STRUCTURE_INVALID','최종 BIN의 TSR.BIN 논리 구조를 다시 확인하지 못했습니다.',{cause:error});
+ }
+ requireEffectiveDataTopology(session,decoded);
+ return written;
+}
 
 async function exportEditedDataImage(session, request, { signal, onProgress, testSeam, onBudget,alicePlanOut,fV2Pipeline=false } = {}, preflightOnly=false) {
   requireAuthenticatedEditorSession(session,request);
@@ -4763,7 +4890,7 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
   if (session.scenario && (deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || dialogueEdits.length || rosterLevelEdits.length || mapEdits.length)) {
     const current = session.scenario, gameId = session.descriptor.gameId;
     const [{ repackScenarioDeployments }, { repackMapTiles }] = await Promise.all([
-      import('./editor-deployments.mjs?v=20261113-froster1'), import('./editor-map-archive.mjs?v=20261113-froster1'),
+      import('./editor-deployments.mjs?v=20261113-alicecopies1'), import('./editor-map-archive.mjs?v=20261113-alicecopies1'),
     ]);
     [scenarioChange, mapChange] = await Promise.all([
       deploymentEdits.length || eventEdits.length || deadlineEdits.length || reinforcementEdits.length || dialogueEdits.length || rosterLevelEdits.length ? repackScenarioDeployments(current.scenarioBytes, gameId, current.inspected.maps, current.tables,
@@ -4815,6 +4942,26 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
   if(JSON.stringify(clonesReadBack.entries)!==JSON.stringify(weaponClones))fail('EDITOR_OUTPUT_INTERNAL','무기 복제 기록이 일치하지 않습니다.');
   const logicalReadBack=expandCompactUnitStorage(clonesReadBack.decoded,session.descriptor.gameId,{profiles:[{gameId:session.descriptor.gameId,baseTargetSha256:session.descriptor.baseTargetSha256,decodedLength:session.baseDecodedLength,unitStorage:compactStorage}],inlineAuxiliary:finalReadBack!==fReadBack});
   if(!sameBytes(logicalReadBack,decoded))fail('EDITOR_OUTPUT_INTERNAL','이설·글꼴 편집을 다시 읽은 결과가 작성한 데이터와 다릅니다.');
+  // Test-only corruption may damage this effective view but cannot skip the
+  // check. Production callers never receive/pass testSeam.
+  testSeam?.afterEffectiveData?.(logicalReadBack,{session});
+  // This is the post-clone/post-restoration/post-field effective table, not the
+  // source request. It catches a malformed link or tail before packing.
+  requireEffectiveDataTopology(session,logicalReadBack);
+  // Allocation checks use physical ISO sectors only. The existing writers keep
+  // their own decoded/staging and native read-backs; this composition check adds
+  // the missing cross-resource overlap proof before either preflight or export.
+  await requirePhysicalResourcePlans(session.sourceBlob,[
+    {label:'TSR.BIN',file:session.file},
+    mapPlan&&{label:'KOM.PAC',file:mapPlan.file,bytes:mapPlan.bytes},
+    componentPlan&&{label:'C_ROBOT.BIN',file:session.battleComponents.file,bytes:componentPlan.bytes},
+    handPointPlan&&{label:'handpoint resource',file:session.battleComponents.handPoints.file,bytes:handPointPlan.bytes},
+    motionPlan&&{label:'motion resource',file:session.battleComponents.motion.file,bytes:motionPlan.bytes},
+    beamPlan&&{label:'beam resource',file:session.battleComponents.beamBank.file,bytes:beamPlan.bytes},
+    aliceFaceChanged&&{label:'FACE.BIN',file:session.alice.face.file,bytes:aliceFacePlan},
+    scenarioChange&&{label:'SCEDATA.BIN',file:session.scenario.files.scedata,bytes:scenarioChange.bytes},
+    mapChange&&{label:'MAP_MAP.BIN',file:session.scenario.files.map_map,bytes:mapChange.bytes},
+  ],{signal});
   if(fV2&&alicePlanOut)alicePlanOut.value.canonicalDecoded=namedDecoded;
   // The a-only battle-scene O repair rides along with a real TSR edit but is
   // never by itself a reason to rewrite the user's image: a request that
@@ -4851,7 +4998,7 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
   // actual output tables, including the TSR-only export path.
   if(tsrChanged&&session.scenario&&(session.scenario.inspected.reinforcements.some(row=>row.enabled===1)||reinforcementEdits.some(row=>row.enabled===1))){
     const current=session.scenario;
-    const {inspectScenarioScopes}=await import('./editor-scenario-provenance.mjs?v=20261113-froster1');
+    const {inspectScenarioScopes}=await import('./editor-scenario-provenance.mjs?v=20261113-alicecopies1');
     inspectScenarioScopes({gameId:session.descriptor.gameId,
       scenarioBytes:scenarioChange?.bytes??current.scenarioBytes,mapBytes:mapChange?.bytes??current.mapBytes,
       // The authenticated type census includes independent unused slots.
@@ -4867,7 +5014,7 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
   if(handPointPlan?.entries.length)storageBudget=Object.freeze({...storageBudget,rows:Object.freeze([...storageBudget.rows,Object.freeze({id:'battle-handpoints',label:'기체별 무기 부착 좌표',usedBytes:handPointPlan.limitBytes-handPointPlan.remaining,limitBytes:handPointPlan.limitBytes,remainingBytes:handPointPlan.remaining,fixed:false})])});
   if(motionPlan?.enabled)storageBudget=Object.freeze({...storageBudget,rows:Object.freeze([...storageBudget.rows,Object.freeze({id:'battle-motion',label:'전투 사출 연출',usedBytes:motionPlan.bytes.length-motionPlan.remaining,limitBytes:motionPlan.bytes.length,remainingBytes:motionPlan.remaining,fixed:false})])});
   if(scenarioChanged){
-    const {readScenarioArchive}=await import('./editor-scenario-archive.mjs?v=20261113-froster1');
+    const {readScenarioArchive}=await import('./editor-scenario-archive.mjs?v=20261113-alicecopies1');
     const archive=readScenarioArchive(scenarioChange.bytes,session.descriptor.gameId,{scenarioLayout:session.scenario.inspected.archive.scenarioLayout});
     const rows=archive.bodies.filter(b=>scenarioChange.changedBodies.includes(b.physicalIndex)).map(b=>Object.freeze({id:`scenario-${b.physicalIndex}`,label:`시나리오 슬롯 ${b.slots.map(n=>n+1).join('/')} 압축`,usedBytes:b.streamEnd,limitBytes:b.end-b.start,remainingBytes:b.end-b.start-b.streamEnd,fixed:false}));
     storageBudget=Object.freeze({...storageBudget,rows:Object.freeze([...storageBudget.rows,...rows]),scenarioBodies:rows.length});
@@ -4899,13 +5046,13 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
     const graphics=await writeBattleComponents(outputBlob);
     outputBlob=graphics.outputBlob;bytesChanged+=graphics.changedSectors.length*SECTOR_SIZE;
   }
-  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261113-froster1');
+  const { inspectScenarioScopes } = await import('./editor-scenario-provenance.mjs?v=20261113-alicecopies1');
   const checked = inspectScenarioScopes({ gameId: session.descriptor.gameId,
     scenarioBytes: scenarioChange?.bytes ?? current.scenarioBytes, mapBytes: mapChange?.bytes ?? current.mapBytes,
     bankBytes: current.bankBytes, tables: current.tables, sectorMode: current.inspected.scope.scenario.sectorMode,
     scenarioLayout: current.inspected.archive.scenarioLayout,glyphMap });
   if (stableScopeJson(checked.scope) !== stableScopeJson(current.inspected.scope)) {
-    const { validateScenarioRebase } = await import('./editor-scenario-archive.mjs?v=20261113-froster1');
+    const { validateScenarioRebase } = await import('./editor-scenario-archive.mjs?v=20261113-alicecopies1');
     try { validateScenarioRebase(current.scenarioBytes, scenarioChange?.bytes, current.inspected.scope, checked.scope,
       session.descriptor.gameId, current.inspected.archive.scenarioLayout); }
     catch { fail('EDITOR_OUTPUT_INTERNAL', 'Scenario/map output changed an immutable byte or editable range.'); }
@@ -4937,6 +5084,10 @@ function requestedCriticalFix(session,request){
 // scalar before awaits; no progress callback may change the requested state.
 export async function exportEditedImage(session,request,options={}) {
  requireAuthenticatedEditorSession(session,request);
+ requireExportSessionStructure(session);
+ const safety=session?.descriptor&&session.sourceBlob instanceof Blob
+   ?validateEditorExportSafety(session,request)
+   :Object.freeze({warnings:Object.freeze([])});
  const criticalValue=requestedCriticalFix(session,request);
  const portraitValue=requestedFinalOutputSwitch(session,request,'dictionaryPortraits')??session?.dictionaryPortraits?.enabled===true;
  const titleValue=requestedFinalOutputSwitch(session,request,'titleLogo');
@@ -5004,13 +5155,25 @@ export async function exportEditedImage(session,request,options={}) {
   written=await finishEditedImage(session,{...written,outputBlob:stored.outputBlob,aliceFV2:stored.state,
     bytesChanged:written.bytesChanged+stored.changedSectors.length*SECTOR_SIZE},options);
  }
- return written;
+ // Test-only corruption is deliberately after every writer and before the
+ // final reader. It can only damage a candidate; it cannot disable a check.
+ if(options.testSeam?.afterFinalWrite)written={...written,outputBlob:await options.testSeam.afterFinalWrite(written.outputBlob)};
+ // Native/dictionary/title/campaign/Fv2 stages can run after TSR packing.
+ // Reopen the final candidate itself before exposing a download. This is a
+ // structural read-back only, not a claim of runtime/gameplay verification.
+ await validateFinalOutputReadBack(session,written,{signal:options.signal});
+ validateEditorOutputSafety(session,written);
+ return Object.freeze({...written,safetyWarnings:safety.warnings});
 }
 
 // The exact same request validation, composition and compressor as export,
 // stopping before any output Blob, sector write, whole-disc hash or download.
 export async function preflightEditedImage(session,request,options={}){
  requireAuthenticatedEditorSession(session,request);
+ requireExportSessionStructure(session);
+ const safety=session?.descriptor&&session.sourceBlob instanceof Blob
+   ?validateEditorExportSafety(session,request)
+   :Object.freeze({warnings:Object.freeze([])});
  requestedCriticalFix(session,request);
  requestedFinalOutputSwitch(session,request,'dictionaryPortraits');requestedFinalOutputSwitch(session,request,'titleLogo');
  const value=ownData(request,'collectionUnlock');
@@ -5021,6 +5184,6 @@ export async function preflightEditedImage(session,request,options={}){
  // deliberately performs no final native write, output hash, or runtime claim.
  const prepared=needsFv2?await prepareAliceFV2Export(session.sourceBlob,{gameId:'srwf-f',baseSha256:session.descriptor.baseTargetSha256,developmentOnly:true,signal:options.signal}):null;
  const dataSession=prepared?createFv2TemporaryDataSession(session,prepared.outputBlob):session;
- try{return await exportEditedDataImage(dataSession,request,{...options,fV2Pipeline:Boolean(prepared)},true);}
+ try{const result=await exportEditedDataImage(dataSession,request,{...options,fV2Pipeline:Boolean(prepared)},true);return Object.freeze({...result,safetyWarnings:safety.warnings});}
  finally{if(prepared)releaseFv2TemporaryDataSession(dataSession);}
 }

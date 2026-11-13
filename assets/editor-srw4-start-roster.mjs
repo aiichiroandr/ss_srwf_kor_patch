@@ -7,7 +7,7 @@ const HOOKS=Object.freeze([2237,2255]),HELPER=2270,LEVEL=31;
 export const SRW4_START_PRESETS=Object.freeze(['s-gundam','s-g-cruiser','ex-s-gundam','g-cruiser','sirbine','zwauss','blood-temple']);
 const BASE_INDICES=Object.freeze([0,2,4,5,6]);
 function fail(message){const error=new Error(message);error.code='EDITOR_SRW4_START_ROSTER_INVALID';throw error;}
-import {bytesEqual as same} from './editor-bytes.mjs?v=20261113-froster1';
+import {bytesEqual as same} from './editor-bytes.mjs?v=20261113-alicecopies1';
 function checkedConfig(input){
  if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(k=>!['version','unitIds','aliceEnabled','alicePilotId','aliceLevel'].includes(k))
   ||input.version!==1||typeof input.aliceEnabled!=='boolean'||input.alicePilotId!==399||input.aliceLevel!==LEVEL

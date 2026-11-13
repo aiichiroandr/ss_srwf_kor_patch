@@ -14,14 +14,15 @@ test('slot summary uses completed counter, exact title index, stored name and co
 });
 const row=(id,kind=0,form=0)=>({recordIndex:id,saveUnitKind:kind,saveUnitForm:form,hp:3000,en:100});
 test('all forms and linked families can be added; components get save-slot references',async()=>{
- const units=[...Array.from({length:13},(_,i)=>row(52+i,i===0?6:5,(i-1)%3)),...Array.from({length:6},(_,i)=>row(38+i,i===0?8:7,i-1)),row(2,9,2),row(3,9,0),row(4,9,1),row(24,4,0),row(25,4,1),row(26,4,2),row(100,0),row(101,1,1)];
+ const units=[...Array.from({length:13},(_,i)=>row(52+i,i===0?6:5,i===0?0:(i-1)%3)),...Array.from({length:6},(_,i)=>row(38+i,i===0?8:7,i===0?0:i-1)),row(2,9,2),row(3,9,0),row(4,9,1),row(24,4,0),row(25,4,1),row(26,4,2),row(100,0),row(101,1,1)];
+ assert.deepEqual(units.filter(unit=>[52,53,54,38,39,40,2,3,4,24,25,26].includes(unit.recordIndex)).map(unit=>[unit.saveUnitKind,unit.saveUnitForm]),[[6,0],[5,0],[5,1],[8,0],[7,0],[7,1],[9,2],[9,0],[9,1],[4,0],[4,1],[4,2]],'every requested root and transform form retains verified save metadata');
  for(const id of [52,55,38,42,2,3,4,24,25,26,100,101]){
   const s=await openSave(syntheticSave().raw,{gameId:'srwf-final',units});const result=s.addUnit(2,id),group=saveUnitGroup(id,units);
   assert.ok(result.record.units.some(u=>u.id===id));
   for(const [child,parent] of group.links){const c=result.record.units.find(u=>u.id===child),p=result.record.units.find(u=>u.id===parent);assert.equal(c.linkedSlot,p.slot);}
   assert.equal((await openSave(await s.exportFile())).list()[0].editable,true);
  }
- assert.ok(saveUnitGroup(52,units,[55,58,61,64]).members.includes(55));
+ assert.equal(saveUnitGroup(52,units).members.includes(55),false,'group template does not borrow occupied save rows');
 });
 
 test('reject mismatched chapter presentation instead of labeling F reunion as episode 69',()=>{

@@ -1,10 +1,10 @@
 // Development-only SCEDATA adapter for F ALICE first-clear scripts.  This module
 // is intentionally not wired into product/core/UI availability.
-import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-froster1';
-import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-froster1';
-import {bytesEqual,bytesToHex,sha256Digest} from './editor-bytes.mjs?v=20261113-froster1';
-import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-froster1';
-import {ALICE_F_FIRST_CLEAR,applyAliceFFirstClearBody,normalizeAliceFFirstClearBody,hasAliceFFirstClearBodyCandidate} from './editor-alice-f-first-clear.mjs?v=20261113-froster1';
+import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1';
+import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-alicecopies1';
+import {bytesEqual,bytesToHex,sha256Digest} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
+import {ALICE_F_FIRST_CLEAR,applyAliceFFirstClearBody,normalizeAliceFFirstClearBody,hasAliceFFirstClearBodyCandidate} from './editor-alice-f-first-clear.mjs?v=20261113-alicecopies1';
 
 const LENGTH=409628;
 const ORIGINAL_SHA='26a3c66a55987323b2c47dd5214f9a2267c724d53f48ca79b16ebc538b091671';

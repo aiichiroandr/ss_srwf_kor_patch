@@ -1,4 +1,4 @@
-import {unitConstructionPreset} from './editor-unit-construction.mjs?v=20261113-froster1';
+import {unitConstructionPreset} from './editor-unit-construction.mjs?v=20261113-alicecopies1';
 
 // A per-launch channel transfers browser-owned Blobs; no ROM URL or persistence.
 export function validateAnimationRuntime(descriptor) {

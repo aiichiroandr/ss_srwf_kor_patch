@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createSavePilotAuthority, getSavePilotDefinitions } from '../assets/save-pilot-support.mjs?v=20261113-froster1';
+import { createSavePilotAuthority, getSavePilotDefinitions } from '../assets/save-pilot-support.mjs?v=20261113-alicecopies1';
 
 const hash='a'.repeat(64);
 const catalog=Object.freeze({version:1,gameId:'srwf-final',growth:{supported:true,experience:Array(100).fill(0),spCurves:Array.from({length:16},()=>Array(99).fill(0))},pilots:[{id:246,name:'donor',identity:'pilot:246',mp:30,mindGrowth:4,subpilot:false},{id:399,name:'ALICE',identity:'alice:1:test',mp:25,mindGrowth:4,subpilot:true}]});

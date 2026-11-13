@@ -1,10 +1,10 @@
 // Development-only F gifted-unit departure guard.  This is intentionally not wired
 // into the editor or product availability path.
-import {Sha256} from './sha256.mjs?v=20261113-froster1';
-import {bytesEqual,dataView,scenarioRootOffsets} from './editor-bytes.mjs?v=20261113-froster1';
-import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-froster1';
-import {normalizeAliceFFirstClearBody} from './editor-alice-f-first-clear.mjs?v=20261113-froster1';
-import {ALICE_F_DEPARTURE_PROFILES} from './editor-alice-f-departure-profiles.mjs?v=20261113-froster1';
+import {Sha256} from './sha256.mjs?v=20261113-alicecopies1';
+import {bytesEqual,dataView,scenarioRootOffsets} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
+import {normalizeAliceFFirstClearBody} from './editor-alice-f-first-clear.mjs?v=20261113-alicecopies1';
+import {ALICE_F_DEPARTURE_PROFILES} from './editor-alice-f-departure-profiles.mjs?v=20261113-alicecopies1';
 
 const MAGIC=new TextEncoder().encode('ALCFDEP1'), FOOTER=26, LIMIT=0x9000;
 function fail(){const e=Error('F gifted-unit departure profile is not an exact supported development shape.');e.code='EDITOR_ALICE_F_DEPARTURE_INVALID';throw e;}

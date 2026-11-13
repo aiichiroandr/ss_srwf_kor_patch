@@ -1,4 +1,4 @@
-import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
+import {sha256Hex} from './sha256.mjs?v=20261113-alicecopies1';
 
 // Compare an exact bounded window without carrying the original game bytes.
 // A mask describes only an independently validated reversible edit, not unknown

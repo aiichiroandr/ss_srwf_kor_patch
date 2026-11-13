@@ -1,5 +1,5 @@
 // Exact source-derived whole-disc pins with only authenticated F FACE sectors added.
-import {Sha256} from './sha256.mjs?v=20261113-froster1';
+import {Sha256} from './sha256.mjs?v=20261113-alicecopies1';
 
 export const ALICE_F_FACE_MASK_PINS=Object.freeze([
  {"baseSha256":"b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9","rawMaskSha256":"32eb0145d21c5a4de66dd436aa25bab88c4ce8a06f7bf91c8106995a4cb1e61b","extentLba":692,"byteLength":343462,"expected":"e74cbc577ee3e13167326ceb689db68992b5c288440310eb63dde96911661105"},

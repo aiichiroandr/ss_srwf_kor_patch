@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {buildDisc} from './helpers/synthetic-iso.mjs';
-import {compressTsr,decompressTsr} from '../assets/editor-core.mjs?v=20261113-froster1';
-import {ALICE_F_V2_IMAGE,aliceFV2PaddedTsrExtent,applyAliceFV2Image,canonicalizeAliceFV2Image,finalizeAliceFV2Export,normalizeAliceFV2NativeImage,prepareAliceFV2Export,readAliceFV2Image} from '../assets/editor-alice-f-v2-image.mjs?v=20261113-froster1';
+import {compressTsr,decompressTsr} from '../assets/editor-core.mjs?v=20261113-alicecopies1';
+import {ALICE_F_V2_IMAGE,aliceFV2PaddedTsrExtent,applyAliceFV2Image,canonicalizeAliceFV2Image,finalizeAliceFV2Export,normalizeAliceFV2NativeImage,prepareAliceFV2Export,readAliceFV2Image} from '../assets/editor-alice-f-v2-image.mjs?v=20261113-alicecopies1';
 const base='b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9';
 const trusted={gameId:'srwf-f',baseSha256:base,developmentOnly:true};
 

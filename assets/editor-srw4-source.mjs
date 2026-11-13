@@ -1,13 +1,13 @@
-import {readSrw4RomFile} from './editor-srw4-file.mjs?v=20261113-froster1';
+import {readSrw4RomFile} from './editor-srw4-file.mjs?v=20261113-alicecopies1';
 // Session-only source ownership. A JSON flag or a decoded pixel array cannot
 // create a connected source: only a completed read of the supplied Blob can.
 async function readSource(blob, options) {
-  const {scanSrw4Icons} = await import('./editor-srw4-rom.mjs?v=20261113-froster1');
+  const {scanSrw4Icons} = await import('./editor-srw4-rom.mjs?v=20261113-alicecopies1');
   options.onProgress?.({phase:'srw4-read',indeterminate:true});
   const bytes=new Uint8Array(await blob.arrayBuffer());
   options.signal?.throwIfAborted();options.onProgress?.({phase:'srw4-source',processed:0,total:1});
   const report=await scanSrw4Icons(bytes,options);
-  if(report.identity.profileId==='srw4-jp-rev1'){const {readSrw4CruiserFrames}=await import('./editor-srw4-battle.mjs?v=20261113-froster1');report.battleFrames=readSrw4CruiserFrames(bytes.subarray(report.identity.headerBytes));report.capabilities.battleBodies='cruiser-frames-rom-verified';}
+  if(report.identity.profileId==='srw4-jp-rev1'){const {readSrw4CruiserFrames}=await import('./editor-srw4-battle.mjs?v=20261113-alicecopies1');report.battleFrames=readSrw4CruiserFrames(bytes.subarray(report.identity.headerBytes));report.capabilities.battleBodies='cruiser-frames-rom-verified';}
   return report;
 }
 

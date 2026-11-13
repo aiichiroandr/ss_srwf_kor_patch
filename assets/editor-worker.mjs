@@ -11,8 +11,8 @@ import {
   prepareFCampaignEditorSource,
   attachFCampaignEditorSource,
   clearFCampaignEditorSource,
-} from "./editor-core.mjs?v=20261113-froster1";
-import {readBattleDialogue} from './editor-battle-dialogue.mjs?v=20261113-froster1';
+} from "./editor-core.mjs?v=20261113-alicecopies1";
+import {readBattleDialogue} from './editor-battle-dialogue.mjs?v=20261113-alicecopies1';
 
 // The worker body takes its scope and the three core operations so that a test can drive it with a fake scope and fake
 // operations. The page's worker starts it below with the real ones.
@@ -294,7 +294,7 @@ export function createEditorWorker(scope, api) {
       }
       if(message.type==='PREFLIGHT'){
         const budget=await api.preflightEditedImage(editorSession,message.request,{signal:controller.signal,onProgress});
-        requireLive();scope.postMessage({type:'PREFLIGHT_COMPLETE',jobId:message.jobId,budget});return;
+        requireLive();scope.postMessage({type:'PREFLIGHT_COMPLETE',jobId:message.jobId,budget,safetyWarnings:budget?.safetyWarnings??[]});return;
       }
       const prepared = await prepareExport(editorSession, message.request, job, {
         onProgress,

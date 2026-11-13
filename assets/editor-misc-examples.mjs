@@ -1,4 +1,4 @@
-import {localEditorReview} from './editor-local-config.mjs?v=20261113-froster1';
+import {localEditorReview} from './editor-local-config.mjs?v=20261113-alicecopies1';
 // Private captures stay in the local review workspace, outside the public package.
 export function createMiscExamples({criticalPanel,debugPanel}) {
  const root=document.createElement('dialog');root.className='misc-example-dialog';root.setAttribute('aria-label','게임 화면 예시');

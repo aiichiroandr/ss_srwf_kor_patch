@@ -1,9 +1,9 @@
-import {createScenarioModel} from './editor-scenario-model.mjs?v=20261113-froster1';
-import {findPatchedEditorImage} from './editor-directory.mjs?v=20261113-froster1';
+import {createScenarioModel} from './editor-scenario-model.mjs?v=20261113-alicecopies1';
+import {findPatchedEditorImage} from './editor-directory.mjs?v=20261113-alicecopies1';
 // Semantic transfer only: old disc offsets and compressed bytes are never copied.
-import {buildPreset,parsePreset,serializePreset,PRESET_TABLE_KEYS} from './editor-preset.mjs?v=20261113-froster1';
-import {inspectMigrationImage,PRODUCTION_TRUST} from './editor-core.mjs?v=20261113-froster1';
-import {constructUnitRow,unitConstructionPreset} from './editor-unit-construction.mjs?v=20261113-froster1';
+import {buildPreset,parsePreset,serializePreset,PRESET_TABLE_KEYS} from './editor-preset.mjs?v=20261113-alicecopies1';
+import {inspectMigrationImage,PRODUCTION_TRUST} from './editor-core.mjs?v=20261113-alicecopies1';
+import {constructUnitRow,unitConstructionPreset} from './editor-unit-construction.mjs?v=20261113-alicecopies1';
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export function extractMigrationPreset(base,edited){
  if(base.gameId!==edited.gameId||base.targetHash!==edited.baseTargetSha256||!['accepted','stock'].includes(base.provenanceMode))throw Error('편집본과 정확히 같은 버전·글꼴의 편집 전 기준 BIN이 필요합니다.');

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ALICE_F_FACE_MASK_PINS,aliceFFaceMasks} from '../assets/editor-alice-f-face-masks.mjs?v=20261113-froster1';
-import {Sha256} from '../assets/sha256.mjs?v=20261113-froster1';
-import {PRODUCTION_TRUST,createEditorInspector} from '../assets/editor-core.mjs?v=20261113-froster1';
+import {ALICE_F_FACE_MASK_PINS,aliceFFaceMasks} from '../assets/editor-alice-f-face-masks.mjs?v=20261113-alicecopies1';
+import {Sha256} from '../assets/sha256.mjs?v=20261113-alicecopies1';
+import {PRODUCTION_TRUST,createEditorInspector} from '../assets/editor-core.mjs?v=20261113-alicecopies1';
 
 const rawMaskSha256=profile=>new Sha256().update(new TextEncoder().encode(JSON.stringify(profile.rawMasks))).hex();
 const faceGeometry=Object.freeze({extentLba:692,byteLength:343462});

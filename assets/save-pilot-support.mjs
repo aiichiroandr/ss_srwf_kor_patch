@@ -11,7 +11,21 @@ function snapshot(value){
  if(!growth.experience.every(n=>Number.isInteger(n)&&n>=0&&n<=65535)||!growth.spCurves.every(c=>Array.isArray(c)&&c.length===99&&c.every(n=>Number.isInteger(n)&&n>=0&&n<=255)))return null;
  const pilots=[];for(const row of value.pilots){if(!plain(row)||!Number.isInteger(row.id)||row.id<1||row.id>511||typeof row.name!=='string'||row.name.length>128||typeof row.identity!=='string'||row.identity.length>256||!Number.isInteger(row.mp)||row.mp<0||row.mp>999||!Number.isInteger(row.mindGrowth)||row.mindGrowth<0||row.mindGrowth>15||typeof row.subpilot!=='boolean')return null;pilots.push(Object.freeze({...row}));}
  if(new Set(pilots.map(p=>p.id)).size!==pilots.length)return null;
- return Object.freeze({version:1,gameId:value.gameId,growth:Object.freeze({supported:true,experience:Object.freeze([...growth.experience]),spCurves:Object.freeze(growth.spCurves.map(c=>Object.freeze([...c])))}),pilots:Object.freeze(pilots)});
+ // Automatic dependent preparation is deliberately stricter than a generic
+ // #399 catalog entry: each inspected base/cruiser family is authenticated.
+ let aliceDependent;
+ if(value.aliceDependent!==undefined){
+  const d=value.aliceDependent,ids=items=>Array.isArray(items)&&items.length>=1&&items.length<=4&&items.every(id=>Number.isInteger(id)&&id>=1&&id<=511)&&new Set(items).size===items.length;
+  if(!plain(d)||d.pilotId!==399||!ids(d.targetIds)||!ids(d.roots)||!Array.isArray(d.families)||d.roots.length<1||d.roots.length>2||d.families.length!==d.roots.length||!pilots.some(p=>p.id===399&&p.subpilot))return null;
+  const families=[];
+  for(const family of d.families){
+   if(!plain(family)||!Number.isInteger(family.root)||!Array.isArray(family.members)||family.members.length!==2||!family.members.every(id=>Number.isInteger(id)&&id>=1&&id<=511)||new Set(family.members).size!==2||!family.members.includes(family.root)||!d.roots.includes(family.root)||!family.members.every(id=>d.targetIds.includes(id)))return null;
+   families.push(Object.freeze({root:family.root,members:Object.freeze([...family.members])}));
+  }
+  if(new Set(d.roots).size!==d.roots.length||new Set(families.map(f=>f.root)).size!==families.length||new Set(families.flatMap(f=>f.members)).size!==d.targetIds.length||!d.targetIds.every(id=>families.some(f=>f.members.includes(id))))return null;
+  aliceDependent=Object.freeze({pilotId:399,targetIds:Object.freeze([...d.targetIds]),roots:Object.freeze([...d.roots]),families:Object.freeze(families)});
+ }
+ return Object.freeze({version:1,gameId:value.gameId,growth:Object.freeze({supported:true,experience:Object.freeze([...growth.experience]),spCurves:Object.freeze(growth.spCurves.map(c=>Object.freeze([...c])))}),pilots:Object.freeze(pilots),...(aliceDependent?{aliceDependent}:{})});
 }
 const fingerprint=c=>JSON.stringify(c);
 export function createSavePilotAuthority(worker){

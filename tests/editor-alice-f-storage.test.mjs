@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {activeFace,aliceFV2StoragePilot,aliceFV2StoragePointerValues,faceDisplayView,getAliceFV2SavePilotState,readAliceFV2Storage,writeAliceFV2Storage} from '../assets/editor-alice-f-storage.mjs?v=20261113-froster1';
-import {dataView} from '../assets/editor-bytes.mjs?v=20261113-froster1';
+import {activeFace,aliceFV2StoragePilot,aliceFV2StoragePointerValues,faceDisplayView,getAliceFV2SavePilotState,readAliceFV2Storage,writeAliceFV2Storage} from '../assets/editor-alice-f-storage.mjs?v=20261113-alicecopies1';
+import {dataView} from '../assets/editor-bytes.mjs?v=20261113-alicecopies1';
 const BASE='b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9';
 test('Fv2 storage exposes no mint/register capability',()=>{assert.equal(typeof getAliceFV2SavePilotState,'function');assert.equal(typeof activeFace,'function');assert.equal(typeof faceDisplayView,'function');assert.equal(getAliceFV2SavePilotState({},{}),null);});
 test('Fv2 storage derives IP targets from the IP base and post-hook data layout',()=>{

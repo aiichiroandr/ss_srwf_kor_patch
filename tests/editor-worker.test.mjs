@@ -213,7 +213,7 @@ test('capacity preflight is a session-bound cancellable job and does not call ex
  let exports=0;const {send,last}=harness({exportEditedImage:async()=>{exports++;}});
  await send(job('PREFLIGHT',{request:{}}));assert.equal(last().error.code,'EDITOR_SESSION_MISSING');
  await send(job('INSPECT',{}));await send(job('PREFLIGHT',{request:{}}));
- assert.deepEqual(last(),{type:'PREFLIGHT_COMPLETE',jobId:'job-00001',budget:{canExport:true}});assert.equal(exports,0);
+ assert.deepEqual(last(),{type:'PREFLIGHT_COMPLETE',jobId:'job-00001',budget:{canExport:true},safetyWarnings:[]});assert.equal(exports,0);
  const {send:cancel,last:cancelLast}=harness({preflightEditedImage:(_s,_r,{signal})=>new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(signal.reason)))});
  await cancel(job('INSPECT',{}));await cancel(job('PREFLIGHT',{request:{}}));await cancel({type:'CANCEL',jobId:'job-00001'});
  assert.equal(cancelLast().type,'CANCELLED');

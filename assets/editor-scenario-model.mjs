@@ -1,15 +1,15 @@
-import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261113-froster1';
-import {validateScenarioDialogueSpeaker} from './editor-scenario-dialogue.mjs?v=20261113-froster1';
-import {canonicalAfterDialogueJson,readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261113-froster1';
-import {ALLY_REINFORCEMENT_FIELDS,isAllyReinforcementRow} from './editor-scenario-reinforcement-data.mjs?v=20261113-froster1';
-import { EVENT_CRITERIA_FIELDS } from './editor-scenario-event-criteria.mjs?v=20261113-froster1';
-import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261113-froster1';
-import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261113-froster1';
+import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261113-alicecopies1';
+import {validateScenarioDialogueSpeaker} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1';
+import {canonicalAfterDialogueJson,readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261113-alicecopies1';
+import {ALLY_REINFORCEMENT_FIELDS,isAllyReinforcementRow} from './editor-scenario-reinforcement-data.mjs?v=20261113-alicecopies1';
+import { EVENT_CRITERIA_FIELDS } from './editor-scenario-event-criteria.mjs?v=20261113-alicecopies1';
+import { EVENT_PHASE_FIELDS } from './editor-scenario-event-phase.mjs?v=20261113-alicecopies1';
+import { CRITERIA_FIELDS } from './editor-scenario-criteria.mjs?v=20261113-alicecopies1';
 // Sparse map rows share the ordinary diff/preset model without allocating a
 // mutable object for every cell of every map on a phone.
-import { createMapGraphics } from './editor-map-graphics.mjs?v=20261113-froster1';
-import {scenarioAppearance} from './editor-scenario-appearance.mjs?v=20261113-froster1';
-import {objectiveContextFor as contextFor,snapshotRegionContexts} from './editor-scenario-region-context.mjs?v=20261113-froster1';
+import { createMapGraphics } from './editor-map-graphics.mjs?v=20261113-alicecopies1';
+import {scenarioAppearance} from './editor-scenario-appearance.mjs?v=20261113-alicecopies1';
+import {objectiveContextFor as contextFor,snapshotRegionContexts} from './editor-scenario-region-context.mjs?v=20261113-alicecopies1';
 export function createScenarioModel(view = {}) {
   const graphics = createMapGraphics();
   const gameId=view.gameId??null,units=view.units??[],pilots=view.pilots??[];

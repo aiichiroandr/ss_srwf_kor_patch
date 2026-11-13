@@ -1,8 +1,8 @@
 // Reversible multi-unit support metadata. No unknown game bytes are modified.
-import{ALICE_ART}from'./editor-alice-art.mjs?v=20261113-froster1';
-import{aliceCrewConfig,isAliceReservedPilot}from'./editor-alice-crew-data.mjs?v=20261113-froster1';
-import{expandFinalInlineAuxiliary}from'./editor-final-inline-aux.mjs?v=20261113-froster1';
-import{base64ToBytes,bytesEqual as same,dataView as d}from'./editor-bytes.mjs?v=20261113-froster1';
+import{ALICE_ART}from'./editor-alice-art.mjs?v=20261113-alicecopies1';
+import{aliceCrewConfig,isAliceReservedPilot}from'./editor-alice-crew-data.mjs?v=20261113-alicecopies1';
+import{expandFinalInlineAuxiliary}from'./editor-final-inline-aux.mjs?v=20261113-alicecopies1';
+import{base64ToBytes,bytesEqual as same,dataView as d}from'./editor-bytes.mjs?v=20261113-alicecopies1';
 // SRWALC03 and the compact (flag 4) form belong to the v0.4 portrait carrier,
 // which the public build does not ship: both are refused, never rewritten.
 const MAGIC='SRWALC04',LEGACY='SRWALC03',FOOTER=16,NAME=Uint8Array.of(0x16,0x21,0x1e,0x18,0x1a,255);

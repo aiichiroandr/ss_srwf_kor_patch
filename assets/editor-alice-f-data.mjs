@@ -1,11 +1,11 @@
 // Reversible F-only TSR envelope for ALICE's reserved subpilot.  No native code
 // or UI consumes this representation while ALICE_F_PROFILE.pendingRuntime is set.
-import {ALICE_ART} from './editor-alice-art.mjs?v=20261113-froster1';
-import {aliceCrewConfig,ALICE_CREW_DEFAULTS,isAliceReservedPilot} from './editor-alice-crew-data.mjs?v=20261113-froster1';
-import {sha256Hex} from './sha256.mjs?v=20261113-froster1';
-import {bytesEqual,dataView} from './editor-bytes.mjs?v=20261113-froster1';
-import {ALICE_F_PROFILE} from './editor-alice-f-profile.mjs?v=20261113-froster1';
-import {inspectAliceFFaceHeader} from './editor-alice-f-face.mjs?v=20261113-froster1';
+import {ALICE_ART} from './editor-alice-art.mjs?v=20261113-alicecopies1';
+import {aliceCrewConfig,ALICE_CREW_DEFAULTS,isAliceReservedPilot} from './editor-alice-crew-data.mjs?v=20261113-alicecopies1';
+import {sha256Hex} from './sha256.mjs?v=20261113-alicecopies1';
+import {bytesEqual,dataView} from './editor-bytes.mjs?v=20261113-alicecopies1';
+import {ALICE_F_PROFILE} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
+import {inspectAliceFFaceHeader} from './editor-alice-f-face.mjs?v=20261113-alicecopies1';
 const MAGIC=new TextEncoder().encode('SRWALF1'),FOOTER=20,NAME=Uint8Array.of(0x16,0x21,0x1e,0x18,0x1a,255);
 export const ALICE_F_CREW_DEFAULTS=ALICE_CREW_DEFAULTS;
 const fConfig=value=>aliceCrewConfig(value);
