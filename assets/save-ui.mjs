@@ -12,7 +12,7 @@ import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
 export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}={}) {
   const $=id=>document.getElementById(id),dialog=$('saveEditorDialog');
   if(!dialog)return;
-  let session=null,key=null,slot=null,kind='pilot',unitTab='stats',fileName='',busy=false,invalid=false,generation=0,downloadedChanges='[]',catalogOpening=null;
+  let session=null,key=null,slot=null,kind='pilot',unitTab='stats',fileName='',busy=false,invalid=false,generation=0,downloadedChanges='[]',catalogOpening=null,pendingCatalogFile=null;
   const drafts=new Map();let portraitKey='',portraitGeneration=0,listPortraitGeneration=0;
   let listPage=0,unitPage=0,slotsPage=0,changesPage=0,layoutFrame=null,commonTab='money';
   const capacity=(id,row,gap=8)=>Math.max(1,Math.floor((($(id).clientHeight||row)+gap)/(row+gap)));
@@ -77,7 +77,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     const changes=session?.diff()??[];
     $('saveDownload').disabled=busy||invalid||!changes.length;
     $('saveReset').disabled=busy||(!changes.length&&!drafts.size);
-    $('saveFileInput').disabled=busy;$('saveRecordSelect').disabled=busy||!session;
+    $('saveFileInput').disabled=busy&&!catalogOpening;$('saveRecordSelect').disabled=busy||!session;
     $('saveChangeCount').textContent=drafts.size?`입력 오류 ${drafts.size}건 · 저장 전 수정하세요`:changes.length?`변경 ${changes.length}건 · 내역 보기`:'변경 없음';
     const list=$('saveChanges');list.replaceChildren();
     const entries=[...[...drafts].map(([id,draft])=>({draftId:id,draft})),...changes.map(change=>({change}))];
@@ -357,14 +357,22 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     if(busy)return;
     open();if(!dialog.open)return;
     const controller=new AbortController(),sourceToken=context().sessionToken;
-    catalogOpening=controller;busy=true;render();message('현재 ROM의 추가 기체와 세이브 연결을 확인하고 있습니다… 닫으면 취소됩니다.');
+    catalogOpening=controller;pendingCatalogFile=null;let catalogReady=false;busy=true;render();message('현재 ROM의 추가 기체와 세이브 연결을 확인하고 있습니다… 닫으면 취소됩니다.');
     try{
       await prepareCatalog({signal:controller.signal});controller.signal.throwIfAborted();
       if(context().sessionToken!==sourceToken)throw Error('ROM이 변경되었습니다. 현재 게임에서 세이브를 다시 열어 주세요.');
-      session?.updateCatalog(context());
+      session?.updateCatalog(context());catalogReady=true;
       message(session?'추가 기체 연결을 확인했습니다. 기존 세이브 편집은 유지됩니다.':'기체 연결을 확인했습니다. 세이브 파일을 열어 주세요.');
     }catch(error){if(!controller.signal.aborted&&dialog.open)message(error.message,true);}
-    finally{if(catalogOpening===controller){catalogOpening=null;busy=false;render();}}
+    finally{
+      if(catalogOpening===controller){
+        const file=pendingCatalogFile;pendingCatalogFile=null;
+        catalogOpening=null;busy=false;render();
+        // The native picker opens on the user's gesture; loading waits for the
+        // authenticated catalog and cannot outlive this particular dialog.
+        if(catalogReady&&dialog.open&&file)void load(file);
+      }
+    }
   }
   $('saveEditorOpen').addEventListener('click',async()=>{
     if(!context().verified)return;
@@ -376,10 +384,15 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
   $('saveCheckRepair').addEventListener('click',()=>{const r=active();if(r)repairSlots([r.key]);});
   $('saveCheckRepairAll').addEventListener('click',()=>repairSlots(records().map(r=>r.key)));
   dialog.addEventListener('close',()=>{
-    if(catalogOpening){catalogOpening.abort(new DOMException('세이브 연결 준비를 취소했습니다.','AbortError'));catalogOpening=null;busy=false;}
+    if(catalogOpening){catalogOpening.abort(new DOMException('세이브 연결 준비를 취소했습니다.','AbortError'));catalogOpening=null;pendingCatalogFile=null;busy=false;}
     $('saveEditorOpen').focus();
   });
-  $('saveFileInput').addEventListener('change',()=>{const f=$('saveFileInput').files?.[0];$('saveFileInput').value='';load(f);});
+  $('saveFileInput').addEventListener('change',()=>{
+    const file=$('saveFileInput').files?.[0];$('saveFileInput').value='';
+    if(!file)return;
+    if(catalogOpening){pendingCatalogFile=file;message('세이브 파일을 선택했습니다. 기체 연결 확인이 끝나면 파일을 엽니다.');return;}
+    void load(file);
+  });
   $('saveRecordSelect').addEventListener('change',()=>selectRecord(Number($('saveRecordSelect').value)));
   $('saveSlotSearch').addEventListener('input',()=>{slotsPage=0;slotCards();});$('saveSlotSort').addEventListener('change',()=>{slotsPage=0;slotCards();});
   $('saveSlotBrowser').addEventListener('toggle',()=>{$('saveEditorBody').hidden=$('saveSlotBrowser').open||!active();requestLayout();});
