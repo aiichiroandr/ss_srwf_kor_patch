@@ -8,6 +8,8 @@ const node = (tag, text, className) => { const n=document.createElement(tag); if
 export function createSrw4SourcePanel(root, host) {
   let report=null, working=false;
   const heading=node('h3','제4차 Rev 1 연동 · F/F완결편 기체 추가');
+  const installed=node('p',undefined,'srw4-source-installed');installed.id='srw4InstalledStatus';installed.hidden=true;
+  installed.title='불러온 BIN에서 확인한 적용 상태입니다. 아래 제4차 원본 연결 상태와는 별개입니다.';
   const tools=node('div',undefined,'srw4-source-tools');
   const open=node('button','제4차 ROM 연결','record-tool'); open.type='button';open.id='srw4SourceOpen';
   const clear=node('button','연결 해제','record-tool'); clear.type='button'; clear.hidden=true;
@@ -20,7 +22,7 @@ export function createSrw4SourcePanel(root, host) {
   const note=node('p','F: 슈퍼계·리얼계 모두 1화 클리어 뒤 첫 인터미션에서 기본 5기가 사용 가능해집니다. F완결편: 세이브 인계 없는 새 게임의 시작 인터미션에서 기본 5기가 바로 사용 가능해집니다.','srw4-source-note');
   const saveNote=node('p','두 G크루저는 독립 추가 기체가 아닌 변형입니다. ALICE는 동승을 켠 전용 서브파일럿만 등록합니다. 기존 세이브는 검증된 Rev1 연결 후 세이브 에디터에서 같은 게임 세이브를 열고 기체 → ＋ 기체 추가에서 연결된 카탈로그를 고르세요. 수정한 BIN/CUE와 세이브를 함께 저장해 사용하세요.','srw4-source-note');
   const results=node('div',undefined,'srw4-source-results');results.hidden=true;
-  tools.append(open,clear,undo,cancel,file);root.append(heading,tools,status,progress,note,saveNote,results);
+  tools.append(open,clear,undo,cancel,file);root.append(heading,tools,installed,status,progress,note,saveNote,results);
 
   function refresh() {
     const ready=host.canConnect();open.disabled=working||!ready;clear.disabled=working||!ready;
@@ -70,7 +72,10 @@ export function createSrw4SourcePanel(root, host) {
   cancel.addEventListener('click',()=>host.cancel?.());
   file.addEventListener('change',()=>{if(file.files?.[0])void run(file.files[0]);});
   refresh();
-  return Object.freeze({refresh,reset(){report=null;progress.hidden=true;status.textContent='제4차 SFC 일본판 Rev 1 원본(SFC/SMC/ZIP)을 검증하면 기본 기체 5대와 변형 2형태를 추가합니다. 기존 기체는 중복 추가하지 않습니다.';render();refresh();},progress(value){
+  return Object.freeze({refresh,reset(verifiedInstall){report=null;progress.hidden=true;
+    installed.hidden=typeof verifiedInstall?.aliceEnabled!=='boolean';
+    installed.textContent=installed.hidden?'':`✓ 4차 기체 확장 적용됨 · ALICE 동승 ${verifiedInstall.aliceEnabled?'ON':'OFF'}`;
+    status.title='';status.textContent='제4차 SFC 일본판 Rev 1 원본(SFC/SMC/ZIP)을 검증하면 기본 기체 5대와 변형 2형태를 추가합니다. 기존 기체는 중복 추가하지 않습니다.';render();refresh();},progress(value){
     if(!working)return;
     if(value?.phase==='srw4-read')status.textContent='제4차 원본을 읽고 있습니다…';
     else if(value?.phase==='srw4-source')status.textContent=value.processed>=value.total?'검증 완료 · 기체 추가를 준비하고 있습니다…':'원본 파일을 검증하고 있습니다…';

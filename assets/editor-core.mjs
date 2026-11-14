@@ -3755,17 +3755,22 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
   // Fv2's SCEDATA/native/data carriers are paired.  This runs after the rows
   // received their verified construction group/form decorations, so a lone
   // cruiser cannot be accepted as one of the seven Rev1 definitions.
+  // Publish installation only after both the native art/map and the exact
+  // scenario grant, unit construction and ALICE settings have authenticated.
+  let srw4Installed = null;
   if(descriptor.gameId==='srwf-f'&&(fv2State||scenario?.aliceFConfig)){
     if(!fv2State||!scenario?.aliceFConfig)fail('EDITOR_ALICE_INVALID','Fv2 동승 데이터와 첫 승리 시나리오가 함께 설치되지 않았습니다.');
     let expected;
     try{expected=makeAliceFFirstClearConfig(units,{gameId:'srwf-f',aliceEnabled:fv2State.registered&&fv2State.crew.enabled});}
     catch{fail('EDITOR_ALICE_INVALID','Fv2 첫 승리용 제4차 기체 7종 구성을 확인하지 못했습니다.');}
     if(JSON.stringify(scenario.aliceFConfig)!==JSON.stringify(expected))fail('EDITOR_ALICE_INVALID','Fv2 첫 승리 시나리오와 인증된 기체·동승 설정이 일치하지 않습니다.');
+    if(componentState?.native&&componentState.mapIcons)srw4Installed=Object.freeze({aliceEnabled:expected.aliceEnabled});
   }
   if(scenario?.srw4StartRoster){
     const expected=srw4StartRosterConfig(root,constructions,{gameId:descriptor.gameId,baseSha256:provenance.baseTargetSha256,
       native:Boolean(componentState?.native),aliceEnabled:aliceState.enabled&&aliceState.crew.enabled});
     if(JSON.stringify(scenario.srw4StartRoster)!==JSON.stringify(expected))fail('EDITOR_SRW4_START_INVALID','새 게임 초기 편성과 검증된 제4차 기체·동승 설정이 일치하지 않습니다.');
+    if(componentState?.native&&componentState.mapIcons)srw4Installed=Object.freeze({aliceEnabled:expected.aliceEnabled});
   }
   if(unitStorage){
     const starts=[...new Set(unitStorage.offsets)].sort((a,b)=>a-b),ends=new Map(starts.map((at,i)=>[at,starts[i+1]??unitStorage.length]));
@@ -3860,6 +3865,7 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
     session,
     view: Object.freeze({
       sessionToken,
+      srw4Installed,
       collectionUnlock:provenance.collectionUnlock===true,
       collections:Object.freeze(descriptor.gameId==='srwf-final'?[collectionEditorRow(provenance.collectionUnlock===true)]:[]),
       debugEntry,

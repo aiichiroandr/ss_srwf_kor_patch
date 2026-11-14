@@ -6169,6 +6169,7 @@ body[data-view="editor"]:has(#miscEditorPanel:not([hidden])) { height:100dvh; mi
 .srw4-source-panel p { margin:0; min-width:0; }
 .srw4-source-progress { display:block; width:100%; height:9px; margin:4px 0 8px; accent-color:#74dc53; }
 .srw4-source-progress[hidden] { display:none; }
+.srw4-source-installed { grid-column:1/-1; color:var(--text,#ebf4f7); font-size:.86rem; font-weight:700; overflow-wrap:anywhere; }
 .srw4-source-note { grid-column:1/-1; font-size:11px; line-height:1.3; color:var(--muted,#b6c7cf); }
 .srw4-source-results { grid-column:1/-1; min-inline-size:0; }
 .srw4-source-known { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px; }

@@ -5131,7 +5131,7 @@ function installEditorRows(view) {
   fCampaignSourcePanel.restore(state.editorFCampaign);
   clearEditorOwnedDraftMarkers();
   weaponNameControl.reset();
-  srw4SourcePanel.reset();state.editorSrw4Connected=false;
+  srw4SourcePanel.reset(view.srw4Installed);state.editorSrw4Connected=false;
   aliceCrewEditor.reset();
   srw4ImportUndo=null;
   state.editorAliceConstructionDefault=null;

@@ -50,3 +50,21 @@ test('source panel publishes both game timings and the connected same-game save 
  assert.match(guidance,/수정한 BIN\/CUE와 세이브를 함께 저장/);
  assert.doesNotMatch(guidance,/F 본편과 기존 세이브의 기체 지급은 별도 편집/);
 });
+
+test('only an authenticated installation shows a badge, and ALICE is separate from source connection',()=>{
+ const root=document.createElement('section');document.body.append(root);
+ const panel=createSrw4SourcePanel(root,{canConnect:()=>true,canUndo:()=>false});
+ const badge=root.querySelector('.srw4-source-installed'),source=root.querySelector('[role="status"]');
+ assert.equal(badge.hidden,true);
+ panel.reset({aliceEnabled:false});
+ assert.equal(badge.hidden,false);
+ assert.match(badge.textContent,/4차 기체 확장 적용됨.*ALICE 동승 OFF/);
+ assert.match(source.textContent,/원본.*검증하면/);
+ assert.equal(root.querySelectorAll('button').find(button=>button.textContent==='연결 해제').hidden,true);
+ panel.reset({aliceEnabled:true});
+ assert.match(badge.textContent,/ALICE 동승 ON/);
+ panel.reset({aliceEnabled:'true'});
+ assert.equal(badge.hidden,true);
+ panel.reset();
+ assert.equal(badge.textContent,'');
+});
