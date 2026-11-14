@@ -5115,7 +5115,9 @@ export async function exportEditedImage(session,request,options={}) {
  // writer restores FACE/IP/EXEC only after those inner writes finish.
  const requestedAlice=Object.hasOwn(request,'alicePilot')?ownData(request,'alicePilot'):session.alice?.enabled===true;
  const fV2Needed=session.descriptor?.gameId==='srwf-f'&&(session.alice?.f2===true||requestedAlice===true||fFirstClearIntent(session,request));
- const stagingOptions=fV2Needed?{...options,[DEFER_OUTPUT_HASH]:true}:options;
+ // Only the final BIN is served or given a receipt; intermediate writers
+ // still run every owning-stage read-back and never consume a stage hash.
+ const stagingOptions={...options,[DEFER_OUTPUT_HASH]:true};
  const fV2Prepared=fV2Needed?await prepareAliceFV2Export(session.sourceBlob,{gameId:'srwf-f',baseSha256:session.descriptor.baseTargetSha256,developmentOnly:true,signal:options.signal}):null;
  // The alias changes only the writer Blob. Its private capability owner remains
  // the original inspected session, so connected Rev1 maps/source plans survive
@@ -5179,7 +5181,10 @@ export async function exportEditedImage(session,request,options={}) {
  // Reopen the final candidate itself before exposing a download. This is a
  // structural read-back only, not a claim of runtime/gameplay verification.
  await validateFinalOutputReadBack(session,written,{signal:options.signal});
- if(fV2Needed)written=await finishEditedImage(session,written,options);
+ // An unchanged source already has an authenticated digest and receipt.
+ if(written.outputBlob!==session.sourceBlob||written.sha256!==session.descriptor.targetSha256){
+  written=await finishEditedImage(session,written,options);
+ }
  validateEditorOutputSafety(session,written);
  if(fV2Needed&&!options.testSeam)verifiedEditorOutputHashes.set(written.outputBlob,Object.freeze({
    gameId:session.descriptor.gameId,baseSha256:session.descriptor.baseTargetSha256,sha256:written.sha256,
