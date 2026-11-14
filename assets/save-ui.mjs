@@ -353,11 +353,34 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     for(const r of rows){const option=document.createElement('option');option.value=String(r.key);option.textContent=slotLabel(r);select.append(option);}
     select.value=String(key);render();dialog.showModal();requestLayout();
   }
+  function clearFastPreview(){
+    $('saveFastPreview').hidden=true;$('saveFastPreviewRows').replaceChildren();
+  }
+  async function previewQueuedSave(file,controller){
+    const token=context().sessionToken,gameId=context().gameId;
+    const live=()=>dialog.open&&catalogOpening===controller&&pendingCatalogFile===file&&context().sessionToken===token;
+    const heading=$('saveFastPreviewTitle'),rows=$('saveFastPreviewRows');
+    $('saveFastPreview').hidden=false;rows.replaceChildren();heading.textContent='선택한 일반 저장의 슬롯을 읽는 중…';
+    try{
+      if(file.size>0x800000)throw Error('8 MiB 이하의 백업 RAM 파일을 선택하세요.');
+      // No ROM catalog is supplied. This temporary parser is not assigned to
+      // the editor session and can never authorize editing or exporting.
+      const bytes=await file.arrayBuffer();if(!live())return;
+      const preview=await openSave(new Uint8Array(bytes));
+      if(!live())return;
+      const matching=preview.list().filter(row=>row.gameId===gameId);
+      heading.textContent=matching.length?`저장 슬롯 ${matching.length}개 · 기체 연결을 확인한 뒤 편집할 수 있습니다.`:'선택한 게임의 일반 저장 슬롯이 없습니다.';
+      for(const row of matching.toSorted((a,b)=>b.dateMinutes-a.dateMinutes).slice(0,3)){
+        const item=document.createElement('li'),summary=saveSummary(row);
+        item.textContent=`슬롯 ${row.name.slice(-2)} · ${summary.progress} · ${summary.date}${row.editable?'':' · 읽기 전용'}`;rows.append(item);
+      }
+    }catch(error){if(live())heading.textContent=error.message;}
+  }
   async function openPrepared(prepareCatalog){
     if(busy)return;
     open();if(!dialog.open)return;
     const controller=new AbortController(),sourceToken=context().sessionToken;
-    catalogOpening=controller;pendingCatalogFile=null;let catalogReady=false;busy=true;render();message('현재 ROM의 추가 기체와 세이브 연결을 확인하고 있습니다… 닫으면 취소됩니다.');
+    catalogOpening=controller;pendingCatalogFile=null;clearFastPreview();let catalogReady=false;busy=true;render();message('현재 ROM의 추가 기체와 세이브 연결을 확인하고 있습니다… 닫으면 취소됩니다.');
     try{
       await prepareCatalog({signal:controller.signal});controller.signal.throwIfAborted();
       if(context().sessionToken!==sourceToken)throw Error('ROM이 변경되었습니다. 현재 게임에서 세이브를 다시 열어 주세요.');
@@ -367,7 +390,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     finally{
       if(catalogOpening===controller){
         const file=pendingCatalogFile;pendingCatalogFile=null;
-        catalogOpening=null;busy=false;render();
+        catalogOpening=null;busy=false;clearFastPreview();render();
         // The native picker opens on the user's gesture; loading waits for the
         // authenticated catalog and cannot outlive this particular dialog.
         if(catalogReady&&dialog.open&&file)void load(file);
@@ -384,13 +407,13 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
   $('saveCheckRepair').addEventListener('click',()=>{const r=active();if(r)repairSlots([r.key]);});
   $('saveCheckRepairAll').addEventListener('click',()=>repairSlots(records().map(r=>r.key)));
   dialog.addEventListener('close',()=>{
-    if(catalogOpening){catalogOpening.abort(new DOMException('세이브 연결 준비를 취소했습니다.','AbortError'));catalogOpening=null;pendingCatalogFile=null;busy=false;}
+    if(catalogOpening){catalogOpening.abort(new DOMException('세이브 연결 준비를 취소했습니다.','AbortError'));catalogOpening=null;pendingCatalogFile=null;busy=false;clearFastPreview();}
     $('saveEditorOpen').focus();
   });
   $('saveFileInput').addEventListener('change',()=>{
     const file=$('saveFileInput').files?.[0];$('saveFileInput').value='';
     if(!file)return;
-    if(catalogOpening){pendingCatalogFile=file;message('세이브 파일을 선택했습니다. 기체 연결 확인이 끝나면 파일을 엽니다.');return;}
+    if(catalogOpening){pendingCatalogFile=file;void previewQueuedSave(file,catalogOpening);message('세이브 파일을 선택했습니다. 기체 연결 확인이 끝나면 파일을 엽니다.');return;}
     void load(file);
   });
   $('saveRecordSelect').addEventListener('change',()=>selectRecord(Number($('saveRecordSelect').value)));

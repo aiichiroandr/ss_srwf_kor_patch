@@ -5,7 +5,7 @@ import {createSaveEditor} from '../assets/save-ui.mjs';
 import {installFakeDom,FakeElement,loadHtml} from './helpers/fake-dom.mjs';
 import {syntheticSave} from './helpers/synthetic-save.mjs';
 
-test('save selection before authenticated catalog stays queued and never survives failure or close',async()=>{
+test('save selection shows read-only preview but editing waits for proof, and abort/error discard the pending file',async()=>{
   const doc=installFakeDom();
   loadHtml(doc,await readFile(new URL('../index.html',import.meta.url),'utf8'));
   Object.defineProperty(FakeElement.prototype,'parentElement',{configurable:true,get(){return this.parentNode;}});
@@ -30,18 +30,27 @@ test('save selection before authenticated catalog stays queued and never survive
   };
   let prep=pending();
   pick('aborted.bcr');close();prep.resolve();await prep.opened;
-  assert.deepEqual(reads,[]);
+  assert.deepEqual(reads,['aborted.bcr']);
+  assert.equal($('saveFastPreview').hidden,true);
+  assert.equal($('saveRecordSelect').options.length,0);reads.length=0;
   prep=pending();
   pick('failed.bcr');prep.reject(Error('검증 실패'));await prep.opened;
-  assert.deepEqual(reads,[]);
+  assert.deepEqual(reads,['failed.bcr']);
+  assert.equal($('saveFastPreview').hidden,true);
+  assert.equal($('saveRecordSelect').options.length,0);reads.length=0;
   assert.match($('saveEditorStatus').textContent,/검증 실패/);
   close();
   prep=pending();
   pick('superseded.bcr');pick('latest.bcr');
-  assert.deepEqual(reads,[]);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(reads,['superseded.bcr','latest.bcr']);
+  assert.equal($('saveFastPreviewRows').children.length,1);
+  assert.equal($('saveRecordSelect').disabled,true);
+  assert.equal($('saveDownload').disabled,true);
   assert.match($('saveEditorStatus').textContent,/확인이 끝나면/);
   prep.resolve();await prep.opened;
   await new Promise(resolve=>setImmediate(resolve));
-  assert.deepEqual(reads,['latest.bcr']);
+  assert.deepEqual(reads,['superseded.bcr','latest.bcr','latest.bcr']);
+  assert.equal($('saveFastPreview').hidden,true);
   assert.equal($('saveFileName').textContent,'latest.bcr');
 });

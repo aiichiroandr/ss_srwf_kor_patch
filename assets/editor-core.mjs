@@ -104,6 +104,10 @@ const srw4NativePlans=new WeakMap();
 // copying it into a frozen data session must not turn a verified Rev1 connection
 // into a caller-reconstructible request flag.
 const fV2TemporarySessionOwners=new WeakMap();
+// These records are process-local and keyed by the exact immutable Blob
+// object produced by an authenticated session, never by a caller's digest.
+const verifiedEditorOutputHashes=new WeakMap();
+const DEFER_OUTPUT_HASH=Symbol('deferIntermediateEditorOutputHash');
 export function createFv2TemporaryDataSession(session,sourceBlob){
   const alias=Object.freeze({...session,sourceBlob});
   fV2TemporarySessionOwners.set(alias,session);
@@ -3556,9 +3560,13 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
   // complete target hash was verified by the patch engine moments earlier.
   // User-selected files and output handles still take the full streaming hash path.
   const patchResultHashAlreadyVerified = descriptor.verifiedPatchTargetSha256 === descriptor.targetSha256;
-  const actualHash = patchResultHashAlreadyVerified
+  const produced = verifiedEditorOutputHashes.get(blob);
+  const producedHash = produced?.gameId === descriptor.gameId &&
+    (produced.baseSha256 === descriptor.targetSha256 || produced.sha256 === descriptor.targetSha256)
+    ? produced.sha256 : null;
+  const actualHash = producedHash ?? (patchResultHashAlreadyVerified
     ? descriptor.targetSha256
-    : await hashBlob(blob, { signal, onProgress, phase: "target-hash" });
+    : await hashBlob(blob, { signal, onProgress, phase: "target-hash" }));
   if (ownEntry(trust.targets, actualHash)?.gameId === descriptor.gameId) {
     requireLatestEditorBase(trust, descriptor.gameId, actualHash);
   }
@@ -4466,8 +4474,14 @@ async function writeEditedTsrImage(session, decoded, { signal, onProgress, testS
   });
 }
 
-async function finishEditedImage(session, written, { signal, onProgress } = {}) {
+async function finishEditedImage(session, written, { signal, onProgress, [DEFER_OUTPUT_HASH]: deferHash=false } = {}) {
   const { outputBlob } = written;
+  if(deferHash){
+    // Raw, decompression, allocation, and logical read-backs still run at
+    // their owning stages. Only final immutable output receives a receipt.
+    const {sha256,receipt,...stage}=written;
+    return Object.freeze({...stage,outputBlob,size:outputBlob.size});
+  }
   onProgress?.({ phase: "output-hash", processed: 0, total: outputBlob.size });
   const outputSha256 = await hashBlob(outputBlob, {
     signal,
@@ -4676,7 +4690,7 @@ async function validateFinalOutputReadBack(session,written,{signal}={}){
  return written;
 }
 
-async function exportEditedDataImage(session, request, { signal, onProgress, testSeam, onBudget,alicePlanOut,fV2Pipeline=false } = {}, preflightOnly=false) {
+async function exportEditedDataImage(session, request, { signal, onProgress, testSeam, onBudget,alicePlanOut,fV2Pipeline=false,[DEFER_OUTPUT_HASH]:deferHash=false } = {}, preflightOnly=false) {
   requireAuthenticatedEditorSession(session,request);
   const readOnly = session.readOnly;
   // A prepared Fv2 pipeline owns FACE/IP/EXEC finalization.  The ordinary
@@ -5021,13 +5035,13 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
     const rows=archive.bodies.filter(b=>scenarioChange.changedBodies.includes(b.physicalIndex)).map(b=>Object.freeze({id:`scenario-${b.physicalIndex}`,label:`시나리오 슬롯 ${b.slots.map(n=>n+1).join('/')} 압축`,usedBytes:b.streamEnd,limitBytes:b.end-b.start,remainingBytes:b.end-b.start-b.streamEnd,fixed:false}));
     storageBudget=Object.freeze({...storageBudget,rows:Object.freeze([...storageBudget.rows,...rows]),scenarioBodies:rows.length});
   }
-  const writeOptions={signal,onProgress,testSeam,onBudget,storageBudget};
+  const writeOptions={signal,onProgress,testSeam,onBudget,storageBudget,[DEFER_OUTPUT_HASH]:deferHash};
   if(preflightOnly)return (await writeEditedTsrImage(session,decoded,{...writeOptions,preflightOnly:true})).budget;
   if (!scenarioChanged && !mapChanged) {
     if(!componentChanged)return buildEditedImage(session, decoded, writeOptions);
     const tsrOutput=await writeEditedTsrImage(session,decoded,writeOptions);
     const graphics=await writeBattleComponents(tsrOutput.outputBlob);
-    return finishEditedImage(session,{...tsrOutput,outputBlob:graphics.outputBlob,bytesChanged:tsrOutput.bytesChanged+graphics.changedSectors.length*SECTOR_SIZE},{signal,onProgress});
+    return finishEditedImage(session,{...tsrOutput,outputBlob:graphics.outputBlob,bytesChanged:tsrOutput.bytesChanged+graphics.changedSectors.length*SECTOR_SIZE},{signal,onProgress,[DEFER_OUTPUT_HASH]:deferHash});
   }
   if(!tsrChanged)await writeEditedTsrImage(session,decoded,{...writeOptions,preflightOnly:true});
   const tsrOutput = tsrChanged ? await writeEditedTsrImage(session, decoded, writeOptions)
@@ -5071,7 +5085,7 @@ async function exportEditedDataImage(session, request, { signal, onProgress, tes
     bytesChanged+=native.changedSectors.length*SECTOR_SIZE;
   }
   return finishEditedImage(session, { ...tsrOutput, outputBlob, bytesChanged,
-    scenario: Object.freeze({ changedBodies: scenarioChange?.changedBodies ?? [], changedPlanes: mapChange?.changedPlanes ?? [] }) }, { signal, onProgress });
+    scenario: Object.freeze({ changedBodies: scenarioChange?.changedBodies ?? [], changedPlanes: mapChange?.changedPlanes ?? [] }) }, { signal, onProgress,[DEFER_OUTPUT_HASH]:deferHash });
 }
 
 function requestedCriticalFix(session,request){
@@ -5101,48 +5115,49 @@ export async function exportEditedImage(session,request,options={}) {
  // writer restores FACE/IP/EXEC only after those inner writes finish.
  const requestedAlice=Object.hasOwn(request,'alicePilot')?ownData(request,'alicePilot'):session.alice?.enabled===true;
  const fV2Needed=session.descriptor?.gameId==='srwf-f'&&(session.alice?.f2===true||requestedAlice===true||fFirstClearIntent(session,request));
+ const stagingOptions=fV2Needed?{...options,[DEFER_OUTPUT_HASH]:true}:options;
  const fV2Prepared=fV2Needed?await prepareAliceFV2Export(session.sourceBlob,{gameId:'srwf-f',baseSha256:session.descriptor.baseTargetSha256,developmentOnly:true,signal:options.signal}):null;
  // The alias changes only the writer Blob. Its private capability owner remains
  // the original inspected session, so connected Rev1 maps/source plans survive
  // both preflight composition and the actual data export.
  const dataSession=fV2Prepared?createFv2TemporaryDataSession(session,fV2Prepared.outputBlob):session;
  let written;
- try{written=await exportEditedDataImage(dataSession,request,{...options,alicePlanOut,fV2Pipeline:Boolean(fV2Prepared)});}
+ try{written=await exportEditedDataImage(dataSession,request,{...stagingOptions,alicePlanOut,fV2Pipeline:Boolean(fV2Prepared)});}
  finally{if(fV2Prepared)releaseFv2TemporaryDataSession(dataSession);}
  const alicePlan=alicePlanOut.value;
  if(session.descriptor.gameId==='srwf-final'&&alicePlan&&(alicePlan.crew.enabled||session.alice?.crew?.enabled)){
   const native=await applyAliceCrewImage(written.outputBlob,{gameId:session.descriptor.gameId,baseSha256:session.descriptor.baseTargetSha256,
    enabled:alicePlan.crew.enabled,unitIds:alicePlan.crew.unitIds,signal:options.signal});
-  if(native.changedSectors.length)written=await finishEditedImage(session,{...written,outputBlob:native.outputBlob,bytesChanged:written.bytesChanged+native.changedSectors.length*SECTOR_SIZE},options);
+  if(native.changedSectors.length)written=await finishEditedImage(session,{...written,outputBlob:native.outputBlob,bytesChanged:written.bytesChanged+native.changedSectors.length*SECTOR_SIZE},stagingOptions);
  }
  if(value!==undefined&&value!==(session.collectionUnlock===true)){
   const changed=await collectionImage(written.outputBlob,session.descriptor.gameId,{enabled:value,signal:options.signal});
-  written=await finishEditedImage(session,{...written,outputBlob:changed.outputBlob,bytesChanged:written.bytesChanged+changed.changedSectors.length*SECTOR_SIZE},options);
+  written=await finishEditedImage(session,{...written,outputBlob:changed.outputBlob,bytesChanged:written.bytesChanged+changed.changedSectors.length*SECTOR_SIZE},stagingOptions);
  }
  if(criticalValue!==undefined&&criticalValue!==session.criticalFix.enabled){
   const changed=await criticalFixImage(written.outputBlob,{gameId:session.descriptor.gameId,enabled:criticalValue,signal:options.signal});
-  written=await finishEditedImage(session,{...written,outputBlob:changed.outputBlob,bytesChanged:written.bytesChanged+changed.changedSectors.length*SECTOR_SIZE},options);
+  written=await finishEditedImage(session,{...written,outputBlob:changed.outputBlob,bytesChanged:written.bytesChanged+changed.changedSectors.length*SECTOR_SIZE},stagingOptions);
  }
  // Hidden-hero portraits and their dictionary additions are an explicit switch.
  written=await writeDictionaryOutputSwitch(written,{enabled:portraitValue,gameId:session.descriptor.gameId,signal:options.signal,
-  alice:Boolean(alicePlan?.registered),units:Boolean(alicePlan?.units)},{finish:next=>finishEditedImage(session,next,options)});
+  alice:Boolean(alicePlan?.registered),units:Boolean(alicePlan?.units)},{finish:next=>finishEditedImage(session,next,stagingOptions)});
  const saveCompat=await changeCampaignSaveImage(written.outputBlob,{gameId:session.descriptor.gameId,signal:options.signal,enabled:Boolean(fCampaignOwner.catalog(session))});
- if(saveCompat.changedSectors.length)written=await finishEditedImage(session,{...written,outputBlob:saveCompat.outputBlob,bytesChanged:written.bytesChanged+saveCompat.changedSectors.length*SECTOR_SIZE},options);
+ if(saveCompat.changedSectors.length)written=await finishEditedImage(session,{...written,outputBlob:saveCompat.outputBlob,bytesChanged:written.bytesChanged+saveCompat.changedSectors.length*SECTOR_SIZE},stagingOptions);
  if(alicePlan?.startRoster||session.scenario?.srw4StartRoster){
   const start=await changeSrw4StartImage(written.outputBlob,{gameId:session.descriptor.gameId,config:alicePlan?.startRoster??null,
     scenarioLayout:session.scenario?.inspected.archive.scenarioLayout,signal:options.signal});
   if(start.changedSectors.length)written=await finishEditedImage(session,{...written,outputBlob:start.outputBlob,
-    srw4StartRoster:start.config,bytesChanged:written.bytesChanged+start.changedSectors.length*SECTOR_SIZE},options);
+    srw4StartRoster:start.config,bytesChanged:written.bytesChanged+start.changedSectors.length*SECTOR_SIZE},stagingOptions);
  }
  const campaign=await fCampaignOwner.write(session,written.outputBlob,options);
  if(campaign)written=await finishEditedImage(session,{...written,outputBlob:campaign.outputBlob,cueText:campaign.cueText,campaign:campaign.campaign,
-   bytesChanged:written.bytesChanged+(campaign.outputBlob.size-written.outputBlob.size)+Math.ceil(session.file.byteLength/2048)*SECTOR_SIZE+3*SECTOR_SIZE},options);
+   bytesChanged:written.bytesChanged+(campaign.outputBlob.size-written.outputBlob.size)+Math.ceil(session.file.byteLength/2048)*SECTOR_SIZE+3*SECTOR_SIZE},stagingOptions);
  if(!campaign)written=await writeTitleOutputSwitch(written,{enabled:titleValue,gameId:session.descriptor.gameId,signal:options.signal},
-  {finish:next=>finishEditedImage(session,next,options)});
+  {finish:next=>finishEditedImage(session,next,stagingOptions)});
  const ingame=await ingameOwner.write(session,written.outputBlob,options);
  if(ingame)written=await finishEditedImage(session,{...written,outputBlob:ingame.outputBlob,
   cueText:ingame.cueText,ingame:ingame.ingame,
-  bytesChanged:written.bytesChanged+ingame.bytesChanged},options);
+  bytesChanged:written.bytesChanged+ingame.bytesChanged},stagingOptions);
  if(fV2Prepared){
   const firstClear=alicePlan?.firstClear??session.scenario?.aliceFConfig??null;
   if(!firstClear||!(alicePlan?.canonicalDecoded instanceof Uint8Array))fail('EDITOR_ALICE_INVALID','F ALICE 저장에는 검증된 Rev1 7기체 첫 승리 구성이 함께 필요합니다.');
@@ -5151,11 +5166,11 @@ export async function exportEditedImage(session,request,options={}) {
   // conflicting user story rather than silently discarding it.
   const scenario=await changeAliceFImage(written.outputBlob,firstClear,{gameId:'srwf-f',baseSha256:session.descriptor.baseTargetSha256,developmentOnly:true,signal:options.signal});
   if(scenario.changedSectors.length)written=await finishEditedImage(session,{...written,outputBlob:scenario.outputBlob,
-    bytesChanged:written.bytesChanged+scenario.changedSectors.length*SECTOR_SIZE,aliceFFirstClear:scenario.config},options);
+    bytesChanged:written.bytesChanged+scenario.changedSectors.length*SECTOR_SIZE,aliceFFirstClear:scenario.config},stagingOptions);
   const stored=await finalizeAliceFV2Export(fV2Prepared.ticket,written.outputBlob,alicePlan.canonicalDecoded,
     {registered:alicePlan.registered,crew:alicePlan.crew},{gameId:'srwf-f',baseSha256:session.descriptor.baseTargetSha256,developmentOnly:true,signal:options.signal});
   written=await finishEditedImage(session,{...written,outputBlob:stored.outputBlob,aliceFV2:stored.state,
-    bytesChanged:written.bytesChanged+stored.changedSectors.length*SECTOR_SIZE},options);
+    bytesChanged:written.bytesChanged+stored.changedSectors.length*SECTOR_SIZE},stagingOptions);
  }
  // Test-only corruption is deliberately after every writer and before the
  // final reader. It can only damage a candidate; it cannot disable a check.
@@ -5164,7 +5179,11 @@ export async function exportEditedImage(session,request,options={}) {
  // Reopen the final candidate itself before exposing a download. This is a
  // structural read-back only, not a claim of runtime/gameplay verification.
  await validateFinalOutputReadBack(session,written,{signal:options.signal});
+ if(fV2Needed)written=await finishEditedImage(session,written,options);
  validateEditorOutputSafety(session,written);
+ if(fV2Needed&&!options.testSeam)verifiedEditorOutputHashes.set(written.outputBlob,Object.freeze({
+   gameId:session.descriptor.gameId,baseSha256:session.descriptor.baseTargetSha256,sha256:written.sha256,
+ }));
  return Object.freeze({...written,safetyWarnings:safety.warnings});
 }
 
