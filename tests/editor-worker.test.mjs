@@ -44,7 +44,7 @@ test('unchanged ingame preview and save catalog retain the inspected overlay wit
    sessionToken:'session-1',includeSaveCatalog});
   assert.equal(run.last().type,'ANIMATION_SOURCE_COMPLETE');
   assert.equal(run.last().blob,outer);assert.equal(run.last().descriptor,original.descriptor);
-  if(includeSaveCatalog)assert.equal(run.last().saveCatalog,view);
+  if(includeSaveCatalog){assert.equal(run.last().saveCatalog,view);assert.equal(run.last().saveOutput,null);}
  }
 });
 
@@ -52,12 +52,14 @@ test('save additions use the inspected export catalog without replacing the edit
  const original=new Blob(['base']),output=new Blob(['edited']),descriptor={gameId:'srwf-final',targetSha256:'base',baseTargetSha256:'base',targetSize:4};
  const session={sessionToken:'session-1',sourceBlob:original,descriptor};let inspections=0,exports=0;
  const catalog={gameId:'srwf-final',targetHash:'edited',units:[{recordIndex:430,construction:{preset:'s-gundam'}}]};
- const run=harness({inspectPatchedImage:async(blob,d)=>{inspections++;if(inspections===1)return{session,view:{gameId:'srwf-final',targetHash:'base',units:[]}};assert.equal(blob,output);assert.equal(d.targetSha256,'base');return{session:{sessionToken:'output-only'},view:catalog};},exportEditedImage:async s=>{assert.equal(s,session);exports++;return{outputBlob:output,sha256:'edited'};}});
+ const receipt={sha256:'edited',size:output.size};
+ const run=harness({inspectPatchedImage:async(blob,d)=>{inspections++;if(inspections===1)return{session,view:{gameId:'srwf-final',targetHash:'base',units:[]}};assert.equal(blob,output);assert.equal(d.targetSha256,'base');return{session:{sessionToken:'output-only'},view:catalog};},exportEditedImage:async s=>{assert.equal(s,session);exports++;return{outputBlob:output,sha256:'edited',receipt,cueText:'cue'};}});
  await run.send(job('INSPECT'));
  const request={units:[{recordIndex:430}]};
  for(let i=0;i<2;i++){
   await run.send({type:'ANIMATION_SOURCE',previewId:'save-catalog-'+i,sessionToken:'session-1',request,includeSaveCatalog:true});
   assert.equal(run.last().saveCatalog,catalog);assert.equal(run.last().blob,output);
+  assert.deepEqual(run.last().saveOutput,{sha256:'edited',receipt,cueText:'cue'});
  }
  await run.send(job('EXPORT',{request}));assert.equal(run.last().type,'EXPORT_COMPLETE');assert.equal(exports,1);assert.equal(inspections,2);
 });

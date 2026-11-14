@@ -16,7 +16,7 @@ function put(b,p,v,n) { for(let i=n-1;i>=0;i--) { b[p+i]=v&255; v=Math.floor(v/2
 function need(ok,message) { if(!ok) throw new Error(message); }
 function integer(v,min,max) { need(Number.isSafeInteger(v)&&v>=min&&v<=max,`${min}~${max} 사이의 정수를 입력하세요.`); }
 const SAME=value=>JSON.stringify(value);
-function sameAliceDependent(left,right){return !!left&&!!right&&left.pilotId===399&&right.pilotId===399&&SAME(left.targetIds)===SAME(right.targetIds)&&SAME(left.roots)===SAME(right.roots);}
+function sameAliceDependent(left,right){return !!left&&!!right&&left.pilotId===399&&right.pilotId===399&&SAME(left.targetIds)===SAME(right.targetIds)&&SAME(left.roots)===SAME(right.roots)&&SAME(left.families)===SAME(right.families);}
 // Existing #399 rows are never rewritten.  A prepared row is an orphan; an
 // attached row must end one unambiguous human crew chain. Empty table entries
 // have no outgoing links even when their unused next byte happens to be zero.
@@ -155,7 +155,7 @@ export async function openSave(input, catalog={}) {
   }
   const records=parse(raw),changes=new Map(),models=new WeakMap(),addedBindings=new Map(),addedPilotBindings=new Map(),aliceDependentBindings=new Map();
   const unitBinding=unit=>JSON.stringify([unit.recordIndex,unit.identity??null,unit.construction?.preset??null,
-    unit.saveUnitKind??null,unit.saveUnitForm??null,unit.constructionGroupRoot??null]);
+    unit.saveUnitKind??null,unit.saveUnitForm??null,unit.constructionGroup??null,unit.constructionGroupRoot??null,unit.srw4Native===true]);
   const pilotBinding=(row,defs)=>JSON.stringify([row.id,row.identity,row.subpilot,row.id===399?defs.aliceDependent??null:null]);
   function currentPilotDefinitions(key){const defs=getSavePilotDefinitions(catalog.savePilotSupport,{gameId:catalog.gameId,sessionToken:catalog.sessionToken,catalog:catalog.savePilotCatalog});need(defs&&catalog.gameId===get(key).gameId,'추가 파일럿의 검증된 ROM 정보가 바뀌었습니다.');return defs;}
   function validateAddedPilots(){
@@ -412,6 +412,33 @@ export async function openSave(input, catalog={}) {
     if(b.every((v,i)=>v===r.payload[i]))changes.delete(key);else changes.set(key,b);
     return fixed;
   }
+  // Compare only grants actually produced by this editor. Unknown provenance
+  // of pre-existing external save rows cannot establish a new dependency.
+  function requiresGameBundle(input){
+    if(!addedBindings.size&&!addedPilotBindings.size&&!aliceDependentBindings.size)return false;
+    const rows=new Map((input?.units??[]).map(row=>[row.recordIndex,row]));
+    const defs=input?.savePilotCatalog;
+    const inputAlice=defs?.pilots?.find(row=>row.id===399&&row.subpilot===true);
+    const hasNativeBinding=(id,binding)=>{
+      const row=rows.get(id);return input?.gameId===catalog.gameId&&row?.srw4Native===true&&unitBinding(row)===binding;
+    };
+    for(const [key,bindings] of addedBindings){
+      const activeIds=new Set(model(get(key),current(get(key))).units.map(row=>row.id));
+      for(const [id,binding] of bindings){
+        if(activeIds.has(id)&&unitCatalog.get(id)?.srw4Native===true&&!hasNativeBinding(id,binding))return true;
+      }
+    }
+    for(const [key,proof] of aliceDependentBindings){
+      if(!changes.has(key))continue;
+      if(input?.gameId!==catalog.gameId||!inputAlice||!sameAliceDependent(defs?.aliceDependent,proof)
+        ||proof.targetIds.some(id=>!unitCatalog.has(id)||!hasNativeBinding(id,unitBinding(unitCatalog.get(id)))))return true;
+    }
+    for(const [key,bindings] of addedPilotBindings){
+      if(bindings.has(399)&&model(get(key),current(get(key))).pilots.some(row=>row.id===399)
+        &&(input?.gameId!==catalog.gameId||!inputAlice||pilotBinding(inputAlice,defs)!==bindings.get(399)))return true;
+    }
+    return false;
+  }
   async function exportFile(){
     validateAddedPilots();
     validateAliceDependent();
@@ -434,7 +461,7 @@ export async function openSave(input, catalog={}) {
     need(delivered.length===wrapped.length&&delivered.every((v,i)=>v===wrapped[i]),'출력 파일의 압축·배치 재검사에 실패했습니다.');
     return result;
   }
-  return Object.freeze({format:Object.freeze({bytes:raw.length,blockSize:SIZES.get(raw.length),gzipLayers:layers,interleaved}),list,edit,editName,editNames,editUnit,addUnit,addPilot,setUpgradeMode,diff,check,repair,
+  return Object.freeze({format:Object.freeze({bytes:raw.length,blockSize:SIZES.get(raw.length),gzipLayers:layers,interleaved}),list,edit,editName,editNames,editUnit,addUnit,addPilot,setUpgradeMode,diff,check,repair,requiresGameBundle,
     canEditNames:key=>{const r=records.find(r=>r.key===key);return !!r&&r.editable&&canEditSaveNames(catalog,r.gameId);},
     updateCatalog:next=>{const units=new Map((next.units??[]).map(u=>[u.recordIndex,structuredClone(u)]));catalog={...next};unitCatalog=units;},
     reset:key=>{if(key===undefined){changes.clear();addedBindings.clear();addedPilotBindings.clear();aliceDependentBindings.clear();}else{get(key);changes.delete(key);addedBindings.delete(key);addedPilotBindings.delete(key);aliceDependentBindings.delete(key);}},exportFile});

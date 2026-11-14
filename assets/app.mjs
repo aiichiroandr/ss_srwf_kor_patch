@@ -757,8 +757,8 @@ elements.cueButton.addEventListener("click", saveCueFile);
 elements.modePatchButton.addEventListener("click", () => setMode("patch"));
 elements.modeEditorButton.addEventListener("click", () => setMode("editor"));
 let saveNameAuthority=null,savePilotAuthority=null;
-let saveCatalogSnapshot=null,saveCatalogPreparation=null;
-const saveEditor = createSaveEditor(() => ({ verified: Boolean(state.editorSessionToken) && !anyJobBusy(), gameId: state.editorGameId, pilots: saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.pilots:state.editorPilots, units: saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.units:state.editorUnits.filter(row=>!row.pendingConstruction), weapons: state.editorWeapons, partNames: state.editorPartNames, saveTitles: state.editorSaveTitles, sessionToken: state.editorSessionToken, saveNameSupport:state.editorSaveNameSupport, savePilotSupport:saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.pilotSupport:null, savePilotCatalog:saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.savePilotCatalog:null, preview: requestSaveEditorPreview, glyphMap:state.editorGlyphMap,glyphPending:state.editorGlyphRows.some(row=>row.characters!==row.original.characters),encodeText:encodeEditorInput,syncSaveGlyphTexts:texts=>{state.editorSaveNameTexts=new Map(texts);try{commitEditorGlyphPlan(editorGlyphPlan());updateEditorStatus('glyph',state.editorGlyphRows[0]);}catch(error){showEditorError('추가 글자를 적용할 수 없습니다',error.message);}},reserveGlyphCodes:codes=>{state.editorGlyphReserved=new Set(codes);} }), {prepare:()=>prepareWorkflow('save-editor'),verifyOutputCatalog:prepareSaveEditorCatalog});
+let saveCatalogSnapshot=null,saveCatalogPreparation=null,saveInputCatalog=null;
+const saveEditor = createSaveEditor(() => ({ inputCatalog:saveInputCatalog,revision:state.editorEditRevision,outputHash:saveCatalogSnapshot?.token===state.editorSessionToken&&saveCatalogSnapshot?.revision===state.editorEditRevision?saveCatalogSnapshot.view.targetHash:null, verified: Boolean(state.editorSessionToken) && !anyJobBusy(), gameId: state.editorGameId, pilots: saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.pilots:state.editorPilots, units: saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.units:state.editorUnits.filter(row=>!row.pendingConstruction), weapons: state.editorWeapons, partNames: state.editorPartNames, saveTitles: state.editorSaveTitles, sessionToken: state.editorSessionToken, saveNameSupport:state.editorSaveNameSupport, savePilotSupport:saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.pilotSupport:null, savePilotCatalog:saveCatalogSnapshot?.token===state.editorSessionToken?saveCatalogSnapshot.view.savePilotCatalog:null, preview: requestSaveEditorPreview, glyphMap:state.editorGlyphMap,glyphPending:state.editorGlyphRows.some(row=>row.characters!==row.original.characters),encodeText:encodeEditorInput,syncSaveGlyphTexts:texts=>{state.editorSaveNameTexts=new Map(texts);try{const plan=editorGlyphPlan(),changed=JSON.stringify(plan.entries)!==JSON.stringify(state.editorGlyphEntries);commitEditorGlyphPlan(plan);if(changed)updateEditorStatus('glyph',state.editorGlyphRows[0]);}catch(error){showEditorError('추가 글자를 적용할 수 없습니다',error.message);}},reserveGlyphCodes:codes=>{state.editorGlyphReserved=new Set(codes);} }), {prepare:()=>prepareWorkflow('save-editor'),verifyOutputCatalog:prepareSaveEditorCatalog,prepareGameBundle:prepareSaveGameBundle});
 let srw4SourceJob=null,srw4ImportUndo=null,srw4BaseMapIcons=null,srw4BasePending=false;
 let fCampaignSourceJob=null;
 const fCampaignSourcePanel=createFCampaignSourcePanel(byId('fCampaignSourcePanel'),{
@@ -911,6 +911,7 @@ function requestEditorOutputSource({signal,includeSaveCatalog=false}={}) {
     const receive = (event) => {
       const data=event.data;
       if (data?.previewId !== previewId) return;
+      if(!event.isTrusted||event.target!==worker||event.currentTarget!==worker)return;
       if(worker!==state.editorWorker)return finish(Error('ROM 작업 스레드가 바뀌었습니다. 다시 열어 주세요.'));
       if (sessionToken !== state.editorSessionToken) return finish(Error("ROM 세션이 바뀌었습니다. 다시 열어 주세요."));
       if(revision!==state.editorEditRevision)return finish(Error('준비 중 편집값이 바뀌었습니다. 미리보기를 다시 여세요.'));
@@ -943,7 +944,7 @@ function requestEditorOutputSource({signal,includeSaveCatalog=false}={}) {
       try{
         const source=Object.freeze({blob:value.blob,descriptor:Object.freeze({...value.descriptor})});
         const verified=currentPreviewResources().rememberVerifiedSource(source);
-        resolve(includeSaveCatalog?Object.freeze({...verified,saveCatalog:value.saveCatalog,event:value.event}):verified);
+        resolve(includeSaveCatalog?Object.freeze({...verified,saveCatalog:value.saveCatalog,saveOutput:value.saveOutput,event:value.event}):verified);
       }catch(error){reject(error);}
     }
     worker.addEventListener("message", receive);
@@ -1143,10 +1144,22 @@ async function prepareSaveEditorCatalog({signal}={}){
     if(token!==state.editorSessionToken||revision!==state.editorEditRevision)throw Error('ROM 편집 내용이 바뀌었습니다. 세이브를 다시 열어 주세요.');
     const view=source.saveCatalog;
     const pilotSupport=savePilotAuthority?.accept(source.event,{gameId:view.gameId,sessionToken:token,sourceSessionToken:view.sessionToken,targetHash:view.targetHash,baseTargetSha256:view.baseTargetSha256})??null;
-    saveCatalogSnapshot={token,revision,view,pilotSupport};
+    saveCatalogSnapshot={token,revision,view,pilotSupport,blob:source.blob,saveOutput:source.saveOutput};
     return view;
   })().finally(()=>{if(saveCatalogPreparation===pending){saveCatalogPreparation=null;state.editorSaveCatalogPreparing=false;updateControls();}});
   saveCatalogPreparation=pending;updateControls();return pending.promise;
+}
+function prepareSaveGameBundle({token,revision,outputHash}){
+  const snapshot=saveCatalogSnapshot, output=snapshot?.saveOutput;
+  if(!snapshot||snapshot.token!==token||snapshot.revision!==revision||token!==state.editorSessionToken
+     ||revision!==state.editorEditRevision||snapshot.view.targetHash!==outputHash||outputHash!==output?.sha256
+     ||outputHash===state.editorTargetHash||!(snapshot.blob instanceof Blob)
+     ||output.receipt?.schema!=='srwf.editor-output-receipt.v1'||output.receipt.sha256!==outputHash||output.receipt.size!==snapshot.blob.size
+     ||output.receipt?.gameId!==state.editorGameId||output.receipt?.baseTargetSha256!==state.editorBaseTargetHash)
+    throw Error('연결된 게임 파일을 확인하지 못했습니다. 현재 ROM과 편집값을 확인한 뒤 다시 준비하세요.');
+  const pair=makeEditorDownloadPair({...output,outputBlob:snapshot.blob});
+  rememberEditorOutputReceipt(output.receipt);
+  return {...pair,outputHash};
 }
 function openSaveEditor(){
   return saveEditor.openPrepared(prepareSaveEditorCatalog);
@@ -4695,7 +4708,7 @@ function beginEditorInspection(imageBlob, {
 // 편집 세션이 사라졌을 때(오류·작업 스레드 종료) 화면에 남은 편집 데이터를 모두 치운다.
 function dropEditorSession() {
   editorNavigationSession = null;
-  saveCatalogSnapshot=null;saveCatalogPreparation=null;state.editorSaveCatalogPreparing=false;
+  saveCatalogSnapshot=null;saveCatalogPreparation=null;state.editorSaveCatalogPreparing=false;saveInputCatalog=null;
   if(fCampaignSourceJob){fCampaignSourceJob.reject(new DOMException('ROM 세션이 닫혔습니다.','AbortError'));fCampaignSourceJob=null;}
   state.editorFCampaign=null;state.editorFCampaignOriginal=false;state.editorCanonicalSize=null;state.editorIngame=null;fCampaignSourcePanel.reset();
   if(srw4SourceJob){srw4SourceJob.reject(new DOMException('ROM 세션이 닫혔습니다.','AbortError'));srw4SourceJob=null;}
@@ -5126,6 +5139,7 @@ function validCriticalControl(type,control,value,row){
 function installEditorRows(view) {
   editorNavigationSession = null;
   saveCatalogSnapshot=null;saveCatalogPreparation=null;state.editorSaveCatalogPreparing=false;
+  saveInputCatalog=Object.freeze({gameId:view.gameId,units:structuredClone(view.units),savePilotCatalog:structuredClone(view.savePilotCatalog)});
   state.editorFCampaign=view.fCampaign??null;state.editorFCampaignOriginal=Boolean(view.fCampaign);
   state.editorIngame=view.ingame??null;
   fCampaignSourcePanel.restore(state.editorFCampaign);
@@ -9055,6 +9069,21 @@ async function startEditorOutputJob(type) {
   }
 }
 
+function makeEditorDownloadPair(result){
+  const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  const suffix = Math.random().toString(16).slice(2, 8).padEnd(6, "0");
+  const prefix = state.editorGameId === "srwf-final" ? "SRWFIN" : "SRWF";
+  const imageName = `${prefix}-${state.workflowBaseKind === "stock" ? "JP" : "KOR"}-CUSTOM-${timestamp}-${suffix}.bin`;
+  const cueName = imageName.slice(0, -4) + ".cue";
+  const cueText = state.editorIngame
+    ?ingameDownloadCue(result,{gameId:state.editorGameId,canonicalSize:state.editorCanonicalSize,enabled:true},imageName)
+    :state.editorFCampaign
+    ?campaignDownloadCue(result,{gameId:state.editorGameId,canonicalSize:state.editorCanonicalSize,canonicalTracks:state.editorCueTracks,enabled:true},imageName)
+    :buildPatchedImageCue(imageName, state.editorTargetHash, state.editorCueTracks);
+  const cueBlob = new Blob([cueText], { type: "application/x-cue;charset=utf-8" });
+  return {imageName,cueName,bin:result.outputBlob,cueBlob};
+}
+
 function installEditorDownload(result) {
   if (!result
     || !(result.outputBlob instanceof Blob)
@@ -9074,22 +9103,12 @@ function installEditorDownload(result) {
     || typeof globalThis.URL?.revokeObjectURL !== "function") {
     throw new PatcherError("EDITOR_DOWNLOAD_UNAVAILABLE", "이 브라우저에서는 수정 BIN 다운로드를 만들 수 없습니다.");
   }
-  const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
-  const suffix = Math.random().toString(16).slice(2, 8).padEnd(6, "0");
-  const prefix = state.editorGameId === "srwf-final" ? "SRWFIN" : "SRWF";
-  const imageName = `${prefix}-${state.workflowBaseKind === "stock" ? "JP" : "KOR"}-CUSTOM-${timestamp}-${suffix}.bin`;
-  const cueName = imageName.slice(0, -4) + ".cue";
-  const cueText = state.editorIngame
-    ?ingameDownloadCue(result,{gameId:state.editorGameId,canonicalSize:state.editorCanonicalSize,enabled:true},imageName)
-    :state.editorFCampaign
-    ?campaignDownloadCue(result,{gameId:state.editorGameId,canonicalSize:state.editorCanonicalSize,canonicalTracks:state.editorCueTracks,enabled:true},imageName)
-    :buildPatchedImageCue(imageName, state.editorTargetHash, state.editorCueTracks);
-  const cueBlob = new Blob([cueText], { type: "application/x-cue;charset=utf-8" });
+  const {imageName,cueName,bin,cueBlob}=makeEditorDownloadPair(result);
 
   let binUrl = null;
   let cueUrl = null;
   try {
-    binUrl = globalThis.URL.createObjectURL(result.outputBlob);
+    binUrl = globalThis.URL.createObjectURL(bin);
     cueUrl = globalThis.URL.createObjectURL(cueBlob);
   } catch (error) {
     if (binUrl) globalThis.URL.revokeObjectURL(binUrl);

@@ -18,3 +18,23 @@ test('two S and two Ex-S distinct humans preserve independent SP and prepare onl
 test('shared chain, ALICE main, invalid metadata, full unit/pilot slots reject atomically',async t=>{const auth=await authenticated(t);for(const mode of ['alice-main','shared-chain','bad-metadata','pilot-full','unit-full']){const fixture=syntheticSave();if(mode==='alice-main'){alice(fixture,1);unit(fixture,1,300,1);}if(mode==='shared-chain'){unit(fixture,1,300,0);unit(fixture,2,310,0);alice(fixture,1);fixture.payload[0x1000+8]=1;}if(mode==='bad-metadata'){alice(fixture,1);fixture.payload[0x1000+12+3]=0;}if(mode==='pilot-full')for(let slot=1;slot<128;slot++){const at=0x1000+slot*12;put16(fixture.payload,at,74);fixture.payload[at+2]=20;}if(mode==='unit-full')for(let slot=1;slot<128;slot++)unit(fixture,slot,23);commit(fixture);const save=await openSave(fixture.raw,context(auth));assert.throws(()=>save.addUnit(2,300),/ALICE|빈 칸/);assert.deepEqual(await save.exportFile(),fixture.raw,mode);}});
 test('no capability and stale dependent binding fail closed',async t=>{const fixture=syntheticSave(),plain=await openSave(fixture.raw,{gameId:'srwf-final',units,pilots:[{recordIndex:74}]});assert.throws(()=>plain.addUnit(2,300),/동승 패치/);const auth=await authenticated(t),save=await openSave(fixture.raw,context(auth));save.addUnit(2,300);save.updateCatalog({gameId:'srwf-final',units,pilots:[{recordIndex:74}]});await assert.rejects(save.exportFile(),/ROM 정보|지원 기체/);save.reset();assert.deepEqual(await save.exportFile(),fixture.raw);});
 test('authenticated ALICE rows may be multiple orphan or attached subpilots without duplicate-ID noise',async t=>{const auth=await authenticated(t),fixture=syntheticSave();put16(fixture.payload,0x1000,74);fixture.payload[0x1000+2]=30;unit(fixture,1,300,0);fixture.payload[0x1000+8]=1;alice(fixture,1);alice(fixture,2);put16(fixture.payload,0x1000+3*12,74);fixture.payload[0x1000+3*12+2]=30;fixture.payload[0x100+15]=fixture.payload[0x100+16]=255;commit(fixture);const save=await openSave(fixture.raw,context(auth));const issues=save.check(2);assert.equal(issues.some(issue=>issue.id===399&&/같은 파일럿/.test(issue.message)),false);assert.ok(issues.some(issue=>issue.id===74&&/같은 파일럿/.test(issue.message)));assert.equal(issues.some(issue=>issue.level==='error'),false);});
+test('pairing requires only grants missing from the exact input ROM bindings',async t=>{
+ const auth=await authenticated(t),fixture=syntheticSave(),target=context(auth);
+ const save=await openSave(fixture.raw,target);
+ const missing={gameId:target.gameId,units:[]};
+ assert.equal(save.requiresGameBundle(missing),false);
+ save.addUnit(2,300);
+ assert.equal(save.requiresGameBundle(missing),true);
+ assert.equal(save.requiresGameBundle(target),false);
+ assert.equal(save.requiresGameBundle({...target,units:units.filter(u=>u.recordIndex!==301)}),true);
+ assert.equal(save.requiresGameBundle({...target,savePilotCatalog:{...target.savePilotCatalog,aliceDependent:undefined}}),true);
+ const exported=await save.exportFile();
+ const legacy=await openSave(exported,target);
+ legacy.edit(2,'money',12345);
+ assert.equal(legacy.requiresGameBundle(missing),false);
+ save.reset();
+ assert.equal(save.requiresGameBundle(missing),false);
+ save.addPilot(2,399);
+ assert.equal(save.requiresGameBundle(missing),true);
+ assert.equal(save.requiresGameBundle(target),false);
+});

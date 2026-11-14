@@ -9,7 +9,7 @@ import { pageItems,fitPages } from './save-pages.mjs?v=20261113-alicecopies1';
 import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261113-alicecopies1';
 import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
 
-export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}={}) {
+export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,prepareGameBundle}={}) {
   const $=id=>document.getElementById(id),dialog=$('saveEditorDialog');
   if(!dialog)return;
   let session=null,key=null,slot=null,kind='pilot',unitTab='stats',fileName='',busy=false,invalid=false,generation=0,downloadedChanges='[]',catalogOpening=null,pendingCatalogFile=null;
@@ -72,9 +72,31 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     return match?.name||match?.alias||addedPilot?.name||`${type==='pilot'?'파일럿':'기체'} #${row.id}`;
   }
   function message(text,error=false){$('saveEditorStatus').textContent=text;$('saveEditorStatus').classList.toggle('is-error',error);}
+  let pendingBundle=null,pairedLinks=null;
+  const pairedIds=['saveGameBin','saveGameCue','saveGameSave'],startedDownloads=new Set();
+  const pairedStamp=()=>{const c=context();return {token:c.sessionToken,revision:c.revision,outputHash:c.outputHash,change:changeSignature(),generation,session};};
+  const sameStamp=(a,b)=>a.token===b.token&&a.revision===b.revision&&a.outputHash===b.outputHash&&a.change===b.change&&a.generation===b.generation&&a.session===b.session;
+  function clearGameBundle(){
+    for(const id of pairedIds){
+      const link=$(id),url=link?.getAttribute('href');
+      if(!url)continue;
+      link.removeAttribute('href');
+      if(startedDownloads.delete(url))setTimeout(()=>URL.revokeObjectURL(url),60000);
+      else URL.revokeObjectURL(url);
+    }
+    pairedLinks=null;
+    if($('saveGameBundleLinks'))$('saveGameBundleLinks').hidden=true;
+  }
+  function gameBundleRequired(){return typeof prepareGameBundle==='function'&&session?.requiresGameBundle(context().inputCatalog)===true;}
   function controls(){
     invalid=drafts.size>0||Array.from(dialog.querySelectorAll('input[type=number],select[data-save-field]')).some(input=>!input.disabled&&!input.closest('[hidden]')&&(input.value.trim()===''||!input.validity.valid||input.getAttribute('aria-invalid')==='true'));
     const changes=session?.diff()??[];
+    const needsGame=gameBundleRequired();
+    if(pairedLinks&&(!needsGame||invalid||!sameStamp(pairedLinks,pairedStamp())))clearGameBundle();
+    if($('saveGameBundle'))$('saveGameBundle').hidden=!needsGame;
+    $('saveDownload').textContent=needsGame?'게임 파일과 세이브 준비':'수정본 저장';
+    $('saveDownload').dataset.paired=String(needsGame);
+    $('saveDownload').hidden=Boolean(pairedLinks);
     $('saveDownload').disabled=busy||invalid||!changes.length;
     $('saveReset').disabled=busy||(!changes.length&&!drafts.size);
     $('saveFileInput').disabled=busy&&!catalogOpening;$('saveRecordSelect').disabled=busy||!session;
@@ -408,6 +430,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
   $('saveCheckRepairAll').addEventListener('click',()=>repairSlots(records().map(r=>r.key)));
   dialog.addEventListener('close',()=>{
     if(catalogOpening){catalogOpening.abort(new DOMException('세이브 연결 준비를 취소했습니다.','AbortError'));catalogOpening=null;pendingCatalogFile=null;busy=false;clearFastPreview();}
+    pendingBundle?.abort();clearGameBundle();
     $('saveEditorOpen').focus();
   });
   $('saveFileInput').addEventListener('change',()=>{
@@ -487,19 +510,52 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog}
     const observer=new ResizeObserver(requestLayout);
     for(const id of ['saveRecordList','saveUnitFields','saveSlotCards'])observer.observe($(id));
   }
+  const saveOutputName=()=>{const dot=fileName.lastIndexOf('.');return dot>0?`${fileName.slice(0,dot)}-edited${fileName.slice(dot)}`:`${fileName}-edited.bin`;};
+  for(const id of pairedIds)$(id)?.addEventListener('click',event=>{
+    if(!dialog.open||!context().verified||invalid||!pairedLinks||!sameStamp(pairedLinks,pairedStamp())){
+      event.preventDefault();clearGameBundle();render();return;
+    }
+    const url=$(id).getAttribute('href');if(url)startedDownloads.add(url);
+    if(id==='saveGameSave')downloadedChanges=pairedLinks.change;
+  });
   $('saveDownload').addEventListener('click',async()=>{
     if(!context().verified||busy||invalid||!session?.diff().length)return;
-    const sourceToken=context().sessionToken,sourceSession=session;busy=true;render();message('체크섬과 출력 파일을 검증하고 있습니다.');
+    const sourceToken=context().sessionToken,sourceSession=session,needsGame=gameBundleRequired();
+    const controller=new AbortController();let stamp=pairedStamp();if(needsGame)pendingBundle=controller;
+    busy=true;render();message(needsGame?'같은 버전의 BIN/CUE와 수정 세이브를 확인하고 있습니다.':'체크섬과 출력 파일을 검증하고 있습니다.');
     try{
-      if(verifyOutputCatalog){await verifyOutputCatalog();sourceSession.updateCatalog(context());}
-      const output=await sourceSession.exportFile();
-      if(!context().verified||context().sessionToken!==sourceToken||session!==sourceSession)throw new Error('게임 ROM이 변경되어 수정본을 저장하지 않았습니다. 현재 게임을 확인한 뒤 다시 저장하세요.');
-      const url=URL.createObjectURL(new Blob([output],{type:'application/octet-stream'}));
-      const a=document.createElement('a');a.href=url;const dot=fileName.lastIndexOf('.');a.download=dot>0?`${fileName.slice(0,dot)}-edited${fileName.slice(dot)}`:`${fileName}-edited.bin`;
+      if(verifyOutputCatalog){await verifyOutputCatalog({signal:needsGame?controller.signal:undefined});sourceSession.updateCatalog(context());}
+      if(needsGame){
+        const verifiedStamp=pairedStamp();
+        if(!verifiedStamp.outputHash||!sameStamp({...stamp,outputHash:verifiedStamp.outputHash},verifiedStamp)
+           ||(stamp.outputHash&&stamp.outputHash!==verifiedStamp.outputHash))throw Error('준비 중 편집값이 바뀌었습니다. 다시 준비하세요.');
+        stamp=verifiedStamp;
+      }
+      if(gameBundleRequired()!==needsGame)throw Error('필요한 게임 파일 조건이 바뀌었습니다. 다시 확인한 뒤 준비하세요.');
+      const output=await sourceSession.exportFile(),blob=new Blob([output],{type:'application/octet-stream'});
+      if(!context().verified||context().sessionToken!==sourceToken||session!==sourceSession)throw Error('게임 ROM이 변경되어 수정본을 저장하지 않았습니다. 현재 게임을 확인한 뒤 다시 저장하세요.');
+      if(needsGame){
+        controller.signal.throwIfAborted();
+        if(!dialog.open||!sameStamp(stamp,pairedStamp()))throw Error('준비 중 편집값이 바뀌었습니다. 다시 준비하세요.');
+        const pair=await prepareGameBundle(stamp);
+        controller.signal.throwIfAborted();
+        if(!dialog.open||!context().verified||!sameStamp(stamp,pairedStamp())||pair?.outputHash!==stamp.outputHash
+           ||!(pair.bin instanceof Blob)||!(pair.cueBlob instanceof Blob))throw Error('연결한 게임 파일이나 세이브가 바뀌었습니다. 다시 준비하세요.');
+        clearGameBundle();
+        try{
+          for(const [index,[file,name]] of [[pair.bin,pair.imageName],[pair.cueBlob,pair.cueName],[blob,saveOutputName()]].entries()){
+            const a=$(pairedIds[index]);a.setAttribute('href',URL.createObjectURL(file));a.download=name;
+          }
+          pairedLinks=stamp;$('saveGameBundleLinks').hidden=false;
+        }catch(error){clearGameBundle();throw error;}
+        message('같이 사용할 파일 3개를 준비했습니다. BIN·CUE·수정 세이브를 각각 받으세요.');return;
+      }
+      const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=saveOutputName();
       document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
       downloadedChanges=changeSignature();
-      message(`수정본 다운로드를 시작했습니다. 에뮬레이터를 종료한 뒤 원본을 백업하고 교체하세요.${sourceSession.diff().some(c=>c.field==='unitAdded')?' 추가 기체는 현재 편집한 BIN/CUE도 함께 저장해 사용하세요.':''}${context().glyphPending?' 새 글자는 수정 ROM도 함께 저장해야 표시됩니다.':''}`);
-    }catch(e){message(e.message,true);}finally{busy=false;render();}
+      message(`수정본 다운로드를 시작했습니다. 에뮬레이터를 종료한 뒤 원본을 백업하고 교체하세요.${context().glyphPending?' 새 글자는 수정 ROM도 함께 저장해야 표시됩니다.':''}`);
+    }catch(e){if(!controller.signal.aborted)message(e.message,true);}
+    finally{if(pendingBundle===controller)pendingBundle=null;busy=false;render();}
   });
   return {load,open,openPrepared,hasUnsavedEdits,isBusy:()=>busy};
 }

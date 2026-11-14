@@ -140,7 +140,8 @@ export function createEditorWorker(scope, api) {
         if(prepared)prepared.saveCatalog=saveCatalog;
       }
       requireExportLive(job,session);
-      scope.postMessage({type:'ANIMATION_SOURCE_COMPLETE',previewId:message.previewId,blob,descriptor,...saveCatalog?{saveCatalog}:{}});
+      const saveOutput=saveCatalog&&prepared?{sha256:prepared.result.sha256,receipt:prepared.result.receipt,cueText:prepared.result.cueText}:null;
+      scope.postMessage({type:'ANIMATION_SOURCE_COMPLETE',previewId:message.previewId,blob,descriptor,...saveCatalog?{saveCatalog,saveOutput}:{}});
       if(prepared)rememberExport(prepared,job);
     }catch(error){if(activeJob===job)completedExport=null;scope.postMessage({type:'ANIMATION_SOURCE_ERROR',previewId:message.previewId,error:typeof error?.message==='string'?error.message:'미리보기용 편집본을 준비하지 못했습니다.',errorCode:typeof error?.code==='string'?error.code:null,details:safeDetails(error?.details)});}
     finally{if(activeJob===job)activeJob=null;}

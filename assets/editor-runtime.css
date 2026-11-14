@@ -87,6 +87,11 @@
 .save-diff ul { max-height: min(180px,25dvh); overflow-y: auto; padding-left: 22px; margin: 8px 0; font-size: 12px; }
 .save-editor-actions { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
 .save-editor-actions button { min-height: 42px; }
+.save-game-bundle { grid-column:1/-1; min-width:0; color:#ffdfab; font-size:.83rem; padding:.45rem .6rem; border:1px solid #84643d; border-radius:5px; overflow-wrap:anywhere; }
+.save-game-bundle p { margin:0; }
+.save-game-bundle-links:not([hidden]) { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.45rem; }
+.save-game-bundle-links a { display:inline-flex; align-items:center; text-decoration:none; }
+.save-editor-actions:has(#saveDownload[data-paired="true"]) .save-footer-note { display:none; }
 .save-footer-note { flex: 1; font-size: 11px; color: var(--ed-muted); }
 #saveDownload:not(:disabled) { background: #28612f; color: #fff6b0; }
 .save-empty { flex: 1; min-height: 200px; justify-content: center; padding: 24px; }

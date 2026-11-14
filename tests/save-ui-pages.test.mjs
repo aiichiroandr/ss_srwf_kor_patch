@@ -201,7 +201,7 @@ test('a verified live ROM refresh exposes new units without disc reload and bloc
  const oldCreate=URL.createObjectURL,oldTimeout=globalThis.setTimeout;let downloads=0;URL.createObjectURL=()=>{downloads++;return'blob:live';};globalThis.setTimeout=()=>0;
  try{
   remove=true;$('saveDownload').click();await new Promise(resolve=>setImmediate(resolve));assert.equal(downloads,0);assert.match($('saveEditorStatus').textContent,/ROM 구성이 바뀌/);assert.equal(ui.hasUnsavedEdits(),true);
-  remove=false;$('saveDownload').click();await new Promise(resolve=>setImmediate(resolve));assert.equal(checks,2);assert.equal(downloads,1);assert.equal(ui.hasUnsavedEdits(),false);assert.match($('saveEditorStatus').textContent,/BIN\/CUE/);
+  remove=false;$('saveDownload').click();await new Promise(resolve=>setImmediate(resolve));assert.equal(checks,2);assert.equal(downloads,1);assert.equal(ui.hasUnsavedEdits(),false);assert.doesNotMatch($('saveEditorStatus').textContent,/BIN\/CUE/);
  }finally{URL.createObjectURL=oldCreate;globalThis.setTimeout=oldTimeout;}
 });
 
@@ -214,4 +214,22 @@ test('the save dialog opens immediately during catalog preparation; closing canc
  assert.equal($('saveEditorDialog').open,true);assert.equal(ui.isBusy(),true);assert.match($('saveEditorStatus').textContent,/확인하고 있습니다/);
  $('saveEditorClose').click();$('saveEditorDialog').dispatchEvent({type:'close'});await pending;assert.equal(signal.aborted,true);assert.equal(ui.isBusy(),false);assert.equal(ui.hasUnsavedEdits(),true);
  await ui.openPrepared(async()=>{});assert.equal($('saveEditorDialog').open,true);assert.equal($('saveMoney').value,'1000');assert.equal(ui.isBusy(),false);assert.equal($('saveFileName').textContent,'loaded.bcr');
+});
+
+test('missing input binding prepares three separate links and invalidates them on reset',async()=>{
+ const doc=installFakeDom();loadHtml(doc,await readFile(new URL('../index.html',import.meta.url),'utf8'));
+ Object.defineProperty(FakeElement.prototype,'parentElement',{configurable:true,get(){return this.parentNode;}});globalThis.requestAnimationFrame=fn=>{queueMicrotask(fn);return 1;};
+ const $=id=>doc.getElementById(id),f=syntheticSave(),unit={recordIndex:434,name:'서바인',hp:4000,en:180,partSlots:2,srw4Native:true,identity:'unit:434',construction:{preset:'sirbine'},recordKind:'constructed-unit',saveUnitKind:0,saveUnitForm:0};
+ const context={verified:true,gameId:'srwf-final',sessionToken:'paired-session',revision:1,outputHash:'a'.repeat(64),units:[unit],pilots:[],inputCatalog:{gameId:'srwf-final',units:[]}};
+ let prepared=0;
+ const ui=createSaveEditor(()=>context,{verifyOutputCatalog:async()=>{},prepareGameBundle:async stamp=>{prepared++;assert.equal(stamp.outputHash,context.outputHash);return {imageName:'game.bin',cueName:'game.cue',bin:new Blob(['bin']),cueBlob:new Blob(['cue']),outputHash:context.outputHash};}});
+ await ui.load({name:'paired.bcr',size:f.raw.length,arrayBuffer:async()=>f.raw.buffer});ui.open();
+ assert.equal($('saveGameBundle').hidden,true);
+ $('saveUnitTab').click();$('saveAddUnitRow').open=true;$('saveAddUnitRow').dispatchEvent({type:'toggle'});$('saveAddUnitSelect').value='434';$('saveAddUnitButton').click();
+ assert.equal($('saveGameBundle').hidden,false);assert.match($('saveDownload').textContent,/게임 파일과 세이브 준비/);
+ $('saveDownload').click();await new Promise(resolve=>setImmediate(resolve));assert.equal(prepared,1);assert.equal($('saveGameBundleLinks').hidden,false);
+ assert.deepEqual(['saveGameBin','saveGameCue','saveGameSave'].map(id=>$(id).download),['game.bin','game.cue','paired-edited.bcr']);
+ assert.equal(ui.hasUnsavedEdits(),true);
+ $('saveReset').click();assert.equal($('saveGameBundleLinks').hidden,true);assert.equal($('saveGameBundle').hidden,true);
+ assert.equal($('saveGameSave').hasAttribute('href'),false);
 });
