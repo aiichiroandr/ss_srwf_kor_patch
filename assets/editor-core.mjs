@@ -3581,7 +3581,9 @@ async function inspectWithTrust(trust, blob, descriptor, { signal, onProgress, t
   // The Fv2 carrier is defined only for the three pinned v0.5 bases. Other
   // trusted F fixtures retain their own scenarioEditing policy and need not
   // provide Fv2's SCEDATA/IP/EXEC carrier files.
-  const aliceFInspection=descriptor.gameId==='srwf-f'&&isAliceFBase(descriptor.targetSha256);
+  const exactTrustedSource=ownEntry(trust.targets,actualHash);
+  const isExactStock=exactTrustedSource?.gameId===descriptor.gameId&&exactTrustedSource.kind==="stock";
+  const aliceFInspection=descriptor.gameId==='srwf-f'&&!isExactStock&&isAliceFBase(descriptor.targetSha256);
   const scenarioEnabled=(aliceFInspection||trust.scenarioEditing) && Object.values(trust.targets)
     .some(target => target.gameId === descriptor.gameId && target.size === blob.size);
   const files=await locateIsoFiles(blob,signal,scenarioEnabled
