@@ -20,7 +20,7 @@ class OwnedWorker{
  addEventListener(type,listener){if(type==='message')this.listeners.add(listener);}
  removeEventListener(type,listener){if(type==='message')this.listeners.delete(listener);}
  postMessage(message){this.messages.push(message);}
- emit(data){for(const listener of [...this.listeners])listener({data});}
+ emit(data,{isTrusted=true,target=this}={}){for(const listener of [...this.listeners])listener({data,isTrusted,target,currentTarget:this});}
  reply(extra={}){this.emit({type:'ANIMATION_SOURCE_COMPLETE',previewId:this.messages.at(-1).previewId,blob,descriptor,...extra});}
 }
 function prepare(){
@@ -34,6 +34,8 @@ function prepare(){
 test('only a current owned worker completion produces a frozen trusted source snapshot',async()=>{
  const worker=prepare(),pending=requestAnimationSource();
  worker.emit({type:'ANIMATION_SOURCE_COMPLETE',previewId:'unrelated',blob,descriptor});
+ worker.emit({type:'ANIMATION_SOURCE_COMPLETE',previewId:worker.messages.at(-1).previewId,blob,descriptor},{isTrusted:false});
+ worker.emit({type:'ANIMATION_SOURCE_COMPLETE',previewId:worker.messages.at(-1).previewId,blob,descriptor},{target:new OwnedWorker()});
  assert.equal(worker.listeners.size,1);
  worker.reply();const value=await pending;
  assert.equal(value.blob,blob);assert.deepEqual(value.descriptor,descriptor);
