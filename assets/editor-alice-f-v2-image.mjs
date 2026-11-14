@@ -1,5 +1,5 @@
 // Development-only Fv2 CD-image carrier. It deliberately has no editor/UI path.
-import {compressTsr,decompressTsr,locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {compressTsr,decompressTsr,locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import {bytesEqual} from './editor-bytes.mjs?v=20261113-alicecopies1';
 import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
 import {createAliceFV2FaceBuilder,readAliceFV2Storage,writeAliceFV2Storage} from './editor-alice-f-storage.mjs?v=20261113-alicecopies1';

@@ -1,4 +1,4 @@
-import {locateIsoFiles,readCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {locateIsoFiles,readCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import {nameMap} from './editor-text-codec.mjs?v=20261113-alicecopies1';
 import {decodeBattleText} from './editor-battle-timeline.mjs?v=20261113-alicecopies1';
 import {buildPilotDialoguePreview,previewPilotDialogueInfo} from './editor-pilot-dialogue.mjs?v=20261113-alicecopies1';

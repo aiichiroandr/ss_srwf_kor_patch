@@ -37,7 +37,7 @@ export function setCollectionCode(bytes,enabled){
 }
 export async function collectionImage(blob,gameId,{enabled,signal}={}){
  if(gameId!==COLLECTION_UNLOCK.gameId){if(enabled===true)fail();return {outputBlob:blob,enabled:false,supported:false,changedSectors:[]};}
- const {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent}=await import('./editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1');
+ const {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent}=await import('./editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-2');
  const file=(await locateIsoFiles(blob,signal,['0']))['0'];
  if(file.extentLba!==24||file.byteLength!==COLLECTION_UNLOCK.execBytes)fail();
  const bytes=await readCdUserExtent(blob,file.extentLba,file.byteLength,{signal}),before=inspectCollectionCode(bytes);

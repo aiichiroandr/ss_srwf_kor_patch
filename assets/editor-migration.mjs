@@ -1,8 +1,8 @@
-import {createScenarioModel} from './editor-scenario-model.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {createScenarioModel} from './editor-scenario-model.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import {findPatchedEditorImage} from './editor-directory.mjs?v=20261113-alicecopies1';
 // Semantic transfer only: old disc offsets and compressed bytes are never copied.
-import {buildPreset,parsePreset,serializePreset,PRESET_TABLE_KEYS} from './editor-preset.mjs?v=20261113-alicecopies1&savefast=20261114-1';
-import {inspectMigrationImage,PRODUCTION_TRUST} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {buildPreset,parsePreset,serializePreset,PRESET_TABLE_KEYS} from './editor-preset.mjs?v=20261113-alicecopies1&savefast=20261114-2';
+import {inspectMigrationImage,PRODUCTION_TRUST} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import {constructUnitRow,unitConstructionPreset} from './editor-unit-construction.mjs?v=20261113-alicecopies1';
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export function extractMigrationPreset(base,edited){

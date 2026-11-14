@@ -1,4 +1,4 @@
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import {dictionaryPortraitExecState,setDictionaryPortraitExec,inspectDictionaryPortraitSlot,changeDictionaryPortraitSlot,dictionaryPortraitAllocation} from './editor-dictionary-portraits.mjs?v=20261113-alicecopies1';
 
 function invalid(){const e=Error('인물사전 초상화의 연결과 사전 데이터가 일치하지 않습니다.');e.code='EDITOR_DICTIONARY_PORTRAIT_INVALID';throw e;}

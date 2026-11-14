@@ -1,6 +1,6 @@
 import {exSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261113-alicecopies1';
 import {encodeEditorText,editorTextMetrics} from './editor-text-codec.mjs?v=20261113-alicecopies1';
-import {validateScenarioDialogueSpeaker} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {validateScenarioDialogueSpeaker} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import {canonicalAfterDialogueJson,readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261113-alicecopies1';
 import {ALLY_REINFORCEMENT_FIELDS,validateAllyReinforcement} from './editor-scenario-reinforcement-data.mjs?v=20261113-alicecopies1';
 // Editor presets: the changes of one editor session as a small JSON file that can be saved and loaded into another session

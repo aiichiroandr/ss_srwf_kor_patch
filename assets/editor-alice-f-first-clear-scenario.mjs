@@ -1,7 +1,7 @@
 // Development-only SCEDATA adapter for F ALICE first-clear scripts.  This module
 // is intentionally not wired into product/core/UI availability.
-import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1&savefast=20261114-1';
-import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1&savefast=20261114-2';
+import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import {bytesEqual,bytesToHex,sha256Digest} from './editor-bytes.mjs?v=20261113-alicecopies1';
 import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
 import {ALICE_F_FIRST_CLEAR,applyAliceFFirstClearBody,normalizeAliceFFirstClearBody,hasAliceFFirstClearBodyCandidate} from './editor-alice-f-first-clear.mjs?v=20261113-alicecopies1';

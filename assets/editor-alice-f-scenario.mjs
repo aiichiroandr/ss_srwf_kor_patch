@@ -1,7 +1,7 @@
 // Development-only combined F scenario adapter. It is intentionally not wired into
 // editor availability, product UI, or runtime paths.
-import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1&savefast=20261114-1';
-import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1&savefast=20261114-2';
+import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import {bytesEqual,bytesToHex,sha256Digest} from './editor-bytes.mjs?v=20261113-alicecopies1';
 import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
 import {ALICE_F_SCENARIO_PROFILE,ALICE_F_SCENARIO_REBASE_PROFILE} from './editor-alice-f-scenario-profile.mjs?v=20261113-alicecopies1';

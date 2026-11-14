@@ -2,11 +2,11 @@ import {validateAllyReinforcement,ALLY_REINFORCEMENT_FIELDS} from './editor-scen
 // The legacy root-4 boundary evidence accompanies the bounded root-4/root-5
 // event reader. No placement or condition is discovered by byte scanning.
 import { ownData, readDenseList } from './editor-own.mjs?v=20261113-alicecopies1';
-import { readScenarioArchive, repackScenarioBodies } from './editor-scenario-archive.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import { readScenarioArchive, repackScenarioBodies } from './editor-scenario-archive.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import { readScenarioEvents } from './editor-scenario-events.mjs?v=20261113-alicecopies1';
-import { normalizeScenarioDeadlines, updateScenarioObjectiveBody } from './editor-scenario-deadlines.mjs?v=20261113-alicecopies1&savefast=20261114-1';
-import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261113-alicecopies1&savefast=20261114-1';
-import { normalizeScenarioDialogues, writeScenarioDialogue } from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import { normalizeScenarioDeadlines, updateScenarioObjectiveBody } from './editor-scenario-deadlines.mjs?v=20261113-alicecopies1&savefast=20261114-2';
+import { updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261113-alicecopies1&savefast=20261114-2';
+import { normalizeScenarioDialogues, writeScenarioDialogue } from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-2';
 import {canonicalAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261113-alicecopies1';
 import {readScenarioRosterLevels,planScenarioRosterLevelEdits,applyScenarioRosterLevelEdits,rosterLevelDecodedMasks} from './editor-scenario-roster-levels.mjs?v=20261113-alicecopies1';
 
