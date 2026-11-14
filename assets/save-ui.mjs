@@ -8,6 +8,7 @@ import { openSave } from './save-core.mjs?v=20261113-alicecopies1&savefast=20261
 import { pageItems,fitPages } from './save-pages.mjs?v=20261113-alicecopies1';
 import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261113-alicecopies1';
 import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
+import { buildSaveZip } from './save-zip.mjs?v=20261113-alicecopies1&savezip=20261115-1';
 
 export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,prepareGameBundle}={}) {
   const $=id=>document.getElementById(id),dialog=$('saveEditorDialog');
@@ -73,7 +74,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
   }
   function message(text,error=false){$('saveEditorStatus').textContent=text;$('saveEditorStatus').classList.toggle('is-error',error);}
   let pendingBundle=null,pairedLinks=null;
-  const pairedIds=['saveGameBin','saveGameCue','saveGameSave'],startedDownloads=new Set();
+  const pairedIds=['saveGameZip'],startedDownloads=new Set();
   const pairedStamp=()=>{const c=context();return {token:c.sessionToken,revision:c.revision,outputHash:c.outputHash,change:changeSignature(),generation,session};};
   const sameStamp=(a,b)=>a.token===b.token&&a.revision===b.revision&&a.outputHash===b.outputHash&&a.change===b.change&&a.generation===b.generation&&a.session===b.session;
   function clearGameBundle(){
@@ -94,7 +95,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
     const needsGame=gameBundleRequired();
     if(pairedLinks&&(!needsGame||invalid||!sameStamp(pairedLinks,pairedStamp())))clearGameBundle();
     if($('saveGameBundle'))$('saveGameBundle').hidden=!needsGame;
-    $('saveDownload').textContent=needsGame?'게임 파일과 세이브 준비':'수정본 저장';
+    $('saveDownload').textContent=needsGame?'게임 파일과 세이브 ZIP 준비':'수정본 저장';
     $('saveDownload').dataset.paired=String(needsGame);
     $('saveDownload').hidden=Boolean(pairedLinks);
     $('saveDownload').disabled=busy||invalid||!changes.length;
@@ -360,7 +361,11 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
       const f=session.format;$('saveFileFormat').textContent=`${f.bytes/1024} KiB · ${f.gzipLayers?'gzip · ':''}${f.interleaved?'인터리브 · ':''}${rows.length}개 저장 슬롯`;
       const broken=rows.filter(r=>session.check(r.key).some(i=>i.level==='error')).length;
       if(broken)message(`세이브 검사: ${broken}개 슬롯에 게임이 멈출 수 있는 깨진 칸이 있습니다. 「세이브 검사」에서 내용을 보고 고치세요.`,true);
-      else message(rows.some(r=>r.editable)?'저장을 고르고 수치를 수정하세요.': '편집 가능한 F/F완결편 일반 저장이 없습니다.');
+      else if(rows.some(r=>r.editable))message('저장을 고르고 수치를 수정하세요.');
+      else if(next.list().length===0)message('이 파일에는 저장 슬롯이 없습니다. 게임에서 실제로 사용하는 일반 저장 파일을 선택하세요.');
+      else if(!rows.length&&next.list().some(r=>r.gameId&&r.gameId!==context().gameId))
+        message('현재 ROM과 다른 게임의 저장입니다. 이 ROM으로 플레이한 일반 저장을 선택하세요.',true);
+      else message('편집 가능한 F/F완결편 일반 저장이 없습니다.');
     }catch(e){message(e.message,true);}
     finally{if(token===generation){busy=false;render();}}
   }
@@ -516,7 +521,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
       event.preventDefault();clearGameBundle();render();return;
     }
     const url=$(id).getAttribute('href');if(url)startedDownloads.add(url);
-    if(id==='saveGameSave')downloadedChanges=pairedLinks.change;
+    downloadedChanges=pairedLinks.change;
   });
   $('saveDownload').addEventListener('click',async()=>{
     if(!context().verified||busy||invalid||!session?.diff().length)return;
@@ -541,14 +546,21 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
         controller.signal.throwIfAborted();
         if(!dialog.open||!context().verified||!sameStamp(stamp,pairedStamp())||pair?.outputHash!==stamp.outputHash
            ||!(pair.bin instanceof Blob)||!(pair.cueBlob instanceof Blob))throw Error('연결한 게임 파일이나 세이브가 바뀌었습니다. 다시 준비하세요.');
+        let percent=-1;
+        const archive=await buildSaveZip([{name:pair.imageName,blob:pair.bin},{name:pair.cueName,blob:pair.cueBlob},{name:saveOutputName(),blob}],{
+          signal:controller.signal,onProgress:(done,total)=>{
+            const next=Math.floor(done*100/total);
+            if(next!==percent){percent=next;message(`게임 파일과 세이브를 ZIP으로 묶고 있습니다. ${next}%`);}
+          }
+        });
+        if(!dialog.open||!context().verified||!sameStamp(stamp,pairedStamp()))throw Error('준비 중 편집값이 바뀌었습니다. 다시 준비하세요.');
         clearGameBundle();
         try{
-          for(const [index,[file,name]] of [[pair.bin,pair.imageName],[pair.cueBlob,pair.cueName],[blob,saveOutputName()]].entries()){
-            const a=$(pairedIds[index]);a.setAttribute('href',URL.createObjectURL(file));a.download=name;
-          }
+          const link=$('saveGameZip');
+          link.setAttribute('href',URL.createObjectURL(archive));link.download=pair.imageName.replace(/\.bin$/i,'')+'-게임과세이브.zip';
           pairedLinks=stamp;$('saveGameBundleLinks').hidden=false;
         }catch(error){clearGameBundle();throw error;}
-        message('같이 사용할 파일 3개를 준비했습니다. BIN·CUE·수정 세이브를 각각 받으세요.');return;
+        message('ZIP 1개를 준비했습니다. 받은 뒤 압축을 풀어 같은 폴더의 BIN/CUE와 수정 세이브를 함께 사용하세요.');return;
       }
       const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=saveOutputName();
       document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);

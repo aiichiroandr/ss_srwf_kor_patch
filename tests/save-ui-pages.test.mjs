@@ -216,7 +216,7 @@ test('the save dialog opens immediately during catalog preparation; closing canc
  await ui.openPrepared(async()=>{});assert.equal($('saveEditorDialog').open,true);assert.equal($('saveMoney').value,'1000');assert.equal(ui.isBusy(),false);assert.equal($('saveFileName').textContent,'loaded.bcr');
 });
 
-test('missing input binding prepares three separate links and invalidates them on reset',async()=>{
+test('missing input binding prepares only one ZIP link and invalidates it on reset',async()=>{
  const doc=installFakeDom();loadHtml(doc,await readFile(new URL('../index.html',import.meta.url),'utf8'));
  Object.defineProperty(FakeElement.prototype,'parentElement',{configurable:true,get(){return this.parentNode;}});globalThis.requestAnimationFrame=fn=>{queueMicrotask(fn);return 1;};
  const $=id=>doc.getElementById(id),f=syntheticSave(),unit={recordIndex:434,name:'서바인',hp:4000,en:180,partSlots:2,srw4Native:true,identity:'unit:434',construction:{preset:'sirbine'},recordKind:'constructed-unit',saveUnitKind:0,saveUnitForm:0};
@@ -226,10 +226,11 @@ test('missing input binding prepares three separate links and invalidates them o
  await ui.load({name:'paired.bcr',size:f.raw.length,arrayBuffer:async()=>f.raw.buffer});ui.open();
  assert.equal($('saveGameBundle').hidden,true);
  $('saveUnitTab').click();$('saveAddUnitRow').open=true;$('saveAddUnitRow').dispatchEvent({type:'toggle'});$('saveAddUnitSelect').value='434';$('saveAddUnitButton').click();
- assert.equal($('saveGameBundle').hidden,false);assert.match($('saveDownload').textContent,/게임 파일과 세이브 준비/);
+ assert.equal($('saveGameBundle').hidden,false);assert.match($('saveDownload').textContent,/게임 파일과 세이브 ZIP 준비/);
  $('saveDownload').click();await new Promise(resolve=>setImmediate(resolve));assert.equal(prepared,1);assert.equal($('saveGameBundleLinks').hidden,false);
- assert.deepEqual(['saveGameBin','saveGameCue','saveGameSave'].map(id=>$(id).download),['game.bin','game.cue','paired-edited.bcr']);
+ assert.equal($('saveGameZip').download,'game-게임과세이브.zip');
+ assert.equal(doc.querySelector('#saveGameSave'),null);assert.equal(doc.querySelector('#saveGameBin'),null);assert.equal(doc.querySelector('#saveGameCue'),null);
  assert.equal(ui.hasUnsavedEdits(),true);
  $('saveReset').click();assert.equal($('saveGameBundleLinks').hidden,true);assert.equal($('saveGameBundle').hidden,true);
- assert.equal($('saveGameSave').hasAttribute('href'),false);
+ assert.equal($('saveGameZip').hasAttribute('href'),false);
 });

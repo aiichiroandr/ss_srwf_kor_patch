@@ -308,6 +308,7 @@
     "assets/save-ui.mjs",
     "assets/save-unit-groups.mjs",
     "assets/save-upgrade-bar.mjs",
+    "assets/save-zip.mjs",
     "assets/sha256.mjs",
     "assets/style.css",
     "assets/user-guide.mjs",
