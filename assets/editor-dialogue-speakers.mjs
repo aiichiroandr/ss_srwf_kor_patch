@@ -1,7 +1,7 @@
 // A dialogue descriptor selects a pilot, not a FACE cell. Derive the choice
 // from the authenticated pilot head and the actual image blocks of that disc.
 // No name-based, reference-portrait or hero-placeholder fallback is allowed.
-import {dataRecordOffsets,decodeFramedLz,isTailOnlyBlock,MAX_PILOT_RECORD_BYTES,readCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1';
+import {dataRecordOffsets,decodeFramedLz,isTailOnlyBlock,MAX_PILOT_RECORD_BYTES,readCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {Sha256} from './sha256.mjs?v=20261113-alicecopies1';
 
 const encoder=new TextEncoder(),MAX_FACE_BYTES=16*1024*1024,MAX_FACE_BLOCK_BYTES=256*1024;

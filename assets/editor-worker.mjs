@@ -11,8 +11,8 @@ import {
   prepareFCampaignEditorSource,
   attachFCampaignEditorSource,
   clearFCampaignEditorSource,
-} from "./editor-core.mjs?v=20261113-alicecopies1";
-import {readBattleDialogue} from './editor-battle-dialogue.mjs?v=20261113-alicecopies1';
+} from "./editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1";
+import {readBattleDialogue} from './editor-battle-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 
 // The worker body takes its scope and the three core operations so that a test can drive it with a fake scope and fake
 // operations. The page's worker starts it below with the real ones.

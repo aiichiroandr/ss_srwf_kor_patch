@@ -5,7 +5,7 @@
 import { inspectPendingObjectiveHook as hookOf, readScenarioPurpose, encodeObjectiveText as encodeText } from './editor-scenario-objective-base.mjs?v=20261113-alicecopies1';
 export { readScenarioPurpose } from './editor-scenario-objective-base.mjs?v=20261113-alicecopies1';
 import { CRITERIA_FIELDS, inspectScenarioCriteria, normalizeScenarioCriteriaBody, updateScenarioCriteriaBody, snapshotScenarioCriteria } from './editor-scenario-criteria.mjs?v=20261113-alicecopies1';
-import { normalizeScenarioReinforcementBody, inspectScenarioReinforcement, updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261113-alicecopies1';
+import { normalizeScenarioReinforcementBody, inspectScenarioReinforcement, updateScenarioReinforcementBody } from './editor-scenario-spawns.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import { normalizeScenarioEventCriteriaBody, updateScenarioEventCriteriaBody } from './editor-scenario-event-criteria.mjs?v=20261113-alicecopies1';
 import { EVENT_PHASE_FIELDS, normalizeScenarioEventPhaseBody, updateScenarioEventPhaseBody } from './editor-scenario-event-phase.mjs?v=20261113-alicecopies1';
 import { ownData } from './editor-own.mjs?v=20261113-alicecopies1';

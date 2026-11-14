@@ -1,8 +1,8 @@
 // Development-only CD-image carrier for the bounded F first-clear SCEDATA edit.
 // It is not an editor availability switch and has no native/IP/data/face coupling.
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
-import {normalizeAliceFFirstClearScenario,changeAliceFFirstClearScenario,hasAliceFFirstClearScenarioCandidate} from './editor-alice-f-first-clear-scenario.mjs?v=20261113-alicecopies1';
+import {normalizeAliceFFirstClearScenario,changeAliceFFirstClearScenario,hasAliceFFirstClearScenarioCandidate} from './editor-alice-f-first-clear-scenario.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 const LBA=244748, BYTES=409628;
 function fail(){const e=Error('F first-clear image is not an exact supported development state.');e.code='EDITOR_ALICE_F_FIRST_CLEAR_INVALID';throw e;}
 function trusted(options){if(!options||typeof options!=='object'||Object.keys(options).some(key=>!['gameId','developmentOnly','baseSha256','signal'].includes(key))||options.gameId!=='srwf-f'||options.developmentOnly!==true||!isAliceFBase(options.baseSha256))fail();}

@@ -1,8 +1,8 @@
 // Development-only CD-image carriers. Neither adapter changes editor availability.
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
 import {ALICE_F_SCENARIO_PROFILE} from './editor-alice-f-scenario-profile.mjs?v=20261113-alicecopies1';
-import {normalizeAliceFScenario,changeAliceFScenario,hasAliceFScenarioCandidate} from './editor-alice-f-scenario.mjs?v=20261113-alicecopies1';
+import {normalizeAliceFScenario,changeAliceFScenario,hasAliceFScenarioCandidate} from './editor-alice-f-scenario.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {applyAliceFNative,normalizeAliceFNative,ALICE_F_NATIVE} from './editor-alice-f-code.mjs?v=20261113-alicecopies1';
 const PROFILE=ALICE_F_SCENARIO_PROFILE;
 function fail(){const e=Error('F combined image is not an exact supported development state.');e.code='EDITOR_ALICE_F_SCENARIO_INVALID';throw e;}

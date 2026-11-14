@@ -2,7 +2,7 @@
 // hash, then restore their authenticated states. Unknown modifications remain
 // errors; no writable hash mask is widened.
 import {applySpawnCapacity,normalizeSpawnCapacity,spawnCapacityInfo} from './editor-spawn-capacity.mjs?v=20261113-alicecopies1';
-import {inspectCollectionCode,setCollectionCode} from './editor-collection-unlock.mjs?v=20261113-alicecopies1';
+import {inspectCollectionCode,setCollectionCode} from './editor-collection-unlock.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {inspectCriticalFix,normalizeCriticalFix,setCriticalFix} from './editor-critical-fix.mjs?v=20261113-alicecopies1';
 import {ownData} from './editor-own.mjs?v=20261113-alicecopies1';
 import {dictionaryPortraitExecState,setDictionaryPortraitExec} from './editor-dictionary-portraits.mjs?v=20261113-alicecopies1';

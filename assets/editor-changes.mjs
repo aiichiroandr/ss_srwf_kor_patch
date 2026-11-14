@@ -28,7 +28,7 @@ import {
   presetChangeCount,
   presetFileName,
   serializePreset,
-} from "./editor-preset.mjs?v=20261113-alicecopies1";
+} from "./editor-preset.mjs?v=20261113-alicecopies1&savefast=20261114-1";
 
 export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "upgrade", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "roster", "dialogue", "glyph", "map", "collection", "alice", "debug", "critical", "beam"]);
 const KIND_HEADINGS = Object.freeze({beam:"Ex-S 빔포 연출 보정",critical:"크리티컬 보정 오류 수정",debug:"디버그 메뉴",alice:"ALICE 등록",collection:"도감·영상 해금", unit: "기체", pilot: "파일럿", weapon: "무기", upgrade: "개조 비용", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 아군 증원", roster: "로스터 초기 레벨", dialogue: "시나리오 대사", glyph: "추가 글자", map: "맵 타일" });

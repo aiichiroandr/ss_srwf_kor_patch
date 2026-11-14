@@ -1,8 +1,8 @@
 // New pilot + ordinary unit data only. Installing a callback additionally
 // requires the authenticated actor/tile preflight and the local event guard.
 // These builders alone never authorize a new appearance in a scenario.
-import {dataRecordOffsets,isTailOnlyBlock,MAX_PILOT_RECORD_BYTES} from './editor-core.mjs?v=20261113-alicecopies1';
-import {readHangarUnitRewardOptions} from './editor-scenario-unit-rewards.mjs?v=20261113-alicecopies1';
+import {dataRecordOffsets,isTailOnlyBlock,MAX_PILOT_RECORD_BYTES} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {readHangarUnitRewardOptions} from './editor-scenario-unit-rewards.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {ownData} from './editor-own.mjs?v=20261113-alicecopies1';
 import {sha256Hex} from './sha256.mjs?v=20261113-alicecopies1';
 

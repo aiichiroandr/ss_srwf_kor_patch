@@ -10,24 +10,24 @@ import {captureSrw4Import,pendingSrw4Import,rollbackSrw4Import} from './editor-s
 import {decorateAlicePilot} from './editor-alice.mjs?v=20261113-alicecopies1';
 import {aliceEditorRow,aliceCrewRequest,ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261113-alicecopies1';
 import {createAliceCrewEditor} from './editor-alice-crew-ui.mjs?v=20261113-alicecopies1';
-import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261113-alicecopies1';
+import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {criticalValues,criticalChoices,criticalPercentLabel,criticalAppliedText} from './editor-critical-values.mjs?v=20261113-alicecopies1';
 import {createSrw4SourcePanel} from './editor-srw4-source-ui.mjs?v=20261113-alicecopies1';
 import {createFCampaignSourcePanel,campaignCanonicalTracks,campaignDownloadCue,ingameCanonicalTracks,ingameDownloadCue} from './editor-v04-unsupported.mjs?v=20261113-alicecopies1';
 import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261113-alicecopies1';
 import {connectDefaultAlice,cancelDefaultAlice} from './editor-alice-construction.mjs?v=20261113-alicecopies1';
-import {requireMigrationIdentities} from './editor-migration.mjs?v=20261113-alicecopies1';
+import {requireMigrationIdentities} from './editor-migration.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {createUnitUpgradeUI} from './editor-unit-upgrade-ui.mjs?v=20261113-alicecopies1';
 import {createEditorStorageUI} from './editor-storage-ui.mjs?v=20261113-alicecopies1';
 import {encodeEditorText,editorTextMetrics,nameMap} from './editor-text-codec.mjs?v=20261113-alicecopies1';
-import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1';
+import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {afterDialogueText} from './editor-dialogue-sequence.mjs?v=20261113-alicecopies1';
 import {createBattleTimeline} from './editor-battle-timeline.mjs?v=20261113-alicecopies1';
 import {createWeaponNameControl} from './editor-name-control.mjs?v=20261113-alicecopies1';
 import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261113-alicecopies1';
 import {UNUSED_UNIT_PRESETS,UNIT_CONSTRUCTION_VISIBLE_PRESETS,constructUnitRow,replaceUnitRow,cancelUnitConstruction,unitConstructionPreset,UNIT_CONCEPTS,planConceptUnitConstruction,planExSCruiserConstruction,planSCruiserConstruction,pruneConstructionWeaponClones} from './editor-unit-construction.mjs?v=20261113-alicecopies1';
 import {createWeaponCloneRow,cancelWeaponClone} from './editor-weapon-clone.mjs?v=20261113-alicecopies1';
-import { createSaveEditor } from './save-ui.mjs?v=20261113-alicecopies1';
+import { createSaveEditor } from './save-ui.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import { UNIT_WEAPON_FIELDS, isUnitWeaponField, pendingUnitWeapons, unitWeaponFields,planUnitLoadouts } from './editor-loadout.mjs?v=20261113-alicecopies1';
 import { createUnitWeaponScroller } from './editor-loadout-ui.mjs?v=20261113-alicecopies1';
 import {createUnitWeaponEditor} from './editor-unit-weapon-ui.mjs?v=20261113-alicecopies1';
@@ -107,15 +107,15 @@ import {
 import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261113-alicecopies1";
 import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261113-alicecopies1";
 import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261113-alicecopies1";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261113-alicecopies1";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261113-alicecopies1&savefast=20261114-1";
 import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261113-alicecopies1";
 import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261113-alicecopies1";
 import { createCostEditor } from "./editor-cost-ui.mjs?v=20261113-alicecopies1";
 import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261113-alicecopies1";
 import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261113-alicecopies1";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261113-alicecopies1";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261113-alicecopies1&savefast=20261114-1";
 import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261113-alicecopies1";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261113-alicecopies1";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261113-alicecopies1&savefast=20261114-1";
 import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261113-alicecopies1";
 import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261113-alicecopies1";
 import {
@@ -3163,7 +3163,7 @@ async function openEditorFromFolder(directoryHandle) {
   // Returning from a review image must also restore the public editor engine.
   if(patched&&localEditorSupport&&reviewSession()){
     try{
-      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-alicecopies1',import.meta.url).href,signal:controller.signal,
+      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-alicecopies1&savefast=20261114-1',import.meta.url).href,signal:controller.signal,
         onProgress:progress=>showEditorProgress({...EDITOR_STAGES.inspect,percent:progress.total?progress.processed/progress.total*100:null})});
       if(opened){state.workflowSourceHandles=sourceHandles;return;}
       endEditorJob();state.editorSource=previous;updateControls();return;
@@ -4523,7 +4523,7 @@ function getEditorWorker(release = null) {
   if (state.editorWorker) return state.editorWorker;
   state.editorWorkerProfile=profile;
   const worker = new Worker(
-    profile==='review'?localEditorSupport.workerUrl:new URL(`./editor-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url),
+    profile==='review'?localEditorSupport.workerUrl:new URL(`./editor-worker.mjs?v=${STATIC_ASSET_REVISION}&savefast=20261114-1`, import.meta.url),
     { type: "module", name: "srwf-local-data-editor" },
   );
   saveNameAuthority?.dispose();savePilotAuthority?.dispose();

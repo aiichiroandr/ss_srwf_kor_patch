@@ -1,6 +1,6 @@
 // MAP_MAP: two sc01 tile planes per member. MAP_BANK: bk00 graphics and the
 // tile -> terrain lookup consumed by the map constructor. No graphics are shipped.
-import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261113-alicecopies1';
+import { decompressTsr, decodeFramedLz, repackTsr, compressTsr } from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import { ownData, readDenseList } from './editor-own.mjs?v=20261113-alicecopies1';
 import { bytesEqual as same } from './editor-bytes.mjs?v=20261113-alicecopies1';
 const FORMATS = Object.freeze({

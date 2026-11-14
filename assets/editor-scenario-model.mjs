@@ -1,5 +1,5 @@
 import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261113-alicecopies1';
-import {validateScenarioDialogueSpeaker} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1';
+import {validateScenarioDialogueSpeaker} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {canonicalAfterDialogueJson,readAfterDialogueJson} from './editor-dialogue-sequence.mjs?v=20261113-alicecopies1';
 import {ALLY_REINFORCEMENT_FIELDS,isAllyReinforcementRow} from './editor-scenario-reinforcement-data.mjs?v=20261113-alicecopies1';
 import { EVENT_CRITERIA_FIELDS } from './editor-scenario-event-criteria.mjs?v=20261113-alicecopies1';

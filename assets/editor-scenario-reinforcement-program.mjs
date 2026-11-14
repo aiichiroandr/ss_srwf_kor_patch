@@ -1,6 +1,6 @@
 // Bytecode composition only. The event writer must authorize the callback,
 // the pilot lifetime and the corresponding exact native preflight overlay.
-import {compileNewPilotPresenceBranch,compileReinforcementPairEntry} from './editor-scenario-reinforcement-pairs.mjs?v=20261113-alicecopies1';
+import {compileNewPilotPresenceBranch,compileReinforcementPairEntry} from './editor-scenario-reinforcement-pairs.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {compileRegionPresenceBranch} from './editor-scenario-objectives.mjs?v=20261113-alicecopies1';
 import {regionContextOf} from './editor-scenario-region-context.mjs?v=20261113-alicecopies1';
 import {ownData} from './editor-own.mjs?v=20261113-alicecopies1';

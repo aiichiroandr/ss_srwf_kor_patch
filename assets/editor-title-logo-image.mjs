@@ -1,4 +1,4 @@
-import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1';
+import {locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {inspectFinalTitleLogo,setFinalTitleLogo} from './editor-title-logo.mjs?v=20261113-alicecopies1';
 
 async function readImage(blob,gameId,signal){

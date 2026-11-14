@@ -1,7 +1,7 @@
 // The new-game roster is a bounded Final74 script extension. The ordinary
 // scenario provenance still authenticates every canonical decoded byte.
-import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1';
-import {compressTsr,decodeFramedLz,locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1';
+import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1&savefast=20261114-1';
+import {compressTsr,decodeFramedLz,locateIsoFiles,readCdUserExtent,rewriteCdUserExtent} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-1';
 import {applySrw4StartRosterBody,normalizeSrw4StartRosterBody} from './editor-srw4-start-roster.mjs?v=20261113-alicecopies1';
 import {applySrw4RosterRetentionBody,normalizeSrw4RosterRetentionBody} from './editor-srw4-roster-retention.mjs?v=20261113-alicecopies1';
 import {applySrw4RosterDepartureBody,normalizeSrw4RosterDepartureBody} from './editor-srw4-roster-departure.mjs?v=20261113-alicecopies1';
