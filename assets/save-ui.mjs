@@ -4,7 +4,7 @@ import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261113-alicecopies1
 import { requestEditorNotice } from './editor-notice.mjs?v=20261113-alicecopies1';
 import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies1';
 import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261113-alicecopies1';
-import { openSave } from './save-core.mjs?v=20261113-alicecopies1&savefast=20261114-5';
+import { openSave } from './save-core.mjs?v=20261113-alicecopies1&savefast=20261114-6';
 import { pageItems,fitPages } from './save-pages.mjs?v=20261113-alicecopies1';
 import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261113-alicecopies1';
 import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
