@@ -851,3 +851,58 @@ test('details with an own __proto__ key cross as nothing and do not touch the pr
   assert.equal(Object.prototype.hasOwnProperty.call(details, '__proto__'), false);
   assert.equal({}.reason, undefined);
 });
+
+test('capacity reuses only a successful report for the identical request, revision, and session',async()=>{
+ const base={schema:'srwf.editor-storage-budget.v1',canExport:true,rows:[],safetyWarnings:[]},warnings=['verified warning'];
+ let probes=0,exports=0;
+ const run=harness({
+  preflightEditedImage:async()=>{probes++;return base;},
+  exportEditedImage:async(_s,_r,o)=>{exports++;o.onBudget(base);return {safetyWarnings:warnings};},
+ });
+ const a={sessionToken:'session-1',units:[1]},b={sessionToken:'session-1',units:[2]};
+ const send=(type,request,revision,id)=>run.send({type,request,revision,jobId:'capacity-'+id});
+ await run.send(job('INSPECT'));
+ await send('PREFLIGHT',a,4,1);assert.equal(run.last().type,'PREFLIGHT_COMPLETE');
+ await send('PREFLIGHT',a,4,2);assert.equal(probes,1);
+ await send('EXPORT',a,4,3);assert.equal(exports,1,'capacity never substitutes a final export');
+ await send('PREFLIGHT',a,4,4);assert.equal(probes,1);assert.deepEqual(run.last().safetyWarnings,warnings);
+ await send('PREFLIGHT',b,4,5);assert.equal(probes,2);
+ await send('PREFLIGHT',b,5,6);assert.equal(probes,3,'same fields at a different edit revision cannot reuse');
+ await run.send(job('INSPECT'));
+ await send('PREFLIGHT',b,5,7);assert.equal(probes,4,'re-inspection clears the preparation');
+});
+
+test('a cancelled relink cannot leave capacity reports from the previous connected source eligible',async()=>{
+ let attachStarted,releaseAttach,checks=0;
+ const entered=new Promise(r=>{attachStarted=r;});
+ const run=harness({
+  preflightEditedImage:async()=>{checks++;return {schema:'srwf.editor-storage-budget.v1',canExport:true,rows:[],safetyWarnings:[]};},
+  prepareSrw4EditorSource:async()=>({}),
+  attachSrw4EditorSource:async()=>{attachStarted();return new Promise(r=>{releaseAttach=r;});},
+ });
+ const request={sessionToken:'session-1'};
+ await run.send(job('INSPECT'));
+ await run.send(job('PREFLIGHT',{request,revision:2}));
+ const connecting=run.send(job('SRW4_CONNECT',{jobId:'capacity-relink',sessionToken:'session-1'}));await entered;
+ await run.send({type:'CANCEL',jobId:'capacity-relink'});
+ releaseAttach({importReady:true});await connecting;await settle();
+ assert.equal(run.last().type,'CANCELLED');
+ await run.send(job('PREFLIGHT',{request,revision:2}));assert.equal(run.last().type,'PREFLIGHT_COMPLETE');assert.equal(checks,2);
+});
+
+test('an export without an actual successful budget or known warnings cannot substitute preflight',async()=>{
+ for(const omit of ['budget','warnings']){
+  let checks=0;
+  const run=harness({preflightEditedImage:async()=>{checks++;return {canExport:true};},
+   exportEditedImage:async(_s,_r,o)=>{
+    if(omit!=='budget')o.onBudget({schema:'srwf.editor-storage-budget.v1',canExport:true,rows:[]});
+    return omit==='warnings'?{ok:true}:{ok:true,safetyWarnings:[]};
+   },
+  });
+  const request={sessionToken:'session-1'},revision=2;
+  await run.send(job('INSPECT'));
+  await run.send(job('EXPORT',{request,revision}));
+  await run.send(job('PREFLIGHT',{request,revision}));
+  assert.equal(checks,1,omit);
+ }
+});

@@ -29,8 +29,11 @@ export function createEditorWorker(scope, api) {
   let editorView = null;
   // Retain only the latest completed export. Both consumers receive the same
   // immutable, fully validated Blob; in-flight work still owns the job slot.
-  let completedExport = null;
+  let completedExport = null, completedCapacity = null;
 
+  const validWarnings = value => Array.isArray(value)&&value.every(item=>typeof item==='string');
+  const validCapacity = value => value?.schema==='srwf.editor-storage-budget.v1'&&value.canExport===true&&Array.isArray(value.rows);
+  const validRevision = value => Number.isSafeInteger(value)&&value>=0;
   const abortError = () => new DOMException("Operation aborted", "AbortError");
   const abortJob = (job) => { if (!job.controller.signal.aborted) job.controller.abort(abortError()); };
 
@@ -39,7 +42,7 @@ export function createEditorWorker(scope, api) {
     if (!message || typeof message.type !== "string") return;
 
     if (message.type === "CANCEL") {
-      if (activeJob && (!message.jobId || message.jobId === activeJob.jobId)) abortJob(activeJob);
+      if (activeJob && (!message.jobId || message.jobId === activeJob.jobId)) {completedCapacity=null;abortJob(activeJob);}
       return;
     }
     if (message.type === "RESET") {
@@ -49,7 +52,7 @@ export function createEditorWorker(scope, api) {
       if (editorSession) api.clearFCampaignEditorSource?.(editorSession);
       editorSession = null;
       editorView = null;
-      completedExport = null;
+      completedExport = null; completedCapacity=null;
       return;
     }
     if (["INSPECT", "EXPORT", "PREFLIGHT", "SRW4_CONNECT", "SRW4_DISCONNECT", "F_CAMPAIGN_CONNECT", "F_CAMPAIGN_DISCONNECT"].includes(message.type)) {
@@ -73,6 +76,7 @@ export function createEditorWorker(scope, api) {
   async function prepareExport(session, request, job, { onProgress, onBudget } = {}) {
     const key = exportRequestKey(request);
     requireExportLive(job, session);
+    completedCapacity=null;
     if (key !== null && completedExport?.session === session && completedExport.key === key) {
       const cached = completedExport;
       if (cached.hasBudget) onBudget?.(cached.budget);
@@ -89,7 +93,7 @@ export function createEditorWorker(scope, api) {
       },
     });
     requireExportLive(job, session);
-    return { session, key, result, budget, hasBudget };
+    return { session, key, revision:job.revision, result, budget, hasBudget };
   }
 
   function rememberExport(prepared, job) {
@@ -115,7 +119,7 @@ export function createEditorWorker(scope, api) {
     if(activeJob||!session||message.sessionToken!==session.sessionToken){
       scope.postMessage({type:'ANIMATION_SOURCE_ERROR',previewId:message.previewId,error:'검증한 ROM 세션이 없습니다. 작업을 마친 뒤 다시 열어 주세요.'});return;
     }
-    const job={jobId:message.previewId,kind:message.includeSaveCatalog===true?'save-catalog':'animation-source',controller:new AbortController()};activeJob=job;
+    const job={jobId:message.previewId,revision:message.revision,kind:message.includeSaveCatalog===true?'save-catalog':'animation-source',controller:new AbortController()};activeJob=job;
     try{
       const original=api.readEditorSourceImage?.(session);
       let blob=original?.blob??session.sourceBlob,descriptor=original?.descriptor??session.descriptor;
@@ -201,7 +205,7 @@ export function createEditorWorker(scope, api) {
     }
 
     const controller = new AbortController();
-    const job = { jobId: message.jobId, controller };
+    const job = { jobId: message.jobId, revision:message.revision, controller };
     activeJob = job;
     const live = () => activeJob === job && !controller.signal.aborted;
     // The last check before a job publishes anything. The core operations check the signal between their reads, but the
@@ -232,6 +236,7 @@ export function createEditorWorker(scope, api) {
     };
     try {
       if (message.type === "INSPECT") {
+        completedCapacity=null;
         // The session of the image that is open stays until another image has been opened: a refused or cancelled
         // inspect leaves the edits on screen exportable. Only a successful inspect or RESET replaces it.
         const result = await api.inspectPatchedImage(message.imageBlob, message.descriptor, {
@@ -259,6 +264,7 @@ export function createEditorWorker(scope, api) {
       if(message.type==='F_CAMPAIGN_CONNECT'||message.type==='F_CAMPAIGN_DISCONNECT'){
         if(message.sessionToken!==editorSession.sessionToken)
           throw makeError('EDITOR_SESSION_MISSING','현재 완결편과 F 연결 요청이 일치하지 않습니다.');
+        completedExport=null;completedCapacity=null;
         let catalog=null;
         if(message.type==='F_CAMPAIGN_CONNECT'){
           const prepared=await api.prepareFCampaignEditorSource(editorSession,message.sourceBlob,{signal:controller.signal,onProgress});
@@ -275,6 +281,7 @@ export function createEditorWorker(scope, api) {
       if (message.type === 'SRW4_CONNECT' || message.type === 'SRW4_DISCONNECT') {
         if (message.sessionToken !== editorSession.sessionToken)
           throw makeError('EDITOR_SESSION_MISSING', '현재 ROM 세션과 제4차 연결 요청이 일치하지 않습니다.');
+        completedExport=null;completedCapacity=null;
         let catalog = null;
         if (message.type === 'SRW4_CONNECT') {
           const prepared = await api.prepareSrw4EditorSource(message.sourceBlob, {signal:controller.signal,onProgress});
@@ -294,8 +301,20 @@ export function createEditorWorker(scope, api) {
         return;
       }
       if(message.type==='PREFLIGHT'){
-        const budget=await api.preflightEditedImage(editorSession,message.request,{signal:controller.signal,onProgress});
-        requireLive();scope.postMessage({type:'PREFLIGHT_COMPLETE',jobId:message.jobId,budget,safetyWarnings:budget?.safetyWarnings??[]});return;
+        // Reuse a report only, never packed data or a final-write shortcut.
+        // Both the report and any verified export become stale on edit/relink.
+        const key=exportRequestKey(message.request),session=editorSession,revision=job.revision;
+        const reusable=key!==null&&validRevision(revision);
+        const previous=reusable&&completedCapacity?.session===session&&completedCapacity.key===key&&completedCapacity.revision===revision?completedCapacity:null;
+        if(!previous)completedCapacity=null;
+        const checked=reusable&&completedExport?.session===session&&completedExport.key===key&&completedExport.revision===revision&&completedExport.hasBudget&&validCapacity(completedExport.budget)&&validWarnings(completedExport.result.safetyWarnings)
+          ?completedExport:null;
+        const budget=previous?.budget??(checked?Object.freeze({...checked.budget,safetyWarnings:checked.result.safetyWarnings})
+          :await api.preflightEditedImage(session,message.request,{signal:controller.signal,onProgress}));
+        requireLive();
+        scope.postMessage({type:'PREFLIGHT_COMPLETE',jobId:message.jobId,budget,safetyWarnings:budget?.safetyWarnings??[]});
+        if(reusable&&validCapacity(budget)&&validWarnings(budget.safetyWarnings)&&!checked)completedCapacity={session,key,revision,budget};
+        return;
       }
       const prepared = await prepareExport(editorSession, message.request, job, {
         onProgress,

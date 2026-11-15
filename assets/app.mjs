@@ -950,7 +950,7 @@ function requestEditorOutputSource({signal,includeSaveCatalog=false}={}) {
     worker.addEventListener("message", receive);
     signal?.addEventListener('abort',abort,{once:true});
     if(signal?.aborted){abort();return;}
-    try{worker.postMessage({ type: "ANIMATION_SOURCE", previewId, sessionToken,...request?{request}:{},...includeSaveCatalog?{includeSaveCatalog:true}:{} });}
+    try{worker.postMessage({ type: "ANIMATION_SOURCE", previewId, sessionToken,revision,...request?{request}:{},...includeSaveCatalog?{includeSaveCatalog:true}:{} });}
     catch(error){finish(error);}
   });
 }
@@ -9059,6 +9059,7 @@ async function startEditorOutputJob(type) {
     getEditorWorker().postMessage({
       type,
       jobId,
+      revision:state.editorEditRevision,
       request,
     });
   } catch (error) {
