@@ -39,6 +39,23 @@ test('page navigation keeps selection, edited values, validation and reset',asyn
   $('saveCommonUpgradeTab').click();assert.equal($('saveMoneyPanel').hidden,true);assert.equal($('saveUpgradePanel').hidden,false);
   $('saveCommonMoneyTab').click();assert.equal($('saveMoney').value,'1000');assert.equal($('saveDownload').disabled,false);
   $('saveReset').click();assert.equal($('saveMoney').value,'123456');
+  const turns=$('saveTotalTurns');
+  assert.equal(turns.value,'0');
+  turns.value='65536';turns.dispatchEvent({type:'input'});
+  $('savePilotTab').click();
+  assert.equal($('saveDownload').disabled,true);
+  const turnError=$('saveChanges').querySelector('button');
+  assert.match(turnError.textContent,/총 턴 수/);
+  turnError.click();
+  assert.equal($('saveMoneyPanel').hidden,false);
+  assert.equal(doc.activeElement,turns);
+  turns.value='300';turns.dispatchEvent({type:'input'});
+  assert.match($('saveChanges').textContent,/총 턴 수 0 → 300/);
+  assert.equal($('saveMoney').value,'123456');
+  assert.equal($('saveDownload').disabled,false);
+  $('saveReset').click();
+  assert.equal(turns.value,'0');
+  assert.equal($('saveDownload').disabled,true);
 });
 
 test('replacing a save asks before discarding edits, and a cancelled or invalid file keeps the current work',async()=>{

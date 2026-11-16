@@ -2,13 +2,15 @@ import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mj
 import {canAddSavePilots} from './save-pilot-support.mjs?v=20261113-alicecopies1';
 import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261113-alicecopies1';
 import { requestEditorNotice } from './editor-notice.mjs?v=20261113-alicecopies1';
-import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies1';
+import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies1&saveturns=20261116-1';
 import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261113-alicecopies1';
-import { openSave } from './save-core.mjs?v=20261113-alicecopies1&savefast=20261114-6';
+import { openSave } from './save-core.mjs?v=20261113-alicecopies1&savefast=20261114-6&saveturns=20261116-1';
 import { pageItems,fitPages } from './save-pages.mjs?v=20261113-alicecopies1';
 import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261113-alicecopies1';
 import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
 import { buildSaveZip } from './save-zip.mjs?v=20261113-alicecopies1&savezip=20261115-1';
+
+const COMMON_NUMBER_INPUTS=Object.freeze({money:'saveMoney',totalTurns:'saveTotalTurns'});
 
 export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,prepareGameBundle}={}) {
   const $=id=>document.getElementById(id),dialog=$('saveEditorDialog');
@@ -21,7 +23,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
     $(prefix+'Prev').disabled=busy||page===0;$(prefix+'Next').disabled=busy||page>=count-1;
     $(prefix+'PageLabel').textContent=`${page+1} / ${count}`;
   }
-  const labels={...Object.fromEntries(SAVE_NAME_FIELDS.map(s=>[s.field,s.label])),money:'자금',pilotAdded:'파일럿 추가',level:'레벨',experience:'다음 레벨까지 EXP',hpUpgrade:'HP 개조',enUpgrade:'EN 개조',armorUpgrade:'장갑 개조',limitUpgrade:'한계 개조',mobilityUpgrade:'운동성 개조',weaponUpgrades:'무기 개조',parts:'장착 파츠',upgradeLimit:'게임 개조 상한',unitAdded:'기체 추가',unitRemoved:'깨진 기체 칸 비움',pilotRemoved:'깨진 파일럿 칸 비움',pilotSlot:'탑승 파일럿 칸',linkedSlot:'연결 기체 칸'};
+  const labels={...Object.fromEntries(SAVE_NAME_FIELDS.map(s=>[s.field,s.label])),money:'자금',totalTurns:SAVE_SCALAR_RULES.totalTurns.label,pilotAdded:'파일럿 추가',level:'레벨',experience:'다음 레벨까지 EXP',hpUpgrade:'HP 개조',enUpgrade:'EN 개조',armorUpgrade:'장갑 개조',limitUpgrade:'한계 개조',mobilityUpgrade:'운동성 개조',weaponUpgrades:'무기 개조',parts:'장착 파츠',upgradeLimit:'게임 개조 상한',unitAdded:'기체 추가',unitRemoved:'깨진 기체 칸 비움',pilotRemoved:'깨진 파일럿 칸 비움',pilotSlot:'탑승 파일럿 칸',linkedSlot:'연결 기체 칸'};
   const records=()=>session?.list().filter(r=>r.gameId===context().gameId)??[];
   const active=()=>records().find(r=>r.key===key);
   const addRowsOpen=()=>$('saveAddPilotRow').open||$('saveAddUnitRow').open;
@@ -221,7 +223,9 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
       if(spec.unitSlot!==undefined){const id=savedHeroUnitId(r,spec.unitSlot),original=context().units?.find(u=>u.recordIndex===id)?.name;input.placeholder=original||`기체 #${id} 기본 이름`;$('saveHeroUnitLabel'+(spec.unitSlot+1)).textContent=original||`형태 ${spec.unitSlot+1}`;}
       restoreDraft(input,field,null);nameCount(input,field);
     }
-    $('saveMoney').value=r.money??'';$('saveMoney').disabled=!r.editable||busy;restoreDraft($('saveMoney'),'money',null);
+    for(const [field,id] of Object.entries(COMMON_NUMBER_INPUTS)){
+      const input=$(id);input.value=r[field]??'';input.disabled=!r.editable||busy;restoreDraft(input,field,null);
+    }
     for(const [id,field] of [['saveLevel','level'],['saveExperience','experience']]){
       $(id).value=row?.[field]??'';$(id).disabled=!r.editable||busy||!row||row.id>=400;$(id).removeAttribute('aria-invalid');restoreDraft($(id),field,slot);
     }
@@ -237,11 +241,11 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
     $('saveRecordSelect').value=String(key);$('saveSlotBrowser').open=false;$('saveAddUnitRow').open=false;$('saveSearch').value='';
     const spec=SAVE_NAME_FIELDS.find(item=>item.field===field);
     if(spec){kind='common';commonTab=spec.unitSlot===undefined?'names':'unitNames';}
-    else if(field==='money'){kind='common';commonTab='money';}
+    else if(Object.hasOwn(COMMON_NUMBER_INPUTS,field)){kind='common';commonTab='money';}
     else if(field==='parts'){kind='unit';unitTab='parts';}
     else kind='pilot';
     $('saveRecordLayout').dataset.mobileView='detail';dialog.querySelector('.save-diff').open=false;render();
-    let target=spec?$(spec.inputId):field==='money'?$('saveMoney'):field==='level'?$('saveLevel'):field==='experience'?$('saveExperience'):null;
+    let target=spec?$(spec.inputId):Object.hasOwn(COMMON_NUMBER_INPUTS,field)?$(COMMON_NUMBER_INPUTS[field]):field==='level'?$('saveLevel'):field==='experience'?$('saveExperience'):null;
     if(field==='parts'){
       const row=active()?.units.find(item=>item.slot===slot);
       while(row){target=$('saveUnitFields').querySelector(`[data-save-field="parts"][data-save-index="${index}"]`);if(target||$('saveUnitNext').disabled)break;unitPage++;unitControls(active(),row);}
@@ -275,7 +279,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
   function numericEdit(input,field,rowSlot){
     if(busy||!context().verified)return;
     const dk=draftKey(field,rowSlot);
-    try{const value=input.value.trim()===''?NaN:Number(input.value),r=active();requireSaveScalar(field,value,field==='money'?r?.money??undefined:r?.pilots.find(p=>p.slot===rowSlot)?.[field]);session.edit(key,field,value,rowSlot);drafts.delete(dk);fieldError(input,'');listRows();message(drafts.size?'변경했습니다. 남은 입력 오류를 수정한 뒤 저장하세요.':'변경 내역을 확인한 뒤 수정본을 저장하세요.');}
+    try{const value=input.value.trim()===''?NaN:Number(input.value),r=active();requireSaveScalar(field,value,rowSlot===null?r?.[field]:r?.pilots.find(p=>p.slot===rowSlot)?.[field]);session.edit(key,field,value,rowSlot);drafts.delete(dk);fieldError(input,'');listRows();message(drafts.size?'변경했습니다. 남은 입력 오류를 수정한 뒤 저장하세요.':'변경 내역을 확인한 뒤 수정본을 저장하세요.');}
     catch(e){drafts.set(dk,{value:input.value,error:e.message});fieldError(input,e.message);message(e.message,true);}controls();
   }
   function portraitRequest(type,id,r){
@@ -451,9 +455,9 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
   $('saveBackToList').addEventListener('click',()=>{$('saveRecordLayout').dataset.mobileView='list';$('saveRecordList').querySelector('[aria-pressed=true]')?.focus({preventScroll:true});});
   $('saveSearch').addEventListener('input',()=>{listPage=0;unitPage=0;invalid=false;render();});
   for(const [id,type] of [['savePilotTab','pilot'],['saveUnitTab','unit'],['saveCommonTab','common']])$(id).addEventListener('click',()=>{kind=type;slot=null;listPage=unitPage=0;invalid=false;$('saveAddUnitRow').open=false;$('saveAddPilotRow').open=false;$('saveSearch').value='';$('saveRecordLayout').dataset.mobileView='list';render();});
-  for(const [id,field] of [['saveMoney','money'],['saveLevel','level'],['saveExperience','experience']]){
+  for(const [field,id] of [...Object.entries(COMMON_NUMBER_INPUTS),['level','saveLevel'],['experience','saveExperience']]){
     const rule=SAVE_SCALAR_RULES[field];$(id).min=String(rule.min);$(id).max=String(rule.max);$(id).step='1';
-    $(id).addEventListener('input',()=>numericEdit($(id),field,field==='money'?null:slot));
+    $(id).addEventListener('input',()=>numericEdit($(id),field,Object.hasOwn(COMMON_NUMBER_INPUTS,field)?null:slot));
   }
   for(const [id,type] of [['saveUnitStatsTab','stats'],['saveUnitWeaponsTab','weapons'],['saveUnitPartsTab','parts']])$(id).addEventListener('click',()=>{unitTab=type;unitPage=0;render();});
   for(const [id,type] of [['saveCommonMoneyTab','money'],['saveCommonUpgradeTab','upgrade'],['saveCommonNamesTab','names'],['saveCommonUnitNamesTab','unitNames']])$(id).addEventListener('click',()=>{commonTab=type;render();});

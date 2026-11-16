@@ -5,6 +5,8 @@
 // a value already stored may be kept as it is (the same rule as EDITOR_SCREEN_FIELD_LIMITS in editor-fields.mjs).
 export const SAVE_SCALAR_RULES=Object.freeze({
   money:Object.freeze({label:'자금',min:0,max:9999999,storedMax:0xffffff}),
+  // The cumulative count is a 16-bit word; the load list and intermission use five digit cells.
+  totalTurns:Object.freeze({label:'총 턴 수',min:0,max:0xffff}),
   level:Object.freeze({label:'파일럿 레벨',min:1,max:99}),
   experience:Object.freeze({label:'다음 레벨까지 EXP',min:0,max:65535}),
 });

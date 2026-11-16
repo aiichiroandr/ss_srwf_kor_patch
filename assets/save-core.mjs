@@ -1,6 +1,6 @@
 import {canEditSaveNames,SAVE_NAME_SUPPORT_MESSAGE} from './save-name-support.mjs?v=20261113-alicecopies1';
 import {SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName} from './save-names.mjs?v=20261113-alicecopies1';
-import { requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies1';
+import { requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies1&saveturns=20261116-1';
 import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
 import {initializeSavePilotRow} from './editor-save-pilot-init.mjs?v=20261113-alicecopies1';
 import {getSavePilotDefinitions} from './save-pilot-support.mjs?v=20261113-alicecopies1';
@@ -139,7 +139,8 @@ function saveModel(r,b,glyphMap) {
     // These are FACE ids, not pilot ids, and remain read-only metadata.
     heroFaceIds:Object.freeze(r.gameId&&b.length===0x1600?{303:u16(b,0x34)>>>7,302:u16(b,0x38)>>>7}:{}),
     upgradeLimit:r.gameId==='srwf-final'&&(b[0x9c]&8)?10:5,
-    money:r.gameId&&b.length===0x1600?b[10]*65536+b[11]*256+b[12]:null,pilots:Object.freeze(pilots),units:Object.freeze(units)});
+    money:r.gameId&&b.length===0x1600?b[10]*65536+b[11]*256+b[12]:null,
+    totalTurns:r.gameId&&b.length===0x1600?u16(b,0x0e):null,pilots:Object.freeze(pilots),units:Object.freeze(units)});
 }
 export async function openSave(input, catalog={}) {
   catalog={...catalog};
@@ -194,6 +195,7 @@ export async function openSave(input, catalog={}) {
     const r=get(key);need(r.editable,r.reason);const b=current(r).slice();let p,n;
     // The value already stored may be echoed unchanged even above the screen limit (save-field-rules.mjs).
     if(field==='money'){p=10;n=3;requireSaveScalar('money',value,b[10]*65536+b[11]*256+b[12]);}
+    else if(field==='totalTurns'){p=0x0e;n=2;requireSaveScalar(field,value);}
     else{
       integer(slot,0,127);p=0x1000+slot*12;
       need(u16(b,p)>0&&u16(b,p)<400,'이 파일럿 번호는 편집을 지원하지 않습니다.');
@@ -371,7 +373,7 @@ export async function openSave(input, catalog={}) {
     for(const {field} of saveNameFields(a))if(a[field+'Bytes'].some((v,i)=>v!==z[field+'Bytes'][i])){
       out.push({key:r.key,name:r.name,field,before:decodeSaveName(a,field,{glyphMap:catalog.glyphMap})??'해독 불가',after:decodeSaveName(z,field,{glyphMap:catalog.glyphMap})??'해독 불가'});
     }
-    if(a.money!==z.money)out.push({key:r.key,name:r.name,field:'money',before:a.money,after:z.money});
+    for(const field of ['money','totalTurns'])if(a[field]!==z[field])out.push({key:r.key,name:r.name,field,before:a[field],after:z[field]});
     for(const next of z.pilots)if(!a.pilots.some(p=>p.slot===next.slot))out.push({key:r.key,name:r.name,slot:next.slot,id:next.id,field:'pilotAdded',before:0,after:next.id});
     for(const before of a.pilots){const after=z.pilots.find(p=>p.slot===before.slot);
       if(!after){out.push({key:r.key,name:r.name,slot:before.slot,id:before.id,field:'pilotRemoved',before:before.id,after:0});continue;}

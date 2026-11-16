@@ -17,7 +17,7 @@
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
     <link rel="stylesheet" href="assets/style.css?v=20261113-alicecopies1">
     <link rel="stylesheet" href="assets/editor-runtime.css?v=20261113-alicecopies1&amp;savefast=20261114-6">
-    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1"></script>
+    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1"></script>
     <script type="module" src="assets/user-guide.mjs?v=20261113-alicecopies1"></script>
   </head>
   <body data-mode="editor" data-view="setup" data-patch-settings="choose">
@@ -1179,7 +1179,14 @@
                 <label><span id="saveHeroUnitLabel3">형태 3</span><input id="saveHeroUnitName3" type="text" autocomplete="off" spellcheck="false" aria-describedby="saveUnitNamesHelp"><small id="saveHeroUnitName3Count"></small></label>
                 <p class="save-help" id="saveUnitNamesHelp">완결편 주인공 기체명은 형태별로 편집합니다. 본문 10바이트이며 빈칸은 ROM 기본 이름을 사용합니다.</p>
               </div>
-              <div id="saveMoneyPanel" class="game-panel"><h3>보유 자금</h3><label>자금<input id="saveMoney" type="number" min="0" max="9999999" step="1" inputmode="numeric"></label><p class="save-help">선택한 저장 슬롯의 보유 자금입니다.</p></div>
+              <div id="saveMoneyPanel" class="game-panel">
+                <h3>보유 자금과 총 턴 수</h3>
+                <div class="save-number-grid">
+                  <label>자금<input id="saveMoney" type="number" min="0" max="9999999" step="1" inputmode="numeric"></label>
+                  <label>총 턴 수<input id="saveTotalTurns" type="number" min="0" max="65535" step="1" inputmode="numeric"></label>
+                </div>
+                <p class="save-help">선택한 저장 슬롯의 자금과 누적 턴 수입니다. 현재 전투의 턴 수는 바꾸지 않습니다.</p>
+              </div>
               <div id="saveUpgradePanel" class="game-panel" hidden><h3>개조 한도</h3><label id="saveUpgradeModeRow" hidden>완결편 개조 해금<select id="saveUpgradeMode"><option value="original">불러온 해금 상태 유지</option><option value="early10">69화 이전에도 10단 개조 해금</option></select></label><p id="saveUpgradeStatus"></p><p class="save-help">조기 해금은 게임의 개조 한도를 10단으로 바꿉니다. 각 기체의 개조 단수는 보유 기체 탭에서 수정하세요.</p></div>
             </section>
           </div>

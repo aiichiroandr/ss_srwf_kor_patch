@@ -18,6 +18,36 @@ test('F and Final namespaces share verified cartridge record ABI',async()=>{
   for(const [name,game] of [['SROBOT_F_32','srwf-f'],['SROBOTFC_02','srwf-final']]){const s=await openSave(syntheticSave({name}).raw);assert.equal(s.list()[0].gameId,game);assert.equal(s.list()[0].pilots[0].experience,321);}
 });
 
+test('total turns use only the shared BE16 field and checksum in either game',async()=>{
+  for(const name of ['SROBOT_F_32','SROBOTFC_02']){
+    const {raw,payload,payloadPositions}=syntheticSave({name});
+    const view=new DataView(payload.buffer);
+    view.setUint16(0x0e,365);
+    view.setUint32(0,saveChecksum(payload));
+    payloadPositions.forEach((p,i)=>{raw[p]=payload[i];});
+    const source=raw.slice(),session=await openSave(raw),[record]=session.list();
+    assert.equal(record.totalTurns,365);
+    for(const bad of [-1,1.5,65536])assert.throws(()=>session.edit(record.key,'totalTurns',bad),/총 턴 수/);
+    assert.deepEqual(await session.exportFile(),source);
+    for(const turns of [0,65535,300]){
+      session.edit(record.key,'totalTurns',turns);
+      assert.deepEqual(session.diff(),[{key:record.key,name,field:'totalTurns',before:365,after:turns}]);
+      const out=await session.exportFile(),[reopened]=(await openSave(out)).list();
+      assert.equal(reopened.editable,true);
+      assert.deepEqual(reopened,{...record,totalTurns:turns});
+      const expected=source.slice();
+      view.setUint16(0x0e,turns);
+      view.setUint32(0,saveChecksum(payload));
+      for(const i of [0,1,2,3,0x0e,0x0f])expected[payloadPositions[i]]=payload[i];
+      assert.deepEqual(out,expected);
+    }
+    session.edit(record.key,'totalTurns',365);
+    assert.deepEqual(session.diff(),[]);
+    assert.deepEqual(await session.exportFile(),source);
+    assert.deepEqual(raw,source);
+  }
+});
+
 test('saved hero faces use the selection words and remain read-only during edits',async()=>{
  for(const name of ['SROBOT_F_32','SROBOTFC_02']){
   const f=syntheticSave({name}),view=new DataView(f.payload.buffer);
