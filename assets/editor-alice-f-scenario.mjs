@@ -1,11 +1,11 @@
 // Development-only combined F scenario adapter. It is intentionally not wired into
 // editor availability, product UI, or runtime paths.
-import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1&savefast=20261114-6';
-import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-6';
+import {readScenarioArchive} from './editor-scenario-archive.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
+import {compressTsr,decodeFramedLz} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
 import {bytesEqual,bytesToHex,sha256Digest} from './editor-bytes.mjs?v=20261113-alicecopies1';
 import {isAliceFBase} from './editor-alice-f-profile.mjs?v=20261113-alicecopies1';
 import {ALICE_F_SCENARIO_PROFILE,ALICE_F_SCENARIO_REBASE_PROFILE} from './editor-alice-f-scenario-profile.mjs?v=20261113-alicecopies1';
-import {ALICE_F_DEPARTURE,applyAliceFDepartureBody,normalizeAliceFDepartureBody,hasAliceFDepartureBodyCandidate} from './editor-alice-f-departure.mjs?v=20261113-alicecopies1';
+import {ALICE_F_DEPARTURE,applyAliceFDepartureBody,normalizeAliceFDepartureBody,hasAliceFDepartureBodyCandidate} from './editor-alice-f-departure.mjs?v=20261113-alicecopies1&f65fix=20261116-1';
 import {applyAliceFFirstClearBody,normalizeAliceFFirstClearBody,hasAliceFFirstClearBodyCandidate} from './editor-alice-f-first-clear.mjs?v=20261113-alicecopies1';
 
 const PROFILE=ALICE_F_SCENARIO_PROFILE, REBASE=ALICE_F_SCENARIO_REBASE_PROFILE;
@@ -63,7 +63,7 @@ export function serializeAliceFScenarioPair(bytes,packedLeft,packedRight,{rebase
 }
 async function packBodies(archive,decoded,{signal}={}){
  const packed=new Map();
- for(const index of PHYSICAL){abort(signal);const plain=decoded.get(index),body=bodyAt(archive,index);if(!(plain instanceof Uint8Array))fail('Missing pinned F scenario body.');const stream=await compressTsr(plain,{signal,completeNearMatches:true});if(!bytesEqual(decodeFramedLz(stream,0x9000).output,plain))fail('F scenario compression read-back failed.');packed.set(index,stream);}return packed;
+ for(const index of PHYSICAL){abort(signal);const plain=decoded.get(index),body=bodyAt(archive,index);if(!(plain instanceof Uint8Array))fail('Missing pinned F scenario body.');if(plain.length>0x8000)fail('F scenario exceeds the 32 KiB runtime arena.');const stream=await compressTsr(plain,{signal,completeNearMatches:true});if(!bytesEqual(decodeFramedLz(stream,0x9000).output,plain))fail('F scenario compression read-back failed.');packed.set(index,stream);}return packed;
 }
 async function replaceBodies(bytes,archive,decoded,{signal,forceOriginalPair=false}={}){
  const packed=await packBodies(archive,decoded,{signal}),out=bytes.slice();
@@ -104,13 +104,13 @@ export async function normalizeAliceFScenario(bytes,options={}){
 }
 export async function changeAliceFScenario(bytes,config=null,options={}){
  trusted(options);const normalized=await normalizeAliceFScenario(bytes,options);abort(options.signal);if(config===null)return Object.freeze({bytes:normalized.bytes,config:null,previous:normalized.config});
- if(normalized.config&&same(normalized.config,config))return Object.freeze({bytes,config:normalized.config,previous:normalized.config});
+ if(normalized.config&&same(normalized.config,config)&&normalized.archive.bodies.every(body=>body.decoded.length<=0x8000))return Object.freeze({bytes,config:normalized.config,previous:normalized.config});
  const clean=new Map();for(const index of PHYSICAL)clean.set(index,bodyAt(normalized.archive,index).decoded);
  const baseline=normalized.config?normalized.bytes:await canonicalReplace(normalized.bytes,normalized.archive,clean,options);if(hash(baseline)!==PROFILE.canonicalSha256)fail('F SCEDATA canonical baseline is not pinned.');
  const archive=readScenarioArchive(baseline,'srwf-f'),wanted=new Map();
  for(const index of FIRST){try{wanted.set(index,applyAliceFFirstClearBody(bodyAt(archive,index),config,firstOptions(options)).decoded);}catch{fail('F first-clear configuration is invalid.');}}
  for(const index of PHYSICAL){const body=index===1||index===31?{...bodyAt(archive,index),decoded:wanted.get(index)}:bodyAt(archive,index);try{wanted.set(index,applyAliceFDepartureBody(body,{unitIds:config?.unitIds},departureOptions(options)).decoded);}catch{fail('F departure configuration is invalid.');}}
- const output=await replaceBodies(baseline,archive,wanted,options);abort(options.signal);const checked=await normalizeAliceFScenario(output,options);if(!checked.config||!same(checked.config,config)||!bytesEqual(checked.bytes,baseline))fail('F combined SCEDATA read-back failed.');return Object.freeze({bytes:output,config:checked.config,previous:normalized.config});
+ const output=await replaceBodies(baseline,archive,wanted,options);abort(options.signal);const finalArchive=readScenarioArchive(output,'srwf-f');if(finalArchive.bodies.some(body=>body.decoded.length>0x8000))fail('F final scenario archive exceeds the 32 KiB runtime arena.');const checked=await normalizeAliceFScenario(output,options);if(!checked.config||!same(checked.config,config)||!bytesEqual(checked.bytes,baseline))fail('F combined SCEDATA read-back failed.');return Object.freeze({bytes:output,config:checked.config,previous:normalized.config});
 }
 export const applyAliceFScenario=changeAliceFScenario;
 export const ALICE_F_SCENARIO=Object.freeze({gameId:'srwf-f',developmentOnly:true,availability:false,byteLength:PROFILE.byteLength,sourceSha256:PROFILE.sourceSha256,canonicalSha256:PROFILE.canonicalSha256,firstClearBodies:FIRST,departureBodies:ALICE_F_DEPARTURE.physicalBodies});

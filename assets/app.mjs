@@ -10,17 +10,17 @@ import {captureSrw4Import,pendingSrw4Import,rollbackSrw4Import} from './editor-s
 import {decorateAlicePilot} from './editor-alice.mjs?v=20261113-alicecopies1';
 import {aliceEditorRow,aliceCrewRequest,ALICE_EDITOR_FIELDS} from './editor-alice-crew-data.mjs?v=20261113-alicecopies1';
 import {createAliceCrewEditor} from './editor-alice-crew-ui.mjs?v=20261113-alicecopies1';
-import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261113-alicecopies1&savefast=20261114-6';
+import {collectionEditorRow} from './editor-collection-unlock.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
 import {criticalValues,criticalChoices,criticalPercentLabel,criticalAppliedText} from './editor-critical-values.mjs?v=20261113-alicecopies1';
 import {createSrw4SourcePanel} from './editor-srw4-source-ui.mjs?v=20261113-alicecopies1&savefast=20261114-6';
 import {createFCampaignSourcePanel,campaignCanonicalTracks,campaignDownloadCue,ingameCanonicalTracks,ingameDownloadCue} from './editor-v04-unsupported.mjs?v=20261113-alicecopies1';
 import {aliceUnitTargets} from './editor-alice-targets.mjs?v=20261113-alicecopies1';
 import {connectDefaultAlice,cancelDefaultAlice} from './editor-alice-construction.mjs?v=20261113-alicecopies1';
-import {requireMigrationIdentities} from './editor-migration.mjs?v=20261113-alicecopies1&savefast=20261114-6';
+import {requireMigrationIdentities} from './editor-migration.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
 import {createUnitUpgradeUI} from './editor-unit-upgrade-ui.mjs?v=20261113-alicecopies1';
 import {createEditorStorageUI} from './editor-storage-ui.mjs?v=20261113-alicecopies1';
 import {encodeEditorText,editorTextMetrics,nameMap} from './editor-text-codec.mjs?v=20261113-alicecopies1';
-import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-6';
+import {validateScenarioDialogueText,validateScenarioDialoguePages,validateScenarioDialogueSpeaker,validateScenarioAfterDialogue} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
 import {afterDialogueText} from './editor-dialogue-sequence.mjs?v=20261113-alicecopies1';
 import {createBattleTimeline} from './editor-battle-timeline.mjs?v=20261113-alicecopies1';
 import {createWeaponNameControl} from './editor-name-control.mjs?v=20261113-alicecopies1';
@@ -107,15 +107,15 @@ import {
 import { LOCKED_UNIT_ABILITY_IDS } from "./editor-locks.mjs?v=20261113-alicecopies1";
 import { canAddUnitAbilityAt, unitAbilityRemoval } from "./editor-unit-abilities.mjs?v=20261113-alicecopies1";
 import { sha256Hex, Sha256 } from "./sha256.mjs?v=20261113-alicecopies1";
-import { createEditorChanges } from "./editor-changes.mjs?v=20261113-alicecopies1&savefast=20261114-6";
+import { createEditorChanges } from "./editor-changes.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1";
 import { createTerrainEditor } from "./editor-terrain-ui.mjs?v=20261113-alicecopies1";
 import { TERRAIN_FIELDS as MAP_TERRAIN_FIELDS, TERRAIN_LABELS as MAP_TERRAIN_LABELS } from "./editor-terrain.mjs?v=20261113-alicecopies1";
 import { createCostEditor } from "./editor-cost-ui.mjs?v=20261113-alicecopies1";
 import { createRewardEditor } from "./editor-reward-ui.mjs?v=20261113-alicecopies1";
 import { REWARD_FIELDS } from "./editor-rewards.mjs?v=20261113-alicecopies1";
-import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261113-alicecopies1&savefast=20261114-6";
+import { createScenarioModel } from "./editor-scenario-model.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1";
 import { createScenarioEditor } from "./editor-scenario-ui.mjs?v=20261113-alicecopies1";
-import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261113-alicecopies1&savefast=20261114-6";
+import { createEditorSearchTools } from "./editor-search-tools.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1";
 import { findPatchedEditorImage } from "./editor-directory.mjs?v=20261113-alicecopies1";
 import { normalizeSelectedSource, normalizeSourceDirectory, discSetForExpectedSize } from "./disc-source.mjs?v=20261113-alicecopies1";
 import {
@@ -3176,7 +3176,7 @@ async function openEditorFromFolder(directoryHandle) {
   // Returning from a review image must also restore the public editor engine.
   if(patched&&localEditorSupport&&reviewSession()){
     try{
-      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-alicecopies1&savefast=20261114-6',import.meta.url).href,signal:controller.signal,
+      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1',import.meta.url).href,signal:controller.signal,
         onProgress:progress=>showEditorProgress({...EDITOR_STAGES.inspect,percent:progress.total?progress.processed/progress.total*100:null})});
       if(opened){state.workflowSourceHandles=sourceHandles;return;}
       endEditorJob();state.editorSource=previous;updateControls();return;
@@ -5449,6 +5449,7 @@ const EDITOR_ERROR_COPY = Object.freeze({
   EDITOR_SPAWN_CAPACITY_INVALID: ["증원 실행 코드를 확인할 수 없습니다", "증원 실행 코드가 지원하는 원본과 다르거나 일부만 적용되어 있습니다. 지원하는 롬을 다시 열어 편집해주세요."],
   EDITOR_UNIT_REWARD_INVALID: ["기체 입수 설정을 반영할 수 없습니다", "선택한 기체와 입수 조건이 지원되는지 확인해주세요. 원래 사건 구조가 다른 시나리오에는 적용할 수 없습니다."],
   EDITOR_MAP_INVALID: ["맵 타일을 반영할 수 없습니다", "해당 맵의 범위와 그래픽 묶음에 맞는 타일인지 확인해주세요."],
+  EDITOR_SCENARIO_RUNTIME_CAPACITY: ["시나리오 실행 공간이 부족합니다", "수정한 시나리오가 게임의 실행 공간을 넘습니다. 변경을 줄여 다시 저장해주세요. 이 상태에서는 파일을 내보내지 않습니다."],
   EDITOR_SCENARIO_GROWTH_UNSUPPORTED: ["시나리오가 원래 공간에 들어가지 않습니다", "압축한 수정 내용이 해당 시나리오의 공간보다 큽니다. 변경을 줄여 다시 저장해주세요."],
   EDITOR_MAP_GROWTH_UNSUPPORTED: ["맵이 원래 공간에 들어가지 않습니다", "압축한 수정 타일이 해당 맵의 공간보다 큽니다. 변경을 줄여 다시 저장해주세요."],
 });
