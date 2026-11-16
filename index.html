@@ -16,8 +16,9 @@
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
     <link rel="stylesheet" href="assets/style.css?v=20261113-alicecopies1">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261113-alicecopies1&amp;savefast=20261114-6">
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;carryover=20261117-1">
     <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1"></script>
+    <script type="module" src="assets/save-srw4-carryover-ui.mjs?v=20261113-alicecopies1&amp;carryover=20261117-1"></script>
     <script type="module" src="assets/user-guide.mjs?v=20261113-alicecopies1"></script>
   </head>
   <body data-mode="editor" data-view="setup" data-patch-settings="choose">
@@ -364,6 +365,32 @@
               </dl>
               <button class="workflow-link" type="button" id="workflowSkipEditor" disabled>편집 없이 저장으로 이동</button>
               <a class="workflow-link" id="webPortRetired" href="web-port/">WEB PORT 시험판 종료 · 저장 내보내기 안내</a>
+              <details id="srw4CarryoverPanel" class="save-add-unit" hidden>
+                <summary>F → 완결편: 제4차 기체 승계용 세이브 만들기</summary>
+                <p>F 클리어 저장의 제4차 기체 번호는 완결편과 다릅니다. 이 도구는 제4차를 적용한 두 게임의 실제 BIN을 대조해 <strong>선택한 F 34화 완료 슬롯의 승계용 복사본</strong>만 만듭니다.</p>
+                <div class="save-add-unit-fields">
+                  <label>플레이에 쓴 F 제4차 연동 BIN<input id="srw4CarryoverF" type="file" accept=".bin"></label>
+                  <label>이어할 완결편 제4차 연동 BIN<input id="srw4CarryoverFinal" type="file" accept=".bin"></label>
+                  <label>F 클리어 일반 저장 (백업 RAM 사본)<input id="srw4CarryoverSave" type="file"></label>
+                </div>
+                <label><input id="srw4CarryoverAttest" type="checkbox"> 이 F 저장을 만들 때 실제로 사용한 F BIN을 선택했습니다.</label>
+                <p class="save-help">기존 F 저장에는 사용한 BIN을 식별하는 정보가 없습니다. 같은 버전이라도 기체 배치가 다를 수 있으니 같은 플레이에 사용한 BIN을 고르세요.</p>
+                <div class="save-check-actions">
+                  <button id="srw4CarryoverVerify" type="button" class="record-tool" disabled>두 BIN과 저장 확인</button>
+                  <button id="srw4CarryoverCancel" type="button" class="record-tool" hidden>승계 도구 초기화</button>
+                </div>
+                <p id="srw4CarryoverStatus" role="status" aria-live="polite">파일은 이 기기 안에서만 읽습니다. 원본은 바뀌지 않습니다.</p>
+                <div id="srw4CarryoverSlots" class="save-add-unit-fields" hidden>
+                  <label>승계할 F 클리어 슬롯<select id="srw4CarryoverSlot"></select></label>
+                  <button id="srw4CarryoverCreate" type="button" class="record-tool" disabled>이 슬롯의 승계용 복사본 만들기</button>
+                </div>
+                <div id="srw4CarryoverResult" hidden>
+                  <ul id="srw4CarryoverEdits"></ul>
+                  <p><strong>이 복사본을 F에서 열지 마세요. 원본에 덮어쓰지 마세요.</strong> 에뮬레이터를 끈 뒤 별도 완결편 프로필에 복사본을 넣고, 검증한 완결편 BIN/CUE로 F 클리어 슬롯을 불러오세요. 승계 후에는 게임에서 완결편 일반 저장을 새로 만드세요.</p>
+                  <a class="record-tool" id="srw4CarryoverDownload">완결편 승계 전용 복사본 받기</a>
+                </div>
+                <small>이미 잘못 승계된 완결편 저장과 SSF 개별 저장은 이 도구로 직접 복구하지 않습니다.</small>
+              </details>
               <p class="notice-item is-info site-notice" id="resaveNotice" role="note"><span class="notice-badge">안내</span><span>완결편에서 기체를 추가했거나 사전 초상을 켜고 내보낸 판은 새 에디터로 한 번 다시 저장해 주세요.</span></p>
               <p class="editor-entry-note" id="editorEntryNote">폴더 확인 후 에디터를 열거나 편집 없이 저장할 수 있습니다.</p>
               <div class="saturn-mini-frame" aria-hidden="true">

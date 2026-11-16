@@ -4,6 +4,7 @@ import { requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies
 import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
 import {initializeSavePilotRow} from './editor-save-pilot-init.mjs?v=20261113-alicecopies1';
 import {getSavePilotDefinitions} from './save-pilot-support.mjs?v=20261113-alicecopies1';
+import {planSrw4Carryover} from './save-srw4-carryover.mjs?v=20261113-alicecopies1&carryover=20261117-1';
 import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261113-alicecopies1';
 // Saturn backup RAM containers; original bytes and unrelated saves stay private.
 // Contracts and source references: docs/SAVE_EDITOR.md.
@@ -133,6 +134,7 @@ function saveModel(r,b,glyphMap) {
   }
   return Object.freeze({key:r.key,name:r.name,gameId:r.gameId,size:r.size,editable:r.editable,reason:r.reason,dateMinutes:r.dateMinutes,...(glyphMap instanceof Map?{glyphMap}:{}),
     completedEpisode:r.gameId&&b.length===0x1600&&b[5]>0?b[5]-1:null,
+    nextScenarioIndex:r.gameId&&b.length===0x1600?b[6]:null,
     completedTitleIndex:r.gameId&&b.length===0x1600?b[7]:null,
     ...names,heroUnitNameCount,
     // Game restoration takes the upper nine bits of each saved selection word.
@@ -146,7 +148,9 @@ export async function openSave(input, catalog={}) {
   catalog={...catalog};
   let unitCatalog=new Map((catalog.units??[]).map(u=>[u.recordIndex,structuredClone(u)]));
   need(input instanceof Uint8Array&&input.length>0&&input.length<=LIMIT,'파일이 비어 있거나 너무 큽니다.');
-  const original=input.slice();let unpacked=original,layers=0;
+  // Node Buffer.slice() aliases input. Always take ownership as a fresh
+  // Uint8Array before either normal save export or the carryover copy path.
+  const original=Uint8Array.from(input);let unpacked=original,layers=0;
   while(unpacked[0]===31&&unpacked[1]===139){need(layers<4,'압축 중첩이 너무 많습니다.');unpacked=await transform(unpacked,'decode');layers++;}
   let interleaved=false,raw=unpacked;
   if(!MAGIC.every((v,i)=>raw[i]===v)&&MAGIC.every((v,i)=>raw[i*2+1]===v)){
@@ -450,9 +454,37 @@ export async function openSave(input, catalog={}) {
       const b=current(r);
       need(saveNameFields(model(r,b)).every(spec=>b.subarray(spec.offset,spec.offset+spec.maxBytes).every((v,i)=>v===r.payload[spec.offset+i])),SAVE_NAME_SUPPORT_MESSAGE);
     }
-    const out=raw.slice();for(const r of records){const b=current(r);if(b===r.payload)continue;need(u32(b,0)===saveChecksum(b),'출력 체크섬 검증에 실패했습니다.');r.offsets.forEach((p,i)=>out[p]=b[i]);}
+    return exportPayloadCopies(current);
+  }
+  async function exportSrw4CarryoverCopy(key,sourceView,destinationView){
+    const r=get(key);
+    // Dedicated export from the untouched selected file only. Do not merge
+    // unsaved normal-editor changes or put an F-incompatible copy in its state.
+    need(changes.size===0,'편집 중인 저장이 아니라 F 클리어 원본을 선택하세요.');
+    const originalModel=model(r,r.payload);
+    const edits=planSrw4Carryover(originalModel,sourceView,destinationView);
+    if(originalModel.pilots.some(p=>p.id===399)){
+      const alice=inspectAliceRows(r.payload),heads=new Set(),changedSlots=new Set(edits.map(edit=>edit.slot));
+      for(const unit of originalModel.units){
+        if(!changedSlots.has(unit.slot)||unit.pilotSlot===255)continue;
+        const head=alice.humanHead(unit.pilotSlot);
+        need(!heads.has(head),'제4차 기체 둘이 같은 ALICE 동승 체인을 공유해 승계하지 않았습니다.');
+        heads.add(head);
+      }
+    }
+    const next=r.payload.slice();
+    for(const {slot,from,to} of edits){
+      const at=0x100+slot*30;
+      need(u16(next,at)===from,'변환 직전의 기체 정보가 다릅니다.');
+      put(next,at,to,2);
+    }
+    put(next,0,saveChecksum(next),4);
+    return {bytes:await exportPayloadCopies(record=>record===r?next:record.payload),edits};
+  }
+  async function exportPayloadCopies(payloadFor){
+    const out=raw.slice();for(const r of records){const b=payloadFor(r);if(b===r.payload)continue;need(u32(b,0)===saveChecksum(b),'출력 체크섬 검증에 실패했습니다.');r.offsets.forEach((p,i)=>out[p]=b[i]);}
     const check=parse(out);need(check.length===records.length,'출력 저장 목록이 달라졌습니다.');
-    for(let i=0;i<records.length;i++)need(check[i].name===records[i].name&&check[i].payload.every((v,j)=>v===current(records[i])[j]),'출력 재검사에 실패했습니다.');
+    for(let i=0;i<records.length;i++)need(check[i].name===records[i].name&&check[i].payload.every((v,j)=>v===payloadFor(records[i])[j]),'출력 재검사에 실패했습니다.');
     let result=out;if(interleaved){result=unpacked.slice();out.forEach((v,i)=>result[2*i+1]=v);}
     const wrapped=result;
     for(let i=0;i<layers;i++)result=await transform(result,'encode');
@@ -464,6 +496,7 @@ export async function openSave(input, catalog={}) {
     return result;
   }
   return Object.freeze({format:Object.freeze({bytes:raw.length,blockSize:SIZES.get(raw.length),gzipLayers:layers,interleaved}),list,edit,editName,editNames,editUnit,addUnit,addPilot,setUpgradeMode,diff,check,repair,requiresGameBundle,
+    exportSrw4CarryoverCopy,
     canEditNames:key=>{const r=records.find(r=>r.key===key);return !!r&&r.editable&&canEditSaveNames(catalog,r.gameId);},
     updateCatalog:next=>{const units=new Map((next.units??[]).map(u=>[u.recordIndex,structuredClone(u)]));catalog={...next};unitCatalog=units;},
     reset:key=>{if(key===undefined){changes.clear();addedBindings.clear();addedPilotBindings.clear();aliceDependentBindings.clear();}else{get(key);changes.delete(key);addedBindings.delete(key);addedPilotBindings.delete(key);aliceDependentBindings.delete(key);}},exportFile});
