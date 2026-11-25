@@ -6261,7 +6261,37 @@ function renderRecordList(type, { build = true, retainSelection = false } = {}) 
     // Reuse the currently mounted list when the query matches the same rows in the same order.
     const mounted = ui.list.children;
     if (mounted.length !== children.length || children.some((option, index) => mounted[index] !== option)) {
-      ui.list.replaceChildren(...children);
+      const before = Array.from(mounted);
+      const narrowing = children.length > 0 && children.length < before.length;
+      const widening = before.length > 0 && children.length > before.length;
+      const short = narrowing ? children : before;
+      const long = narrowing ? before : children;
+      const start = short.length ? long.indexOf(short[0]) : -1;
+      const contiguous = (narrowing || widening) && start >= 0
+        && short.every((option, index) => long[start + index] === option)
+        && typeof document.createRange === "function";
+      if (contiguous && narrowing) {
+        const discard = (from, to) => {
+          if (to <= from) return;
+          const range = document.createRange();
+          range.setStart(ui.list, from);
+          range.setEnd(ui.list, to);
+          range.deleteContents();
+        };
+        discard(start + short.length, long.length);
+        discard(0, start);
+      } else if (contiguous && widening) {
+        const add = (nodes, anchor) => {
+          if (!nodes.length) return;
+          const fragment = document.createDocumentFragment();
+          for (const node of nodes) fragment.append(node);
+          ui.list.insertBefore(fragment, anchor);
+        };
+        add(long.slice(0, start), before[0]);
+        add(long.slice(start + short.length), null);
+      } else {
+        ui.list.replaceChildren(...children);
+      }
     }
   } else {
     ui.list.replaceChildren();
