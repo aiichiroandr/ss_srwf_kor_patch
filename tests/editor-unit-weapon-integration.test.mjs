@@ -189,3 +189,39 @@ for(const gameId of ['srwf-f','srwf-final'])test(`${gameId}: an actual loaded le
  assert.equal(reopened.view.weapons.find(row=>row.recordIndex===1).critical,15);
 });
 
+
+for (const gameId of ['srwf-f', 'srwf-final']) test(`${gameId}: P toggles in both weapon views, exports to BIN and restores after reopening`, async () => {
+ const base = await makeBase({gameId, weaponPostMove:true, units:2, unitWeapons:{1:[{slot:2,weapon:1}], 2:[{slot:2,weapon:1}]}});
+ const setSession = opened => {
+   hooks.clearEditorState();
+   Object.assign(hooks.state,{mode:'editor',editorGameId:gameId,editorSessionToken:opened.session.sessionToken,editorBusy:false,busy:false,cueSaving:false,editorSetupOpen:false});
+   $('editorWorkspace').hidden=false;
+   hooks.installEditorRows(opened.view);
+   hooks.selectEditorTab('weapon'); hooks.selectEditorRecord('weapon',1);
+ };
+ let opened=base.opened;
+ const main=hooks.EDITOR_UI.weapon.form;
+ const select=main.querySelector('[data-editor-field="postMove"]');
+ setSession(opened); assert.equal(select.value, '0'); assert.equal(select.disabled, false);
+ select.value='1'; main.dispatchEvent({type:'change',target:select});
+ assert.equal(hooks.state.editorWeapons.find(w=>w.recordIndex===1).postMove, true);
+ assert.equal(hooks.countEditorChanges(), 1);
+ hooks.selectEditorTab('unit'); hooks.selectEditorRecord('unit',2);
+ $('unitWeaponList').querySelector('[data-unit-weapon-select="1"]').click();
+ const inline=$('unitWeaponDetail').querySelector('[data-inline-weapon-field="postMove"]');
+ assert.equal(inline.selectedOptions[0].textContent,'가능');
+ inline.value='0'; inline.dispatchEvent({type:'change',target:inline});
+ assert.equal(select.value,'0'); assert.equal(hooks.countEditorChanges(),0);
+ inline.value='1'; inline.dispatchEvent({type:'change',target:inline});
+ const changes=hooks.buildEditorExportRequest();
+ assert.equal(changes.weaponEdits.find(row=>row.recordIndex===1).fields.postMove,true);
+ for (const enabled of [true,false]) {
+   const request=hooks.buildEditorExportRequest();
+   const output=await exportEditedImage(opened.session,request);
+   opened=await base.full.inspectPatchedImage(output.outputBlob,descriptorFor(base.disc,{gameId,imageKind:'local'}));
+   assert.equal(opened.view.weapons.find(row=>row.recordIndex===1).postMove,enabled);
+   setSession(opened);
+   assert.equal(select.value,enabled?'1':'0');
+   select.value='0'; main.dispatchEvent({type:'change',target:select});
+ }
+});

@@ -48,7 +48,7 @@ export function checkSaveCompatibility(records,source,target){
     for(const id of new Set(oldIds)){
      const old=oldWeapons.get(id),next=weapons.get(id);
      const oldIdentity=old?.saveIdentity??old?.identity,nextIdentity=next?.saveIdentity??next?.identity;
-     if(!oldIdentity||oldIdentity!==nextIdentity)add(record,'weapon-identity',`기체 #${unit.id}의 개조 슬롯 ${i+1}: 무기 #${id}의 버전 간 동일성을 확인하지 못했습니다.`);
+     if(!oldIdentity||oldIdentity!==nextIdentity&&!next?.saveIdentityAliases?.includes(oldIdentity))add(record,'weapon-identity',`기체 #${unit.id}의 개조 슬롯 ${i+1}: 무기 #${id}의 버전 간 동일성을 확인하지 못했습니다.`);
     }
    }
    for(const id of unit.parts??[])if(id&&source.partNames?.[id]&&!target.partNames?.[id])add(record,'part-id',`장착 파츠 #${id}가 새 ROM에 없습니다.`);

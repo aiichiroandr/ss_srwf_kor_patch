@@ -1,3 +1,4 @@
+import { prepareFinalBalanceTransfer } from './editor-f-final-transfer.mjs?v=20261113-alicecopies1&editorcompat=20261125-1';
 import {exSBeamCloneIds} from './editor-exs-beam-ui.mjs?v=20261113-alicecopies1';
 import {encodeEditorText,editorTextMetrics} from './editor-text-codec.mjs?v=20261113-alicecopies1';
 import {validateScenarioDialogueSpeaker} from './editor-scenario-dialogue.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
@@ -29,7 +30,7 @@ import { objectiveContextFor, REGION_RULE_TAG } from './editor-scenario-region-c
 import { EVENT_CRITERIA_FIELDS, snapshotEventCriteria } from './editor-scenario-event-criteria.mjs?v=20261113-alicecopies1';
 import { EVENT_PHASE_FIELDS, snapshotPhaseEvent } from './editor-scenario-event-phase.mjs?v=20261113-alicecopies1';
 import { CRITERIA_FIELDS, snapshotScenarioCriteria, criteriaPurpose, encodeObjectiveRule } from './editor-scenario-criteria.mjs?v=20261113-alicecopies1';
-import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isStoredFieldValueInBounds, isObjectiveRuleValueInBounds, isScreenFieldEditAllowed } from "./editor-fields.mjs?v=20261113-alicecopies1";
+import { EDITOR_FIELD_BOUNDS, isFieldValueInBounds, isStoredFieldValueInBounds, isObjectiveRuleValueInBounds, isScreenFieldEditAllowed } from "./editor-fields.mjs?v=20261113-alicecopies1&editorcompat=20261125-1";
 import { TERRAIN_DATA_ORDER, isGradeEditAllowed } from "./editor-grades.mjs?v=20261113-alicecopies1";
 import { UNIT_ABILITY_SLOT_COUNT, findUnitAbilityLockViolation, isLockedUnitAbility } from "./editor-locks.mjs?v=20261113-alicecopies1";
 import { ownData, readDenseList } from "./editor-own.mjs?v=20261113-alicecopies1";
@@ -52,7 +53,7 @@ import { isUnitWeaponField, pendingUnitWeapons,unitWeaponFamily } from './editor
 import { rewardValueAllowed } from "./editor-rewards.mjs?v=20261113-alicecopies1";
 
 import {constructUnitRow,constructUnitUpgradeRow,replaceUnitRow,unitConstructionPreset,unitConstructionLoadout,unitConstructionRewards,linkExSCruiserRows,tagConstructionWeaponClones,requireAircraftGraphicCompatibility,UNIT_CONCEPTS} from './editor-unit-construction.mjs?v=20261113-alicecopies1';
-import {createWeaponCloneRow,weaponCloneIds} from './editor-weapon-clone.mjs?v=20261113-alicecopies1';
+import {createWeaponCloneRow,weaponCloneIds} from './editor-weapon-clone.mjs?v=20261113-alicecopies1&editorcompat=20261125-1';
 import {previousUnitConcept} from './editor-unit-upgrade.mjs?v=20261113-alicecopies1';
 import {srw4NativeIconId} from './editor-srw4-native-map.mjs?v=20261113-alicecopies1';
 import {bytesEqual as sameWeaponIds} from './editor-bytes.mjs?v=20261113-alicecopies1';
@@ -71,7 +72,7 @@ export const PRESET_FIELDS = Object.freeze(Object.fromEntries(
 // Every way a loaded change can be judged against the open session.
 export const PRESET_STATUSES = Object.freeze(["apply", "conflict", "same", "skip"]);
 export const PRESET_SKIP_REASONS = Object.freeze([
-  "cost-domain", "identity-missing", "identity-ambiguous", "missing", "alias", "read-only", "locked", "grade", "reward-total",
+  "transfer-unverified", "transfer-unsupported", "cost-domain", "identity-missing", "identity-ambiguous", "missing", "alias", "read-only", "locked", "grade", "reward-total",
   "scenario-domain", "reinforcement-domain", "text-domain", "speaker-domain", "dialogue-sequence-domain", "map-capacity",
   "construction-domain", "weapon-domain", "screen-width", "spirits-locked", "spirit-value", "spirit-capacity", "spirit-flag", "skills-locked", "skill-unknown", "skill-level", "skill-capacity", "skill-consumers", "skill-flag",
 ]);
@@ -430,8 +431,8 @@ function parseEntry(kind, value, index, gameId) {
     if(from!==null||(kind==='unit'?!unitConstructionPreset(to)||![0,1,2].includes(loadoutVersion):!Number.isInteger(to)||to<1||to>=weaponCloneIds(gameId)[0]||typeof sourceIdentity!=='string'||!/^weapon-save:1:[a-f0-9]{64}$/.test(sourceIdentity)))fail('PRESET_BAD_VALUE',detail);
     let seed=null;
     if(kind==='weapon'){
-      seed=ownData(submitted,'seed');if(!isPlainRecord(seed))fail('PRESET_BAD_VALUE',detail);requireKeys(seed,PRESET_FIELDS.weapon,PRESET_FIELDS.weapon,detail);
-      seed=Object.freeze(Object.fromEntries(PRESET_FIELDS.weapon.map(k=>{const value=ownData(seed,k);if(!isFieldValueInBounds('weapon',k,value))fail('PRESET_BAD_VALUE',detail);return [k,value];})));
+      seed=ownData(submitted,'seed');if(!isPlainRecord(seed))fail('PRESET_BAD_VALUE',detail);requireKeys(seed,PRESET_FIELDS.weapon,LEGACY_WEAPON_CLONE_FIELDS,detail);
+      seed=Object.freeze(Object.fromEntries(PRESET_FIELDS.weapon.filter(k=>Object.hasOwn(seed,k)).map(k=>{const value=ownData(seed,k);if(!isFieldValueInBounds('weapon',k,value))fail('PRESET_BAD_VALUE',detail);return [k,value];})));
       if(fields.some(e=>e.to!==seed[e.field]))fail('PRESET_BAD_VALUE',detail);
     }
     construction=Object.freeze(kind==='unit'?{from,to,loadoutVersion,...(source?{source}:{}),...(previousVersion!==undefined?{previousVersion}:{})}:{from,to,sourceIdentity,seed});
@@ -754,10 +755,12 @@ function guardCloneDependencies(items){
  for(const item of items)if(item.kind==='weapon'&&blocked.has(item.recordIndex))skipItem(item,'construction-domain');
  for(const item of items)if(item.kind==='unit'&&(isUnitWeaponField(item.field)&&blocked.has(item.to)||item.field==='weaponAdditions'&&item.to.some(id=>blocked.has(id))))skipItem(item,'construction-domain');
 }
+// Old format-v1 clone presets do not have a P field; inherit the donor flag when absent.
+const LEGACY_WEAPON_CLONE_FIELDS = PRESET_FIELDS.weapon.filter(k=>k!=='postMove');
 function safeCloneSeed(seed){
  if(!isPlainRecord(seed))throw Error('clone seed');
- requireKeys(seed,PRESET_FIELDS.weapon,PRESET_FIELDS.weapon,{kind:'weapon',field:'construction'});
- return Object.fromEntries(PRESET_FIELDS.weapon.map(k=>{const value=ownData(seed,k);if(!isFieldValueInBounds('weapon',k,value))throw Error('clone seed value');return [k,value];}));
+ requireKeys(seed,PRESET_FIELDS.weapon,LEGACY_WEAPON_CLONE_FIELDS,{kind:'weapon',field:'construction'});
+ return Object.fromEntries(PRESET_FIELDS.weapon.filter(k=>Object.hasOwn(seed,k)).map(k=>{const value=ownData(seed,k);if(!isFieldValueInBounds('weapon',k,value))throw Error('clone seed value');return [k,value];}));
 }
 function guardUnitWeapons(items, session, statuses = [['apply'], ['apply', 'conflict']]) {
   const rows=sessionRows(session,'unit'),seen=new Set();
@@ -928,16 +931,22 @@ function linkCruiserConstructions(virtualUnits,constructionItems,originalUnits,c
  linked.forEach((row,i)=>{if(row!==virtualUnits[i]){virtualUnits[i]=row;if(candidates?.has(row.recordIndex))candidates.set(row.recordIndex,row);}});
 }
 
-export function planPresetApplication(preset, session) {
+export function planPresetApplication(preset, session, { finalTransferMap = null } = {}) {
   if (!preset || !PRESET_GAME_IDS.includes(preset.gameId) || !preset.entries) fail("PRESET_WRONG_FORMAT");
-  if (preset.gameId !== session?.gameId) fail("PRESET_OTHER_GAME", { presetGame: preset.gameId, sessionGame: session?.gameId ?? null });
-  const items = [];
+  let transfer = null;
+  if (preset.gameId !== session?.gameId) {
+    if (finalTransferMap && preset.gameId === 'srwf-f' && session?.gameId === 'srwf-final') {
+      transfer = prepareFinalBalanceTransfer(preset, session, finalTransferMap);
+      preset = transfer.preset;
+    } else fail("PRESET_OTHER_GAME", { presetGame: preset.gameId, sessionGame: session?.gameId ?? null });
+  }
+  const items = transfer ? [...transfer.skipped] : [];
   const weaponCloneItems=new Map(),virtualWeapons=[...sessionRows(session,'weapon')];
   for(const entry of preset.entries.weapon??[]){
     if(!entry.construction)continue;
     const at=virtualWeapons.findIndex(row=>row.recordIndex===entry.recordIndex),row=virtualWeapons[at],source=virtualWeapons.find(row=>row.recordIndex===entry.construction.to);
     const item={kind:'weapon',recordIndex:entry.recordIndex,name:entry.name,field:'construction',from:null,to:entry.construction.to,sourceIdentity:entry.construction.sourceIdentity,seed:entry.construction.seed,current:row?.weaponClone?.sourceRecordIndex??null,status:null,reason:null};
-    try{const seed=safeCloneSeed(item.seed);if(source?.saveIdentity!==item.sourceIdentity)throw Error();if(item.current===item.to)item.status='same';else{virtualWeapons[at]=Object.assign(createWeaponCloneRow(row,source,session.gameId),seed);item.status='apply';}}
+    try{const seed=safeCloneSeed(item.seed);if(source?.saveIdentity!==item.sourceIdentity&&!source?.saveIdentityAliases?.includes(item.sourceIdentity))throw Error();if(item.current===item.to)item.status='same';else{virtualWeapons[at]=Object.assign(createWeaponCloneRow(row,source,session.gameId),seed);item.status='apply';}}
     catch{skipItem(item,'construction-domain');}weaponCloneItems.set(entry.recordIndex,item);
   }
   const constructionItems=new Map(),virtualUnits=[...sessionRows(session,'unit')];
@@ -980,10 +989,10 @@ export function planPresetApplication(preset, session) {
         ||CRITERIA_FIELDS.some(key=>Number.isInteger(rows.get(index)?.[key])&&(rows.get(index)[key]>=REGION_RULE_TAG||rows.get(index)[key]<=0xffff&&(rows.get(index)[key]&0xfc00)===0x4000)))
         &&(!entry.identity||!/^objective:1:[a-f0-9]{64}$/.test(entry.identity)))identityReason='identity-missing';
       if (!entry.construction && entry.identity && rows.get(index)?.identity !== entry.identity
-        && !(["deployment", "event", "objective", "unit"].includes(kind) && rows.get(index)?.identityAliases?.includes(entry.identity))) {
+        && !(["deployment", "event", "objective", "unit", "weapon"].includes(kind) && rows.get(index)?.identityAliases?.includes(entry.identity))) {
         // Scenario locations are part of their identity. Never remap them by a
         // repeated body/plane hash or by a display name across another layout.
-        const matches = ["deployment", "event", "objective", "reinforcement", "roster", "dialogue", "map"].includes(kind) ? [] : [...rows.values()].filter((row) => row.identity === entry.identity || kind === "unit" && row.identityAliases?.includes(entry.identity));
+        const matches = ["deployment", "event", "objective", "reinforcement", "roster", "dialogue", "map"].includes(kind) ? [] : [...rows.values()].filter((row) => row.identity === entry.identity || ["unit", "weapon"].includes(kind) && row.identityAliases?.includes(entry.identity));
         if (matches.length === 1) index = matches[0].recordIndex;
         else identityReason = matches.length === 0 ? "identity-missing" : "identity-ambiguous";
       }
@@ -1027,6 +1036,7 @@ export function planPresetApplication(preset, session) {
   }
   return Object.freeze({
     gameId: preset.gameId,
+    ...(transfer ? { transferFrom: "srwf-f" } : {}),
     releaseId: preset.releaseId ?? null,
     items: Object.freeze(items),
     counts: Object.freeze(counts),
@@ -1069,7 +1079,7 @@ export function applyPresetPlan(plan, session, mode) {
   for(const item of items.filter(e=>e.kind==='weapon'&&e.field==='construction')){
     const at=virtualWeapons.findIndex(row=>row.recordIndex===item.recordIndex),row=virtualWeapons[at],source=virtualWeapons.find(r=>r.recordIndex===item.to);
     try{
-      if(source?.saveIdentity!==item.sourceIdentity)throw Error();
+      if(source?.saveIdentity!==item.sourceIdentity&&!source?.saveIdentityAliases?.includes(item.sourceIdentity))throw Error();
       if(item.status==='same'){if(row?.weaponClone?.sourceRecordIndex!==item.to)throw Error();}
       else if(take.has(item.status)){const candidate=Object.assign(createWeaponCloneRow(row,source,session.gameId),safeCloneSeed(item.seed));virtualWeapons[at]=candidate;weaponCandidates.set(item.recordIndex,candidate);}
     }catch{for(const dependent of items.filter(e=>e.kind==='weapon'&&e.recordIndex===item.recordIndex))skipItem(dependent,'construction-domain');}
@@ -1152,7 +1162,7 @@ export function applyPresetPlan(plan, session, mode) {
 }
 
 // Judges the preset against the session as it is now and applies it in one step (the plan is never older than the rows).
-export function applyPreset(preset, session, mode) {
-  const plan = planPresetApplication(preset, session);
+export function applyPreset(preset, session, mode, options) {
+  const plan = planPresetApplication(preset, session, options);
   return Object.freeze({ plan, ...applyPresetPlan(plan, session, mode) });
 }

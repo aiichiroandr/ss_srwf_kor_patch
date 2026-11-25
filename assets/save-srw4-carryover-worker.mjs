@@ -1,4 +1,4 @@
-import {inspectPatchedImage,isLatestEditorBase,PRODUCTION_TRUST} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
+import {inspectPatchedImage,isLatestEditorBase,PRODUCTION_TRUST} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1&editorcompat=20261125-1';
 import {openSave} from './save-core.mjs?v=20261113-alicecopies1&saveturns=20261116-1&carryover=20261117-1';
 
 const looksLikeFile=(value,max)=>value instanceof Blob&&value.size>0&&value.size<=max;

@@ -9,13 +9,14 @@ import {requireTsrInspectionSize,requireTsrRuntimeSize} from './editor-storage-s
 import {editorTextMetrics} from './editor-text-codec.mjs?v=20261113-alicecopies1';
 import {sha256Hex} from './sha256.mjs?v=20261113-alicecopies1';
 import {bytesEqual as equal,dataView as view} from './editor-bytes.mjs?v=20261113-alicecopies1';
-import {screenFieldLimit} from './editor-fields.mjs?v=20261113-alicecopies1';
+import {WEAPON_POST_MOVE_MASK} from './editor-weapon-post-move.mjs?v=20261113-alicecopies1&editorcompat=20261125-1';
+import {screenFieldLimit} from './editor-fields.mjs?v=20261113-alicecopies1&editorcompat=20261125-1';
 const MAGIC='SRWCPY01',FOOTER=16;
 const PROFILES=Object.freeze({
  'srwf-f':Object.freeze({count:1280,first:1248,last:1278,preimageSha256:'2d9a86b0e10e3fef37668ed02a62145a65b4769af32d8d6f7e961c23141ec85e'}),
  'srwf-final':Object.freeze({count:1408,first:1331,last:1343,preimageSha256:'0508223126731bb976230a9caaf76f085e521a1b28a362995627b2ce74f5490b'}),
 });
-const FIELDS=['attack','hit','critical','minRange','maxRange','terrain','energy','ammo','requiredMorale','requiredSkill','voiceType'];
+const FIELDS=['attack','hit','critical','minRange','maxRange','terrain','energy','ammo','requiredMorale','requiredSkill','voiceType','postMove'];
 function fail(reason){const e=Error('독립 무기를 복제할 빈 레코드·기반 무기 또는 복원 기록이 올바르지 않습니다.');e.code='EDITOR_WEAPON_CLONE_INVALID';e.details={kind:'weapon',reason};throw e;}
 export function weaponCloneIds(gameId){const p=Object.hasOwn(PROFILES,gameId)?PROFILES[gameId]:null;return p?Array.from({length:p.last-p.first+1},(_,i)=>p.first+i):[];}
 export function isWeaponClonePreimage(bytes,gameId){const p=Object.hasOwn(PROFILES,gameId)?PROFILES[gameId]:null;if(!p)fail('game');return bytes instanceof Uint8Array&&bytes.length===17&&sha256Hex(bytes)===p.preimageSha256;}
@@ -52,7 +53,7 @@ function checkRecords(root,table,rows,entries,gameId,{exsBeamPose=false}={}){
   if(!row||!['empty','decoded'].includes(row.nameStatus)||!source?.editable||source.weaponClone||targets.has(source.recordIndex)||!source.name)fail('source');
   const a=record(root,table,e.recordIndex,gameId),b=record(root,table,e.sourceRecordIndex,gameId);
   const aligned=exsBeamPose===true&&e.sourceRecordIndex===511&&a[3]===5&&a[4]===127&&b[3]===5&&b[4]===37;
-  if([0,1,...(aligned?[]:[3,4])].some(i=>a[i]!==b[i])||(a[2]&192)!==(b[2]&192)||(a[8]&15)!==(b[8]&15)||(a[12]===0)!==(b[12]===0)
+  if([0,...(aligned?[]:[3,4])].some(i=>a[i]!==b[i])||((a[1]^b[1])&~WEAPON_POST_MOVE_MASK)!==0||(a[2]&192)!==(b[2]&192)||(a[8]&15)!==(b[8]&15)||(a[12]===0)!==(b[12]===0)
     ||a[15]>150&&a[15]!==b[15]||!isWeaponRequiredSkillEditable(gameId,a[16])&&a[16]!==b[16])fail('copied-header');
  }
 }

@@ -22,6 +22,7 @@ test('save selection shows read-only preview but editing waits for proof, and ab
     let resolve,reject;
     const opened=ui.openPrepared(()=>new Promise((r,j)=>{resolve=r;reject=j;}));
     assert.equal(input.disabled,false);
+    assert.equal(doc.activeElement?.id,input.id);
     return {opened,resolve,reject};
   };
   const close=()=>{
@@ -29,7 +30,11 @@ test('save selection shows read-only preview but editing waits for proof, and ab
     dialog.dispatchEvent({type:'close'});
   };
   let prep=pending();
-  pick('aborted.bcr');close();prep.resolve();await prep.opened;
+  // The app re-enables the opener after the canceled worker request settles.
+  const opener=$('saveEditorOpen');opener.disabled=true;
+  pick('aborted.bcr');doc.body.focus();close();queueMicrotask(()=>{opener.disabled=false;});
+  prep.resolve();await prep.opened;await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(doc.activeElement?.id,'saveEditorOpen');
   assert.deepEqual(reads,['aborted.bcr']);
   assert.equal($('saveFastPreview').hidden,true);
   assert.equal($('saveRecordSelect').options.length,0);reads.length=0;

@@ -1,6 +1,6 @@
 import {createWeaponNameControl} from './editor-name-control.mjs?v=20261113-alicecopies1';
 import {createWeaponDialogueSource} from './editor-weapon-dialogue-ui.mjs?v=20261113-alicecopies1';
-import {EDITOR_FIELD_BOUNDS,isFieldValueInBounds} from './editor-fields.mjs?v=20261113-alicecopies1';
+import {EDITOR_FIELD_BOUNDS,isFieldValueInBounds} from './editor-fields.mjs?v=20261113-alicecopies1&editorcompat=20261125-1';
 import {criticalChoices,criticalValues,criticalAppliedText} from './editor-critical-values.mjs?v=20261113-alicecopies1';
 import {WEAPON_GRADE_CHOICES,TERRAIN_SCREEN_ORDER,TERRAIN_LABELS,splitWeaponTerrain,joinWeaponTerrain} from './editor-grades.mjs?v=20261113-alicecopies1';
 
@@ -10,7 +10,7 @@ const fields=Object.freeze([
  ['energy','소비 EN',0,65535],['ammo','탄수',1,255],
  ['requiredMorale','필요 기력',0,150],['critical','크리티컬 보정',0,15],
 ]);
-const choiceFields=Object.freeze([['requiredSkill','필요 기능'],['voiceType','공격 대사 유형']]);
+const choiceFields=Object.freeze([['requiredSkill','필요 기능'],['postMove','이동 후 사용 (P)'],['voiceType','공격 대사 유형']]);
 const editableFields=[...fields.map(([field])=>field),...choiceFields.map(([field])=>field),'terrain','name'];
 
 // This view edits the same weapon rows as the weapon tab, using a separate
@@ -62,13 +62,15 @@ export function createUnitWeaponEditor(host) {
  function commit(field,input){
   const current=row();if(locked(current)||input.disabled)return;
   clearError(input);
-  const value=input.value.trim()===''?NaN:Number(input.value);
+  const value=field==='postMove'
+   ? (input.value==='1' ? true : input.value==='0' ? false : null)
+   : input.value.trim()===''?NaN:Number(input.value);
   const allowed=isFieldValueInBounds('weapon',field,value)&&input.validity.valid
    &&(field!=='critical'||criticalOptions(current).some(option=>option.value===value))
    &&(field!=='requiredSkill'||host.choices(field,current).some(option=>option.value===value))
    &&(field!=='ammo'||current.ammo>0&&current.ammoEditable!==false)
    &&(field!=='requiredMorale'||value<=150||value===current.original?.requiredMorale);
-  if(!allowed){drafts.set(field,input.value);reject(input,field==='critical'?'크리티컬 보정: 목록의 보정값을 선택해주세요.':`${input.dataset.caption}: ${input.min||0}~${input.max||255} 범위의 정수를 입력해주세요.`);host.onInvalid?.();return;}
+  if(!allowed){drafts.set(field,input.value);reject(input,field==='postMove'?'이동 후 사용 가능 또는 불가를 선택해 주세요.':field==='critical'?'크리티컬 보정: 목록의 보정값을 선택해주세요.':`${input.dataset.caption}: ${input.min||0}~${input.max||255} 범위의 정수를 입력해주세요.`);host.onInvalid?.();return;}
   const wasInvalid=drafts.has(field);drafts.delete(field);clearError(input);status.textContent=invalidInput()?.validationMessage??'';
   if(current[field]!==value){current[field]=value;host.onChange(current);}
   else if(wasInvalid)host.onInvalid?.();
@@ -114,7 +116,7 @@ export function createUnitWeaponEditor(host) {
   actual.classList.toggle('is-different',values?.actual!==null&&values?.actual!==undefined&&values.display!==values.actual);
   actual.title=`오류 수정 ${fix===null?'상태 미확인':fix?'ON':'OFF'} · 무기 보정값이며 최종 크리티컬 발생률이 아닙니다.`;
   actual.setAttribute('aria-label',`${actual.textContent}. ${actual.title}`);
-  for(const [field,input]of controls){input.disabled=disabled||!Number.isSafeInteger(current?.[field])||field==='ammo'&&(!(current.ammo>0)||current.ammoEditable===false);
+  for(const [field,input]of controls){input.disabled=disabled||!(field==='postMove'?typeof current?.[field]==='boolean':Number.isSafeInteger(current?.[field]))||field==='ammo'&&(!(current.ammo>0)||current.ammoEditable===false);
    const restore=panel.querySelector(`[data-inline-weapon-reset="${field}"]`);restore.disabled=disabled||!changed(current,field)&&!drafts.has(field);restore.hidden=!changed(current,field)&&!drafts.has(field);}
   for(const select of terrain.values())select.disabled=disabled||!Number.isSafeInteger(current?.terrain);
   reset.disabled=disabled||!editableFields.some(field=>changed(current,field))&&!drafts.size&&names.validate();
@@ -129,9 +131,12 @@ export function createUnitWeaponEditor(host) {
   scope.textContent=`무기 #${current.recordIndex} · 같은 번호를 쓰는 모든 기체에 적용`;
   for(const [field,input]of controls){
    if(input.tagName==='SELECT'){
-    const options=field==='critical'?criticalOptions(current):host.choices(field,current),signature=JSON.stringify(options);if(input.dataset.options!==signature){input.replaceChildren(...options.map(choice=>{const option=document.createElement('option');option.value=String(choice.value);option.textContent=choice.label;return option;}));input.dataset.options=signature;}
+    const options=field==='critical'?criticalOptions(current):field==='postMove'
+      ?[{value:0,label:'불가'},{value:1,label:'가능'}]:host.choices(field,current),signature=JSON.stringify(options);if(input.dataset.options!==signature){input.replaceChildren(...options.map(choice=>{const option=document.createElement('option');option.value=String(choice.value);option.textContent=choice.label;return option;}));input.dataset.options=signature;}
    }
-   const value=drafts.get(field)??(Number.isSafeInteger(current[field])?String(current[field]):'');if(input.value!==value)input.value=value;
+   const value=drafts.get(field)??(field==='postMove'
+    ? (current[field]===true?'1':current[field]===false?'0':'')
+    : (Number.isSafeInteger(current[field])?String(current[field]):''));if(input.value!==value)input.value=value;
    input.classList.toggle('is-modified',changed(current,field));
    if(field==='ammo'){const counted=current.ammo>0;input.hidden=!counted;input.closest('label').querySelector('.unit-weapon-no-ammo').hidden=counted;}
   }

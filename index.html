@@ -16,9 +16,9 @@
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
     <link rel="stylesheet" href="assets/style.css?v=20261113-alicecopies1">
-    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;carryover=20261117-1">
-    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1"></script>
-    <script type="module" src="assets/save-srw4-carryover-ui.mjs?v=20261113-alicecopies1&amp;carryover=20261117-1"></script>
+    <link rel="stylesheet" href="assets/editor-runtime.css?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;carryover=20261117-1&amp;saveux=20261123-6">
+    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1&amp;saveux=20261123-6&amp;editorcompat=20261125-1"></script>
+    <script type="module" src="assets/save-srw4-carryover-ui.mjs?v=20261113-alicecopies1&amp;carryover=20261117-1&amp;saveux=20261123-2&amp;editorcompat=20261125-1"></script>
     <script type="module" src="assets/user-guide.mjs?v=20261113-alicecopies1"></script>
   </head>
   <body data-mode="editor" data-view="setup" data-patch-settings="choose">
@@ -39,6 +39,7 @@
       </a>
 
       <div class="header-status">
+        <a class="user-guide-open site-notices-link" id="siteNoticesLink" href="./docs/web-editor-notices.html" target="_blank" rel="noopener" aria-label="공지·패치노트 (새 탭)" title="공지·패치노트 (새 탭)">공지·패치노트 <span class="site-notices-new-tab" aria-hidden="true">↗</span></a>
         <button class="user-guide-open" id="userGuideOpen" type="button" aria-haspopup="dialog" aria-controls="userGuideDialog" aria-expanded="false">사용 가이드</button>
         <span class="compatibility" id="compatibilityBadge">
           <span aria-hidden="true">●</span>
@@ -67,7 +68,7 @@
               </div>
               <div class="mode-summary" id="modeSummary" hidden>
                 <p class="origin-line" id="originLine"></p>
-                <p class="origin-note" id="originNote">저장하면 수치가 조정된 새 BIN/CUE가 만들어집니다. 원본과 패치본은 바뀌지 않습니다.</p>
+                <p class="origin-note" id="originNote">원본과 기존 패치본은 그대로 두고 새 BIN/CUE를 만듭니다.</p>
               </div>
               <button type="button" class="mode-setup-toggle" id="setupToggle" aria-expanded="false" aria-controls="releaseRegion editorSourceRegion editorEntryRegion" hidden>
                 <span class="toggle-long" id="setupToggleText">메인페이지로</span>
@@ -312,7 +313,7 @@
                   <span class="zone-state" id="editorSourceState" role="status" aria-live="polite">선택 대기</span>
                 </div>
                 <div class="saturn-disc" aria-hidden="true"><span class="saturn-disc-label">SEGA SATURN</span><span class="saturn-disc-hub"></span><span class="saturn-disc-caption">COMPACT DISC</span></div>
-                <p class="editor-source-help" id="editorSourceHelp">정품 원본·한글 패치본·기존 편집본의 폴더를 고르세요. 파일은 이 기기 안에서만 검사합니다.</p>
+                <p class="editor-source-help" id="editorSourceHelp">정품 원본·한글 패치본·개인 편집본 폴더를 선택하세요. 파일은 이 기기 안에서만 확인합니다.</p>
                 <button class="file-button" type="button" id="editorSourceButton" disabled>
                   <span class="button-symbol" aria-hidden="true">＋</span>
                   <span id="editorSourceButtonText">폴더 찾기</span>
@@ -354,45 +355,37 @@
               <p class="editor-intro">
                 기체·파일럿·무기를 수정합니다.
               </p>
-              <button class="primary-button" type="button" id="workflowOpenEditor" disabled>F 롬 에디터 열기</button>
-              <button class="primary-button" type="button" id="saveEditorOpen" aria-haspopup="dialog" aria-controls="saveEditorDialog" disabled hidden>F 세이브 데이터 열기</button>
+              <div class="workflow-status-strip" id="workflowStatusStrip" hidden>
+                <p class="workflow-detected-summary" id="workflowDetectedSummary" hidden></p>
+                <p class="workflow-session-brief" id="workflowSessionBrief" hidden></p>
+              </div>
+              <div class="workflow-action-list" role="group" aria-label="데이터 작업 선택">
+                <div class="workflow-action-item is-rom">
+                  <button class="primary-button workflow-action-btn is-rom" type="button" id="workflowOpenEditor" aria-describedby="workflowOpenEditorDesc" disabled>F 롬 에디터 열기</button>
+                  <p class="workflow-action-desc" id="workflowOpenEditorDesc">기체·파일럿·무기·맵 수치를 직접 편집합니다.</p>
+                </div>
+                <div class="workflow-action-item is-save" id="saveEditorAction" hidden>
+                  <button class="primary-button workflow-action-btn is-save" type="button" id="saveEditorOpen" aria-haspopup="dialog" aria-controls="saveEditorDialog" aria-describedby="saveEditorOpenDesc" disabled hidden>F 세이브 데이터 열기</button>
+                  <p class="workflow-action-desc" id="saveEditorOpenDesc">카트리지 세이브의 레벨·자금·개조·파츠를 수정합니다.</p>
+                </div>
+                <div class="workflow-action-item is-skip">
+                  <button class="primary-button workflow-action-btn is-skip" type="button" id="workflowSkipEditor" aria-describedby="workflowSkipEditorDesc" disabled>편집 없이 저장</button>
+                  <p class="workflow-action-desc" id="workflowSkipEditorDesc">바로 저장하지 않고 BIN/CUE 저장 단계로 이동합니다.</p>
+                </div>
+              </div>
               <div id="workflowSetupFeedback"></div>
-              <p class="workflow-detected-summary" id="workflowDetectedSummary" hidden></p>
-              <dl class="workflow-editor-facts" id="workflowEditorFacts" hidden aria-label="편집 가능한 데이터">
-                <div><dt>기체</dt><dd id="workflowUnitCount"></dd></div>
-                <div><dt>파일럿</dt><dd id="workflowPilotCount"></dd></div>
-                <div><dt>무기</dt><dd id="workflowWeaponCount"></dd></div>
-              </dl>
-              <button class="workflow-link" type="button" id="workflowSkipEditor" disabled>편집 없이 저장으로 이동</button>
-              <a class="workflow-link" id="webPortRetired" href="web-port/">WEB PORT 시험판 종료 · 저장 내보내기 안내</a>
-              <details id="srw4CarryoverPanel" class="save-add-unit" hidden>
-                <summary>F → 완결편: 제4차 기체 승계용 세이브 만들기</summary>
-                <p>F 클리어 저장의 제4차 기체 번호는 완결편과 다릅니다. 이 도구는 제4차를 적용한 두 게임의 실제 BIN을 대조해 <strong>선택한 F 34화 완료 슬롯의 승계용 복사본</strong>만 만듭니다.</p>
-                <div class="save-add-unit-fields">
-                  <label>플레이에 쓴 F 제4차 연동 BIN<input id="srw4CarryoverF" type="file" accept=".bin"></label>
-                  <label>이어할 완결편 제4차 연동 BIN<input id="srw4CarryoverFinal" type="file" accept=".bin"></label>
-                  <label>F 클리어 일반 저장 (백업 RAM 사본)<input id="srw4CarryoverSave" type="file"></label>
+              <details class="workflow-entry-details" id="workflowEntryDetails" hidden>
+                <summary>검증 상세 보기</summary>
+                <div class="workflow-entry-details-body">
+                  <p class="workflow-entry-origin" id="workflowEntryOrigin"></p>
+                  <dl class="workflow-editor-facts" id="workflowEditorFacts" hidden aria-label="편집 가능한 데이터">
+                    <div><dt>기체</dt><dd id="workflowUnitCount"></dd></div>
+                    <div><dt>파일럿</dt><dd id="workflowPilotCount"></dd></div>
+                    <div><dt>무기</dt><dd id="workflowWeaponCount"></dd></div>
+                  </dl>
                 </div>
-                <label><input id="srw4CarryoverAttest" type="checkbox"> 이 F 저장을 만들 때 실제로 사용한 F BIN을 선택했습니다.</label>
-                <p class="save-help">기존 F 저장에는 사용한 BIN을 식별하는 정보가 없습니다. 같은 버전이라도 기체 배치가 다를 수 있으니 같은 플레이에 사용한 BIN을 고르세요.</p>
-                <div class="save-check-actions">
-                  <button id="srw4CarryoverVerify" type="button" class="record-tool" disabled>두 BIN과 저장 확인</button>
-                  <button id="srw4CarryoverCancel" type="button" class="record-tool" hidden>승계 도구 초기화</button>
-                </div>
-                <p id="srw4CarryoverStatus" role="status" aria-live="polite">파일은 이 기기 안에서만 읽습니다. 원본은 바뀌지 않습니다.</p>
-                <div id="srw4CarryoverSlots" class="save-add-unit-fields" hidden>
-                  <label>승계할 F 클리어 슬롯<select id="srw4CarryoverSlot"></select></label>
-                  <button id="srw4CarryoverCreate" type="button" class="record-tool" disabled>이 슬롯의 승계용 복사본 만들기</button>
-                </div>
-                <div id="srw4CarryoverResult" hidden>
-                  <ul id="srw4CarryoverEdits"></ul>
-                  <p><strong>이 복사본을 F에서 열지 마세요. 원본에 덮어쓰지 마세요.</strong> 에뮬레이터를 끈 뒤 별도 완결편 프로필에 복사본을 넣고, 검증한 완결편 BIN/CUE로 F 클리어 슬롯을 불러오세요. 승계 후에는 게임에서 완결편 일반 저장을 새로 만드세요.</p>
-                  <a class="record-tool" id="srw4CarryoverDownload">완결편 승계 전용 복사본 받기</a>
-                </div>
-                <small>이미 잘못 승계된 완결편 저장과 SSF 개별 저장은 이 도구로 직접 복구하지 않습니다.</small>
               </details>
-              <p class="notice-item is-info site-notice" id="resaveNotice" role="note"><span class="notice-badge">안내</span><span>완결편에서 기체를 추가했거나 사전 초상을 켜고 내보낸 판은 새 에디터로 한 번 다시 저장해 주세요.</span></p>
-              <p class="editor-entry-note" id="editorEntryNote">폴더 확인 후 에디터를 열거나 편집 없이 저장할 수 있습니다.</p>
+              <p class="editor-entry-note" id="editorEntryNote">폴더 확인 후 롬 편집·세이브 편집을 열거나 편집 없이 저장 단계로 이동할 수 있습니다.</p>
               <div class="saturn-mini-frame" aria-hidden="true">
                 <div class="saturn-mini-art">
                   <div class="saturn-mini-pad">
@@ -415,13 +408,13 @@
               </div>
             </section>
 
-            <section class="workflow-save workflow-zone" id="workflowSaveRegion" hidden aria-labelledby="workflow-save-heading">
+            <section class="workflow-save workflow-zone" id="workflowSaveRegion" tabindex="-1" hidden aria-labelledby="workflow-save-heading">
               <h3 id="workflow-save-heading">4. BIN/CUE 저장</h3>
               <p id="workflowSaveSummary" role="status"></p>
               <p class="editor-fallback-note" id="workflowSaveFallback" role="status" hidden></p>
               <section class="editor-storage-budget" id="editorStorageBudget" aria-labelledby="editorStorageHeading" hidden>
-                <div class="editor-budget-heading"><h4 id="editorStorageHeading">저장 공간</h4><button type="button" id="editorStorageCheck" disabled>용량만 확인</button></div>
-                <p id="editorStorageStatus" role="status">저장 공간을 확인할 수 있습니다.</p>
+                <div class="editor-budget-heading"><h4 id="editorStorageHeading">롬 내부 용량</h4><button type="button" id="editorStorageCheck" disabled>롬 용량 확인</button></div>
+                <p id="editorStorageStatus" role="status">편집한 데이터가 롬의 용량 한도에 맞는지 확인합니다.</p>
                 <div class="editor-budget-grid" id="editorStorageRows"></div>
                 <p id="editorStorageNote"></p>
               </section>
@@ -429,11 +422,11 @@
               <p id="workflowFolderStatus" role="status" hidden></p>
               <button class="primary-button" type="button" id="workflowSaveButton" disabled>BIN/CUE 만들기</button>
               <nav class="workflow-save-navigation" aria-label="저장 및 이동">
-                <button class="workflow-link" type="button" id="workflowFolderSave" title="다른 폴더에 BIN/CUE 저장" hidden>폴더에 저장</button>
+                <button class="workflow-link workflow-folder-save" type="button" id="workflowFolderSave" title="선택한 폴더에 BIN과 CUE 두 파일을 함께 저장" hidden>폴더에 저장</button>
                 <button class="workflow-link" type="button" id="workflowBackEditor">편집으로</button>
                 <button class="workflow-link" type="button" id="workflowBackSetup">파일·설정으로</button>
               </nav>
-              <p class="editor-intro">저장한 BIN/CUE로 다시 편집할 수 있습니다.</p>
+              <p class="editor-intro">원본 파일은 바뀌지 않습니다. 저장한 BIN/CUE 폴더를 다시 열어 이어서 편집할 수 있습니다.</p>
             </section>
 
             <section class="editor-region" id="editorRegion" hidden aria-label="게임 데이터 에디터">
@@ -907,6 +900,7 @@
                         <label>필요 기력<input type="number" data-editor-field="requiredMorale" min="0" max="150" step="1" inputmode="numeric"></label>
                         <label class="weapon-critical-field">크리티컬 보정<select data-editor-field="critical" aria-describedby="weaponCriticalActual"></select><output id="weaponCriticalActual" class="critical-applied-value" aria-live="polite">실제 미확인</output></label>
                         <label>필요 기능<select data-editor-field="requiredSkill"></select></label>
+                        <label title="같은 무기 번호를 사용하는 모든 기체에 적용됩니다.">이동 후 사용 (P)<select data-editor-field="postMove"></select></label>
                         <label title="같은 무기 ID에 공통 적용됩니다. 선택한 파일럿에게 녹음된 대사 중 이 유형을 사용합니다.">공격 대사 유형<select data-editor-field="voiceType" aria-label="공격 대사 유형 · 같은 무기 ID에 공통 적용"></select></label>
                       </div>
                       <div id="weaponDialogueSource"></div>
@@ -933,6 +927,7 @@
                     <input type="file" id="editorPresetFile" accept=".json,application/json" hidden>
                   </div>
                   <div class="editor-download-actions" id="editorDownloadActions" hidden>
+                    <p class="workflow-output-methods" id="workflowOutputMethods">‘폴더에 저장’은 두 파일을 함께 저장합니다. 다운로드로 받으려면 BIN과 CUE를 모두 받아 이름을 바꾸지 말고 같은 폴더에 두세요.</p>
                     <a class="download-link is-bin" id="editorDownloadBinLink">BIN 다운로드</a>
                     <a class="download-link is-cue" id="editorDownloadCueLink">CUE 다운로드</a>
                     <span id="editorDownloadSummary"></span>
@@ -998,6 +993,20 @@
           <p id="userGuideImageError" role="status" hidden>화면 캡처를 불러오지 못했습니다. 위 안내를 확인해 주세요.</p>
           <figcaption>현재 UI · 설명용 예시 데이터</figcaption>
         </figure>
+        <div class="user-guide-aux">
+          <section class="user-guide-notice" id="resaveNotice" aria-label="완결편 기존 편집본 재저장 안내">
+            <span class="user-guide-notice-badge">안내</span>
+            <p class="user-guide-notice-body"><strong>완결편 기존 편집본 재저장 안내</strong> · 완결편에서 기체를 추가했거나 사전 초상을 켜고 내보낸 판은 새 에디터로 한 번 다시 저장해 주세요.</p>
+          </section>
+          <button
+            type="button"
+            id="userGuideCarryoverOpen"
+            class="user-guide-tool-button"
+            data-carryover-open
+            aria-haspopup="dialog"
+            aria-controls="srw4CarryoverDialog"
+          >F → 완결편 세이브 승계</button>
+        </div>
         <footer class="user-guide-footer">
           <button id="userGuidePrevious" type="button">‹ 이전</button>
           <span id="userGuidePosition" aria-label="가이드 위치"></span>
@@ -1068,6 +1077,7 @@
           <div>
             <span id="patchNotesKicker">PATCH NOTES · AS-IS → TO-BE</span>
             <h2 id="patchNotesHeading">버전별 패치노트</h2>
+            <a id="patchNotesTimelineLink" class="patch-notes-timeline-link" href="./docs/web-editor-notices.html" target="_blank" rel="noopener" aria-label="이 날짜의 전체 변경 내역 (새 탭)" hidden>이 날짜의 전체 변경 내역 ↗</a>
           </div>
           <nav class="patch-note-navigation" id="patchNotesNavigation" aria-label="패치노트 사진 넘기기" hidden>
             <button class="patch-note-close" type="button" id="patchNotesPrevious" aria-label="이전 사진 묶음" aria-controls="patchNotesList">‹</button>
@@ -1156,34 +1166,56 @@
       </div>
     </dialog>
 
-    <dialog id="saveEditorDialog" class="save-editor-dialog" aria-labelledby="saveEditorHeading">
+    <dialog id="saveEditorDialog" class="save-editor-dialog" data-has-save="false" aria-labelledby="saveEditorHeading">
       <div class="save-editor-shell">
-        <header class="save-editor-header"><div><span class="save-eyebrow">CARTRIDGE SAVE</span><h2 id="saveEditorHeading">세이브 에디터</h2></div><button type="button" id="saveEditorClose" class="record-tool">닫기</button></header>
+        <header class="save-editor-header"><div><span class="save-eyebrow">CARTRIDGE SAVE</span><h2 id="saveEditorHeading">세이브 에디터</h2></div><div class="save-editor-header-actions"><button type="button" id="srw4CarryoverOpen" class="record-tool save-carryover-open" data-carryover-open aria-haspopup="dialog" aria-controls="srw4CarryoverDialog">F → 완결편 세이브 승계</button><button type="button" id="saveEditorClose" class="record-tool">닫기</button></div></header>
         <div class="save-editor-content">
           <div class="save-file-selection">
-          <p id="saveFileGuide" class="save-file-guide">현재 선택한 ROM으로 플레이할 때 사용하는 세이브 파일을 선택해 주세요.</p>
-          <div class="save-file-toolbar">
-            <label class="record-tool save-file-picker">세이브 파일 열기<input id="saveFileInput" type="file" accept=".bcr,.bkr,.bin,.sav,.srm,.gz" aria-label="카트리지 세이브 파일 선택" aria-describedby="saveFileGuide"></label>
-            <div class="save-file-info"><strong id="saveFileName">카트리지 파일을 선택하세요</strong><span id="saveFileFormat">Ymir · RetroArch · Mednafen</span></div>
-            <label class="save-slot-select-label">편집할 저장<select id="saveRecordSelect" disabled aria-label="편집할 게임 저장"></select></label>
-          </div>
+            <p id="saveFileGuide" class="save-file-guide">현재 선택한 ROM으로 플레이할 때 사용하는 세이브 파일을 선택해 주세요.</p>
+            <div class="save-file-toolbar">
+              <label class="record-tool save-file-picker">세이브 파일 열기<input id="saveFileInput" type="file" accept=".bcr,.bkr,.bin,.sav,.srm,.gz" aria-label="카트리지 세이브 파일 선택" aria-describedby="saveFileGuide"></label>
+              <div class="save-file-info"><strong id="saveFileName">카트리지 파일을 선택하세요</strong><span id="saveFileFormat">Ymir · RetroArch · Mednafen</span></div>
+              <label class="save-slot-select-label">편집할 저장<select id="saveRecordSelect" disabled aria-label="편집할 게임 저장"></select></label>
+            </div>
           </div>
           <section id="saveFastPreview" class="save-fast-preview" role="status" hidden>
             <strong id="saveFastPreviewTitle"></strong>
             <ul id="saveFastPreviewRows"></ul>
           </section>
-          <section id="saveSlotSummary" class="save-slot-summary" aria-label="선택한 저장 정보" hidden>
-            <div class="save-slot-heading"><span id="saveSlotIdentity" class="save-eyebrow"></span><div><strong id="saveSlotProgress"></strong><span id="saveSlotTitle"></span></div></div>
-            <dl><div><dt>주인공</dt><dd id="saveSlotHero"></dd></div><div><dt>저장 시점 · 게임기 시계</dt><dd id="saveSlotDate"></dd></div></dl>
-          </section>
-          <details id="saveSlotBrowser" class="save-slot-browser" hidden><summary id="saveSlotCount">다른 저장 고르기</summary><div class="save-slot-filters"><input id="saveSlotSearch" class="editor-search" type="search" placeholder="화수 · 시나리오 · 주인공 · 슬롯 번호" aria-label="저장 슬롯 검색"><label>정렬<select id="saveSlotSort" aria-label="저장 슬롯 정렬"><option value="slot">슬롯순</option><option value="recent">최근 저장순</option><option value="progress">진행순</option></select></label></div><div id="saveSlotCards" class="save-slot-cards"></div><nav id="saveSlotsPager" class="save-pager" aria-label="저장 슬롯"><button id="saveSlotsPrev" type="button" aria-label="저장 슬롯 이전 페이지">◀ 이전</button><span id="saveSlotsPageLabel" aria-live="polite">1 / 1</span><button id="saveSlotsNext" type="button" aria-label="저장 슬롯 다음 페이지">다음 ▶</button></nav></details>
-          <details id="saveCheckPanel" class="save-check" hidden><summary id="saveCheckSummary">세이브 검사</summary><div class="save-check-body"><p class="save-help">ROM에 없는 기체·파일럿, 비었거나 잘못된 탑승·연결 칸, 상한을 넘은 개조, 범위 밖 파츠를 찾습니다. 고치기는 게임이 멈추지 않게 문제 칸만 정리하며 원래 값을 되살리지는 않습니다. 원본 파일은 바뀌지 않고 수정본 저장으로 새 파일이 만들어집니다.</p><ul id="saveCheckList"></ul><div class="save-check-actions"><button type="button" id="saveCheckRepair" class="record-tool">이 슬롯 고치기</button><button type="button" id="saveCheckRepairAll" class="record-tool">모든 슬롯 고치기</button></div></div></details>
-          <p id="saveEditorStatus" role="status" aria-live="polite">파일은 이 기기에서만 읽습니다. 일반 카트리지 저장을 선택하세요.</p>
-          <div id="saveEditorEmpty" class="game-panel save-empty"><h3>이어서 하던 게임을 편집하세요</h3><p>카트리지 파일을 열고, 화수와 주인공 이름으로 편집할 저장 슬롯을 고르세요.</p><p>파일럿 추가는 <strong>저장 선택 → 파일럿 탭 → ＋ 파일럿 추가</strong>, 기체 추가는 <strong>저장 선택 → 보유 기체 탭 → ＋ 기체 추가</strong>에 있습니다.</p><p>ALICE는 S건담·Ex-S에 딸린 보조 AI이며 주 파일럿처럼 다른 기체로 자유롭게 옮길 수 없습니다. 확인된 구성에서 S건담 또는 Ex-S를 추가하면 필요한 ALICE를 자동으로 준비합니다. 실제 게임에서는 사람이 탑승해야 연결됩니다. 파일럿 칸이 부족하면 기체 추가도 함께 취소됩니다.</p><small>ALICE 직접 추가는 확인된 설치 상태에서만 가능합니다. 기체를 없애도 ALICE의 SP와 진행은 자동으로 지우지 않습니다. 에뮬레이터의 일시 저장(스테이트)은 사용할 수 없습니다.</small></div>
+          <div class="save-context-stack">
+            <section id="saveSlotSummary" class="save-slot-summary" aria-label="선택한 저장 정보" hidden>
+              <div class="save-slot-heading"><span id="saveSlotIdentity" class="save-eyebrow"></span><div><strong id="saveSlotProgress"></strong><span id="saveSlotTitle"></span></div></div>
+              <dl><div><dt>주인공</dt><dd id="saveSlotHero"></dd></div><div><dt>저장 시점 · 게임기 시계</dt><dd id="saveSlotDate"></dd></div></dl>
+            </section>
+            <div id="saveUtilityBar" class="save-utility-bar" hidden>
+              <details id="saveSlotBrowser" class="save-slot-browser" hidden><summary id="saveSlotCount">다른 저장 고르기</summary><div class="save-slot-filters"><input id="saveSlotSearch" class="editor-search" type="search" placeholder="화수 · 시나리오 · 주인공 · 슬롯 번호" aria-label="저장 슬롯 검색"><label>정렬<select id="saveSlotSort" aria-label="저장 슬롯 정렬"><option value="slot">슬롯순</option><option value="recent">최근 저장순</option><option value="progress">진행순</option></select></label></div><div id="saveSlotCards" class="save-slot-cards"></div><nav id="saveSlotsPager" class="save-pager" aria-label="저장 슬롯"><button id="saveSlotsPrev" type="button" aria-label="저장 슬롯 이전 페이지">◀ 이전</button><span id="saveSlotsPageLabel" aria-live="polite">1 / 1</span><button id="saveSlotsNext" type="button" aria-label="저장 슬롯 다음 페이지">다음 ▶</button></nav></details>
+              <details id="saveCheckPanel" class="save-check" hidden><summary id="saveCheckSummary">세이브 검사</summary><div class="save-check-body"><p class="save-help save-check-lead">문제가 있는 칸을 찾아 게임이 멈추지 않게 정리합니다. 원본 파일은 바뀌지 않습니다.</p><details class="save-inline-help"><summary>검사 항목 자세히 보기</summary><p class="save-help">ROM에 없는 기체·파일럿, 비었거나 잘못된 탑승·연결 칸, 상한을 넘은 개조, 범위 밖 파츠, 게임 화면의 숫자 칸보다 긴 자금과 다음 레벨까지 EXP를 찾습니다. 고치기는 게임이 멈추지 않게 문제 칸만 정리하며 원래 값을 되살리지는 않습니다. 원본 파일은 바뀌지 않고 수정본 저장으로 새 파일이 만들어집니다.</p></details><ul id="saveCheckList"></ul><div class="save-check-actions"><button type="button" id="saveCheckRepair" class="record-tool">이 슬롯 고치기</button><button type="button" id="saveCheckRepairAll" class="record-tool">모든 슬롯 고치기</button></div></div></details>
+            </div>
+          </div>
+          <div id="saveEditorEmpty" class="game-panel save-empty">
+            <div class="save-empty-header">
+              <h3>이어서 하던 게임을 편집하세요</h3>
+              <p>카트리지 파일을 열고 편집할 저장 슬롯을 고르면 파일럿·보유 기체·이름·자금을 바로 수정할 수 있습니다.</p>
+            </div>
+            <ol class="save-empty-flow">
+              <li class="save-empty-card"><strong>1. 세이브 열기</strong><span>상단에서 일반 카트리지 저장(.bcr · .bkr · .bin · .sav · .srm · .gz)을 선택하세요.</span></li>
+              <li class="save-empty-card"><strong>2. 슬롯·항목 수정</strong><span>슬롯을 고른 뒤 파일럿·보유 기체·이름·자금·총 턴 수를 편집하세요.</span></li>
+              <li class="save-empty-card"><strong>3. 수정본 저장</strong><span>원본은 보존되며, 필요 시 맞는 BIN/CUE와 함께 ZIP으로 저장합니다.</span></li>
+            </ol>
+            <div class="save-empty-shortcuts">
+              <span>파일럿 추가: <strong>저장 선택 → 파일럿 탭 → ＋ 파일럿 추가</strong></span>
+              <span>기체 추가: <strong>저장 선택 → 보유 기체 탭 → ＋ 기체 추가</strong></span>
+            </div>
+            <details class="save-empty-notes">
+              <summary>ALICE · 추가 기체 · 지원 형식 안내</summary>
+              <p>ALICE는 S건담·Ex-S에 딸린 보조 AI이며 주 파일럿처럼 다른 기체로 자유롭게 옮길 수 없습니다. 확인된 구성에서 S건담 또는 Ex-S를 추가하면 필요한 ALICE를 자동으로 준비합니다. 실제 게임에서는 사람이 탑승해야 연결됩니다. 파일럿 칸이 부족하면 기체 추가도 함께 취소됩니다.</p>
+              <small>ALICE 직접 추가는 확인된 설치 상태에서만 가능합니다. 기체를 없애도 ALICE의 SP와 진행은 자동으로 지우지 않습니다. 에뮬레이터의 일시 저장(스테이트)은 사용할 수 없습니다.</small>
+            </details>
+          </div>
           <div id="saveEditorBody" class="save-editor-body" hidden>
-            <div class="save-game-toolbar"><div class="editor-tab-row" role="group" aria-label="세이브 데이터 종류"><button type="button" id="savePilotTab" class="editor-tab" aria-pressed="true">파일럿</button><button type="button" id="saveUnitTab" class="editor-tab" aria-pressed="false">보유 기체</button><button type="button" id="saveCommonTab" class="editor-tab" aria-pressed="false">이름·자금·개조</button></div><span id="saveRecordNote"></span></div>
+            <div class="save-game-toolbar"><div class="editor-tab-row" role="group" aria-label="세이브 데이터 종류"><button type="button" id="savePilotTab" class="editor-tab" aria-pressed="true">파일럿</button><button type="button" id="saveUnitTab" class="editor-tab" aria-pressed="false">보유 기체</button><button type="button" id="saveCommonTab" class="editor-tab" aria-pressed="false">이름·자금·턴</button></div><span id="saveRecordNote"></span></div>
             <details id="saveAddPilotRow" class="save-add-unit" hidden><summary>＋ 파일럿 추가</summary><div class="save-add-unit-fields"><label>파일럿 찾기<input id="saveAddPilotSearch" class="editor-search" type="search" placeholder="이름 또는 ID" aria-label="추가할 파일럿 검색"></label><label>추가할 파일럿<select id="saveAddPilotSelect" aria-label="추가할 파일럿"></select></label><label>레벨<input id="saveAddPilotLevel" type="number" min="1" max="99" value="31" step="1" inputmode="numeric"></label><button id="saveAddPilotButton" type="button" class="record-tool">추가하기</button></div><small>확인된 최신 F 또는 F완결편의 일반 파일럿과, 실제 설치 상태를 확인한 ALICE 서브파일럿만 추가합니다.</small></details>
-            <details id="saveAddUnitRow" class="save-add-unit" hidden><summary>＋ 기체 추가</summary><div class="save-add-unit-fields"><label>기체 찾기<input id="saveAddUnitSearch" class="editor-search" type="search" placeholder="모든 기체 · 이름 또는 ID" aria-label="추가할 기체 검색"></label><label>표시 범위<select id="saveAddUnitFilter"><option value="all">전체 · 미사용 포함</option><option value="unused">빈·미완성 레코드만</option></select></label><label>추가할 기체<select id="saveAddUnitSelect" aria-label="추가할 기체"></select></label><button id="saveAddUnitButton" type="button" class="record-tool">추가하기</button></div><small id="saveAddUnitNote">제4차 기체를 추가하려면 ROM 에디터에서 Rev1 원본을 연결하세요. 같은 게임의 세이브를 열고 목록에서 고르면 됩니다. BIN을 먼저 저장하고 다시 열 필요는 없습니다. 수정한 BIN/CUE와 세이브를 함께 저장해 사용하세요. 필요한 합체·분리 구성 기체도 함께 추가하며, 그림만 남은 더미는 기체 데이터와 구분합니다.</small></details>
+            <details id="saveAddUnitRow" class="save-add-unit" hidden><summary>＋ 기체 추가</summary><div class="save-add-unit-fields"><label>기체 찾기<input id="saveAddUnitSearch" class="editor-search" type="search" placeholder="모든 기체 · 이름 또는 ID" aria-label="추가할 기체 검색"></label><label>표시 범위<select id="saveAddUnitFilter"><option value="all">전체 · 미사용 포함</option><option value="unused">빈·미완성 레코드만</option></select></label><label>추가할 기체<select id="saveAddUnitSelect" aria-label="추가할 기체"></select></label><button id="saveAddUnitButton" type="button" class="record-tool">추가하기</button></div><small id="saveAddUnitNote">제4차 기체를 추가하려면 ROM 에디터에서 Rev1 원본을 먼저 연결하세요. 추가 시 필요한 합체·변형 칸도 함께 넣습니다.</small></details>
             <p id="saveNameNote" hidden>검증한 ROM에서 이름을 찾지 못한 데이터는 ID로 표시합니다.</p>
             <div id="saveRecordLayout" class="save-record-layout" data-mobile-view="list">
               <aside class="save-record-sidebar"><div class="save-list-heading"><strong id="saveListHeading">파일럿 목록</strong><span id="saveListCount"></span></div><label for="saveSearch" class="sr-only">이름·ID·저장 칸 검색</label><input id="saveSearch" class="editor-search" type="search" placeholder="이름으로 찾기" autocomplete="off"><div id="saveRecordList" class="record-list" aria-label="저장된 파일럿 또는 기체"></div><nav id="saveListPager" class="save-pager" aria-label="파일럿·기체 목록"><button id="saveListPrev" type="button" aria-label="파일럿·기체 목록 이전 페이지">◀ 이전</button><span id="saveListPageLabel" aria-live="polite">1 / 1</span><button id="saveListNext" type="button" aria-label="파일럿·기체 목록 다음 페이지">다음 ▶</button></nav></aside>
@@ -1191,7 +1223,7 @@
             </div>
             <section id="saveCommonFields" class="save-common-fields" hidden>
               <div class="save-detail-tabs save-common-tabs" role="group" aria-label="이름·자금·개조 종류">
-                <button id="saveCommonNamesTab" type="button" aria-pressed="false">이름·애칭</button><button id="saveCommonUnitNamesTab" type="button" aria-pressed="false" hidden>기체 이름</button><button id="saveCommonMoneyTab" type="button" aria-pressed="true">보유 자금</button><button id="saveCommonUpgradeTab" type="button" aria-pressed="false">개조 해금</button>
+                <button id="saveCommonNamesTab" type="button" aria-pressed="false">이름·애칭</button><button id="saveCommonUnitNamesTab" type="button" aria-pressed="false" hidden>기체 이름</button><button id="saveCommonMoneyTab" type="button" aria-pressed="true">자금·총 턴</button><button id="saveCommonUpgradeTab" type="button" aria-pressed="false">개조 해금</button>
               </div>
               <div id="saveNamesPanel" class="game-panel save-name-panel" hidden>
                 <label><span>주인공 풀네임</span><input id="saveHeroName" type="text" autocomplete="off" spellcheck="false" aria-describedby="saveNamesHelp"><small id="saveHeroNameCount"></small></label>
@@ -1217,8 +1249,56 @@
               <div id="saveUpgradePanel" class="game-panel" hidden><h3>개조 한도</h3><label id="saveUpgradeModeRow" hidden>완결편 개조 해금<select id="saveUpgradeMode"><option value="original">불러온 해금 상태 유지</option><option value="early10">69화 이전에도 10단 개조 해금</option></select></label><p id="saveUpgradeStatus"></p><p class="save-help">조기 해금은 게임의 개조 한도를 10단으로 바꿉니다. 각 기체의 개조 단수는 보유 기체 탭에서 수정하세요.</p></div>
             </section>
           </div>
+          <p id="saveEditorStatus" role="status" aria-live="polite">파일은 이 기기에서만 읽습니다. 일반 카트리지 저장을 선택하세요.</p>
         </div>
-        <footer class="save-editor-footer"><section id="saveGameBundle" class="save-game-bundle" hidden aria-label="게임 파일과 세이브"><p>이 수정 세이브에는 처음 불러온 BIN에 없는 4차 기체 또는 ALICE 구성이 들어 있습니다. 맞는 BIN/CUE와 수정 세이브를 ZIP 하나로 받아 압축을 풀어 사용하세요.</p><div id="saveGameBundleLinks" class="save-game-bundle-links" hidden><a class="record-tool" id="saveGameZip">BIN/CUE + 세이브 ZIP 받기</a></div></section><details class="save-diff"><summary id="saveChangeCount">변경 없음</summary><div class="save-change-panel"><ul id="saveChanges"></ul><nav id="saveChangesPager" class="save-pager" aria-label="변경 내역"><button id="saveChangesPrev" type="button" aria-label="변경 내역 이전 페이지">◀ 이전</button><span id="saveChangesPageLabel" aria-live="polite">1 / 1</span><button id="saveChangesNext" type="button" aria-label="변경 내역 다음 페이지">다음 ▶</button></nav></div></details><div class="save-editor-actions"><span class="save-footer-note">원본은 보존하고 수정본을 따로 저장합니다.</span><button type="button" id="saveReset" class="record-tool" aria-label="모든 저장 슬롯의 변경 취소" title="모든 저장 슬롯의 변경과 입력 오류를 불러온 값으로 되돌립니다." disabled>전체 취소</button><button type="button" id="saveDownload" class="record-tool" disabled>수정본 저장</button></div></footer>
+        <footer class="save-editor-footer"><section id="saveGameBundle" class="save-game-bundle" hidden aria-label="게임 파일과 세이브"><span class="save-bundle-badge">BIN/CUE 함께 저장</span><p>추가된 4차 기체·ALICE 구성을 플레이하려면 맞는 BIN/CUE와 수정 세이브를 함께 사용하세요.</p><div id="saveGameBundleLinks" class="save-game-bundle-links" hidden><a class="record-tool save-bundle-cta" id="saveGameZip">BIN/CUE + 세이브 ZIP 받기</a></div></section><details class="save-diff"><summary id="saveChangeCount">변경 없음</summary><div class="save-change-panel"><ul id="saveChanges"></ul><nav id="saveChangesPager" class="save-pager" aria-label="변경 내역"><button id="saveChangesPrev" type="button" aria-label="변경 내역 이전 페이지">◀ 이전</button><span id="saveChangesPageLabel" aria-live="polite">1 / 1</span><button id="saveChangesNext" type="button" aria-label="변경 내역 다음 페이지">다음 ▶</button></nav></div></details><div class="save-editor-actions"><span class="save-footer-note">원본은 보존하고 수정본을 따로 저장합니다.</span><button type="button" id="saveReset" class="record-tool" title="모든 슬롯을 처음 불러온 값으로 되돌립니다." disabled>모든 슬롯 되돌리기</button><button type="button" id="saveDownload" class="record-tool" disabled>수정본 저장</button></div></footer>
+      </div>
+    </dialog>
+
+    <dialog id="srw4CarryoverDialog" class="carryover-dialog" aria-labelledby="srw4CarryoverHeading">
+      <div class="carryover-shell">
+        <header class="carryover-header">
+          <div>
+            <span class="save-eyebrow">세이브 승계 도구</span>
+            <h2 id="srw4CarryoverHeading">F → 완결편 제4차 기체 승계</h2>
+          </div>
+          <button type="button" id="srw4CarryoverClose" class="record-tool">닫기</button>
+        </header>
+        <div class="carryover-content">
+          <p class="carryover-intro">F 34화 클리어 저장에 들어 있는 제4차 연동 기체는 완결편과 기체 번호가 다릅니다. 플레이에 쓴 F BIN과 이어할 완결편 BIN을 대조해 호환되는 번호로 맞춘 <strong>선택한 슬롯의 승계 전용 복사본</strong>만 만듭니다. 원본은 바뀌지 않습니다.</p>
+          <section class="carryover-stage">
+            <h3>1. 두 BIN과 F 클리어 저장 선택</h3>
+            <div class="carryover-fields">
+              <label class="carryover-file-field"><span>플레이에 쓴 F 제4차 연동 BIN</span><input id="srw4CarryoverF" type="file" accept=".bin"></label>
+              <label class="carryover-file-field"><span>이어할 완결편 제4차 연동 BIN</span><input id="srw4CarryoverFinal" type="file" accept=".bin"></label>
+              <label class="carryover-file-field"><span>F 클리어 일반 저장 (백업 RAM 사본)</span><input id="srw4CarryoverSave" type="file"></label>
+            </div>
+            <label class="carryover-attest"><input id="srw4CarryoverAttest" type="checkbox"><span>이 F 저장을 만들 때 실제로 사용한 F BIN을 선택했습니다.</span></label>
+            <details class="carryover-help">
+              <summary>주의 및 지원 범위</summary>
+              <p>기존 F 저장에는 사용한 BIN을 식별하는 정보가 없습니다. 같은 버전이라도 기체 배치가 다를 수 있으니 같은 플레이에 사용한 BIN을 고르세요.</p>
+              <small>이미 잘못 승계된 완결편 저장과 SSF 개별 저장은 이 도구로 직접 복구하지 않습니다.</small>
+            </details>
+            <div class="carryover-actions">
+              <button id="srw4CarryoverVerify" type="button" class="record-tool is-primary" disabled>두 BIN과 저장 확인</button>
+              <button id="srw4CarryoverCancel" type="button" class="record-tool" hidden>승계 도구 초기화</button>
+            </div>
+          </section>
+          <p id="srw4CarryoverStatus" class="carryover-status" role="status" aria-live="polite">파일은 이 기기 안에서만 읽습니다. 원본은 바뀌지 않습니다.</p>
+          <section id="srw4CarryoverSlots" class="carryover-stage" hidden>
+            <h3>2. 승계할 F 클리어 슬롯 선택</h3>
+            <div class="carryover-slot-row">
+              <label class="carryover-slot-field"><span>승계할 F 클리어 슬롯</span><select id="srw4CarryoverSlot"></select></label>
+              <button id="srw4CarryoverCreate" type="button" class="record-tool is-primary" disabled>이 슬롯의 승계용 복사본 만들기</button>
+            </div>
+          </section>
+          <section id="srw4CarryoverResult" class="carryover-stage carryover-result" hidden>
+            <h3>3. 승계 전용 복사본 준비 완료</h3>
+            <ul id="srw4CarryoverEdits"></ul>
+            <p class="carryover-warning"><strong>이 복사본을 F에서 열지 마세요. 원본에 덮어쓰지 마세요.</strong> 에뮬레이터를 끈 뒤 별도 완결편 프로필에 복사본을 넣고, 검증한 완결편 BIN/CUE로 F 클리어 슬롯을 불러오세요. 승계 후에는 게임에서 완결편 일반 저장을 새로 만드세요.</p>
+            <a class="record-tool carryover-download" id="srw4CarryoverDownload">완결편 승계 전용 복사본 받기</a>
+          </section>
+        </div>
       </div>
     </dialog>
     <div class="sr-only" id="liveRegion" role="status" aria-live="polite" aria-atomic="true"></div>

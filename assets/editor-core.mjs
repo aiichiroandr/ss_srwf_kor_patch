@@ -50,7 +50,7 @@ import { PILOT_LADDER_FAMILIES, isWeaponRequiredSkillEditable, pilotSkillFamily,
 import { ownData, ownEntry, readDenseList } from "./editor-own.mjs?v=20261113-alicecopies1";
 import { LOCKED_UNIT_ABILITY_IDS, findUnitAbilityLockViolation, unitAbilityLocks } from "./editor-locks.mjs?v=20261113-alicecopies1";
 import { UNIT_LOCK_LAYOUTS } from "./editor-lock-layout.mjs?v=20261113-alicecopies1";
-import { EDITOR_FIELD_BOUNDS, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261113-alicecopies1";
+import { EDITOR_FIELD_BOUNDS, isScreenFieldEditAllowed, screenFieldLimit } from "./editor-fields.mjs?v=20261113-alicecopies1&editorcompat=20261125-1";
 import { PUBLIC_EDITOR_FEATURES } from "./editor-public-features.mjs?v=20261113-alicecopies1";
 import { readUpgradeCosts, updateUpgradeCosts, upgradeCostDecodedMasks } from "./editor-costs.mjs?v=20261113-alicecopies1";
 import { readRewardTable, rewardDecodedMasks, updateRewardRecords } from "./editor-rewards.mjs?v=20261113-alicecopies1";
@@ -65,6 +65,7 @@ import { supplementScenarioDisplay } from "./editor-scenario-display.mjs?v=20261
 import { UNIT_WEAPON_FIELDS, planUnitWeapons, unitWeaponFields, unitWeaponMasks,unitWeaponReservations } from './editor-loadout.mjs?v=20261113-alicecopies1';
 import { LOADOUT_EDITOR_PROFILES } from './editor-loadout-profiles.mjs?v=20261113-alicecopies1';
 import {WEAPON_VOICE_PROFILES} from './editor-weapon-voice-profiles.mjs?v=20261113-alicecopies1';
+import { WEAPON_POST_MOVE_PROFILES } from './editor-weapon-post-move-profiles.mjs?v=20261113-alicecopies1&editorcompat=20261125-1';
 import {KILL_EXPERIENCE_PROFILES} from './editor-kill-experience-profiles.mjs?v=20261113-alicecopies1';
 import {readMapIcons} from './editor-map-icons.mjs?v=20261113-alicecopies1';
 import {createSrw4SourceStore} from './editor-srw4-source.mjs?v=20261113-alicecopies1';
@@ -77,7 +78,8 @@ import {requireTsrExportSize,requireTsrInspectionSize,requireTsrRuntimeSize,requ
 import {compactUnitStorage,expandCompactUnitStorage,isFinalInlineUnitStorage,isFinalReferenceInlineUnitStorage} from './editor-unit-compact.mjs?v=20261113-alicecopies1';
 import {packFInlineAuxiliary,expandFInlineAuxiliary} from './editor-f-inline.mjs?v=20261113-alicecopies1';
 import {packFinalInlineAuxiliary,expandFinalInlineAuxiliary} from './editor-final-inline-aux.mjs?v=20261113-alicecopies1';
-import {readWeaponCloneManifest,writeWeaponCloneManifest,markWeaponClones,applyWeaponCloneRecords,normalizeWeaponClones,isWeaponClonePreimage,requireWeaponCloneScreenFields} from './editor-weapon-clone.mjs?v=20261113-alicecopies1';
+import {WEAPON_POST_MOVE_OFFSET, WEAPON_POST_MOVE_MASK} from "./editor-weapon-post-move.mjs?v=20261113-alicecopies1&editorcompat=20261125-1";
+import {readWeaponCloneManifest,writeWeaponCloneManifest,markWeaponClones,applyWeaponCloneRecords,normalizeWeaponClones,isWeaponClonePreimage,requireWeaponCloneScreenFields} from './editor-weapon-clone.mjs?v=20261113-alicecopies1&editorcompat=20261125-1';
 import {repairBattleSceneLabels,normalizeBattleSceneLabels,requireSingleByteFontPreserved} from './editor-battle-scene-labels.mjs?v=20261113-alicecopies1';
 import {editorStorageBudget,withDiskBudget} from './editor-storage-budget.mjs?v=20261113-alicecopies1';
 import {createBattleComponentCodec} from './editor-battle-components.mjs?v=20261113-alicecopies1';
@@ -2104,6 +2106,7 @@ export function weaponRows(segments, decoded, nameMap, gameId = "srwf-final", pi
       attack: attackValue,
       mapType: (data[start]&128)&&(data[start]&127)<126?data[start]&127:null,
       voiceType: data[start+2]&63,
+      postMove: Boolean(data[start + WEAPON_POST_MOVE_OFFSET] & WEAPON_POST_MOVE_MASK),
       hit: data[start + 7] > 0x7f ? data[start + 7] - 0x100 : data[start + 7],
       critical: criticalAndTune >>> 4,
       upgradeCostClass: criticalAndTune & 15,
@@ -2538,7 +2541,7 @@ function writeWeaponEdits(segment, edits, readOnly, offsets, records, gameId) {
   const valid = new Set(records.map(({ recordIndex }) => recordIndex));
   const bounds = EDITOR_FIELD_BOUNDS.weapon;
   for (const edit of edits) {
-    const optional=Object.hasOwn(ownData(edit,'fields')??{},'voiceType')?['voiceType']:[];
+    const optional = ['voiceType', 'postMove'].filter(field => Object.hasOwn(ownData(edit, 'fields') ?? {}, field));
     // Preserve an authenticated old BIN's out-of-range byte only when echoed
     // unchanged. A new modifier, including a correction, uses the UI bounds.
     const requestedId=ownData(edit,'recordIndex');
@@ -2555,7 +2558,11 @@ function writeWeaponEdits(segment, edits, readOnly, offsets, records, gameId) {
     const lockedReason = readOnly.get(recordIndex) ?? null;
     const before = lockedReason ? segment.slice(start, start + 17) : null;
     if (!lockedReason) requireWeaponDomain(segment, start, values, recordIndex, gameId);
-    if(optional.length)segment[start+2]=(segment[start+2]&0xc0)|values.voiceType;
+    if (optional.includes('voiceType')) segment[start + 2] = (segment[start + 2] & 0xc0) | values.voiceType;
+    if (optional.includes('postMove')) {
+      const flag = start + WEAPON_POST_MOVE_OFFSET;
+      segment[flag] = (segment[flag] & ~WEAPON_POST_MOVE_MASK) | (values.postMove ? WEAPON_POST_MOVE_MASK : 0);
+    }
     writeU16BE(segment, start + 5, values.attack);
     segment[start + 7] = values.hit & 0xff;
     segment[start + 8] = (values.critical << 4) | (segment[start + 8] & 0x0f);
@@ -2983,7 +2990,7 @@ function preparePilotExpansion(segment, edits, readOnly, gameId) {
 // irregular) have no range at all. Known hero lists have only their fixed pair block, excluding four reserved zeros.
 // Which records those are is derived from the image itself, but a change that moves a
 // record from one class to the other changes the ranges, so such an image no longer matches the stored profile.
-export function editorDecodedMasks(root, gameId, { rewards = true, terrain = true, heroTemplates = true, economy = true, weaponLoadouts = true,weaponVoices=true,killExperience=true } = {}) {
+export function editorDecodedMasks(root, gameId, { rewards = true, terrain = true, heroTemplates = true, economy = true, weaponLoadouts = true,weaponVoices=true,killExperience=true,weaponPostMove=false } = {}) {
   if (!ownEntry(PILOT_SKILL_EDIT_RANGE, gameId)) {
     fail("EDITOR_RELEASE_INVALID", "The editable ranges are defined for a known game only.");
   }
@@ -3018,6 +3025,7 @@ export function editorDecodedMasks(root, gameId, { rewards = true, terrain = tru
   // that has ammo, so every image it can make from an accepted one has the same ranges).
   for (const record of dataRecordOffsets(root[29].bytes, 17).records) {
     const start = root[29].start + record.start;
+    if (weaponPostMove) add(start + WEAPON_POST_MOVE_OFFSET, 1, WEAPON_POST_MOVE_MASK);
     if(weaponVoices)add(start+2,1,63);
     add(start + 5, 3); add(start + 8, 1, 240); add(start + 9, 3);
     if (root[29].bytes[record.start + WEAPON_AMMO_OFFSET] > 0) add(start + WEAPON_AMMO_OFFSET, 1);
@@ -3066,7 +3074,7 @@ async function createProfile(trust, session, options = {}) {
   const scenarioModule = scenario ? await import('./editor-scenario-provenance.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1') : null;
   const completeRawMasks = scenario ? scenarioModule.mergeFullByteMasks([...rawMasks,
     ...scenarioModule.scenarioRawMasks(scenario.files, scenario.inspected)]) : rawMasks;
-  const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId);
+  const decodedMasks = editorDecodedMasks(session.root, session.descriptor.gameId, {weaponPostMove: options.weaponPostMove === true});
   const extent = await readMode1UserExtent(session.sourceBlob, file.extentLba, allocatedSectors * SECTOR_USER_SIZE, {
     signal: options.signal, checksum: true,
   });
@@ -3105,7 +3113,7 @@ export const LATEST_EDITOR_RELEASE_GROUPS = Object.freeze({
 // check what the production inspector is wired to.
 export const PRODUCTION_TRUST = Object.freeze({
   targets: Object.freeze({ ...ACCEPTED_EDITOR_TARGETS, ...STOCK_EDITOR_TARGETS }),
-  profiles: Object.freeze([...KILL_EXPERIENCE_PROFILES, ...WEAPON_VOICE_PROFILES, ...UNIT_STORAGE_PROFILES, ...LOADOUT_EDITOR_PROFILES, ...ECONOMY_EDITOR_PROFILES, ...HERO_EDITOR_PROFILES, ...SCENARIO_EDITOR_PROFILES, ...TERRAIN_EDITOR_PROFILES, ...REWARD_EDITOR_PROFILES, ...EDITOR_PROVENANCE_PROFILES, ...STOCK_EDITOR_PROFILES]),
+  profiles: Object.freeze([...WEAPON_POST_MOVE_PROFILES, ...KILL_EXPERIENCE_PROFILES, ...WEAPON_VOICE_PROFILES, ...UNIT_STORAGE_PROFILES, ...LOADOUT_EDITOR_PROFILES, ...ECONOMY_EDITOR_PROFILES, ...HERO_EDITOR_PROFILES, ...SCENARIO_EDITOR_PROFILES, ...TERRAIN_EDITOR_PROFILES, ...REWARD_EDITOR_PROFILES, ...EDITOR_PROVENANCE_PROFILES, ...STOCK_EDITOR_PROFILES]),
   scenarioEditing: true,
   latestGroups: LATEST_EDITOR_RELEASE_GROUPS,
   lockLayouts: UNIT_LOCK_LAYOUTS,
@@ -3285,7 +3293,8 @@ async function establishEditorProvenance(trust, blob, actualHash, descriptor, re
     const legacy = [{}, { economy: false }, { economy: false, terrain: false }, { economy: false, rewards: false, terrain: false }];
     const maskOptions=[{},...legacy.map(options=>({...options,weaponLoadouts:false}))];
     const voiceOptions=[...maskOptions,...maskOptions.map(options=>({...options,weaponVoices:false}))];
-    if (![...voiceOptions,...voiceOptions.map(options=>({...options,killExperience:false}))].some(options => JSON.stringify(editorDecodedMasks(canonicalRoot, descriptor.gameId, options)) === masks)) continue;
+    if (![...voiceOptions, ...voiceOptions.map(options=>({...options,killExperience:false})), {weaponPostMove:true}]
+      .some(options => JSON.stringify(editorDecodedMasks(canonicalRoot, descriptor.gameId, options)) === masks)) continue;
     if (immutableBytesHash(canonicalDecoded, profile.decodedMasks) !== profile.immutableTsrSha256) continue;
     let rebasedScenario = false;
     if (profile.scenarioScopes) {
@@ -3392,10 +3401,13 @@ export function buildEditorRows(root, decoded, gameId, lockLayout = null, weapon
       }
       row.identity = `${kind}:1:${new Sha256().update(header).hex()}`;
       if (kind === "weapon") {
-        // Voice selection is editable and does not change the save upgrade slot.
-        // Keep the stricter preset identity unchanged; save compatibility ignores
-        // only these six voice bits, retaining animation/header differences.
+        // Keep historical identities and recognize their P-only counterpart.
+        // Neither the animation header nor any other flag is ignored.
+        header[WEAPON_POST_MOVE_OFFSET] ^= WEAPON_POST_MOVE_MASK;
+        row.identityAliases = [`weapon:1:${new Sha256().update(header).hex()}`];
         header[2] &= 0xc0;
+        row.saveIdentityAliases = [`weapon-save:1:${new Sha256().update(header).hex()}`];
+        header[WEAPON_POST_MOVE_OFFSET] ^= WEAPON_POST_MOVE_MASK;
         row.saveIdentity = `weapon-save:1:${new Sha256().update(header).hex()}`;
       }
     }

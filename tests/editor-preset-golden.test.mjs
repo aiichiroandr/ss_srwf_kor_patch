@@ -3,7 +3,7 @@
 // and these run; otherwise they skip. The page opens the image through the real worker body and the production inspector
 // (the image is read in place as a file-backed Blob, nothing is copied to disk), edits units, pilots (one skill added, one
 // removed) and weapons (terrain included) on its own screen, exports, saves the changes as a preset, opens the same image
-// again, applies the preset and exports again: both BINs have the same SHA-256. A preset of the other game is refused.
+// again, applies the preset and exports again: both BINs have the same SHA-256. Also exercises the F-to-Final transfer.
 // Everything asserted is a count, a status or a hash; no name or text of the game appears here.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -14,6 +14,7 @@ import { createEditorWorker } from "../assets/editor-worker.mjs";
 import { isLockedUnitAbility } from "../assets/editor-locks.mjs";
 import { addBlock, isFlagGated } from "../assets/editor-skill-list.mjs";
 import { parsePreset } from "../assets/editor-preset.mjs";
+import { verifiedFinalTransfer } from "../assets/editor-f-final-transfer-map.mjs";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
 
 const IMAGE_DIR = process.env.SRWF_GOLDEN_IMAGE_DIR;
@@ -24,6 +25,7 @@ const LANES = [
 const available = (lane) => Boolean(IMAGE_DIR) && fs.existsSync(`${IMAGE_DIR}/${lane}.bin`);
 
 const document = installFakeDom();
+if (!globalThis.ImageData) globalThis.ImageData = class { constructor(data,width,height) { Object.assign(this,{data,width,height}); } };
 loadHtml(document, await readFile(new URL("../index.html", import.meta.url), "utf8"));
 const initialConsoleError = console.error;
 console.error = () => {};
@@ -57,6 +59,10 @@ class RealWorker {
 
   addEventListener(type, listener) {
     this.#listeners.set(type, [...(this.#listeners.get(type) ?? []), listener]);
+  }
+
+  removeEventListener(type, listener) {
+    this.#listeners.set(type,(this.#listeners.get(type) ?? []).filter(current => current !== listener));
   }
 
   postMessage(message) {
@@ -207,13 +213,40 @@ for (const lane of LANES) {
   });
 }
 
-test("golden: a preset of one game is refused by a session of the other", { skip: !LANES.every(({ lane }) => available(lane)), timeout: 600_000 }, async () => {
-  for (const [from, to] of [[LANES[1], LANES[0]], [LANES[0], LANES[1]]]) {
-    const text = presets.get(from.gameId);
-    assert.ok(text, `the ${from.lane} test saved its preset`);
-    await openPage(to);
-    assert.equal(await editorChanges.loadFile(fileOf(text)), false);
-    assert.equal(editorChanges.pending(), null);
-    assert.equal(state.editorChangeCount, 0);
-  }
+test("golden F-to-Final: actual approved BINs, footer JSON, export and reopen", { skip: !LANES.every(({ lane }) => available(lane)), timeout: 600_000 }, async () => {
+  const specs=[
+    ["unit", "hp", "editorUnits", 100, 65_000],
+    ["pilot", "atk", "editorPilots", 3, 240],
+    ["weapon", "attack", "editorWeapons", 50, 9_000],
+    ["weapon", "postMove", "editorWeapons", null, null],
+  ];
+  const final=await openPage(LANES[0]);
+  const finals = specs.map(([kind,field,key]) => new Map(state[key].filter(row=>Object.hasOwn(verifiedFinalTransfer[kind],row.recordIndex)).map(row=>[row.recordIndex,row[field]])));
+  await openPage(LANES[1]);
+  const selected = specs.map(([kind,field,key,step,max],index) => {
+    const row=state[key].find(candidate=>finals[index].has(candidate.recordIndex)&&candidate[field]===finals[index].get(candidate.recordIndex)&&(max===null?typeof candidate[field]==="boolean":candidate[field]<max));
+    assert.ok(row,`approved matching ${kind} has the same baseline stat`);
+    const value=step===null?!row[field]:row[field]+step;
+    select(kind,row.recordIndex);
+    setControl(EDITOR_UI[kind].form.querySelector(`[data-editor-field="${field}"]`),step===null?Number(value):value);
+    return {field,key,id:row.recordIndex,value};
+  });
+  const text=await savePreset();
+  assert.equal(parsePreset(text,{gameId:'srwf-f'}).changeCount,4);
+  const target=await openPage(LANES[0]);
+  assert.equal(await editorChanges.loadFile(fileOf(text)),true);
+  assert.deepEqual(editorChanges.pending().plan.counts,{apply:4,conflict:0,same:0,skip:0});
+  byId("editorPresetApplyMatching").click();
+  assert.equal(state.editorChangeCount,4);
+  for(const {field,key,id,value} of selected)assert.equal(state[key].find(r=>r.recordIndex===id)[field],value);
+  const output=await exportThroughPage(target.worker);
+  assert.notEqual(output.sha256,final.manifest.target.sha256);
+  const desc={gameId:'srwf-final',imageKind:'local',targetSize:target.manifest.target.size,targetSha256:target.manifest.target.sha256};
+  const {view}=await inspectPatchedImage(output.outputBlob,desc);
+  for(const {field,key,id,value} of selected)assert.equal(view[key.slice(6).toLowerCase()].find(r=>r.recordIndex===id)[field],value);
+  const finalText=await savePreset();
+  await openPage(LANES[1]);
+  assert.equal(await editorChanges.loadFile(fileOf(finalText)),false,"reverse transfer stays unsupported");
+  assert.equal(editorChanges.pending(),null);
+  assert.equal(state.editorChangeCount,0);
 });

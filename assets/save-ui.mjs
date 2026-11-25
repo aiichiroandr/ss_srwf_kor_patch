@@ -4,7 +4,7 @@ import { createUpgradeBar } from './save-upgrade-bar.mjs?v=20261113-alicecopies1
 import { requestEditorNotice } from './editor-notice.mjs?v=20261113-alicecopies1';
 import { SAVE_SCALAR_RULES, requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies1&saveturns=20261116-1';
 import { saveSummary, saveHeroName } from './save-metadata.mjs?v=20261113-alicecopies1';
-import { openSave } from './save-core.mjs?v=20261113-alicecopies1&savefast=20261114-6&saveturns=20261116-1';
+import { openSave } from './save-core.mjs?v=20261113-alicecopies1&savefast=20261114-6&saveturns=20261116-1&editorcompat=20261125-1';
 import { pageItems,fitPages } from './save-pages.mjs?v=20261113-alicecopies1';
 import { SAVE_NAME_FIELDS,saveNameFields,saveNameSpec,savedHeroUnitId,decodeSaveName,encodeSaveName } from './save-names.mjs?v=20261113-alicecopies1';
 import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
@@ -33,10 +33,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
   const slotLabel=r=>{const m=summary(r);return `슬롯 ${r.name.slice(-2)} · ${m.progress}${r.editable?'':' · 읽기 전용'}`;};
   function slotCards(){
     const rows=records(),r=active(),list=$('saveSlotCards');list.replaceChildren();
-    if($('saveSlotBrowser').open){
-      const used=$('saveSlotCount').getBoundingClientRect().height+dialog.querySelector('.save-slot-filters').getBoundingClientRect().height+$('saveSlotsPager').getBoundingClientRect().height+32;
-      list.style.height=`${Math.max(0,$('saveSlotBrowser').clientHeight-used)}px`;
-    }
+    list.style.removeProperty?.('height');
     $('saveSlotBrowser').hidden=!rows.length;$('saveSlotCount').textContent=`다른 저장 고르기 · ${rows.length}개 슬롯`;
     $('saveSlotSummary').hidden=!r;
     const query=$('saveSlotSearch').value.trim().toLowerCase(),order=$('saveSlotSort').value;
@@ -92,6 +89,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
   }
   function gameBundleRequired(){return typeof prepareGameBundle==='function'&&session?.requiresGameBundle(context().inputCatalog)===true;}
   function controls(){
+    dialog.dataset.hasSave=String(Boolean(session&&active()));
     invalid=drafts.size>0||Array.from(dialog.querySelectorAll('input[type=number],select[data-save-field]')).some(input=>!input.disabled&&!input.closest('[hidden]')&&(input.value.trim()===''||!input.validity.valid||input.getAttribute('aria-invalid')==='true'));
     const changes=session?.diff()??[];
     const needsGame=gameBundleRequired();
@@ -150,7 +148,11 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
     const issues=session.check(r.key),errors=issues.filter(i=>i.level==='error'),warns=issues.length-errors.length;
     const others=records().filter(x=>x.key!==r.key&&session.check(x.key).some(i=>i.level==='error')).length;
     panel.classList.toggle('is-error',errors.length>0);panel.classList.toggle('is-warn',!errors.length&&warns>0);
-    $('saveCheckSummary').textContent=`세이브 검사 · ${issues.length?`오류 ${errors.length} · 주의 ${warns}`:'이 슬롯 정상'}${others?` · 다른 슬롯 ${others}개에 오류`:''}`;
+    $('saveCheckSummary').textContent=issues.length
+      ?`세이브 검사 · 오류 ${errors.length}${warns?` · 주의 ${warns}`:''}${others?` · 다른 슬롯 ${others}개`:''}`
+      :others
+        ?`세이브 검사 · 이 슬롯 정상 · 다른 슬롯 ${others}개 오류`
+        :'세이브 검사 · 정상';
     const list=$('saveCheckList');list.replaceChildren();
     for(const issue of issues){const li=document.createElement('li');li.className=issue.level==='error'?'is-error':'is-warn';
       li.textContent=issue.type==='money'?`${issue.level==='error'?'오류':'주의'} · 보유 자금 · ${issue.message}`:`${issue.level==='error'?'오류':'주의'} · ${issue.type==='unit'?'기체':'파일럿'} 칸 ${issue.slot+1} · ${name({id:issue.id},issue.type,r)} · ${issue.message}`;list.append(li);}
@@ -165,7 +167,10 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
     render();
   }
   function render(){
-    slotCards();const r=active();checkPanel(r);$('saveEditorBody').hidden=!r||$('saveSlotBrowser').open;$('saveEditorEmpty').hidden=!!r;
+    slotCards();const r=active();checkPanel(r);
+    dialog.dataset.hasSave=String(Boolean(session&&r));
+    if($('saveUtilityBar'))$('saveUtilityBar').hidden=$('saveSlotBrowser').hidden&&$('saveCheckPanel').hidden;
+    $('saveEditorBody').hidden=!r||$('saveSlotBrowser').open;$('saveEditorEmpty').hidden=!!r;
     if(commonTab==='unitNames'&&r?.gameId!=='srwf-final')commonTab='names';
     $('savePilotTab').setAttribute('aria-pressed',String(kind==='pilot'));
     $('saveUnitTab').setAttribute('aria-pressed',String(kind==='unit'));
@@ -195,12 +200,12 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
       let group;try{group=saveUnitGroup(unit.recordIndex,context().units??[]);}catch{continue;}
       const selectedFormCount=r.units.filter(row=>row.id===unit.recordIndex).length;
       const option=document.createElement('option');option.value=String(unit.recordIndex);
-      option.textContent=`${unit.name||'이름 없는 기체'} #${unit.recordIndex}${unit.construction?' · 추가 기체':unit.recordKind==='regular'?'':' · 빈/미완성 레코드'} · 추가시 ${group.members.length}칸 · 선택 형태 ${selectedFormCount}기`;
+      option.textContent=`${unit.name||'이름 없는 기체'} (#${unit.recordIndex})${unit.construction?' · 추가 기체':unit.recordKind==='regular'?'':' · 미완성'} · ${group.members.length}칸${selectedFormCount?` · 보유 ${selectedFormCount}기`:''}`;
       options.append(option);
     }
     if(Array.from(options.options).some(o=>o.value===selected))options.value=selected;
     const selectedUnit=(context().units??[]).find(unit=>unit.recordIndex===Number(options.value));
-    try{const group=selectedUnit&&saveUnitGroup(selectedUnit.recordIndex,context().units??[]);$('saveAddUnitNote').textContent=group?`선택한 추가는 기체 저장 칸 ${group.members.length}개를 사용합니다. 현재 선택 형태는 ${r.units.filter(row=>row.id===selectedUnit.recordIndex).length}기이며 기존 행은 숨기거나 재사용하지 않습니다. 수정한 BIN/CUE와 세이브를 함께 저장해 사용하세요.`:'기체 저장 형식을 확인하지 못했습니다.';}catch{$('saveAddUnitNote').textContent='선택한 기체의 저장 구조를 확인하지 못했습니다.';}
+    try{const group=selectedUnit&&saveUnitGroup(selectedUnit.recordIndex,context().units??[]);$('saveAddUnitNote').textContent=group?`기체 저장 칸 ${group.members.length}개 사용 · 현재 보유 ${r.units.filter(row=>row.id===selectedUnit.recordIndex).length}기. 기존 기체는 유지되며, 필요 시 수정한 BIN/CUE와 함께 ZIP으로 저장합니다.`:'기체 저장 형식을 확인하지 못했습니다.';}catch{$('saveAddUnitNote').textContent='선택한 기체의 저장 구조를 확인하지 못했습니다.';}
     options.disabled=busy||!r.editable;$('saveAddUnitButton').disabled=busy||!r.editable||!options.options.length||r.units.length>=128;
     listRows();const row=(kind==='pilot'?r.pilots:kind==='unit'?r.units:[]).find(v=>v.slot===slot);
     $('saveRecordTitle').textContent=row?name(row,kind):'선택할 데이터가 없습니다';
@@ -238,7 +243,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
     const [recordKey,rowSlot,field,index]=id.split(':'),record=records().find(item=>String(item.key)===recordKey);
     if(!record||!drafts.has(id)||busy)return;
     key=record.key;slot=rowSlot==='null'?null:Number(rowSlot);listPage=unitPage=0;
-    $('saveRecordSelect').value=String(key);$('saveSlotBrowser').open=false;$('saveAddUnitRow').open=false;$('saveSearch').value='';
+    $('saveRecordSelect').value=String(key);$('saveSlotBrowser').open=false;$('saveCheckPanel').open=false;$('saveAddPilotRow').open=false;$('saveAddUnitRow').open=false;$('saveSearch').value='';
     const spec=SAVE_NAME_FIELDS.find(item=>item.field===field);
     if(spec){kind='common';commonTab=spec.unitSlot===undefined?'names':'unitNames';}
     else if(Object.hasOwn(COMMON_NUMBER_INPUTS,field)){kind='common';commonTab='money';}
@@ -321,7 +326,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
       panel.append(createUpgradeBar(document,{label,value,limit:max,field,index,disabled:busy||!r.editable||!unit,onChange:next=>{
         if(busy||!context().verified)throw new Error('ROM 검증 상태를 확인하세요.');
         try{session.editUnit(key,field,next,row.slot,index);message(`${label}: ${next}단으로 변경했습니다.`);controls();}
-        catch(e){message(next>max?`${label}: 현재 한도는 ${max}단입니다. 자금·개조 해금 탭에서 해금 상태를 확인하세요.`:e.message,true);throw e;}
+        catch(e){message(next>max?`${label}: 현재 한도는 ${max}단입니다. 이름·자금·턴 탭의 개조 해금에서 확인하세요.`:e.message,true);throw e;}
       }}));
     }
     if(unitTab==='stats'){
@@ -358,6 +363,7 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
       if(!context().verified||context().sessionToken!==sourceToken)throw new Error('게임 ROM이 변경되어 저장 파일을 열지 않았습니다. 현재 게임에서 다시 선택하세요.');
       if(hasUnsavedEdits()&&typeof globalThis.confirm==='function'&&!globalThis.confirm('저장하지 않은 세이브 수정이 있습니다. 새 파일을 열면 사라집니다. 계속할까요?')){message('기존 세이브 편집을 유지했습니다.');return;}
       session=next;downloadedChanges='[]';reserveNameGlyphCodes();syncSaveGlyphTexts();fileName=file.name;invalid=false;drafts.clear();portraitKey='';listPage=unitPage=slotsPage=changesPage=0;
+      $('saveSlotBrowser').open=false;$('saveCheckPanel').open=false;$('saveAddPilotRow').open=false;$('saveAddUnitRow').open=false;
       const rows=records(),select=$('saveRecordSelect');select.replaceChildren();
       for(const r of rows){const option=document.createElement('option');option.value=String(r.key);option.textContent=slotLabel(r);select.append(option);}
       key=rows.find(r=>r.editable)?.key??rows[0]?.key??null;select.value=String(key);slot=null;
@@ -382,7 +388,11 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
     const rows=records();key=rows.some(r=>r.key===key)?key:rows.find(r=>r.editable)?.key??rows[0]?.key??null;
     const select=$('saveRecordSelect');select.replaceChildren();
     for(const r of rows){const option=document.createElement('option');option.value=String(r.key);option.textContent=slotLabel(r);select.append(option);}
-    select.value=String(key);render();dialog.showModal();requestLayout();
+    select.value=String(key);render();dialog.showModal();
+    // Keep the ordinary task first. The carryover button is a separate workflow.
+    const activeTab={pilot:'savePilotTab',unit:'saveUnitTab',common:'saveCommonTab'}[kind];
+    (active()&&activeTab?$(activeTab):$('saveFileInput')).focus({preventScroll:true});
+    requestLayout();
   }
   function clearFastPreview(){
     $('saveFastPreview').hidden=true;$('saveFastPreviewRows').replaceChildren();
@@ -440,7 +450,18 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
   dialog.addEventListener('close',()=>{
     if(catalogOpening){catalogOpening.abort(new DOMException('세이브 연결 준비를 취소했습니다.','AbortError'));catalogOpening=null;pendingCatalogFile=null;busy=false;clearFastPreview();}
     pendingBundle?.abort();clearGameBundle();
-    $('saveEditorOpen').focus();
+    const entry=$('saveEditorOpen');
+    if(!entry.disabled)entry.focus();
+    // A closing dialog may release focus before the catalog abort settles.
+    // Retry briefly only while focus is unclaimed; never override user input.
+    const restoreAfterAbort=(remaining)=>{
+      if(dialog.open)return;
+      const focus=document.activeElement;
+      if(focus&&focus!==document.body&&!dialog.contains?.(focus))return;
+      if(!entry.disabled&&(!focus||focus===document.body)){entry.focus();return;}
+      if(remaining>0)requestAnimationFrame(()=>restoreAfterAbort(remaining-1));
+    };
+    requestAnimationFrame(()=>restoreAfterAbort(8));
   });
   $('saveFileInput').addEventListener('change',()=>{
     const file=$('saveFileInput').files?.[0];$('saveFileInput').value='';
@@ -450,7 +471,18 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
   });
   $('saveRecordSelect').addEventListener('change',()=>selectRecord(Number($('saveRecordSelect').value)));
   $('saveSlotSearch').addEventListener('input',()=>{slotsPage=0;slotCards();});$('saveSlotSort').addEventListener('change',()=>{slotsPage=0;slotCards();});
-  $('saveSlotBrowser').addEventListener('toggle',()=>{$('saveEditorBody').hidden=$('saveSlotBrowser').open||!active();requestLayout();});
+  $('saveSlotBrowser').addEventListener('toggle',()=>{
+    if($('saveSlotBrowser').open)$('saveCheckPanel').open=false;
+    $('saveEditorBody').hidden=$('saveSlotBrowser').open||!active();
+    requestLayout();
+  });
+  $('saveCheckPanel').addEventListener('toggle',()=>{
+    if($('saveCheckPanel').open){
+      $('saveSlotBrowser').open=false;
+      $('saveEditorBody').hidden=!active();
+    }
+    requestLayout();
+  });
   for(const id of ['saveAddPilotRow','saveAddUnitRow'])$(id).addEventListener('toggle',()=>{dialog.dataset.addOpen=String(addRowsOpen());render();requestLayout();});
   $('saveBackToList').addEventListener('click',()=>{$('saveRecordLayout').dataset.mobileView='list';$('saveRecordList').querySelector('[aria-pressed=true]')?.focus({preventScroll:true});});
   $('saveSearch').addEventListener('input',()=>{listPage=0;unitPage=0;invalid=false;render();});
@@ -504,7 +536,15 @@ export function createSaveEditor(context=()=>({}), {prepare,verifyOutputCatalog,
     try{session.setUpgradeMode(key,$('saveUpgradeMode').value);render();message('개조 해금 상태를 변경했습니다. 기존 개조 단수는 유지합니다.');}
     catch(e){message(e.message,true);}
   });
-  $('saveReset').addEventListener('click',()=>{session?.reset();reserveNameGlyphCodes();syncSaveGlyphTexts();invalid=false;drafts.clear();render();message('모든 저장을 불러왔을 때의 값으로 복원했습니다.');});
+  $('saveReset').addEventListener('click',()=>{
+    if(busy||!session)return;
+    if(!session.diff().length&&!drafts.size)return;
+    if(typeof globalThis.confirm==='function'&&globalThis.confirm('모든 슬롯을 처음 불러온 값으로 되돌립니다. 원본과 이미 내려받은 파일은 바뀌지 않습니다. 되돌릴까요?')!==true){
+      message('모든 슬롯 되돌리기를 취소했습니다.');
+      return;
+    }
+    session.reset();reserveNameGlyphCodes();syncSaveGlyphTexts();invalid=false;drafts.clear();render();message('모든 슬롯을 처음 불러온 값으로 되돌렸습니다.');
+  });
   for(const [prefix,change] of [
     ['saveList',delta=>{listPage+=delta;listRows();}],
     ['saveUnit',delta=>{unitPage+=delta;const r=active();if(r)unitControls(r,r.units.find(u=>u.slot===slot));}],

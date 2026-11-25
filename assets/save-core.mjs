@@ -4,7 +4,7 @@ import { requireSaveScalar } from './save-field-rules.mjs?v=20261113-alicecopies
 import { saveUnitGroup } from './save-unit-groups.mjs?v=20261113-alicecopies1';
 import {initializeSavePilotRow} from './editor-save-pilot-init.mjs?v=20261113-alicecopies1';
 import {getSavePilotDefinitions} from './save-pilot-support.mjs?v=20261113-alicecopies1';
-import {planSrw4Carryover} from './save-srw4-carryover.mjs?v=20261113-alicecopies1&carryover=20261117-1';
+import {planSrw4Carryover} from './save-srw4-carryover.mjs?v=20261113-alicecopies1&carryover=20261117-1&editorcompat=20261125-1';
 import { checkSaveBytes, repairSaveBytes } from './save-check.mjs?v=20261113-alicecopies1';
 // Saturn backup RAM containers; original bytes and unrelated saves stay private.
 // Contracts and source references: docs/SAVE_EDITOR.md.

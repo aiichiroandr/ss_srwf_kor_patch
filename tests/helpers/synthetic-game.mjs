@@ -76,13 +76,13 @@ export const trustFor = (disc, profiles = [], gameId = GAME) => ({
   latestGroups: { [F_GAME]: F_GROUP, [GAME]: GROUP },
 });
 
-export async function makeBase({ gameId = GAME, ...options } = {}) {
+export async function makeBase({ gameId = GAME, weaponPostMove = false, ...options } = {}) {
   const decoded = buildGame(options);
   const stream = packGreedy(decoded);
   const disc = buildDisc({ slot: stream, product: PRODUCTS[gameId] });
   const inspector = createEditorInspector(trustFor(disc, [], gameId));
   const opened = await inspector.inspectPatchedImage(disc.blob, descriptorFor(disc, { gameId }));
-  const profile = await inspector.createEditorProvenanceProfile(opened.session);
+  const profile = await inspector.createEditorProvenanceProfile(opened.session, {weaponPostMove});
   const full = createEditorInspector(trustFor(disc, [profile], gameId));
   return { gameId, decoded, stream, disc, inspector, opened, profile, full };
 }

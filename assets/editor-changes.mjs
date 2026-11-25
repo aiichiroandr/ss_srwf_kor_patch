@@ -28,7 +28,7 @@ import {
   presetChangeCount,
   presetFileName,
   serializePreset,
-} from "./editor-preset.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1";
+} from "./editor-preset.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1&editorcompat=20261125-1";
 
 export const CHANGE_KINDS = Object.freeze(["unit", "pilot", "weapon", "upgrade", "reward", "terrain", "deployment", "event", "objective", "reinforcement", "roster", "dialogue", "glyph", "map", "collection", "alice", "debug", "critical", "beam"]);
 const KIND_HEADINGS = Object.freeze({beam:"Ex-S 빔포 연출 보정",critical:"크리티컬 보정 오류 수정",debug:"디버그 메뉴",alice:"ALICE 등록",collection:"도감·영상 해금", unit: "기체", pilot: "파일럿", weapon: "무기", upgrade: "개조 비용", reward: "격추 보상", terrain: "지형 효과", deployment: "기체 배치", event: "이벤트 조건", objective: "작전 목적", reinforcement: "새 아군 증원", roster: "로스터 초기 레벨", dialogue: "시나리오 대사", glyph: "추가 글자", map: "맵 타일" });
@@ -55,6 +55,8 @@ export const PRESET_ERROR_COPY = Object.freeze({
 
 // Why one loaded change is skipped in this session.
 export const SKIP_REASON_COPY = Object.freeze({
+  "transfer-unverified": "두 게임의 동일 항목으로 확인되지 않음",
+  "transfer-unsupported": "이 기능은 본편 → 완결편 이전 대상이 아님",
   "construction-domain": "기체·무기를 추가할 빈 자리 또는 복제 원본 불일치",
   "cost-domain": "이 비용표의 금액 범위·단위 불일치",
   "identity-missing": "같은 구조의 레코드를 찾지 못함",
@@ -333,8 +335,9 @@ export function createEditorChanges(host) {
     const { apply, conflict, same, skip } = plan.counts;
     const knownBase = preset.releaseId ? host.releaseLabel(preset.releaseId) : null;
     const base = knownBase ? ` · 저장한 판 ${knownBase}` : "";
-    ui.title.textContent = "편집값 불러오기";
-    ui.summaryText.textContent = `${fileName || "선택한 파일"} · 값 ${preset.changeCount}개${base}`;
+    ui.title.textContent = plan.transferFrom ? "F 본편 → 완결편 편집값 옮기기" : "편집값 불러오기";
+    const transferNote = plan.transferFrom ? " · 검증된 기체·파일럿·무기 밸런스 수치만" : "";
+    ui.summaryText.textContent = `${fileName || "선택한 파일"} · 값 ${preset.changeCount}개${base}${transferNote}`;
     const lines = [
       ["apply", `바로 적용 ${apply}개`, "지금 값이 파일의 원래 값과 같습니다"],
       ["conflict", `원래 값이 다름 ${conflict}개`, "이 판에서 값이 달라진 곳입니다"],
@@ -356,7 +359,8 @@ export function createEditorChanges(host) {
       const summary = node("summary", "", [`원래 값이 다른 곳 ${conflicts.length}개`, `건너뛴 항목 ${skipped.length}개`].filter((_,i)=>i===0?conflicts.length:skipped.length).join(' · ')+' 보기');
       const list = node("ul", "editor-preset-conflicts");
       const nameOf = namer();
-      for (const item of conflicts) {
+      const previewLimit = plan.transferFrom ? 150 : Infinity;
+      for (const item of conflicts.slice(0,previewLimit)) {
         const name = `${KIND_HEADINGS[item.kind]} ${nameOf(item.kind, item.recordIndex, item.name)} #${item.recordIndex}`;
         const value = (number) => formatFieldValue(item.kind, item.field, number, {...host,recordIndex:item.recordIndex});
         const text = ["skills", "spirits"].includes(item.field)
@@ -367,8 +371,9 @@ export function createEditorChanges(host) {
         entry.dataset.recordIndex = String(item.recordIndex);
         list.append(entry);
       }
-      for(const item of skipped){
-        const name=`${KIND_HEADINGS[item.kind]??item.kind} ${nameOf(item.kind,item.recordIndex,item.name)} #${item.recordIndex}`;
+      for(const item of skipped.slice(0,previewLimit)){
+        const recordLabel=item.sourceOnly ? `${item.name || '이름 없음'} (본편 #${item.recordIndex})` : `${nameOf(item.kind,item.recordIndex,item.name)} #${item.recordIndex}`;
+        const name=`${KIND_HEADINGS[item.kind]??item.kind} ${recordLabel}`;
         const entry=node('li','editor-preset-skip',`${name} · ${fieldTitle(item.kind,item.field,host)} · ${SKIP_REASON_COPY[item.reason]??item.reason}`);
         entry.dataset.changeKind=item.kind;
         entry.dataset.recordIndex=String(item.recordIndex);
@@ -376,6 +381,8 @@ export function createEditorChanges(host) {
         entry.dataset.skipReason=item.reason;
         list.append(entry);
       }
+      const more = Math.max(0,conflicts.length-previewLimit)+Math.max(0,skipped.length-previewLimit);
+      if (more) list.append(node("li", "", `나머지 ${more}개는 위의 집계에 포함했습니다.`));
       ui.details.replaceChildren(summary, list);
     } else {
       ui.details.replaceChildren();
@@ -453,11 +460,16 @@ export function createEditorChanges(host) {
         throw new PresetError("PRESET_READ_FAILED");
       }
       if (!current()) return false;
-      const preset = parsePreset(text, { gameId: host.gameId() });
-      host.validatePreset?.(preset);
-      host.preparePreset?.(preset);
-      const plan = planPresetApplication(preset, session());
-      pending = { preset, plan, sessionToken, fileName: typeof file.name === "string" ? file.name : "" };
+      const preset = parsePreset(text);
+      if (preset.gameId === host.gameId()) {
+        host.validatePreset?.(preset);
+        host.preparePreset?.(preset);
+      }
+      const transferOptions = preset.gameId === 'srwf-f' && host.gameId() === 'srwf-final'
+        ? {finalTransferMap:(await import('./editor-f-final-transfer-map.mjs?v=20261113-alicecopies1&editorcompat=20261125-1')).verifiedFinalTransfer} : undefined;
+      if (!current()) return false;
+      const plan = planPresetApplication(preset, session(), transferOptions);
+      pending = { preset, plan, transferOptions, sessionToken, fileName: typeof file.name === "string" ? file.name : "" };
       say("");
       renderSummary();
       if (!ui.dialog.open) ui.dialog.showModal?.();
@@ -482,11 +494,11 @@ export function createEditorChanges(host) {
       say('적용되지 않은 입력이 있습니다. 창을 닫고 수정하거나 복원한 뒤 다시 불러와 주세요.', 'error');
       return null;
     }
-    const { preset } = pending;
+    const { preset, transferOptions } = pending;
     let result;
     try {
       // judged again against the rows as they are now, then applied to the pending rows only
-      result = applyPreset(preset, session(), mode);
+      result = applyPreset(preset, session(), mode, transferOptions);
     } catch (error) {
       pending = null;
       renderList();

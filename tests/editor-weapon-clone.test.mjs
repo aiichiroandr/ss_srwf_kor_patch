@@ -7,7 +7,7 @@ import {createWeaponCloneRow,weaponCloneIds,readWeaponCloneManifest,writeWeaponC
 import {buildPreset,parsePreset,serializePreset,planPresetApplication,applyPreset,PRESET_FIELDS} from '../assets/editor-preset.mjs';
 import {unitWeaponFields} from '../assets/editor-loadout.mjs';
 import {extractMigrationPreset} from '../assets/editor-migration.mjs';
-async function baseFor(gameId){const disc=buildDisc({slot:packGreedy(weaponCloneGame(gameId)),product:gameId==='srwf-f'?'20610G':'20612G'}),descriptor=descriptorFor(disc,{gameId}),initial=createEditorInspector(trustFor(disc,[],gameId)),base=await initial.inspectPatchedImage(disc.blob,descriptor),profile=await initial.createEditorProvenanceProfile(base.session);return {disc,descriptor,base,inspector:createEditorInspector(trustFor(disc,[profile],gameId))};}
+async function baseFor(gameId,{weaponPostMove=false}={}){const disc=buildDisc({slot:packGreedy(weaponCloneGame(gameId)),product:gameId==='srwf-f'?'20610G':'20612G'}),descriptor=descriptorFor(disc,{gameId}),initial=createEditorInspector(trustFor(disc,[],gameId)),base=await initial.inspectPatchedImage(disc.blob,descriptor),profile=await initial.createEditorProvenanceProfile(base.session,{weaponPostMove});return {disc,descriptor,base,inspector:createEditorInspector(trustFor(disc,[profile],gameId))};}
 function requestFor(base,gameId){const ids=weaponCloneIds(gameId),weapons=base.view.weapons.map(row=>({...row}));for(const [i,source]of [245,994].entries()){const index=weapons.findIndex(row=>row.recordIndex===ids[i]);weapons[index]=createWeaponCloneRow(weapons[index],weapons.find(row=>row.recordIndex===source),gameId);}
  const request=echoRequest(base.session,{...base.view,weapons});request.weaponClones=ids.slice(0,2).map((recordIndex,i)=>({recordIndex,sourceRecordIndex:[245,994][i]}));request.weaponNameEdits=ids.slice(0,2).map((recordIndex,i)=>({recordIndex,text:['천지인검','빔라이플'][i]}));request.unitWeaponAdditions=[{recordIndex:1,weapons:[ids[0]]},{recordIndex:2,weapons:[ids[1]]}];request.weaponEdits.find(e=>e.recordIndex===ids[0]).fields.attack=2000;return request;}
 function model(view){const m={gameId:view.gameId};for(const [kind,key]of [['unit','units'],['pilot','pilots'],['weapon','weapons']])m[key]=view[key].map(value=>{const row=structuredClone(value);if(kind==='unit')Object.assign(row,unitWeaponFields(row.weaponList),{weaponAdditions:[]});row.original=Object.fromEntries(PRESET_FIELDS[kind].map(k=>[k,row[k]]));if(kind==='unit')row.original.weaponAdditions=[];if(kind==='pilot')row.originalSkillEntries=structuredClone(row.specialAbilities??[]);return row;});return m;}
@@ -58,4 +58,25 @@ test('ammo-counted clones retain a separate counter and cannot become an unlimit
  const request=echoRequest(f.base.session,{...f.base.view,weapons});request.weaponClones=[weapons[at].weaponClone];request.weaponNameEdits=[{recordIndex:1331,text:'빔라이플'}];request.unitWeaponAdditions=[{recordIndex:1,weapons:[1331]}];
  const out=await exportEditedImage(f.base.session,request),opened=await f.inspector.inspectPatchedImage(out.outputBlob,{...f.descriptor,imageKind:'local'});assert.equal(opened.view.weapons.find(r=>r.recordIndex===1331).ammo,5);assert.equal(opened.view.weapons.find(r=>r.recordIndex===1).ammo,12);assert.equal(opened.view.units.find(r=>r.recordIndex===1).weaponList.entries.at(-1).ammoSlot,2);
  const bad=echoRequest(opened.session,opened.view);bad.weaponEdits.find(e=>e.recordIndex===1331).fields.ammo=0;await assert.rejects(exportEditedImage(opened.session,bad),e=>e.code==='EDITOR_VALUE_OUT_OF_RANGE');
+});
+
+test('existing clone JSON without P remains compatible; a clone can change only P independently', async () => {
+ const gameId='srwf-final',f=await baseFor(gameId,{weaponPostMove:true}),src=model(f.base.view),donor=src.weapons.find(r=>r.recordIndex===245);
+ const slot=src.weapons.findIndex(r=>r.recordIndex===1331);
+ src.weapons[slot]=createWeaponCloneRow(src.weapons[slot],donor,gameId);
+ const json=JSON.parse(serializePreset(buildPreset({gameId},tables(src))));
+ const clone=json.weapons.find(r=>r.recordIndex===1331);
+ assert.equal(typeof clone.construction.seed.postMove,'boolean');
+ delete clone.construction.seed.postMove;
+ const legacy=parsePreset(JSON.stringify(json),{gameId}),dest=model(f.base.view);
+ assert.equal(planPresetApplication(legacy,dest).counts.skip,0);
+ applyPreset(legacy,dest,'all');
+ assert.equal(dest.weapons.find(r=>r.recordIndex===1331).postMove,donor.postMove);
+
+ const request=requestFor(f.base,gameId);
+ request.weaponEdits.find(r=>r.recordIndex===1331).fields.postMove=!donor.postMove;
+ const result=await exportEditedImage(f.base.session,request);
+ const opened=await f.inspector.inspectPatchedImage(result.outputBlob,{...f.descriptor,imageKind:'local'});
+ assert.equal(opened.view.weapons.find(r=>r.recordIndex===1331).postMove,!donor.postMove);
+ assert.equal(opened.view.weapons.find(r=>r.recordIndex===245).postMove,donor.postMove);
 });

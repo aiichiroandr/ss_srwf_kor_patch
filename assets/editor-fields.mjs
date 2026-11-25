@@ -75,7 +75,7 @@ export const EDITOR_FIELD_BOUNDS = Object.freeze({
     agiGrowth: NIBBLE, cntGrowth: NIBBLE, mindGrowth: NIBBLE, syncGrowth: NIBBLE,
   }),
   weapon: Object.freeze({
-    voiceType: range(0,63),
+    voiceType: range(0,63), postMove: "boolean",
     // Three-digit signed modifiers spill into the next weapon-list row in
     // the game. Keep edits inside the display's two-digit magnitude.
     attack: WORD, hit: range(-99, 99), critical: NIBBLE,

@@ -1,8 +1,8 @@
 import {createScenarioModel} from './editor-scenario-model.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
 import {findPatchedEditorImage} from './editor-directory.mjs?v=20261113-alicecopies1';
 // Semantic transfer only: old disc offsets and compressed bytes are never copied.
-import {buildPreset,parsePreset,serializePreset,PRESET_TABLE_KEYS} from './editor-preset.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
-import {inspectMigrationImage,PRODUCTION_TRUST} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1';
+import {buildPreset,parsePreset,serializePreset,PRESET_TABLE_KEYS} from './editor-preset.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1&editorcompat=20261125-1';
+import {inspectMigrationImage,PRODUCTION_TRUST} from './editor-core.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1&editorcompat=20261125-1';
 import {constructUnitRow,unitConstructionPreset} from './editor-unit-construction.mjs?v=20261113-alicecopies1';
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export function extractMigrationPreset(base,edited){
@@ -15,8 +15,8 @@ export function extractMigrationPreset(base,edited){
    const before=originals.get(row.recordIndex);
    if(!before)throw Error(`${kind} #${row.recordIndex}: 기준 레코드가 없어 자동 추출할 수 없습니다.`);
    const copy=structuredClone(row);copy.original={...before.original,...before};
-   // A voice edit changes the stored weapon header. Match the destination
-   // against the authenticated baseline, then carry voiceType as a field edit.
+   // Voice and P edits change the stored weapon header. Match the destination
+   // against the authenticated baseline, then carry them as field edits.
    if(kind==='weapon')copy.identity=before.identity;
    if(kind==='pilot')copy.originalSkillEntries=structuredClone(before.originalSkillEntries??before.specialAbilities??[]);
    if(kind==='unit'){

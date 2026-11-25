@@ -38,7 +38,7 @@ function verifiedRoster(view,gameId){
 }
 function slotWeaponKeys(row,slot,defs){
   return (row.weaponList?.entries??[]).filter(e=>e.slot===slot)
-    .map(entry=>defs.get(entry.weaponIndex)?.saveIdentity??null);
+    .map(entry=>defs.get(entry.weaponIndex)??null);
 }
 // Part labels come from the unedited definitions decoded by each authenticated
 // disc inspector. A same-number placeholder/alias is not an identity. We do
@@ -76,7 +76,7 @@ function verifyRetainedEquipment(unit,origin,target,source,receiving){
   for(let slot=1;slot<=16;slot++){
     if(!unit.weaponUpgrades[slot-1])continue;
     const a=slotWeaponKeys(origin,slot,source.weapons),b=slotWeaponKeys(target,slot,receiving.weapons);
-    need(a.length&&a.length===b.length&&a.every((key,i)=>key&&key===b[i]),
+    need(a.length&&a.length===b.length&&a.every((weapon,i)=>weapon?.saveIdentity&&(weapon.saveIdentity===b[i]?.saveIdentity||b[i]?.saveIdentityAliases?.includes(weapon.saveIdentity))),
       `${name}의 무기 개조 슬롯 ${slot}이 두 BIN에서 같다고 확인되지 않았습니다. 개조 값은 자동으로 옮기지 않습니다.`);
   }
   need(unit.parts.every((id,i)=>!id||i<origin.partSlots&&i<target.partSlots

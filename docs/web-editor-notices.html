@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>공지·패치노트 | 새턴 슈퍼로봇대전 F 한글패치</title>
+  <style>
+    :root{color-scheme:dark;--bg:#111820;--card:#1b2734;--border:#3b5265;--ink:#eff5fa;--muted:#bac9d7;--link:#a8ddff;--accent:#f5d398}
+    *,*::before,*::after{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,sans-serif;word-break:keep-all;overflow-wrap:anywhere}
+    a{color:var(--link);text-underline-offset:.2em}
+    a:focus-visible{outline:2px solid var(--link);outline-offset:4px}
+    .shell{width:min(100% - 40px, 1000px);margin:auto}
+    header{padding:26px 0 20px;border-bottom:1px solid var(--border)}
+    .breadcrumb{display:inline-flex;align-items:center;min-height:44px}
+    main{padding:26px 0 56px}
+    h1,h2,h3,p{margin-top:0}
+    h1{font-size:clamp(30px,6vw,46px);line-height:1.15;letter-spacing:-.038em;margin-bottom:10px}
+    h2{font-size:clamp(21px,4vw,27px);line-height:1.3;margin-bottom:12px}
+    h3{font-size:18px;line-height:1.4;margin:4px 0 7px}
+    p{margin-bottom:10px}
+    .intro,.scope,footer{color:var(--muted)}
+    .page-heading{padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:20px}
+    .eyebrow{font-size:.86rem;font-weight:700;letter-spacing:.035em;color:var(--link);margin-bottom:6px}
+    .tab-help{font-size:.84rem;margin-bottom:0}
+    .timeline-layout{display:grid;grid-template-columns:140px minmax(0,1fr);gap:28px;align-items:start}
+    .date-rail{position:sticky;top:12px;padding:14px 15px;border:1px solid var(--border);border-radius:10px;background:var(--card)}
+    .date-rail p{margin-bottom:6px;font-weight:700}
+    .date-rail ol{list-style:none;display:grid;gap:2px;padding:0;margin:0}
+    .date-rail a{display:block;padding:4px 7px;border-radius:4px;text-decoration:none;font-variant-numeric:tabular-nums}
+    .date-rail a:hover{background:#294056}
+    .day{scroll-margin-top:14px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:18px}
+    .day:last-child{margin-bottom:0}
+    .day h2{display:flex;align-items:baseline;gap:10px;font-variant-numeric:tabular-nums}
+    .permalink{font-size:.8em;text-decoration:none;font-weight:400}
+    .day:target h2{color:var(--link)}
+    article{padding:15px 17px;background:var(--card);border:1px solid var(--border);border-radius:11px}
+    article+article{margin-top:9px}
+    article p:last-child{margin-bottom:0}
+    .tag{display:inline-block;font-weight:700;font-size:.82rem;color:var(--link)}
+    .t-수정{color:var(--accent)}
+    .t-한글패치{color:#b8e1bf}
+    footer{border-top:1px solid var(--border);padding:15px 0 30px}
+    @media(max-width:620px){.shell{width:min(100% - 26px,1000px)}header{padding-block:9px}main{padding-top:19px}.timeline-layout{grid-template-columns:minmax(0,1fr);gap:18px}.date-rail{position:static;padding:9px 11px}.date-rail ol{grid-template-columns:repeat(auto-fit,minmax(54px,1fr));gap:4px}.date-rail a{padding:6px 4px;text-align:center;background:#202f3d}.date-rail p{font-size:.82rem}.day{margin-bottom:16px;padding-bottom:14px}article{padding:12px}}
+    /* Date rail and classification chips. */
+    .date-rail a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 10px;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--card);
+    }
+
+    .date-rail a:hover,
+    .date-rail a:focus-visible {
+      color: var(--link);
+      border-color: var(--link);
+    }
+
+    .day h2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: clamp(1.12rem, 3.5vw, 1.34rem);
+      font-weight: 600;
+      margin: 0 0 10px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1.4;
+      letter-spacing: 0.02em;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+    }
+
+    @media (min-width: 621px) {
+      .date-rail {
+        top: 24px;
+        border: 0;
+        border-radius: 0;
+        padding: 4px 0 4px 14px;
+        background: transparent;
+        border-left: 1px solid var(--border);
+      }
+
+      .date-rail a {
+        position: relative;
+        min-height: 28px;
+        padding: 4px 0;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .date-rail a::before {
+        content: "";
+        position: absolute;
+        left: -18px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--bg);
+        border: 1.5px solid var(--border);
+      }
+
+      .date-rail a:hover::before,
+      .date-rail a:focus-visible::before {
+        border-color: var(--link);
+        background: var(--link);
+      }
+    }
+
+    @media(max-width:620px){.date-rail a{display:flex;justify-content:center;padding-inline:4px}.date-rail ol{min-width:0}}
+  </style>
+</head>
+<body>
+  <header><div class="shell"><a class="breadcrumb" href="../index.html">웹패처 열기</a></div></header>
+  <main class="shell">
+    <div class="page-heading">
+      <p class="eyebrow">새턴 슈퍼로봇대전 F · F완결편</p>
+      <h1>공지·패치노트</h1>
+      <p class="intro">웹에디터 업데이트와 게임 한글패치 내역을 최신순으로 모았습니다.</p>
+      <p class="intro tab-help">작업 중에 열었다면 이 탭을 닫고 기존 웹패처 탭에서 이어서 작업하세요.</p>
+    </div>
+    <div class="timeline-layout">
+      <nav class="date-rail" aria-label="날짜별 바로가기">
+        <p>2026년</p><ol>
+          <li><a href="#day-2026-11-17">11.17</a></li>
+          <li><a href="#day-2026-11-16">11.16</a></li>
+          <li><a href="#day-2026-11-15">11.15</a></li>
+          <li><a href="#day-2026-11-05">11.05</a></li>
+          <li><a href="#day-2026-11-04">11.04</a></li>
+          <li><a href="#day-2026-10-12">10.12</a></li>
+          <li><a href="#day-2026-10-05">10.05</a></li>
+          <li><a href="#day-2026-09-28">09.28</a></li>
+          <li><a href="#day-2026-09-15">09.15</a></li>
+        </ol>
+      </nav>
+      <div class="timeline" aria-label="최신순 업데이트">
+        <section class="day" id="day-2026-11-17" aria-labelledby="date-2026-11-17">
+          <h2 id="date-2026-11-17"><time datetime="2026-11-17">2026.11.17</time><a href="#day-2026-11-17" class="permalink" aria-label="2026.11.17 바로가기">#</a></h2>
+          <article><span class="tag t-수정">수정 · 세이브 인계</span>
+            <h3>F → 완결편에서 연동 기체가 다른 기체로 바뀌던 문제</h3>
+          <p>같은 기체라도 두 게임의 기체 번호가 달라 그대로 넘기면 다른 기체로 인식되는 문제가 있었습니다. F와 완결편의 연동 BIN을 대조해 선택한 F 클리어 슬롯의 인계용 사본을 만드는 도구를 추가했습니다. 원본 저장은 건드리지 않습니다.</p>
+          <p class="scope">사용 위치: <strong>세이브 에디터 → F → 완결편 세이브 승계</strong>. 사용 가이드에서도 열 수 있습니다.</p>
+          </article>
+        </section>
+        <section class="day" id="day-2026-11-16" aria-labelledby="date-2026-11-16">
+          <h2 id="date-2026-11-16"><time datetime="2026-11-16">2026.11.16</time><a href="#day-2026-11-16" class="permalink" aria-label="2026.11.16 바로가기">#</a></h2>
+          <article><span class="tag t-수정">수정 · 웹에디터</span>
+            <h3>「합체!! 초수기신 단쿠가」 도입 후 보라색 화면에서 멈추던 문제</h3>
+          <p>제4차 연동을 적용한 슈퍼계 22·23화에서 도입 영상 뒤 멈추던 문제를 수정했습니다. 기체 보호 동작은 유지하고, 시나리오 실행 공간을 넘는 결과는 저장 단계에서 막습니다.</p>
+          <p class="scope">기존 편집본은 웹패처 새로고침 후 다시 열어 새 BIN/CUE로 저장하세요. 원본과 일반 세이브는 따로 보관한 뒤, 게임 안의 일반 저장에서 이어갈 수 있습니다.</p>
+          </article>
+          <article><span class="tag t-추가">추가 · 세이브 편집</span>
+            <h3>총 턴 수 수정</h3><p>세이브 에디터에서 자금과 함께 총 턴 수를 수정할 수 있습니다.</p>
+          </article>
+        </section>
+        <section class="day" id="day-2026-11-15" aria-labelledby="date-2026-11-15">
+          <h2 id="date-2026-11-15"><time datetime="2026-11-15">2026.11.15</time><a href="#day-2026-11-15" class="permalink" aria-label="2026.11.15 바로가기">#</a></h2>
+          <article><span class="tag t-개선">개선 · 파일 저장</span>
+            <h3>연동 세이브와 맞는 BIN/CUE를 ZIP 하나로 저장</h3><p>수정 게임 파일이 필요한 세이브는 호환되는 BIN/CUE와 세이브를 함께 내려받을 수 있습니다.</p>
+          </article>
+        </section>
+        <section class="day" id="day-2026-11-05" aria-labelledby="date-2026-11-05">
+          <h2 id="date-2026-11-05"><time datetime="2026-11-05">2026.11.05</time><a href="#day-2026-11-05" class="permalink" aria-label="2026.11.05 바로가기">#</a></h2>
+          <article><span class="tag t-수정">수정 · 웹에디터</span>
+            <h3>ALICE 탑승 처리 중 출격 확인에서 멈추던 문제</h3>
+          <p>ALICE 탑승 처리 문제로 출격 확인에서 멈출 수 있던 경우를 고쳤습니다. 이전 에디터에서 만든 편집본은 다시 열어 내보낼 때 수정이 반영됩니다.</p>
+          </article>
+        </section>
+        <section class="day" id="day-2026-11-04" aria-labelledby="date-2026-11-04">
+          <h2 id="date-2026-11-04"><time datetime="2026-11-04">2026.11.04</time><a href="#day-2026-11-04" class="permalink" aria-label="2026.11.04 바로가기">#</a></h2>
+          <article><span class="tag t-추가">추가 · 세이브 편집</span>
+            <h3>카트리지 세이브 편집과 검사</h3><p>일반 저장의 자금·레벨·개조·장착 파츠를 수정하고, 불러오기 때 문제를 일으킬 수 있는 기체·파일럿 연결을 검사할 수 있습니다.</p>
+          </article>
+        </section>
+        <section class="day" id="day-2026-10-12" aria-labelledby="date-2026-10-12">
+          <h2 id="date-2026-10-12"><time datetime="2026-10-12">2026.10.12</time><a href="#day-2026-10-12" class="permalink" aria-label="2026.10.12 바로가기">#</a></h2>
+          <article><span class="tag t-추가">추가 · 롬 편집</span>
+            <h3>기체별 무장 추가와 전투 모션 선택</h3><p>공용 무장을 복제해 해당 기체의 무장만 바꾸거나, 저장 공간 범위 안에서 무장과 기존 전투 모션을 추가할 수 있습니다.</p>
+          </article>
+        </section>
+        <section class="day" id="day-2026-10-05" aria-labelledby="date-2026-10-05">
+          <h2 id="date-2026-10-05"><time datetime="2026-10-05">2026.10.05</time><a href="#day-2026-10-05" class="permalink" aria-label="2026.10.05 바로가기">#</a></h2>
+          <article><span class="tag t-한글패치">한글패치 · 완결편</span>
+            <h3>완결편 v0.3</h3><p>새 게임에서 신지의 기본 기체를 에바 초호기로 복원했습니다. 정신기 ‘부활’ 대상 목록의 암전과 특수기능 숫자 표시를 고쳤습니다. 기존 진행 세이브의 기체를 자동 변경하지는 않습니다.</p>
+          </article>
+        </section>
+        <section class="day" id="day-2026-09-28" aria-labelledby="date-2026-09-28">
+          <h2 id="date-2026-09-28"><time datetime="2026-09-28">2026.09.28</time><a href="#day-2026-09-28" class="permalink" aria-label="2026.09.28 바로가기">#</a></h2>
+          <article><span class="tag t-한글패치">한글패치 · F 본편·완결편</span>
+            <h3>F v0.5 / 완결편 v0.2</h3><p>유닛·무기 일괄 개조, START로 전투 연출 건너뛰기, 공격·반격 화면에서 L로 전투곡 선택을 추가했습니다.</p>
+          </article>
+        </section>
+        <section class="day" id="day-2026-09-15" aria-labelledby="date-2026-09-15">
+          <h2 id="date-2026-09-15"><time datetime="2026-09-15">2026.09.15</time><a href="#day-2026-09-15" class="permalink" aria-label="2026.09.15 바로가기">#</a></h2>
+          <article><span class="tag t-한글패치">한글패치 · F 본편</span>
+            <h3>F v0.4</h3><p>슈발츠의 ‘슈투름 운트 드랑’ 사용 중 화면이 멈추던 문제를 고쳤습니다. 글꼴 3종 선택, 일부 전투 대사와 미번역 문구도 보완했습니다.</p>
+          </article>
+        </section>
+      </div>
+    </div>
+  </main>
+  <footer><div class="shell"><p>버전별 비교 화면과 세부 기능은 웹패처에서 공개 버전을 선택한 뒤 패치노트를 열면 볼 수 있습니다.</p>비공식 팬 프로젝트 · 게임 원본 미포함</div></footer>
+</body>
+</html>

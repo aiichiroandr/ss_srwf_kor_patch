@@ -4,6 +4,7 @@ import {chooseSkillControl,offeredSkillIds} from "./helpers/skill-controls.mjs";
 // way edits on the screen are. Behaviour only (state, rows, requests, focus); the wording on screen is not pinned.
 // No game data: the rows are made up here.
 import assert from "node:assert/strict";
+import { verifiedFinalTransfer } from "../assets/editor-f-final-transfer-map.mjs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
@@ -399,7 +400,7 @@ test("a refused file leaves the open session exactly as it was and says why", as
   const good = await savedText();
   const before = JSON.stringify(hooks.buildEditorExportRequest());
   const count = state.editorChangeCount;
-  const otherGame = serializePreset(buildPreset({ gameId: "srwf-f" }, { unit: state.editorUnits, pilot: [], weapon: [] }));
+  const otherGame = good.replace('"gameId": "srwf-final"', '"gameId": "unknown"');
   const big = presetFile(good, "big.json", { size: PRESET_MAX_BYTES + 1 });
   const cases = [
     big,
@@ -425,6 +426,35 @@ test("a refused file leaves the open session exactly as it was and says why", as
   }
   assert.equal(big.reads, 0, "a file over the cap is not read at all");
   assert.equal({}.polluted, undefined);
+});
+
+test("F-to-Final footer import previews verified changes, conflicts and source-only skips", async () => {
+  const unitId = Number(Object.keys(verifiedFinalTransfer.unit).find(k => k <= 30));
+  const digest = verifiedFinalTransfer.unit[unitId];
+  openSession(makeView({unit:{[unitId]:{hp:1700,en:100,identity:`unit:1:${digest}`}}}));
+  const preset = {
+    format:"srwf.editor-preset", version:1, gameId:"srwf-f", base:{releaseId:"srwf-f-20260928-v0-5-a"},
+    pilots:[], weapons:[],
+    units:[
+      {recordIndex:unitId,name:"본편 일치",identity:`unit:1:${digest}`,fields:{hp:{from:1600,to:1800},en:{from:100,to:110},ability1:{from:0,to:1}}},
+      {recordIndex:65535,name:"본편 미검증",fields:{hp:{from:1600,to:1900}}},
+    ],
+  };
+  assert.equal(await editorChanges.loadFile(presetFile(JSON.stringify(preset))),true);
+  assert.match(byId("editorChangesTitle").textContent,/F 본편 → 완결편/);
+  const plan=editorChanges.pending().plan;
+  assert.deepEqual(plan.counts,{apply:1,conflict:1,same:0,skip:2});
+  assert.match(byId("editorPresetDetails").textContent,/본편 미검증/);
+  assert.equal(row("unit",unitId).en,100,"preview alone never changes a value");
+  byId("editorPresetApplyMatching").click();
+  assert.equal(row("unit",unitId).en,110);
+  assert.equal(row("unit",unitId).hp,1700,"matching mode leaves the Final conflict unchanged");
+  assert.equal(row("unit",unitId).ability1,0,"ordinary fields do not carry cross-game ability IDs");
+  assert.equal(await editorChanges.loadFile(presetFile(JSON.stringify(preset))),true);
+  assert.deepEqual(editorChanges.pending().plan.counts,{apply:0,conflict:1,same:1,skip:2});
+  byId("editorPresetApplyAll").click();
+  assert.equal(row("unit",unitId).hp,1800);
+  assert.equal(hooks.buildEditorExportRequest().unitEdits.find(r=>r.recordIndex===unitId).fields.hp,1800);
 });
 
 test("footer file actions follow edits and busy state, and closing a load review returns focus to its trigger", async () => {

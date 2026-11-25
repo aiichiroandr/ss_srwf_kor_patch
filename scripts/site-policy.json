@@ -7,7 +7,8 @@
     "docs/WEB_PORT_CLIENT_RECOMP.md",
     "docs/HISTORY_REWRITE_20261103.md",
     "docs/RELEASE_ARCHIVE_20261011.json",
-    "docs/HISTORY_REWRITE_20261103.json"
+    "docs/HISTORY_REWRITE_20261103.json",
+    "docs/web-editor-notices.html"
   ],
   "files": [
     "NOTICE.md",
@@ -83,6 +84,8 @@
     "assets/editor-exs-beam-geometry.mjs",
     "assets/editor-exs-beam-motion.mjs",
     "assets/editor-exs-beam-ui.mjs",
+    "assets/editor-f-final-transfer-map.mjs",
+    "assets/editor-f-final-transfer.mjs",
     "assets/editor-f-inline.mjs",
     "assets/editor-face-record.mjs",
     "assets/editor-facts.mjs",
@@ -229,6 +232,8 @@
     "assets/editor-weapon-dialogue-ui.mjs",
     "assets/editor-weapon-links.mjs",
     "assets/editor-weapon-names.mjs",
+    "assets/editor-weapon-post-move-profiles.mjs",
+    "assets/editor-weapon-post-move.mjs",
     "assets/editor-weapon-voice-profiles.mjs",
     "assets/editor-worker.mjs",
     "assets/font-previews/a-dos-thin-beamrifle.png",
@@ -357,6 +362,7 @@
     "docs/RELEASE_ARCHIVE_20261011.json",
     "docs/WEB_PORT_CLIENT_RECOMP.md",
     "docs/WEB_PORT_TEST.md",
+    "docs/web-editor-notices.html",
     "index.html",
     "manifest/releases.json",
     "patches/srwf-f-20260915-v0-4-a.srwfp",

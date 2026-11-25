@@ -381,6 +381,7 @@ test("an older accepted version stays patch-only and uses the common verified BI
  state.release = { ...releaseFor("c"), id: "srwf-final-20260928-v0-2-c" };
  hooks.syncModeUi();
  assert.equal(byId("workflowOpenEditor").disabled, true);
+ assert.equal(byId("saveEditorOpen").disabled, true);
  assert.equal(byId("workflowSkipEditor").disabled, false);
  hooks.prepareWorkflow("save");
  const build = workerNamed("srwf-local-editor-build");
@@ -597,7 +598,7 @@ test("folder output reads back both files and verifies the complete BIN hash bef
   assert.deepEqual(picks.at(-1), { id: "srwf-editor-output", mode: "readwrite" });
   assert.equal(await (await target.handles.get("personal.bin").getFile()).text(), "abc");
   assert.equal(await (await target.handles.get("personal.cue").getFile()).text(), await output.cue.text());
-  assert.match(byId("workflowFolderStatus").textContent, /전체 파일 검증을 통과/);
+  assert.match(byId("workflowFolderStatus").textContent, /BIN과 CUE 두 파일.*전체 파일 검증을 통과/);
   assert.equal(state.workflowSaving, false);
   assert.equal(state.workflowOutput, output);
 });
@@ -630,7 +631,10 @@ test("CUE write failure aborts its stream, reports failure in Korean and keeps t
   picks.next.push(target.folder);
   await hooks.saveWorkflowFolder();
   assert.deepEqual(target.calls.aborts, ["personal.cue"]);
-  assert.match(byId("workflowFolderStatus").textContent, /완료하지 못했습니다/);
+  assert.equal(await (await target.handles.get("personal.bin").getFile()).text(), "abc");
+  assert.equal(await (await target.handles.get("personal.cue").getFile()).text(), "");
+  assert.match(byId("workflowFolderStatus").textContent, /BIN은 기록됐지만 CUE 저장을 완료하지 못했습니다/);
+  assert.match(byId("workflowFolderStatus").textContent, /BIN과 CUE를 각각 다운로드/);
   assert.doesNotMatch(byId("workflowFolderStatus").textContent, /browser write failed/);
   assert.equal(state.workflowOutput, output);
   assert.equal(state.workflowSaving, false);
@@ -642,4 +646,258 @@ test("cancelling the output picker releases the busy lock without clearing the r
   assert.equal(state.workflowSaving, false);
   assert.equal(state.workflowOutput, output);
   assert.equal(byId("workflowFolderStatus").hidden, true);
+});
+
+test("main entry card distinguishes ROM edit, save edit and skip-to-save with collapsed verification details", async () => {
+  reset();
+  hooks.syncModeUi();
+  const entry = byId("editorEntryRegion");
+  const openEditor = byId("workflowOpenEditor");
+  const saveEditor = byId("saveEditorOpen");
+  const skipEditor = byId("workflowSkipEditor");
+  const details = byId("workflowEntryDetails");
+
+  assert.equal(entry.querySelector("#workflowOpenEditor"), openEditor);
+  assert.equal(entry.querySelector("#saveEditorOpen"), saveEditor);
+  assert.equal(entry.querySelector("#workflowSkipEditor"), skipEditor);
+  assert.equal(openEditor.getAttribute("aria-describedby"), "workflowOpenEditorDesc");
+  assert.equal(saveEditor.getAttribute("aria-describedby"), "saveEditorOpenDesc");
+  assert.equal(skipEditor.getAttribute("aria-describedby"), "workflowSkipEditorDesc");
+  assert.equal(details.tagName, "DETAILS");
+  assert.equal(details.hidden, true);
+  assert.equal(details.open, false);
+  assert.equal(details.querySelector("#workflowEditorFacts"), byId("workflowEditorFacts"));
+  assert.equal(byId("saveEditorAction").hidden, true);
+  assert.equal(byId("workflowStatusStrip").hidden, true);
+
+  await openSession("stock", nativeView());
+  hooks.syncModeUi();
+  assert.equal(entry.dataset.sessionReady, "true");
+  assert.equal(byId("workflowStatusStrip").hidden, false);
+  assert.equal(byId("workflowSessionBrief").hidden, false);
+  assert.equal(byId("workflowDetectedSummary").hidden, true);
+  assert.match(byId("workflowSessionBrief").textContent, /정품 원본/);
+  assert.equal(byId("saveEditorAction").hidden, false);
+  assert.equal(openEditor.disabled, false);
+  assert.equal(saveEditor.disabled, false);
+  assert.equal(skipEditor.disabled, false);
+  assert.equal(details.hidden, false);
+  assert.equal(details.open, false);
+  assert.match(byId("workflowEntryOrigin").textContent, /정품 원본/);
+  assert.equal(byId("workflowUnitCount").textContent, "40개");
+  assert.equal(byId("workflowPilotCount").textContent, "5개");
+  assert.equal(byId("workflowWeaponCount").textContent, "5개");
+  assert.match(byId("workflowOpenEditorDesc").textContent, /수치/);
+  assert.match(byId("saveEditorOpenDesc").textContent, /세이브/);
+  assert.match(byId("workflowSkipEditorDesc").textContent, /바로 저장하지 않고 BIN\/CUE 저장 단계로 이동/);
+
+  // Opening details stays user-controlled and resets when a new image or clear happens.
+  details.open = true;
+  await openSession("patched", viewFor());
+  assert.equal(details.open, false);
+  assert.equal(byId("workflowDetectedSummary").hidden, false);
+  assert.equal(byId("workflowSessionBrief").hidden, true);
+  assert.match(byId("workflowEntryOrigin").textContent, /공개 한글 패치본/);
+
+  // Personal image keeps its concise summary and exposes details on demand.
+  await openSession("patched", viewFor({ provenanceMode: "bounded-editor-profile", targetHash: "d".repeat(64), baseHash: TARGET_HASHES.c, match: false }));
+  assert.equal(byId("workflowDetectedSummary").hidden, false);
+  assert.equal(byId("workflowSessionBrief").hidden, true);
+  assert.match(byId("workflowDetectedSummary").textContent, /개인 편집본/);
+  assert.match(byId("workflowEntryOrigin").textContent, /수치가 조정된 BIN/);
+
+  // Older accepted release gates both ROM and save editors while keeping skip-to-save available.
+  await openSession("stock", nativeView());
+  state.release = { ...releaseFor("c"), id: "srwf-final-20260928-v0-2-c" };
+  hooks.syncModeUi();
+  assert.equal(openEditor.disabled, true);
+  assert.equal(saveEditor.disabled, true);
+  assert.equal(skipEditor.disabled, false);
+  assert.match(byId("workflowSessionBrief").textContent, /편집 없이 저장 전용/);
+  assert.match(byId("workflowOpenEditorDesc").textContent, /이전 승인 버전/);
+  assert.match(byId("saveEditorOpenDesc").textContent, /이전 승인 버전/);
+});
+
+test("skipping editor moves keyboard focus to the save step without auto-exporting, and navigation restores focus", async () => {
+  reset();
+  await openSession("stock", nativeView());
+  chooseOriginal();
+  hooks.syncModeUi();
+
+  const editor = workerNamed("srwf-local-data-editor");
+  const messagesBefore = editor.messages.length;
+  byId("workflowSkipEditor").click();
+  await settle();
+  assert.equal(state.workflowStage, "save");
+  assert.equal(byId("workflowSaveRegion").hidden, false);
+  assert.equal(editor.messages.length, messagesBefore, "skipping editor must not auto-export");
+  assert.equal(editor.last("EXPORT"), undefined);
+  assert.equal(document.activeElement, byId("workflowSaveButton"));
+
+  byId("workflowBackSetup").click();
+  assert.equal(state.workflowStage, "setup");
+  assert.equal(document.activeElement, byId("workflowSkipEditor"));
+
+  byId("workflowOpenEditor").click();
+  await settle();
+  assert.equal(state.workflowStage, "editor");
+  assert.equal(document.activeElement, byId("unitTabButton"));
+
+  byId("setupToggle").click();
+  assert.equal(state.workflowStage, "setup");
+  assert.equal(document.activeElement, byId("workflowOpenEditor"));
+});
+
+test("static resave notice stays in the guide while actionable workflow warnings remain visible", async () => {
+  reset();
+  const resave = byId("resaveNotice");
+  assert.equal(byId("editorEntryRegion").querySelector("#resaveNotice"), null);
+  assert.equal(byId("userGuideDialog").querySelector("#resaveNotice"), resave);
+  assert.equal(byId("userGuideDialog").open, false);
+  assert.match(resave.textContent, /완결편 기존 편집본 재저장 안내/);
+  assert.match(resave.textContent, /새 에디터로 한 번 다시 저장/);
+
+  finishFallback();
+  assert.equal(byId("editorSourceFallback").hidden, false);
+  assert.equal(byId("workflowSaveFallback").hidden, false);
+  assert.equal(byId("editorSourceFallback").closest("details"), null);
+  assert.equal(byId("workflowSaveFallback").closest("details"), null);
+
+  picks.next.push(patchedFolder());
+  await hooks.chooseSource();
+  await settle();
+  const editor = workerNamed("srwf-local-data-editor");
+  editor.emit({ type: "ERROR", jobId: editor.last("INSPECT").jobId, error: { code: "EDITOR_CUSTOM_PROVENANCE" } });
+  assert.equal(byId("editorSourceError").hidden, false);
+  assert.equal(byId("editorSourceError").closest("details"), null);
+});
+
+test("setup CSS keeps verified file info and collapsible details reachable on 390px mobile", async () => {
+  const css = await readFile(new URL("../assets/editor-runtime.css", import.meta.url), "utf8");
+  assert.match(css, /body\[data-view="setup"\] #editorSourceRegion \.file-selection:not\(\[hidden\]\)\s*\{\s*display:\s*grid !important;/);
+  assert.doesNotMatch(css, /\.workflow-editor-facts\s*\{\s*display:\s*none;\s*\}/);
+  assert.match(css, /body\[data-view="setup"\] #editorEntryRegion\[data-session-ready="false"\] > :not\(\.zone-heading, \.saturn-mini-frame, #workflowSetupFeedback\)/);
+});
+
+test("skip-to-save copy reflects included edits only when the save route keeps them, covering clean, edit, revert, EXPORT HP, base replacement and invalid drafts", async () => {
+  const setHp = (value) => {
+    const hp = byId("unitStatsForm").querySelector('[data-editor-field="hp"]');
+    hp.value = String(value);
+    hp.dispatchEvent({ type: "input", target: hp });
+    return hp;
+  };
+
+  // Stock original: clean (0 edits, EXPORT HP 1000) -> edit HP 1234 (copy includes edits, EXPORT HP 1234) -> revert (clean copy).
+  reset();
+  await openSession("stock", nativeView());
+  chooseOriginal();
+  hooks.syncModeUi();
+  const stockEditor = workerNamed("srwf-local-data-editor");
+  assert.equal(byId("workflowSkipEditor").textContent, "편집 없이 저장");
+  assert.equal(byId("workflowSkipEditorDesc").textContent, "바로 저장하지 않고 BIN/CUE 저장 단계로 이동합니다.");
+
+  byId("workflowSkipEditor").click();
+  await settle();
+  assert.match(byId("workflowSaveSummary").textContent, /변경 0건/);
+  byId("workflowSaveButton").click();
+  assert.equal(stockEditor.last("EXPORT").request.unitEdits[0].fields.hp, 1000);
+  stockEditor.emit({ type: "CANCELLED", jobId: stockEditor.last("EXPORT").jobId });
+  byId("workflowBackSetup").click();
+
+  byId("workflowOpenEditor").click();
+  await settle();
+  setHp(1234);
+  byId("setupToggle").click();
+  assert.equal(byId("workflowSkipEditor").textContent, "현재 편집 포함 저장");
+  assert.match(byId("workflowSkipEditorDesc").textContent, /현재 편집한 변경 1건을 포함한 BIN\/CUE 저장 단계로 이동/);
+  assert.doesNotMatch(byId("editorEntryNote").textContent, /편집 없이/);
+
+  byId("workflowSkipEditor").click();
+  await settle();
+  assert.match(byId("workflowSaveSummary").textContent, /변경 1건/);
+  byId("workflowSaveButton").click();
+  assert.equal(stockEditor.last("EXPORT").request.unitEdits[0].fields.hp, 1234);
+  stockEditor.emit({ type: "CANCELLED", jobId: stockEditor.last("EXPORT").jobId });
+
+  byId("workflowBackEditor").click();
+  setHp(1000);
+  byId("setupToggle").click();
+  assert.equal(byId("workflowSkipEditor").textContent, "편집 없이 저장");
+  assert.equal(byId("workflowSkipEditorDesc").textContent, "바로 저장하지 않고 BIN/CUE 저장 단계로 이동합니다.");
+
+  // Patched image: clean -> edit HP 1234 -> setup copy includes edits -> EXPORT HP 1234.
+  reset();
+  await openSession("patched", viewFor());
+  assert.equal(byId("workflowSkipEditor").textContent, "편집 없이 저장");
+  byId("workflowOpenEditor").click();
+  await settle();
+  setHp(1234);
+  byId("setupToggle").click();
+  assert.equal(byId("workflowSkipEditor").textContent, "현재 편집 포함 저장");
+  assert.match(byId("workflowSkipEditorDesc").textContent, /변경 1건을 포함한 BIN\/CUE 저장 단계/);
+  byId("workflowSkipEditor").click();
+  await settle();
+  assert.match(byId("workflowSaveSummary").textContent, /변경 1건/);
+  byId("workflowSaveButton").click();
+  assert.equal(workerNamed("srwf-local-data-editor").last("EXPORT").request.unitEdits[0].fields.hp, 1234);
+
+  // Stock Korean v0.3-c edited: base-replacing settings (font a, older v0.2-c, original language) drop the inclusion promise,
+  // cancelling base replacement preserves HP 1234, switching back restores it, and invalid drafts alone keep clean copy + confirm guard.
+  reset();
+  await openSession("stock", nativeView());
+  await hooks.prepareWorkflow("editor");
+  const build = workerNamed("srwf-local-editor-build");
+  build.emit({ type: "complete", jobId: build.last("PREPARE_SOURCE").jobId, preparationToken: "verified" });
+  build.emit({ type: "complete", jobId: build.last("BUILD_PATCH_DOWNLOAD").jobId, result: { outputBlob: new SizedBlob(FINAL_TARGET, "built"), targetSha256: TARGET_HASHES.c } });
+  const koreanEditor = workerNamed("srwf-local-data-editor");
+  koreanEditor.emit({ type: "INSPECT_COMPLETE", jobId: koreanEditor.last("INSPECT").jobId, view: viewFor() });
+  setHp(1234);
+  byId("setupToggle").click();
+  assert.equal(byId("workflowSkipEditor").textContent, "현재 편집 포함 저장");
+
+  state.release = releaseFor("a");
+  hooks.syncModeUi();
+  assert.equal(byId("workflowSkipEditor").textContent, "편집 없이 저장");
+  assert.equal(byId("workflowSkipEditorDesc").textContent, "바로 저장하지 않고 BIN/CUE 저장 단계로 이동합니다.");
+  answer = false;
+  byId("workflowSkipEditor").click();
+  await settle();
+  assert.equal(prompts.length, 1);
+  assert.equal(state.workflowStage, "setup");
+  assert.equal(state.editorUnits[0].hp, 1234);
+
+  state.release = { ...releaseFor("c"), id: "srwf-final-20260928-v0-2-c" };
+  hooks.syncModeUi();
+  assert.equal(byId("workflowOpenEditor").disabled, true);
+  assert.equal(byId("workflowSkipEditor").textContent, "편집 없이 저장");
+  assert.equal(byId("workflowSkipEditorDesc").textContent, "선택한 이전 버전 한글 패치의 BIN/CUE 저장 단계로 이동합니다.");
+
+  state.release = releaseFor("c");
+  hooks.syncModeUi();
+  assert.equal(byId("workflowSkipEditor").textContent, "현재 편집 포함 저장");
+
+  chooseOriginal();
+  hooks.syncModeUi();
+  assert.equal(byId("workflowSkipEditor").textContent, "편집 없이 저장");
+
+  byId("languageKorean").checked = true;
+  byId("languageOriginal").checked = false;
+  hooks.syncModeUi();
+  byId("workflowOpenEditor").click();
+  await settle();
+  setHp(1000);
+  const invalidHp = setHp("");
+  assert.equal(state.editorChangeCount, 0);
+  assert.equal(invalidHp.getAttribute("aria-invalid"), "true");
+  byId("setupToggle").click();
+  assert.equal(byId("workflowSkipEditor").textContent, "편집 없이 저장");
+
+  chooseOriginal();
+  hooks.syncModeUi();
+  prompts.length = 0;
+  answer = false;
+  byId("workflowSkipEditor").click();
+  await settle();
+  assert.equal(prompts.length, 1, "invalid draft alone still confirms before replacing base");
+  assert.equal(invalidHp.value, "", "cancelling keeps the invalid draft");
 });

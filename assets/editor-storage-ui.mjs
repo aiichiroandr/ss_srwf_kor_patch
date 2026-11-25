@@ -15,10 +15,10 @@ export function createEditorStorageUI({root,status,list,note}){
    item.dataset.state=row.remainingBytes<0?'error':'ok';return item;
   });
   list.replaceChildren(...rows);checkedRevision=revision;root.dataset.state=report.canExport?'ok':'error';
-  status.textContent=report.canExport?'현재 편집값의 공간 확인 완료':'저장 공간 초과 · 편집량을 줄여 주세요';
+  status.textContent=report.canExport?'롬 내부 용량 확인 완료 · 편집값이 한도 안에 있습니다.':'롬 내부 용량 초과 · 편집량을 줄여 주세요';
   const m=report.metadata;note.textContent=m?`무기명 기록 ${m.nameBytes.toLocaleString()} B · 추가 글자 ${m.glyphCount}개 / 기록 ${m.glyphBytes.toLocaleString()} B${m.cloneCount?` · 독립 무기 ${m.cloneCount}개 / 기록 ${m.cloneBytes.toLocaleString()} B`:''}. 공유 풀은 표시된 그룹 안에서만 사용할 수 있습니다.`:'';
  }
- return Object.freeze({show,reset:warning=>{clear('저장 공간을 확인할 수 있습니다.');if(warning){root.dataset.state='warning';note.textContent=warning;}},cancelled:()=>clear('공간 확인을 중단했습니다. 다시 계산할 수 있습니다.'),pending:()=>{checkedRevision=-1;root.dataset.state='pending';status.textContent='현재 편집값의 압축·공간 계산 중…';},
+ return Object.freeze({show,reset:warning=>{clear('편집한 데이터가 롬의 용량 한도에 맞는지 확인합니다.');if(warning){root.dataset.state='warning';note.textContent=warning;}},cancelled:()=>clear('공간 확인을 중단했습니다. 다시 계산할 수 있습니다.'),pending:()=>{checkedRevision=-1;root.dataset.state='pending';status.textContent='현재 편집값의 압축·공간 계산 중…';},
   invalidate:()=>{if(checkedRevision>=0){checkedRevision=-1;root.dataset.state='stale';status.textContent='편집값이 바뀌었습니다 · 다시 확인해 주세요';}},
   failed:()=>{checkedRevision=-1;root.dataset.state='error';status.textContent='공간 확인을 마치지 못했습니다 · 아래 오류를 확인해 주세요';}});
 }

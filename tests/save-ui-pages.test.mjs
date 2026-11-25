@@ -230,7 +230,7 @@ test('the save dialog opens immediately during catalog preparation; closing canc
  const pending=ui.openPrepared(options=>{signal=options.signal;return new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(signal.reason),{once:true}));});
  assert.equal($('saveEditorDialog').open,true);assert.equal(ui.isBusy(),true);assert.match($('saveEditorStatus').textContent,/확인하고 있습니다/);
  $('saveEditorClose').click();$('saveEditorDialog').dispatchEvent({type:'close'});await pending;assert.equal(signal.aborted,true);assert.equal(ui.isBusy(),false);assert.equal(ui.hasUnsavedEdits(),true);
- await ui.openPrepared(async()=>{});assert.equal($('saveEditorDialog').open,true);assert.equal($('saveMoney').value,'1000');assert.equal(ui.isBusy(),false);assert.equal($('saveFileName').textContent,'loaded.bcr');
+ await ui.openPrepared(async()=>{});assert.equal($('saveEditorDialog').open,true);assert.equal(doc.activeElement?.id,'saveCommonTab');assert.equal($('saveMoney').value,'1000');assert.equal(ui.isBusy(),false);assert.equal($('saveFileName').textContent,'loaded.bcr');
 });
 
 test('missing input binding prepares only one ZIP link and invalidates it on reset',async()=>{
