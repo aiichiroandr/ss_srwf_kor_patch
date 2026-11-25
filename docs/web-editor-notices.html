@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-srwf-backdrop="graphite" data-srwf-theme="beige">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -123,9 +123,19 @@
 
     @media(max-width:620px){.date-rail a{display:flex;justify-content:center;padding-inline:4px}.date-rail ol{min-width:0}}
   </style>
+  <link rel="stylesheet" href="../assets/editor-graphite.css?v=20261113-alicecopies1&amp;graphite=20261125-1">
+  <script type="module" src="../assets/notice-return.mjs?v=20261113-alicecopies1&amp;noticesreturn=20261125-3"></script>
+  <link rel="stylesheet" href="../assets/saturn-theme.css?v=20261113-alicecopies1&amp;theme=20261126-2">
+  <script type="module" src="../assets/saturn-theme.mjs?v=20261113-alicecopies1&amp;theme=20261126-1"></script>
 </head>
-<body>
-  <header><div class="shell"><a class="breadcrumb" href="../index.html">웹패처 열기</a></div></header>
+<body class="srwf-notices">
+  <header><div class="shell notices-toolbar"><a class="breadcrumb" id="noticeReturnToPatcher" href="../index.html">← 웹패처로 돌아가기</a><details class="saturn-theme-menu" data-theme-menu>
+          <summary class="saturn-theme-toggle" aria-label="테마 설정"><span class="saturn-theme-icon" aria-hidden="true">◐</span><span class="saturn-theme-label" aria-hidden="true">테마</span></summary>
+          <div class="saturn-theme-options">
+            <fieldset><legend>배경</legend><label><input type="radio" name="saturn-backdrop" value="graphite" checked> 그래파이트</label><label><input type="radio" name="saturn-backdrop" value="beige"> 베이지</label></fieldset>
+            <fieldset><legend>본문</legend><label><input type="radio" name="saturn-content" value="graphite"> 그래파이트</label><label><input type="radio" name="saturn-content" value="beige" checked> 베이지</label></fieldset>
+          </div>
+        </details></div></header>
   <main class="shell">
     <div class="page-heading">
       <p class="eyebrow">새턴 슈퍼로봇대전 F · F완결편</p>

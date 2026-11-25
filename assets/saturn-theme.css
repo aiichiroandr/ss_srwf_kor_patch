@@ -1,0 +1,256 @@
+/* Gemini 4 Neon palette, adapted to existing editor and notices surfaces. */
+:root {
+  --saturn-bg: #E5E1D8;
+  --saturn-shell: #DDD8CE;
+  --saturn-panel: #ECE9E2;
+  --saturn-raised: #F4F1EB;
+  --saturn-well: #D6D1C6;
+  --saturn-line: #C2BCB0;
+  --saturn-strong-line: #8B8476;
+  --saturn-ink: #1F2124;
+  --saturn-muted: #55534D;
+  --saturn-link: #254A7C;
+  --saturn-selected: #CDD8E5;
+  --saturn-selected-ink: #173257;
+  --saturn-focus: #2D5B99;
+  --saturn-changed-bg: #F3E4B5;
+  --saturn-changed-ink: #5A3E08;
+  --saturn-warn: #A84B07;
+  --saturn-success: #236342;
+  --saturn-error: #A62B2B;
+  --saturn-shine: #FAF8F4;
+}
+
+.saturn-theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  flex: 0 0 auto; min-width: 36px; min-height: 36px; padding: 3px 8px;
+  border: 1px solid #596778; border-radius: 7px;
+  background: linear-gradient(#384352, #2c3541); color: #ecf0f6;
+  font: inherit; font-size: 12px; cursor: pointer;
+}
+.saturn-theme-icon { font-size: 16px; line-height: 1; }
+.notices-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.saturn-theme-toggle:focus-visible { outline: 2px solid #e8cf7d; outline-offset: 2px; }
+@media (max-width: 640px) {
+  .site-header .saturn-theme-label { display: none; }
+  .site-header .saturn-theme-toggle { padding-inline: 5px; }
+}
+
+html[data-srwf-theme="beige"] { color-scheme: light; }
+html[data-srwf-backdrop="beige"] :is(body[data-view], body.srwf-notices) {
+  background: radial-gradient(ellipse at 50% 8%,var(--saturn-shine),transparent 70%),var(--saturn-bg);
+}
+html[data-srwf-backdrop="beige"] :is(.site-header, body.srwf-notices header) {
+  color: var(--saturn-ink); border-bottom-color: var(--saturn-strong-line);
+  background: linear-gradient(var(--saturn-raised),var(--saturn-shell));
+  box-shadow: 0 1px 0 var(--saturn-line);
+}
+html[data-srwf-backdrop="beige"] .site-header :is(.brand-copy strong,.brand-copy span,.local-pill,.compatibility) { color: var(--saturn-muted); }
+html[data-srwf-backdrop="beige"] .site-header :is(.local-pill,.compatibility,.user-guide-open),
+html[data-srwf-backdrop="beige"] .saturn-theme-toggle {
+  color: var(--saturn-ink); border-color: var(--saturn-strong-line);
+  background: linear-gradient(var(--saturn-shine),var(--saturn-shell));
+  box-shadow: inset 0 1px 0 var(--saturn-shine);
+}
+html[data-srwf-theme="beige"] body[data-view="editor"] :is(.editor-workspace,.editor-data-panel,.editor-game-screen),
+html[data-srwf-theme="beige"] dialog :is(.save-editor-shell,.editor-search-shell,.editor-changes-shell,.pilot-skill-dialog-shell) {
+  color-scheme: light;
+  --ed-text: var(--saturn-ink); --ed-ink: var(--saturn-ink);
+  --ed-muted: var(--saturn-muted); --ed-cyan: var(--saturn-link);
+  --ed-rail: var(--saturn-strong-line); --ed-gold: var(--saturn-selected-ink);
+  --ed-modified: var(--saturn-changed-ink);
+  color: var(--saturn-ink);
+}
+html[data-srwf-theme="beige"] body[data-view="editor"] :is(.editor-game-screen,.record-bar,.record-pane,.record-list,.editor-feedback,.editor-footer .editor-status) {
+  color: var(--saturn-ink); border-color: var(--saturn-strong-line); outline-color: var(--saturn-line);
+  background: var(--saturn-shell);
+}
+html[data-srwf-theme="beige"] body[data-view="editor"] .game-panel:not(.editor-visual) {
+  border-image-source: var(--light-frame);
+  --light-frame: url("./editor-beige-frame.svg?v=20261113-alicecopies1&theme=20261125-1");
+  background: linear-gradient(var(--saturn-raised),var(--saturn-panel));
+}
+html[data-srwf-theme="beige"] body[data-view="editor"] :is(.editor-tab,.editor-unused-toggle,.editor-page-button,.editor-preset-file-button,.panel-toggle,.record-nav,.record-tool,.record-search-row input),
+html[data-srwf-theme="beige"] dialog :is(.save-carryover-open,.save-diff > summary,.save-detail-tabs button,.save-upgrade-body > button),
+html[data-srwf-theme="beige"] dialog.editor-search-dialog button {
+  color: var(--saturn-ink); border-color: var(--saturn-strong-line);
+  background: linear-gradient(var(--saturn-shine),var(--saturn-shell)); box-shadow: inset 0 1px 0 var(--saturn-shine);
+}
+html[data-srwf-theme="beige"] body[data-view="editor"] :is(.editor-tab,.editor-page-button,.panel-toggle,.record-nav,.record-option):not(:disabled):hover,
+html[data-srwf-theme="beige"] body[data-view="editor"] :is(.editor-tab[aria-selected="true"],.editor-page-button[aria-pressed="true"],.panel-toggle[aria-pressed="true"],.record-option.is-selected),
+html[data-srwf-theme="beige"] dialog :is(.save-slot-card[aria-pressed="true"],.save-detail-tabs button[aria-pressed="true"]) {
+  color: var(--saturn-selected-ink); border-color: var(--saturn-focus); background: var(--saturn-selected); box-shadow: none;
+}
+html[data-srwf-theme="beige"] body[data-view="editor"] :is(.record-option-meta,.record-option.is-selected .record-option-meta,.record-option.is-read-only,.editor-preset-file-button:disabled) { color: var(--saturn-muted); }
+html[data-srwf-theme="beige"] body[data-view="editor"] .record-option { border-bottom-color: var(--saturn-line); }
+html[data-srwf-theme="beige"] body[data-view="editor"] .record-option-dot { color: var(--saturn-warn); }
+html[data-srwf-theme="beige"] body[data-view="editor"] .editor-game-screen :is(input[data-editor-field],select):not(.is-modified),
+html[data-srwf-theme="beige"] dialog :is(.save-editor-shell select,.save-editor-shell input[type="number"],.save-slot-card,.editor-search-shell select,.editor-search-shell input:not([type="checkbox"])) {
+  color: var(--saturn-ink); border-color: var(--saturn-strong-line); background-color: var(--saturn-shine);
+}
+html[data-srwf-theme="beige"] body[data-view="editor"] .editor-game-screen [data-editor-field].is-modified {
+  color: var(--saturn-changed-ink); border-color: var(--saturn-warn); background-color: var(--saturn-changed-bg);
+}
+html[data-srwf-theme="beige"] :is(.saturn-theme-toggle,.breadcrumb,.editor-workspace button,.editor-workspace select,.editor-workspace input):focus-visible {
+  outline-color: var(--saturn-focus);
+}
+html[data-srwf-theme="beige"] dialog:is(.save-editor-dialog,.editor-search-dialog,.editor-changes-dialog,.pilot-skill-dialog,.carryover-dialog,.user-guide-dialog) {
+  color-scheme: light; color: var(--saturn-ink); border-color: var(--saturn-strong-line); background: var(--saturn-panel);
+}
+html[data-srwf-theme="beige"] dialog :is(.save-editor-header,.save-editor-footer,.save-fast-preview,.save-slot-summary,.save-slot-browser,.save-check,.save-add-unit,.save-empty-card,.save-empty-shortcuts,.save-empty-notes,.save-record-art) {
+  border-color: var(--saturn-strong-line); background: var(--saturn-raised);
+}
+html[data-srwf-theme="beige"] dialog :is(.save-check.is-warn,.save-game-bundle,.save-bundle-badge) { color: var(--saturn-changed-ink); background: var(--saturn-changed-bg); }
+html[data-srwf-theme="beige"] dialog :is(.save-check.is-error,#saveEditorStatus.is-error,.save-check-body li.is-error) { color: var(--saturn-error); background: #f5ded9; }
+html[data-srwf-theme="beige"] dialog :is(.save-check > summary) { color: var(--saturn-success); }
+html[data-srwf-theme="beige"] dialog :is(.save-check.is-error > summary,.save-field-message,.editor-search-error,.save-editor-shell input[aria-invalid="true"]) { color: var(--saturn-error); }
+html[data-srwf-theme="beige"] dialog :is(.save-check.is-warn > summary,.save-check-body li.is-warn) { color: var(--saturn-changed-ink); background: var(--saturn-changed-bg); }
+html[data-srwf-theme="beige"] body.srwf-notices {
+  --bg: var(--saturn-bg); --card: var(--saturn-panel);
+  --border: var(--saturn-strong-line); --ink: var(--saturn-ink); --muted: var(--saturn-muted);
+  --link: var(--saturn-link); --accent: var(--saturn-warn);
+}
+html[data-srwf-theme="beige"] body.srwf-notices article {
+  background: linear-gradient(var(--saturn-shine),var(--saturn-panel)); border-color: var(--saturn-strong-line);
+  box-shadow: inset 0 1px 0 var(--saturn-shine), 0 8px 20px #27211b14;
+}
+html[data-srwf-theme="beige"] body.srwf-notices :is(.tag,.date-rail a:hover) { background: var(--saturn-shell); border-color: var(--saturn-strong-line); }
+html[data-srwf-theme="beige"] body.srwf-notices .t-수정 { color: var(--saturn-warn); }
+html[data-srwf-theme="beige"] body.srwf-notices .t-한글패치 { color: var(--saturn-success); }
+@media (max-width:620px) {
+  html[data-srwf-theme="beige"] body.srwf-notices .date-rail a { background: var(--saturn-raised); border-color: var(--saturn-strong-line); }
+}
+
+/* The usage-guide overview is independent of the existing screenshot walkthrough. */
+.user-guide-dialog {
+  --guide-body: #e9edf3; --guide-muted: #bac4d3; --guide-surface: #242931;
+  --guide-raised: #303944; --guide-line: #657487; --guide-focus: #e8cf7d;
+  --guide-selected: #405571; --guide-selected-text: #f4f7fb;
+  --ink: var(--guide-body); --ink-soft: var(--guide-muted);
+  --white: var(--guide-surface); --paper: var(--guide-raised);
+  --line: var(--guide-line); --line-strong: var(--guide-line);
+  --blue: var(--guide-line); --blue-deep: var(--guide-selected-text);
+}
+html[data-srwf-theme="beige"] .user-guide-dialog {
+  --guide-body: var(--saturn-ink); --guide-muted: var(--saturn-muted);
+  --guide-surface: var(--saturn-panel); --guide-raised: var(--saturn-raised);
+  --guide-line: var(--saturn-strong-line); --guide-focus: var(--saturn-focus);
+  --guide-selected: var(--saturn-selected); --guide-selected-text: var(--saturn-selected-ink);
+}
+.user-guide-mode-bar { display: flex; gap: 6px; }
+.user-guide-mode-bar button {
+  min-height: 36px; padding: 4px 11px; border-radius: 7px; cursor: pointer;
+  border: 1px solid var(--guide-line); background: var(--guide-raised); color: var(--guide-body);
+}
+.user-guide-mode-bar button[aria-pressed="true"],
+.user-guide-steps button[aria-current] {
+  border-color: var(--guide-line); background: var(--guide-selected); color: var(--guide-selected-text);
+}
+.user-guide-dialog :is(button,input,summary,select):focus-visible { outline: 2px solid var(--guide-focus); outline-offset: 2px; }
+.user-guide-dialog[data-guide-mode="catalog"] .user-guide-shell { grid-template-rows: auto auto minmax(0,1fr) auto; }
+.user-guide-dialog[data-guide-mode="catalog"] .user-guide-shell > :not(.user-guide-header,.user-guide-mode-bar,.user-guide-catalog,.user-guide-aux) { display: none; }
+.user-guide-dialog[data-guide-mode="examples"] .user-guide-shell { grid-template-rows: auto auto auto auto auto minmax(0,1fr) auto auto; }
+.user-guide-dialog[data-guide-mode="examples"][data-guide-group="2"] .user-guide-shell { grid-template-rows: auto auto auto auto auto auto minmax(0,1fr) auto auto; }
+.user-guide-catalog { min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.user-guide-catalog-search { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 4px 8px; padding: 4px 5px 8px; }
+.user-guide-catalog-search label { font-weight: 700; }
+.user-guide-catalog-search small { grid-column: 2; color: var(--guide-muted); }
+.user-guide-catalog-search input {
+  width: 100%; min-width: 0; min-height: 39px; padding: 5px 8px; font: inherit;
+  color: var(--guide-body); background: var(--guide-raised); border: 1px solid var(--guide-line); border-radius: 7px;
+}
+#userGuideCatalogList { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; gap: 7px; padding: 2px 5px 7px; }
+.user-guide-chapter { min-width: 0; border: 1px solid var(--guide-line); border-radius: 8px; background: var(--guide-raised); color: var(--guide-body); }
+.user-guide-chapter summary { padding: 8px 10px; min-height: 42px; cursor: pointer; font-weight: 700; }
+.user-guide-chapter[open] summary { border-bottom: 1px solid var(--guide-line); background: var(--guide-selected); color: var(--guide-selected-text); }
+.user-guide-entry { padding: 8px 10px; overflow-wrap: anywhere; }
+.user-guide-entry + .user-guide-entry { border-top: 1px solid var(--guide-line); }
+.user-guide-entry h3 { margin: 0 0 3px; font-size: 15px; line-height: 1.3; }
+.user-guide-entry p { margin: 0; font-size: 14px; line-height: 1.5; }
+.user-guide-entry .user-guide-entry-limit { color: var(--guide-muted); margin: 4px 0 0; font-size: 13px; }
+@media (max-width: 640px) {
+  #userGuideCatalogList { grid-template-columns: 1fr; }
+}
+
+/* Keep captions legible when the shell is light; don't recolor game assets. */
+html[data-srwf-theme="beige"] body[data-view="editor"] .editor-data-panel :is(.unit-vital-row,.unit-secondary-stat) > .editor-field-name {
+  color: var(--saturn-link);
+}
+html[data-srwf-theme="beige"] body[data-view="editor"] .editor-game-screen .panel-note {
+  color: var(--saturn-warn);
+}
+html[data-srwf-theme="beige"] body[data-view="editor"] :is(.editor-search,.unit-weapon-search)::placeholder {
+  color: var(--saturn-muted);
+}
+.user-guide-notice-badge { background: var(--guide-selected); color: var(--guide-selected-text); }
+@media (max-width: 760px) {
+  .user-guide-dialog .user-guide-notice { flex: 0 1 auto; }
+}
+
+/* Backdrop is a separate layer; it does not style the Saturn console or guide. */
+html[data-srwf-backdrop="graphite"] :is(body[data-view], body.srwf-notices) {
+  background: radial-gradient(ellipse at 50% 12%, #434a56 0%, transparent 64%), #242931;
+}
+.saturn-theme-menu { position: relative; flex: 0 0 auto; }
+.saturn-theme-menu > summary { list-style: none; }
+.saturn-theme-menu > summary::-webkit-details-marker { display: none; }
+.saturn-theme-options {
+  position: absolute; z-index: 50; top: calc(100% + 6px); right: 0;
+  width: min(284px, calc(100vw - 16px)); padding: 8px;
+  background: #252b34; color: #e9edf3; border: 1px solid #657487;
+  border-radius: 10px; box-shadow: 0 12px 28px #1118205c;
+}
+body.srwf-notices header { position: relative; z-index: 4; }
+html[data-srwf-backdrop="beige"] .saturn-theme-options {
+  color: var(--saturn-ink); background: var(--saturn-raised); border-color: var(--saturn-strong-line);
+}
+.saturn-theme-options fieldset { display: flex; gap: 6px; margin: 0 0 4px; border: 0; padding: 3px; }
+.saturn-theme-options legend { padding: 0 3px; font-weight: 700; font-size: 13px; }
+.saturn-theme-options label { display: inline-flex; align-items: center; gap: 3px; min-height: 34px; padding: 4px; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.saturn-theme-options input { accent-color: #547bae; }
+@media (max-width: 640px) {
+  .site-header .saturn-theme-menu { position: static; }
+  .site-header .saturn-theme-options { position: absolute; top: calc(100% + 4px); right: 8px; }
+}
+/* Neutral notes header/text sit on the stage; articles can use either content finish. */
+body.srwf-notices :is(.page-heading, .day > h2, footer, header .breadcrumb) { color: #e9edf3; }
+body.srwf-notices :is(.intro,.eyebrow,.day > h2 a,header .breadcrumb) { color: #bac4d3; }
+html[data-srwf-backdrop="beige"] body.srwf-notices :is(.page-heading,.day > h2,footer) { color: var(--saturn-ink); }
+html[data-srwf-backdrop="beige"] body.srwf-notices :is(.intro,.eyebrow,.day > h2 a,header .breadcrumb) { color: var(--saturn-link); }
+html[data-srwf-theme="beige"] body.srwf-notices article { color: var(--saturn-ink); }
+html[data-srwf-theme="graphite"] body.srwf-notices article { color: #e9edf3; }
+html[data-srwf-theme="beige"][data-srwf-backdrop="graphite"] body.srwf-notices .date-rail a { color: #bed0e4; }
+html[data-srwf-theme="beige"][data-srwf-backdrop="graphite"] body.srwf-notices .date-rail a:hover { color: #2d4565; }
+html[data-srwf-theme="beige"][data-srwf-backdrop="graphite"] body.srwf-notices .date-rail p { color: #e9edf3; }
+html[data-srwf-theme="graphite"][data-srwf-backdrop="beige"] body.srwf-notices .date-rail :is(a,p) { color: var(--saturn-link); }
+@media(max-width: 620px) {
+  html[data-srwf-theme="beige"][data-srwf-backdrop="graphite"] body.srwf-notices .date-rail :is(a,p) { color: var(--saturn-link); }
+  html[data-srwf-theme="graphite"][data-srwf-backdrop="beige"] body.srwf-notices .date-rail :is(a,p) { color: #bed0e4; }
+}
+/* The original warm faceplate remains the beige mix's main control surface. */
+html[data-srwf-theme="graphite"] body[data-view="setup"] .patch-console {
+  color: #e9edf3; border-color: #556171; border-top-color: #657487;
+  background: linear-gradient(160deg,#48515f,#343c48 48%,#252c36);
+  box-shadow: inset 0 2px 1px #728091, inset 0 -8px 1px #1c222b, 0 9px 0 #19202a,0 18px 32px #151b254f;
+}
+html[data-srwf-theme="graphite"] body[data-view="setup"] :is(.saturn-wordmark,.saturn-fascia-copy > span,.saturn-fascia-copy strong,.patch-console::after) {
+  color: #dae2ee; text-shadow: none;
+}
+html[data-srwf-theme="graphite"] body[data-view="setup"] .patch-console::after { border-top-color: #596778; box-shadow: inset 0 1px 0 #6a788a; }
+html[data-srwf-theme="graphite"] body[data-view="setup"] .saturn-fascia-copy { border-left-color: #718094; text-shadow: none; }
+html[data-srwf-theme="graphite"] body[data-view="setup"] .saturn-planet { border-color: #9baabd; box-shadow: inset 5px 0 0 #697889, inset 9px 0 0 #384552; }
+html[data-srwf-theme="graphite"] body[data-view="setup"] .saturn-planet::after { border-color: #9baabd; background: #8797aa; }
+html[data-srwf-theme="graphite"] body[data-view="setup"] #releaseRegion {
+  --ink: #e9edf3; --ink-soft: #bac4d3; --paper: #303944; --white: #303944; --line: #657487; --line-strong: #768597;
+  color: var(--ink); border-color: #657487; background: linear-gradient(#374251,#2a313c);
+}
+html[data-srwf-theme="graphite"] body[data-view="setup"] #releaseRegion :is(.card-heading,.zone-heading) { border-bottom-color: #657487; }
+html[data-srwf-theme="graphite"] body[data-view="setup"] #releaseRegion :is(.workflow-language p,.field-label,.workflow-language legend) { color: #c5d0df; }
+html[data-srwf-theme="graphite"] body[data-view="setup"] #releaseRegion :is(.workflow-language label, .zone-state,.state-chip) { color: #e9edf3; border-color: #657487; background: #354154; }
+html[data-srwf-theme="graphite"] body[data-view="setup"] #releaseRegion .workflow-language label:has(input:checked) { color: #f4f7fb; border-color: #8aa6c4; background: #4a5e75; }
+html[data-srwf-theme="graphite"] body[data-view="editor"] .editor-region,
+html[data-srwf-theme="graphite"] body[data-view="save"] .workflow-save:not([hidden]) {
+  --ink: #e9edf3; --ink-soft: #bac4d3; --white: #303944; --paper: #303944; --line: #657487;
+  color: var(--ink); background-color: #303944; border-color: #657487;
+}
+html[data-srwf-theme="graphite"] body[data-view="setup"] .patch-console::after { color: #dae2ee; text-shadow: none; }

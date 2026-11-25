@@ -1016,6 +1016,7 @@ for (const type of EDITOR_TYPES) {
   if (typeof window.matchMedia === "function") editorLayouts.set(type, createEditorLayout(type, ui.panel, ui.form, page => setEditorPage(type, page)));
   ui.search.addEventListener("input", () => { editorSearchTools.searchChanged(type); renderRecordList(type); });
   ui.search.addEventListener("keydown", (event) => {
+    if (event.isComposing || event.keyCode === 229) return;
     if (event.key === "Enter") {
       event.preventDefault();
       focusRecordList(type);
@@ -2949,6 +2950,9 @@ async function pickWorkflowDirectory(options) {
 async function saveWorkflowFolder() {
   if (!state.workflowOutput || anyJobBusy()) return;
   const output = state.workflowOutput;
+  const revision = state.editorEditRevision;
+  const session = state.editorSessionToken;
+  const editorOutput = Boolean(session) && !state.workflowDirectOutput;
   let directory;
   let closedFiles = 0;
   state.workflowSaving = true;
@@ -2990,6 +2994,9 @@ async function saveWorkflowFolder() {
     }
     if (hash.hex() !== output.sha256 || await (await cue.getFile()).text() !== await output.cue.text()) {
       throw new PatcherError("WORKFLOW_OUTPUT_MISMATCH", "Saved BIN/CUE differs");
+    }
+    if (editorOutput && state.workflowOutput === output && state.editorSessionToken === session && state.editorEditRevision === revision) {
+      state.editorExportedRevision = revision;
     }
     elements.workflowFolderStatus.textContent = "BIN과 CUE 두 파일을 폴더에 저장했습니다. 전체 파일 검증을 통과했습니다.";
   } catch (error) {
@@ -6244,10 +6251,17 @@ function renderRecordList(type, { build = true, retainSelection = false } = {}) 
         option = buildRecordOption(type, row, false);
         nodes.set(row.recordIndex, option);
       }
-      setOptionSelected(option, row.recordIndex === selected);
+      const shouldSelect = row.recordIndex === selected;
+      if (option.getAttribute("aria-selected") !== String(shouldSelect)) {
+        setOptionSelected(option, shouldSelect);
+      }
       return option;
     });
-    ui.list.replaceChildren(...children);
+    // Reuse the currently mounted list when the query matches the same rows in the same order.
+    const mounted = ui.list.children;
+    if (mounted.length !== children.length || children.some((option, index) => mounted[index] !== option)) {
+      ui.list.replaceChildren(...children);
+    }
   } else {
     ui.list.replaceChildren();
   }
@@ -9824,7 +9838,7 @@ function renderPatchNotesForRelease(releaseId) {
   const entry = byId("patchNotesTimelineLink");
   const day = /^srwf-(?:f|final)-(20261005|20260928|20260915)-/.exec(releaseId)?.[1];
   entry.hidden = !day;
-  if (day) entry.href = `./docs/web-editor-notices.html#day-${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6)}`;
+  if (day) entry.href = `./docs/web-editor-notices.html?entry=patcher#day-${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6)}`;
   if (/^\d+\. /m.test(notes.summary)) {
     elements.patchNotesSummary.replaceChildren(...notes.summary.split("\n").map((line, index) => {
       const node = document.createElement(/^\d+\. /.test(line) ? "strong" : "span");

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-srwf-backdrop="graphite" data-srwf-theme="beige">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,9 +17,13 @@
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
     <link rel="stylesheet" href="assets/style.css?v=20261113-alicecopies1">
     <link rel="stylesheet" href="assets/editor-runtime.css?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;carryover=20261117-1&amp;saveux=20261123-6">
-    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1&amp;saveux=20261123-6&amp;editorcompat=20261125-1"></script>
+    <link rel="stylesheet" href="assets/editor-graphite.css?v=20261113-alicecopies1&amp;graphite=20261125-1">
+    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1&amp;saveux=20261123-6&amp;editorcompat=20261125-1&amp;noticesreturn=20261125-3&amp;overnight=20261126-1"></script>
     <script type="module" src="assets/save-srw4-carryover-ui.mjs?v=20261113-alicecopies1&amp;carryover=20261117-1&amp;saveux=20261123-2&amp;editorcompat=20261125-1"></script>
-    <script type="module" src="assets/user-guide.mjs?v=20261113-alicecopies1"></script>
+    <script type="module" src="assets/user-guide.mjs?v=20261113-alicecopies1&amp;guide=20261125-1"></script>
+  <link rel="stylesheet" href="assets/saturn-theme.css?v=20261113-alicecopies1&amp;theme=20261126-2">
+  <script type="module" src="assets/saturn-theme.mjs?v=20261113-alicecopies1&amp;theme=20261126-1"></script>
+    <script type="module" src="assets/notice-return.mjs?v=20261113-alicecopies1&amp;noticesreturn=20261125-3"></script>
   </head>
   <body data-mode="editor" data-view="setup" data-patch-settings="choose">
     <a class="skip-link" href="#main">패처로 바로가기</a>
@@ -39,7 +43,14 @@
       </a>
 
       <div class="header-status">
-        <a class="user-guide-open site-notices-link" id="siteNoticesLink" href="./docs/web-editor-notices.html" target="_blank" rel="noopener" aria-label="공지·패치노트 (새 탭)" title="공지·패치노트 (새 탭)">공지·패치노트 <span class="site-notices-new-tab" aria-hidden="true">↗</span></a>
+        <details class="saturn-theme-menu" data-theme-menu>
+          <summary class="saturn-theme-toggle" aria-label="테마 설정"><span class="saturn-theme-icon" aria-hidden="true">◐</span><span class="saturn-theme-label" aria-hidden="true">테마</span></summary>
+          <div class="saturn-theme-options">
+            <fieldset><legend>배경</legend><label><input type="radio" name="saturn-backdrop" value="graphite" checked> 그래파이트</label><label><input type="radio" name="saturn-backdrop" value="beige"> 베이지</label></fieldset>
+            <fieldset><legend>본문</legend><label><input type="radio" name="saturn-content" value="graphite"> 그래파이트</label><label><input type="radio" name="saturn-content" value="beige" checked> 베이지</label></fieldset>
+          </div>
+        </details>
+        <a class="user-guide-open site-notices-link" id="siteNoticesLink" href="./docs/web-editor-notices.html?entry=patcher" target="_blank" rel="noopener" aria-label="공지·패치노트 (새 탭)" title="공지·패치노트 (새 탭)">공지·패치노트 <span class="site-notices-new-tab" aria-hidden="true">↗</span></a>
         <button class="user-guide-open" id="userGuideOpen" type="button" aria-haspopup="dialog" aria-controls="userGuideDialog" aria-expanded="false">사용 가이드</button>
         <span class="compatibility" id="compatibilityBadge">
           <span aria-hidden="true">●</span>
@@ -950,6 +961,18 @@
           <h2 id="userGuideTitle">사용 가이드</h2>
           <button class="user-guide-close" id="userGuideClose" type="button" autofocus>닫기 <span aria-hidden="true">×</span></button>
         </header>
+        <div class="user-guide-mode-bar" role="group" aria-label="가이드 보기">
+          <button type="button" id="userGuideFullMode" aria-pressed="false">전체 기능</button>
+          <button type="button" id="userGuideExampleMode" aria-pressed="true">단계별 예시</button>
+        </div>
+        <section class="user-guide-catalog" id="userGuideCatalog" aria-label="전체 기능 가이드" hidden>
+          <div class="user-guide-catalog-search">
+            <label for="userGuideSearch">기능 찾기</label>
+            <input id="userGuideSearch" type="search" placeholder="예: 이동 후 사용, JSON, 승계" autocomplete="off">
+            <small id="userGuideMatchCount" aria-live="polite"></small>
+          </div>
+          <div id="userGuideCatalogList"></div>
+        </section>
         <label class="user-guide-route" for="userGuideRoute">
           <span>시작할 파일</span>
           <select id="userGuideRoute">
@@ -991,7 +1014,7 @@
             <img id="userGuideImage" alt="" decoding="async">
           </picture>
           <p id="userGuideImageError" role="status" hidden>화면 캡처를 불러오지 못했습니다. 위 안내를 확인해 주세요.</p>
-          <figcaption>현재 UI · 설명용 예시 데이터</figcaption>
+          <figcaption>설명용 예시 화면 · 테마와 일부 버튼은 현재 화면과 다를 수 있습니다.</figcaption>
         </figure>
         <div class="user-guide-aux">
           <section class="user-guide-notice" id="resaveNotice" aria-label="완결편 기존 편집본 재저장 안내">
@@ -1077,7 +1100,7 @@
           <div>
             <span id="patchNotesKicker">PATCH NOTES · AS-IS → TO-BE</span>
             <h2 id="patchNotesHeading">버전별 패치노트</h2>
-            <a id="patchNotesTimelineLink" class="patch-notes-timeline-link" href="./docs/web-editor-notices.html" target="_blank" rel="noopener" aria-label="이 날짜의 전체 변경 내역 (새 탭)" hidden>이 날짜의 전체 변경 내역 ↗</a>
+            <a id="patchNotesTimelineLink" class="patch-notes-timeline-link" href="./docs/web-editor-notices.html?entry=patcher" target="_blank" rel="noopener" aria-label="이 날짜의 전체 변경 내역 (새 탭)" hidden>이 날짜의 전체 변경 내역 ↗</a>
           </div>
           <nav class="patch-note-navigation" id="patchNotesNavigation" aria-label="패치노트 사진 넘기기" hidden>
             <button class="patch-note-close" type="button" id="patchNotesPrevious" aria-label="이전 사진 묶음" aria-controls="patchNotesList">‹</button>

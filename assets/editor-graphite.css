@@ -1,0 +1,200 @@
+/* Unified Graphite & Brushed Metal Theme (scoped: editor, dialog, notices) */
+
+/* 1. Editor View ----------------------------------------------------------- */
+body[data-view="editor"],
+body[data-view="editor"] .editor-data-panel {
+  --ed-text: #e9edf3;
+  --ed-muted: #bac4d3;
+  --ed-cyan: #a8c7e4;
+  --ed-rail: #475260;
+  --ed-gold: #dce5f0;
+  --ed-modified: #ebd07c;
+}
+body[data-view="editor"] { background: radial-gradient(ellipse at 50% 12%, #434a56 0%, transparent 64%), #242931; }
+body[data-view="editor"] .patch-workspace { background: transparent; }
+body[data-view="editor"] .editor-workspace { color: var(--ed-text); }
+body[data-view="editor"] .editor-feedback { background: rgba(20, 24, 31, 0.8); }
+body[data-view="editor"] .editor-tab,
+body[data-view="editor"] .editor-unused-toggle,
+body[data-view="editor"] .editor-preset-file-button,
+body[data-view="editor"] .panel-toggle {
+  color: #dce4ef;
+  border-color: #475260;
+  background: linear-gradient(180deg, #36404d, #2b333e);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+body[data-view="editor"] .editor-preset-file-button:not(:disabled):hover,
+body[data-view="editor"] .editor-tab:hover,
+body[data-view="editor"] .panel-toggle:hover {
+  border-color: #6b7d93;
+  background: linear-gradient(180deg, #404d5d, #323c49);
+}
+body[data-view="editor"] .editor-preset-file-button:disabled { color: #8f9aa8; }
+body[data-view="editor"] .editor-tab[aria-selected="true"],
+body[data-view="editor"] .panel-toggle[aria-pressed="true"] {
+  color: #f4f7fb;
+  border-color: #84a2bf;
+  background: linear-gradient(180deg, #4a5e75, #38495c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -2px 0 #263342;
+}
+body[data-view="editor"] .editor-unused-toggle input { accent-color: #84a2bf; }
+body[data-view="editor"] .editor-preset-file-button:focus-visible { outline-color: #a8c7e4; }
+body[data-view="editor"] .notice-item { color: #ebd07c; border-color: #8c7640; background: #322c1e; }
+body[data-view="editor"] .notice-body { color: #e9edf3; border-color: #8c7640; background: #27231b; box-shadow: 0 10px 28px rgba(10, 14, 20, 0.52); }
+body[data-view="editor"] .notice-item.is-info { color: #a8c7e4; border-color: #4c6680; background: #232d38; }
+body[data-view="editor"] .notice-item.is-info .notice-body { border-color: #5b7896; background: #202832; }
+body[data-view="editor"] .editor-footer .editor-status { color: var(--ed-muted); border-color: #475260; background: #252b34; }
+body[data-view="editor"] .record-list { border-color: #475260; background: #1e232b; }
+body[data-view="editor"] .record-option { color: var(--ed-text); border-bottom-color: #313945; }
+body[data-view="editor"] .record-option:hover { background: #2e3744; }
+body[data-view="editor"] .record-option.is-selected { color: #f4f7fb; border-left-color: #84a2bf; background: #344457; }
+body[data-view="editor"] .record-option.is-read-only { color: #9ea9b7; }
+body[data-view="editor"] .record-option-meta,
+body[data-view="editor"] .is-weapons .record-option-stat.is-range,
+body[data-view="editor"] .is-weapons .record-option-stat.is-hit { color: var(--ed-muted); }
+body[data-view="editor"] .record-option.is-selected .record-option-meta { color: #dce7f3; }
+body[data-view="editor"] .record-option-dot { color: var(--ed-modified); }
+body[data-view="editor"] .editor-game-screen { border-color: #556171; outline-color: #363e4a; background: #1b2028; }
+body[data-view="editor"] .game-panel:not(.editor-visual) { background: #242b34; }
+body[data-view="editor"] .weapon-dialogue-lines { border-color: #475260; color: var(--ed-text); background: #242a33; }
+
+/* 2. Dialogs (Save Editor, Carryover, Search) ------------------------------ */
+dialog.save-editor-dialog { color: #e9edf3; border-color: #556171; background: #242931; box-shadow: 0 20px 56px rgba(10, 14, 20, 0.6); }
+dialog.save-editor-dialog::backdrop,
+dialog.carryover-dialog::backdrop { background: rgba(16, 20, 26, 0.78); }
+dialog .save-editor-shell {
+  --ed-text: #e9edf3;
+  --ed-muted: #bac4d3;
+  --ed-cyan: #a8c7e4;
+  --ed-rail: #475260;
+  --ed-gold: #dce5f0;
+  --ed-modified: #ebd07c;
+}
+dialog .save-editor-header,
+dialog .save-editor-footer { border-color: #4b515c; background: linear-gradient(180deg, #2d343f, #252b34); }
+dialog .save-fast-preview,
+dialog .save-slot-summary,
+dialog .save-slot-browser,
+dialog .save-check,
+dialog .save-add-unit,
+dialog .save-empty-card,
+dialog .save-empty-shortcuts,
+dialog .save-empty-notes { border-color: #475260; background: #2a313c; }
+dialog .save-slot-summary { border-left-color: #84a2bf; }
+dialog .save-record-art { border-color: #475260; background: linear-gradient(180deg, #2d343f, #20252d); }
+dialog .save-carryover-open,
+dialog .save-diff > summary,
+dialog .save-detail-tabs button,
+dialog .save-upgrade-body > button,
+dialog.editor-search-dialog button {
+  color: #dce4ef;
+  border-color: #475260;
+  background: linear-gradient(180deg, #36404d, #2c3440);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+dialog .save-carryover-open:hover { color: #f4f7fb; border-color: #6b7d93; background: linear-gradient(180deg, #404d5d, #333d4b); }
+dialog .save-editor-shell select,
+dialog .save-editor-shell input[type="number"],
+dialog .save-slot-card,
+dialog.editor-search-dialog select,
+dialog.editor-search-dialog input:not([type="checkbox"]) { color: #e9edf3; border-color: #475260; background: #1e232b; }
+dialog .save-slot-card[aria-pressed="true"],
+dialog .save-game-toolbar .editor-tab[aria-pressed="true"],
+dialog .save-editor-shell .record-option.is-selected,
+dialog .save-detail-tabs button[aria-pressed="true"],
+dialog.editor-search-dialog .editor-search-actions .is-primary:not(:disabled) {
+  color: #f4f7fb;
+  border-color: #84a2bf;
+  background: linear-gradient(180deg, #4a5e75, #38495c);
+}
+dialog .save-check > summary { color: #96d6a6; }
+dialog .save-bundle-cta,
+dialog #saveDownload:not(:disabled) { color: #edf7ef; border-color: #5b996c; background: linear-gradient(180deg, #356345, #294e36); }
+dialog .save-check.is-warn,
+dialog .save-game-bundle { color: #ebd07c; border-color: #8c7640; background: #322c1e; }
+dialog .save-check.is-warn > summary,
+dialog .save-check-body li.is-warn,
+dialog .save-bundle-badge { color: #ebd07c; border-color: #8c7640; background: #3a3220; }
+dialog .save-check.is-error,
+dialog #saveEditorStatus.is-error { color: #f7a6a6; border-color: #9e4f55; background: #352327; }
+dialog .save-check.is-error > summary,
+dialog .save-check-body li.is-error,
+dialog .save-editor-shell input[aria-invalid="true"],
+dialog .save-upgrade-control.is-over-limit output,
+dialog .save-field-message,
+dialog.editor-search-dialog .editor-search-error { color: #f7a6a6; }
+dialog #saveEditorStatus { color: var(--ed-muted); border-left-color: #5b697a; background: #232831; }
+dialog .save-upgrade-track { border-color: #556171; background: #1a1f26; }
+dialog .save-upgrade-box { border-color: #444f5d; background: #2a323d; box-shadow: inset 0 0 0 1px #1a1f26; }
+dialog .save-upgrade-box.is-locked { background: repeating-linear-gradient(135deg, #252c35, #252c35 3px, #313a46 3px, #313a46 5px); }
+dialog.editor-search-dialog .editor-search-summary,
+dialog.editor-search-dialog .editor-bulk-fields label { color: #bac4d3; }
+dialog.editor-search-dialog .editor-bulk-preview-heading button { color: #a8c7e4; background: transparent; box-shadow: none; }
+dialog.editor-search-dialog .editor-bulk-target { border-bottom-color: #3c4552; }
+dialog.editor-search-dialog .editor-bulk-target-name input { accent-color: #84a2bf; }
+dialog.editor-search-dialog :is(button, select, input):focus-visible { outline-color: #a8c7e4; }
+
+/* 3. Notices Page ---------------------------------------------------------- */
+body.srwf-notices {
+  --bg: #242931;
+  --card: #2c333e;
+  --border: #4b515c;
+  --ink: #e9edf3;
+  --muted: #bac4d3;
+  --link: #a8c7e4;
+  --accent: #ebd07c;
+  background: radial-gradient(ellipse at 50% 12%, #434a56 0%, transparent 64%), #242931;
+}
+body.srwf-notices header { border-bottom-color: #4b515c; background: #252b34; box-shadow: 0 1px 0 #131921; }
+body.srwf-notices article {
+  border-color: #475260;
+  background: linear-gradient(180deg, #323a46, #29303a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 24px rgba(13, 18, 25, 0.24);
+}
+body.srwf-notices .date-rail a:hover { background: #36414f; }
+body.srwf-notices .tag { border-color: #475260; background: #252b34; }
+body.srwf-notices .t-수정 { color: #ebd07c; }
+body.srwf-notices .t-한글패치 { color: #96d6a6; }
+@media (max-width: 620px) { body.srwf-notices .date-rail a { border-color: #475260; background: #303944; } }
+
+/* Match the patch station's physical rails, leaving the game preview itself unchanged. */
+body[data-view="editor"] .editor-data-panel,
+dialog.save-editor-dialog .save-editor-shell {
+  --frame: url("./editor-graphite-frame.svg?v=20261113-alicecopies1&graphite=20261125-1");
+}
+body[data-view="editor"] .editor-game-screen :is(input[data-editor-field], select):not(.is-modified) {
+  border-color: #657487;
+  background-color: #26303c;
+}
+body[data-view="editor"] :is(.record-search-row input, .record-tool) {
+  color: #e9edf3;
+  border-color: #657487;
+  background-color: #303944;
+}
+dialog:is(.editor-search-dialog, .editor-changes-dialog, .pilot-skill-dialog, .carryover-dialog) {
+  color: #e9edf3;
+  border-color: #556171;
+  background-color: #242931;
+}
+body.srwf-notices .date-rail a:focus-visible,
+body[data-view="editor"] :is(button,select,input):focus-visible { outline-color: #e8cf7d; }
+body[data-view="editor"] :is(.record-bar, .record-pane) {
+  border-color: #556171;
+  outline-color: #363e4a;
+  background: linear-gradient(180deg, #303944, #242931);
+}
+body[data-view="editor"] :is(.record-nav, .editor-page-button) {
+  color: #e9edf3;
+  border-color: #657487;
+  background: linear-gradient(180deg, #36404d, #2b333e);
+}
+body[data-view="editor"] :is(.record-nav, .editor-page-button):not(:disabled):hover {
+  border-color: #9ab0c8;
+  background: linear-gradient(180deg, #44536a, #344457);
+}
+body[data-view="editor"] .editor-page-button[aria-pressed="true"] {
+  color: #f4f7fb;
+  border-color: #84a2bf;
+  background: linear-gradient(180deg, #4a5e75, #38495c);
+}
+body[data-view="editor"] .record-nav:disabled { color: #a0abb9; }

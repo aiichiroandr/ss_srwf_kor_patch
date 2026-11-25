@@ -1,3 +1,5 @@
+import { GUIDE_SECTIONS } from "./user-guide-catalog.mjs?v=20261113-alicecopies1&guide=20261125-1";
+
 // Read the visible workflow only. The manual never changes the user's editor session or file selection.
 const CASES = new Set(["stock", "native", "patched", "personal"]);
 const PAGES = {
@@ -13,10 +15,10 @@ const PAGES = {
   pilot: ["파일럿 능력과 성장 바꾸기", "파일럿 탭에서 전투 능력과 정신(SP)을 수정하세요. 성장·지형 구역에는 성장값과 파일럿 지형 적응이 있습니다. 휴대폰은 표시되는 구역 버튼으로 이동하세요."],
   spirits: ["정신커맨드 편집", "이름을 고르면 교체되고 Lv(1~99)는 습득 레벨입니다. ×로 삭제하고 빈칸의 ‘＋ 추가’에서 넣으세요. 특수능력과 저장 공간을 공유하므로 남은 자리가 있어야 추가할 수 있습니다."],
   skills: ["파일럿 특수능력 추가·삭제", "특수능력의 ‘추가·삭제’를 누르면 이 창이 열립니다. 능력·습득 Lv를 골라 추가하고, 목록에서 레벨을 바꾸거나 삭제하세요. 이벤트 조건으로 고정된 항목은 편집할 수 없습니다."],
-  weapon: ["무기 수치와 사용 조건 바꾸기", "공격력·명중 보정·사거리·소비 EN·탄수·필요 기력·필요 기능을 수정하세요. 기체 무장에서 무기를 누르면 해당 무기로 이동합니다. 여러 기체가 같은 무기 데이터를 쓰면 함께 반영됩니다."],
+  weapon: ["무기 수치와 사용 조건 바꾸기", "공격력·명중 보정·사거리·소비 EN·탄수·필요 기력·필요 기능과 이동 후 사용(P)을 수정하세요. 기체 무장에서 무기를 누르면 해당 무기로 이동합니다. 여러 기체가 같은 무기 데이터를 쓰면 함께 반영됩니다."],
   "weapon-terrain": ["무기 지형 적응 바꾸기", "공·육·해·우의 등급을 고르면 해당 무기의 지형 적응이 바뀝니다. 기체 지형 적응과 별도 항목입니다. ⓘ에서 등급 효과와 게임 화면 표시의 주의점을 확인하세요."],
   changes: ["변경 목록 확인하기", "아래의 ‘이번 변경 …건’을 누르면 바꾼 항목과 이전·현재 값이 나옵니다. 목록의 항목을 누르면 해당 편집 칸으로 돌아갑니다. BIN/CUE를 만들기 전에 확인하세요."],
-  preset: ["편집값 저장·불러오기", "‘편집값 저장’은 이번에 바꾼 값을 JSON으로 보관합니다. ‘편집값 불러오기’는 JSON을 읽어 적용할 내용을 확인합니다."],
+  preset: ["편집값 저장·불러오기", "‘편집값 저장’은 이번에 바꾼 값을 JSON으로 보관합니다. ‘편집값 불러오기’는 JSON을 읽어 적용 내용을 확인합니다. 완결편에서 본편 JSON을 불러오면 확인된 공통 수치만 한 방향으로 옮길 수 있습니다."],
   save: ["플레이할 BIN/CUE 만들기", "‘BIN/CUE 저장’으로 이동해 적용 언어·변경 건수를 확인하고 ‘BIN/CUE 만들기’를 누르세요. JSON과 별도로 게임 파일을 만듭니다."],
   downloads: ["BIN과 CUE 함께 저장하기", "준비가 끝나면 BIN과 CUE를 둘 다 받아 같은 폴더에 두세요. 저장한 파일의 폴더를 다시 열어 계속 편집할 수 있습니다."],
 };
@@ -55,12 +57,74 @@ export function createUserGuide(doc) {
   const previous = byId("userGuidePrevious");
   const next = byId("userGuideNext");
   const stepButtons = [...dialog.querySelectorAll("[data-guide-step]")];
+  const catalog = byId("userGuideCatalog");
+  const full = byId("userGuideFullMode");
+  const example = byId("userGuideExampleMode");
+  const search = byId("userGuideSearch");
+  const matches = byId("userGuideMatchCount");
+  const list = byId("userGuideCatalogList");
+  const clean = text => text.normalize("NFKC").toLowerCase().trim();
+  const catalogRows = [];
+  const make = (name, text) => {
+    const node = doc.createElement(name);
+    if (text) node.textContent = text;
+    return node;
+  };
+  function catalogFilter() {
+    const words = clean(search?.value ?? "").split(/\s+/).filter(Boolean);
+    let total = 0;
+    for (const { section, rows } of catalogRows) {
+      let visible = 0;
+      for (const row of rows) {
+        row.node.hidden = !words.every(word => row.text.includes(word));
+        if (!row.node.hidden) visible += 1;
+      }
+      section.hidden = visible === 0;
+      if (words.length) section.open = visible > 0;
+      total += visible;
+    }
+    if (matches) matches.textContent = total ? `${total}개 기능` : "일치하는 기능이 없어요.";
+  }
+  function prepareCatalog() {
+    if (!list || catalogRows.length) return;
+    for (const group of GUIDE_SECTIONS) {
+      const section = make("details");
+      section.className = "user-guide-chapter";
+      section.id = `guide-${group.id}`;
+      section.append(make("summary", group.title));
+      const rows = group.items.map(item => {
+        const node = make("section");
+        node.className = "user-guide-entry";
+        node.append(make("h3", item.label), make("p", item.how));
+        if (item.limit) {
+          const limit = make("p", item.limit);
+          limit.className = "user-guide-entry-limit";
+          node.append(limit);
+        }
+        section.append(node);
+        return { node, text: clean(`${group.title} ${item.label} ${item.how} ${item.limit}`) };
+      });
+      list.append(section);
+      catalogRows.push({ section, rows });
+    }
+    catalogFilter();
+  }
+  function showCatalog(enabled) {
+    if (!catalog) return;
+    dialog.dataset.guideMode = enabled ? "catalog" : "examples";
+    dialog.style.height = "";
+    catalog.hidden = !enabled;
+    full?.setAttribute("aria-pressed", String(enabled));
+    example?.setAttribute("aria-pressed", String(!enabled));
+    if (enabled) prepareCatalog();
+    else fit();
+  }
   let route = "stock";
   let step = 0;
   const pages = () => guidePages(route);
 
   function fit() {
-    if (!dialog.open || !image.naturalWidth || !image.naturalHeight) return;
+    if (dialog.dataset.guideMode === "catalog" || !dialog.open || !image.naturalWidth || !image.naturalHeight) return;
     const shell = dialog.querySelector(".user-guide-shell");
     const figure = dialog.querySelector(".user-guide-figure");
     const style = getComputedStyle(shell);
@@ -103,6 +167,7 @@ export function createUserGuide(doc) {
 
   function open() {
     if (dialog.open) return;
+    showCatalog(false);
     const context = guideContext(doc);
     route = context.route;
     step = pages().findIndex(page => page.group === context.step);
@@ -124,7 +189,10 @@ export function createUserGuide(doc) {
     render();
   }
 
-  opener.addEventListener("click", open);
+  opener.addEventListener("click", () => { open(); showCatalog(true); });
+  full?.addEventListener("click", () => showCatalog(true));
+  example?.addEventListener("click", () => showCatalog(false));
+  search?.addEventListener("input", catalogFilter);
   byId("userGuideClose").addEventListener("click", close);
   dialog.addEventListener("close", () => {
     opener.setAttribute("aria-expanded", "false");
@@ -155,7 +223,7 @@ export function createUserGuide(doc) {
   dialog.addEventListener("keydown", event => {
     // Keep the editor's document-level shortcuts out of the open manual, including Escape and arrows on selects.
     event.stopPropagation?.();
-    if (event.target?.tagName === "SELECT" || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (dialog.dataset.guideMode === "catalog" || event.target?.tagName === "SELECT" || event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
       event.preventDefault();
       move(event.key === "ArrowLeft" ? -1 : 1);
