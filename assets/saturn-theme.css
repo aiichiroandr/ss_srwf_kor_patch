@@ -227,6 +227,21 @@ html[data-srwf-theme="graphite"][data-srwf-backdrop="beige"] body.srwf-notices .
   html[data-srwf-theme="beige"][data-srwf-backdrop="graphite"] body.srwf-notices .date-rail :is(a,p) { color: var(--saturn-link); }
   html[data-srwf-theme="graphite"][data-srwf-backdrop="beige"] body.srwf-notices .date-rail :is(a,p) { color: #bed0e4; }
 }
+/* Hovered date links sit on the dark button surface even against a beige backdrop. */
+html[data-srwf-theme="graphite"][data-srwf-backdrop="beige"] body.srwf-notices .date-rail a:hover { color: #e9edf3; }
+@media (max-width: 620px) {
+  html[data-srwf-theme="beige"] body.srwf-notices .date-rail a:focus-visible { outline-color: var(--saturn-link); }
+}
+@media (min-width: 621px) and (max-height: 560px) {
+  body.srwf-notices .date-rail {
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-left: 18px;
+    padding-right: 4px;
+  }
+}
 /* The original warm faceplate remains the beige mix's main control surface. */
 html[data-srwf-theme="graphite"] body[data-view="setup"] .patch-console {
   color: #e9edf3; border-color: #556171; border-top-color: #657487;
