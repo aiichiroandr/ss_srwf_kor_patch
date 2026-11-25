@@ -5837,6 +5837,10 @@ body[data-view="setup"] :is(.editor-progress-topline,.progress-copy) :is(strong,
 body[data-view="setup"] :is(.editor-progress-actions span,.progress-panel p){color:#505e58}
 body[data-view="setup"] :is(#editorProgressPercent,#progressPercent){color:#3156ae}
 body[data-view="setup"] :is(.editor-cancel-button,.progress-panel .cancel-button){color:#29323c;background:#d7ddd4;border-color:#9ca69e}
+/* Error feedback inside the dark folder card sits on #fff1f0 and must not inherit dark-card light ink. */
+body[data-view="setup"] #editorSourceRegion .message-panel.is-error{--ink:#29323c;--ink-soft:#59636d;color:#29323c;border-color:rgba(200,62,67,0.42)}
+body[data-view="setup"] #editorSourceRegion .message-panel.is-error strong{color:#29323c}
+body[data-view="setup"] #editorSourceRegion .message-panel.is-error p{color:#59636d}
 
 /* User-entered names keep the numeric rows compact. */
 .weapon-name-field { display:grid; grid-template-columns:max-content minmax(80px,1fr) max-content 24px; align-items:center; gap:4px; margin:2px 0; min-width:0; }
