@@ -5131,7 +5131,8 @@ function handleEditorWorkerMessage(event) {
     setEditorStatus(`${editorGameLabel(view.gameId)} · ${reviewSession() ? localEditorSupport.label(state.editorBaseTargetHash) : native ? "원본 언어 유지" : isPublic ? "공개 패치 해시 일치" : `개인 BIN · ${releaseTag(view.baseReleaseId)} 기반`}`);
     selectEditorTab("unit", { render: false });
     updateControls();
-    announce(`에디터를 열었습니다. ${editorOriginText() ?? ""}`);
+    const readyAnnouncement = state.workflowStage === "editor" ? "에디터를 열었습니다." : "게임 파일을 확인했습니다.";
+    announce(`${readyAnnouncement} ${editorOriginText() ?? ""}`);
     if (openSaveEditor) void saveEditor.openPrepared(prepareSaveEditorCatalog);
     return;
   }
