@@ -62,6 +62,7 @@ export function createUserGuide(doc) {
   const example = byId("userGuideExampleMode");
   const search = byId("userGuideSearch");
   const matches = byId("userGuideMatchCount");
+  const clearSearch = byId("userGuideClearSearch");
   const list = byId("userGuideCatalogList");
   const clean = text => text.normalize("NFKC").toLowerCase().trim();
   const catalogRows = [];
@@ -84,6 +85,7 @@ export function createUserGuide(doc) {
       total += visible;
     }
     if (matches) matches.textContent = total ? `${total}개 기능` : "일치하는 기능이 없어요.";
+    if (clearSearch) clearSearch.hidden = total > 0 || words.length === 0;
   }
   function prepareCatalog() {
     if (!list || catalogRows.length) return;
@@ -193,6 +195,12 @@ export function createUserGuide(doc) {
   full?.addEventListener("click", () => showCatalog(true));
   example?.addEventListener("click", () => showCatalog(false));
   search?.addEventListener("input", catalogFilter);
+  clearSearch?.addEventListener("click", () => {
+    if (!search) return;
+    search.value = "";
+    search.focus({preventScroll:true});
+    catalogFilter();
+  });
   byId("userGuideClose").addEventListener("click", close);
   dialog.addEventListener("close", () => {
     opener.setAttribute("aria-expanded", "false");
