@@ -906,3 +906,28 @@ test('an export without an actual successful budget or known warnings cannot sub
   assert.equal(checks,1,omit);
  }
 });
+
+test('sprite reads are read-only and confined to the current authenticated editor session',async()=>{
+ const asset={pixels:new Uint8Array([0,1,2,255])};
+ let release;
+ const run=harness({previewEditorBattle:async(session,request,{signal})=>{
+  assert.equal(session.sessionToken,'session-1');
+  if(request.wait)await new Promise(resolve=>{release=resolve;});
+  assert.equal(signal.aborted,!!request.wait);
+  return {assets:[asset]};
+ }});
+ const sprite=(extra={})=>({type:'SPRITE_PREVIEW',previewId:'sprite-1',sessionToken:'session-1',request:{},...extra});
+ await run.send(sprite());
+ assert.equal(run.last().type,'SPRITE_PREVIEW_ERROR');
+ await run.send(job('INSPECT'));
+ await run.send(sprite({sessionToken:'unrelated'}));
+ assert.equal(run.last().type,'SPRITE_PREVIEW_ERROR');
+ await run.send(sprite());
+ assert.equal(run.last().type,'SPRITE_PREVIEW_COMPLETE');
+ assert.deepEqual(run.posts.at(-1).transfer,[asset.pixels.buffer]);
+ await run.send(sprite({request:{wait:true}}));
+ await run.send({type:'RESET'});
+ const before=run.posts.length;
+ release();await settle();
+ assert.equal(run.posts.length,before);
+});

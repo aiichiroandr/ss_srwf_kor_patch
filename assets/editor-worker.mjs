@@ -26,6 +26,7 @@ import {readBattleDialogue} from './editor-battle-dialogue.mjs?v=20261113-alicec
 export function createEditorWorker(scope, api) {
   let activeJob = null;
   let editorSession = null;
+  let spriteJob = null;
   let editorView = null;
   // Retain only the latest completed export. Both consumers receive the same
   // immutable, fully validated Blob; in-flight work still owns the job slot.
@@ -37,6 +38,24 @@ export function createEditorWorker(scope, api) {
   const abortError = () => new DOMException("Operation aborted", "AbortError");
   const abortJob = (job) => { if (!job.controller.signal.aborted) job.controller.abort(abortError()); };
 
+  function abortSprite(){if(spriteJob){abortJob(spriteJob);spriteJob=null;}}
+  async function runSpritePreview(m){
+    if(typeof m.previewId!=='string'||m.previewId.length>128||!api.previewEditorBattle)return;
+    if(activeJob||!editorSession||m.sessionToken!==editorSession.sessionToken){
+      scope.postMessage({type:'SPRITE_PREVIEW_ERROR',previewId:m.previewId,sessionToken:m.sessionToken});return;
+    }
+    abortSprite();
+    const session=editorSession,controller=new AbortController(),job={previewId:m.previewId,controller};spriteJob=job;
+    const live=()=>spriteJob===job&&editorSession===session&&!controller.signal.aborted;
+    try {
+      const result=await api.previewEditorBattle(session,m.request,{signal:controller.signal});
+      if(live())scope.postMessage({type:'SPRITE_PREVIEW_COMPLETE',previewId:m.previewId,sessionToken:session.sessionToken,result},
+        [...new Set(result.assets.map(x=>x.pixels.buffer))]);
+    } catch {
+      if(live())scope.postMessage({type:'SPRITE_PREVIEW_ERROR',previewId:m.previewId,sessionToken:session.sessionToken});
+    } finally {if(spriteJob===job)spriteJob=null;}
+  }
+
   scope.addEventListener("message", (event) => {
     const message = event.data;
     if (!message || typeof message.type !== "string") return;
@@ -45,7 +64,10 @@ export function createEditorWorker(scope, api) {
       if (activeJob && (!message.jobId || message.jobId === activeJob.jobId)) {completedCapacity=null;abortJob(activeJob);}
       return;
     }
+    if(message.type==='SPRITE_PREVIEW'){void runSpritePreview(message);return;}
+    if(message.type==='SPRITE_PREVIEW_CANCEL'){if(spriteJob?.previewId===message.previewId)abortSprite();return;}
     if (message.type === "RESET") {
+      abortSprite();
       if (activeJob) abortJob(activeJob);
       activeJob = null;
       if (editorSession) api.clearSrw4EditorSource?.(editorSession);
@@ -206,6 +228,7 @@ export function createEditorWorker(scope, api) {
 
     const controller = new AbortController();
     const job = { jobId: message.jobId, revision:message.revision, controller };
+    abortSprite();
     activeJob = job;
     const live = () => activeJob === job && !controller.signal.aborted;
     // The last check before a job publishes anything. The core operations check the signal between their reads, but the
@@ -421,7 +444,7 @@ function makeError(code, message) {
 
 if (new URL(import.meta.url).searchParams.get('factory') !== '1'
   && typeof self !== "undefined" && typeof self.addEventListener === "function") {
-  createEditorWorker(self, { exportEditedImage, inspectPatchedImage, readEditorSourceImage, previewEditorRecord, preflightEditedImage,readBattleDialogue,
+  createEditorWorker(self, { previewEditorBattle: (...args)=>import('./editor-battle-disc-preview.mjs?v=20261113-alicecopies1&sprite=20261126-1').then(m=>m.previewEditorBattle(...args)), exportEditedImage, inspectPatchedImage, readEditorSourceImage, previewEditorRecord, preflightEditedImage,readBattleDialogue,
     prepareSrw4EditorSource,preflightSrw4HandPoints,attachSrw4EditorSource,clearSrw4EditorSource,
     prepareFCampaignEditorSource,attachFCampaignEditorSource,clearFCampaignEditorSource });
 }

@@ -1,3 +1,4 @@
+import {createBattlePreview} from './editor-battle-preview.mjs?v=20261113-alicecopies1&sprite=20261126-1';
 import {createSaveNameAuthority} from './save-name-support.mjs?v=20261113-alicecopies1';
 import {createSavePilotAuthority} from './save-pilot-support.mjs?v=20261113-alicecopies1';
 import {PUBLIC_EDITOR_FEATURES} from './editor-public-features.mjs?v=20261113-alicecopies1';
@@ -849,7 +850,62 @@ function inertAnimationPreview(button,panel){
   button.hidden=true;panel.hidden=true;const none=()=>{};
   return Object.freeze({close:none,hide:none,select:none,refreshChoices:none,show:none,invalidate:none});
 }
-const animationPreview = !PUBLIC_EDITOR_FEATURES.runtimePreview ? inertAnimationPreview(byId("weaponAnimationButton"),byId("weaponAnimationPanel")) : createInlineAnimationPreview({
+function createDiscSpritePreview(button,panel){
+  const explanation=document.createElement('p');
+  explanation.className='battle-preview-explanation';
+  explanation.textContent='연결한 디스크의 전투 그림입니다. 동영상 재생이나 아직 저장하지 않은 편집값은 반영하지 않습니다.';
+  panel.append(explanation);
+  let gallery=null,visible=false,busy=false;
+  function getGallery(){
+    if(!gallery){
+      gallery=createBattlePreview({container:panel,requestPreview:requestDiscSprite});
+      gallery.setBusy(busy);
+    }
+    return gallery;
+  }
+  function select(){
+    if(!visible)return;
+    const weapon=selectedEditorRow('weapon'),token=state.editorSessionToken;
+    if(!weapon||!token){gallery?.clear();return;}
+    const owners=[...new Set((weapon.owners??[]).map(x=>x.unit))]
+      .map(unitIndex=>({unitIndex,name:unitNameForOwner(unitIndex)}));
+    void getGallery().select({sessionToken:token,gameId:state.editorGameId,weaponIndex:weapon.recordIndex,weaponName:editorRowName(weapon),owners});
+  }
+  function setVisible(value){
+    visible=value;
+    panel.hidden=!value;
+    button.setAttribute('aria-checked',String(value));
+    button.textContent=value?'원본 그림 닫기':'원본 그림 미리보기';
+    if(value)select();else gallery?.clear();
+    editorLayouts.get('weapon')?.schedule();
+  }
+  button.addEventListener('click',()=>{if(!button.disabled)setVisible(!visible);});
+  return Object.freeze({close:()=>setVisible(false),hide:()=>setVisible(false),show:()=>setVisible(true),select,
+    refreshChoices:select,invalidate:select,setBusy(value){if(busy!==value){busy=value;gallery?.setBusy(value);}}});
+}
+function requestDiscSprite({signal,...request}){
+  const worker=state.editorWorker,sessionToken=state.editorSessionToken;
+  if(!worker||!sessionToken||signal.aborted)return Promise.reject(new DOMException('Preview cancelled','AbortError'));
+  return new Promise((resolve,reject)=>{
+    const previewId='sprite-'+(++state.editorPreviewSequence);
+    const timer=setTimeout(()=>finish(Error('그림을 읽는 시간이 초과됐습니다.'),null,true),15000);
+    function finish(error,result,cancel=false){
+      clearTimeout(timer);signal.removeEventListener('abort',abort);worker.removeEventListener('message',receive);
+      if(cancel)try{worker.postMessage({type:'SPRITE_PREVIEW_CANCEL',previewId});}catch{}
+      if(error)reject(error);else resolve(result);
+    }
+    function abort(){finish(new DOMException('Preview cancelled','AbortError'),null,true);}
+    function receive({data:m}){
+      if(m?.previewId!==previewId)return;
+      if(state.editorWorker!==worker||state.editorSessionToken!==sessionToken||signal.aborted){abort();return;}
+      if(m.type==='SPRITE_PREVIEW_COMPLETE'&&m.sessionToken===sessionToken)finish(null,m.result);
+      else finish(Error('연결한 디스크의 그림을 읽지 못했습니다.'));
+    }
+    signal.addEventListener('abort',abort,{once:true});worker.addEventListener('message',receive);
+    try{worker.postMessage({type:'SPRITE_PREVIEW',previewId,sessionToken,request});}catch(error){finish(error);}
+  });
+}
+const animationPreview = !PUBLIC_EDITOR_FEATURES.runtimePreview ? createDiscSpritePreview(byId("weaponAnimationButton"),byId("weaponAnimationPanel")) : createInlineAnimationPreview({
   getPreviewPage:localPreviewPage,
   preferBattleCrop:true,
   onTimeline:message=>battleTimeline.receive(message),
@@ -3301,7 +3357,7 @@ async function openEditorFromFolder(directoryHandle) {
   // Returning from a review image must also restore the public editor engine.
   if(patched&&localEditorSupport&&reviewSession()){
     try{
-      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1&editorcompat=20261125-1',import.meta.url).href,signal:controller.signal,
+      const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1&editorcompat=20261125-1&sprite=20261126-1',import.meta.url).href,signal:controller.signal,
         onProgress:progress=>showEditorProgress({...EDITOR_STAGES.inspect,percent:progress.total?progress.processed/progress.total*100:null})});
       if(opened){state.workflowSourceHandles=sourceHandles;return;}
       endEditorJob();state.editorSource=previous;updateControls();return;
@@ -4702,7 +4758,7 @@ function getEditorWorker(release = null) {
   if (state.editorWorker) return state.editorWorker;
   state.editorWorkerProfile=profile;
   const worker = new Worker(
-    profile==='review'?localEditorSupport.workerUrl:new URL(`./editor-worker.mjs?v=${STATIC_ASSET_REVISION}&savefast=20261114-6&editorcompat=20261125-1`, import.meta.url),
+    profile==='review'?localEditorSupport.workerUrl:new URL(`./editor-worker.mjs?v=${STATIC_ASSET_REVISION}&savefast=20261114-6&editorcompat=20261125-1&sprite=20261126-1`, import.meta.url),
     { type: "module", name: "srwf-local-data-editor" },
   );
   saveNameAuthority?.dispose();savePilotAuthority?.dispose();
@@ -10337,7 +10393,8 @@ function updateControls() {
   const interactionBusy = state.busy || state.cueSaving;
   // 어느 모드의 작업이든 하나라도 돌고 있으면 게임·버전·폰트와 모든 폴더 줄을 잠근다(작업은 하나씩 한다).
   const controlsLocked = anyJobBusy();
-  byId("weaponAnimationButton").disabled = !state.editorSessionToken || controlsLocked;
+  byId("weaponAnimationButton").disabled = !state.editorSessionToken || controlsLocked || !selectedEditorRow('weapon');
+  animationPreview.setBusy?.(controlsLocked);
   renderUnitConstructionChoice();
   renderWeaponCloneControls();
   const fileControls = deriveFileControlState({

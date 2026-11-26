@@ -16,9 +16,10 @@
     >
     <title>세가새턴 슈퍼로봇대전 F 한글패치</title>
     <link rel="stylesheet" href="assets/style.css?v=20261113-alicecopies1">
+    <link rel="stylesheet" href="assets/editor-battle-preview.css?v=20261113-alicecopies1&amp;sprite=20261126-1">
     <link rel="stylesheet" href="assets/editor-runtime.css?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;carryover=20261117-1&amp;saveux=20261123-6&amp;sourceerror=20261126-1">
     <link rel="stylesheet" href="assets/editor-graphite.css?v=20261113-alicecopies1&amp;graphite=20261125-1">
-    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1&amp;saveux=20261123-6&amp;editorcompat=20261125-1&amp;noticesreturn=20261125-3&amp;overnight=20261126-1&amp;ready=20261126-1&amp;list=20261126-2"></script>
+    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1&amp;saveux=20261123-6&amp;editorcompat=20261125-1&amp;noticesreturn=20261125-3&amp;overnight=20261126-1&amp;ready=20261126-1&amp;list=20261126-2&amp;sprite=20261126-1"></script>
     <script type="module" src="assets/save-srw4-carryover-ui.mjs?v=20261113-alicecopies1&amp;carryover=20261117-1&amp;saveux=20261123-2&amp;editorcompat=20261125-1"></script>
     <script type="module" src="assets/user-guide.mjs?v=20261113-alicecopies1&amp;guide=20261126-2"></script>
   <link rel="stylesheet" href="assets/saturn-theme.css?v=20261113-alicecopies1&amp;theme=20261126-3">
@@ -876,7 +877,7 @@
                 <span class="record-bar-label">전체 무기 목록</span>
                 <button class="record-nav" type="button" id="weaponPrevButton" aria-label="이전 무기" aria-controls="weaponRecordList"><span aria-hidden="true">‹</span></button>
                 <h3 class="record-title" id="weaponStatsHeading">무기</h3>
-                <button class="record-tool" type="button" role="switch" aria-checked="false" aria-controls="weaponAnimationPanel" id="weaponAnimationButton" disabled>미리보기 OFF</button>
+                <button class="record-tool" type="button" role="switch" aria-checked="false" aria-controls="weaponAnimationPanel" id="weaponAnimationButton" disabled>원본 그림 미리보기</button>
                 <button class="record-nav" type="button" id="weaponNextButton" aria-label="다음 무기" aria-controls="weaponRecordList"><span aria-hidden="true">›</span></button>
                 <span class="record-position" id="weaponPosition" aria-hidden="true">0 / 0</span>
               </div>
@@ -896,7 +897,7 @@
                 </aside>
                 <div class="game-screen-shell">
                   <div class="editor-game-screen weapon-game-screen" id="weaponStatsForm">
-                    <section class="game-panel weapon-animation-panel" id="weaponAnimationPanel" data-editor-section="main" aria-label="무기 연출 미리보기" hidden></section>
+                    <section class="game-panel weapon-animation-panel" id="weaponAnimationPanel" data-editor-section="main" aria-label="무기 원본 그림 미리보기" hidden></section>
                     <section class="game-panel weapon-timeline-panel" id="weaponTimeline" aria-label="보기 전용 전투 타임라인" data-editor-section="extra" hidden></section>
                     <p class="weapon-scope-note" data-editor-section="main">게임 전체의 무기 데이터입니다. 기체마다 쓰는 무기는 기체 탭의 ‘무기’ 구역에서 봅니다.</p>
                     <section class="game-panel weapon-detail-panel" data-editor-section="main" aria-label="선택한 무기 수치">
