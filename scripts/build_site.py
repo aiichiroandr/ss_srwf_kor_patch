@@ -2,6 +2,7 @@
 """Offline, exact-allowlist static-site packaging. Never changes/deletes source."""
 import argparse
 import hashlib
+import importlib.util
 from html.parser import HTMLParser
 import json
 import os
@@ -13,6 +14,16 @@ import stat
 import subprocess
 import sys
 from urllib.parse import unquote, urlsplit
+def verify_nightly_asset(root):
+    # The test harness imports this script by filesystem path rather than
+    # through a package. Anchor the helper to this file, not cwd/sys.path.
+    spec = importlib.util.spec_from_file_location("srwf_nightly_gate", Path(__file__).with_name("nightly_gate.py"))
+    if spec is None or spec.loader is None:
+        raise ValueError("Missing Nightly asset verifier")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.nightly_artifact(root)
+
 
 MAX_BYTES = 1_000_000_000
 class PackageError(ValueError):
@@ -156,6 +167,14 @@ def check_dynamic(root, policy):
         provenance = target.get('provenance', {})
         require(file_hash(safe_file(root, receipt_name)) == provenance.get('acceptanceReceiptSha256'), f'Acceptance receipt hash mismatch: {receipt_name}')
         require(receipt.get('releaseId', receipt.get('id')) == row['id'], f'Acceptance identity mismatch: {receipt_name}')
+    if 'assets/nightly-build.mjs' in names:
+        try:
+            nightly = verify_nightly_asset(root)
+            require(nightly in names and nightly in policy['pins'] and
+                    nightly not in {f"patches/{r['id']}.srwfp" for r in releases},
+                    'Nightly requires its own pinned static asset outside accepted releases')
+        except (ValueError, KeyError, OSError, TypeError) as exc:
+            raise PackageError(f'Invalid Nightly bundle: {exc}') from exc
     retained = {(x['surface'], x['version']) for x in policy['runtimeSets']}
     for name, version in policy['runtimeManifests'].items():
         manifest = read_json(root, name, names)

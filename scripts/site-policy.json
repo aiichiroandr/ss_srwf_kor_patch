@@ -275,8 +275,12 @@
     "assets/font-revisions.mjs",
     "assets/mixed-game-folder.mjs",
     "assets/next-release-notes.mjs",
+    "assets/nightly-build.mjs",
+    "assets/nightly-carryover-catalog.mjs",
+    "assets/nightly-donor.mjs",
     "assets/notice-return.mjs",
     "assets/patch-core-v2.mjs",
+    "assets/patch-core-v3.mjs",
     "assets/patch-core.mjs",
     "assets/patch-notes/fin-v0-3-btsr-boundaries.png",
     "assets/patch-notes/fin-v0-3-btsr-ten.png",
@@ -308,11 +312,13 @@
     "assets/patch-notes/v0-1-split-before.png",
     "assets/patch-notes/v0-1-turn-end-after.png",
     "assets/patch-notes/v0-1-turn-end-before.png",
+    "assets/patch-worker-v3.mjs",
     "assets/patch-worker.mjs",
     "assets/release-notes.mjs",
     "assets/runtime-panel-frame.svg",
     "assets/saturn-theme.css",
     "assets/saturn-theme.mjs",
+    "assets/save-auto-carryover-ui.mjs",
     "assets/save-check.mjs",
     "assets/save-compatibility.mjs",
     "assets/save-core.mjs",
@@ -385,6 +391,7 @@
     "patches/srwf-final-20261005-v0-3-a.srwfp",
     "patches/srwf-final-20261005-v0-3-b.srwfp",
     "patches/srwf-final-20261005-v0-3-c.srwfp",
+    "patches/srwf-final-20261128-v0-4-nightly.srwfp",
     "receipts/srwf-f-20260928-v0-5-a.acceptance.json",
     "receipts/srwf-f-20260928-v0-5-b.acceptance.json",
     "receipts/srwf-f-20260928-v0-5-c.acceptance.json",
@@ -522,6 +529,34 @@
     "docs/RELEASE_ARCHIVE_20261128.json": {
       "bytes": 9369,
       "sha256": "33df4cba82686391e5a8e520462b177a374a387092ae50b3bceb0a67c103bcef"
+    },
+    "assets/nightly-build.mjs": {
+      "bytes": 2430,
+      "sha256": "81590f40050c089cf951e5c2567246890380ac8f7e9fe7611ba6c13d9b5f2085"
+    },
+    "assets/nightly-carryover-catalog.mjs": {
+      "bytes": 4827,
+      "sha256": "941f511493a9a6834881be1b39ea0e0e32bb97ebfb23902cc7f376fe49e0e4f5"
+    },
+    "assets/nightly-donor.mjs": {
+      "bytes": 4290,
+      "sha256": "33971b1e4d4bcbeee6c0dcbe756b62fbd3d62d2a14daa8f374355e5fd628ba4d"
+    },
+    "assets/patch-core-v3.mjs": {
+      "bytes": 11895,
+      "sha256": "b857743f46a26bc7d6981a9adb820c6d02ebc15ff53bac74e63039aae75a0802"
+    },
+    "assets/patch-worker-v3.mjs": {
+      "bytes": 3167,
+      "sha256": "25d1a41bafbc9b5bdd64515261ce40e328c115bbd91dbd3a7301551ca34af796"
+    },
+    "assets/save-auto-carryover-ui.mjs": {
+      "bytes": 5903,
+      "sha256": "f2cab9071a0befd69345d6cc420eda8df3c7c006fd1ce19c0ffdcfc8998a875d"
+    },
+    "patches/srwf-final-20261128-v0-4-nightly.srwfp": {
+      "bytes": 25335221,
+      "sha256": "74b1f96a2162bda76204aef45809fc8f31165251dedec8f0c23f4803c6c8d1f5"
     }
   },
   "runtimeSets": [],

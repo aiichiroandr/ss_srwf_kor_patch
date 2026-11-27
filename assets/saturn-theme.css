@@ -269,3 +269,16 @@ html[data-srwf-theme="graphite"] body[data-view="save"] .workflow-save:not([hidd
   color: var(--ink); background-color: #303944; border-color: #657487;
 }
 html[data-srwf-theme="graphite"] body[data-view="setup"] .patch-console::after { color: #dae2ee; text-shadow: none; }
+.nightly-notice{display:grid;gap:.25rem;margin:12px 0 0;padding:.65rem .85rem;border:1px solid #a4773a;border-inline-start:3px solid #a4773a;border-radius:6px;color:inherit;font-size:.84rem;background:color-mix(in srgb,#b98943 12%,transparent)}
+.nightly-notice[hidden]{display:none}
+.nightly-notice strong{font-weight:750}
+.nightly-notice input{display:block;width:100%;min-width:0;font-size:inherit;margin-top:4px}
+.nightly-notice label{display:block;margin-top:4px}
+
+.nightly-notice label[hidden]{display:none}
+
+.save-auto-carryover{flex:1 0 100%;min-width:0;padding:.65rem .75rem;border:1px solid var(--line);border-radius:8px;font-size:.85rem}
+.save-auto-carryover[hidden],.save-auto-carryover [hidden]{display:none!important}
+.save-auto-carryover p{margin:0 0 .35rem}
+.save-auto-carryover label{display:block;margin-top:.5rem}
+.save-auto-carryover input{display:block;max-width:100%;min-width:0}

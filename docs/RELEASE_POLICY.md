@@ -73,6 +73,19 @@ manifest, acceptance receipt 27개를 저장소와 공개 인덱스에서 제거
 `HAS_ACCEPTED_RELEASE`로 바꿉니다. `NO_ACCEPTED_RELEASE` 상태에서는 schema와
 검증기가 빈 배열을 강제합니다.
 
+## Nightly 운용
+
+완결편 v0.4 Nightly는 승인판 인덱스에 등록하지 않는다. 기존 안정판, 글꼴,
+기본 선택은 바뀌지 않는다. 사용자가 Nightly를 직접 선택할 때만 별도 SRWFP v3
+경로를 사용한다. 시안 구현과 로컬 통과는 배포를 의미하지 않는다.
+[형식·검증 범위](PATCH_FORMAT_V3_DRAFT.md)를 참고한다.
+
+Nightly는 ‘수시 갱신 · 안정판 아님’으로 표시한다. 전체 원본 또는 F 영상은
+배포하지 않는다. 브라우저에서 사용자 제공 원본과 이미 연동된 개인 BIN의
+인증된 영상만 참조한다. 4차 승계 사본은 사용자가 선택한 폴더의 적합한
+원본 F 저장과 양쪽 연동 BIN을 검증한 경우에만 새 파일로 생성한다.
+기존 원본·세이브나 일반 승계 경로는 변경하지 않는다.
+
 ## source authority
 
 공개 patch는 게임별로 아래 stock profile 하나에만 적용됩니다.

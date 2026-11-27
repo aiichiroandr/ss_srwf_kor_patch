@@ -19,10 +19,10 @@
     <link rel="stylesheet" href="assets/editor-battle-preview.css?v=20261113-alicecopies1&amp;sprite=20261126-1">
     <link rel="stylesheet" href="assets/editor-runtime.css?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;carryover=20261117-1&amp;saveux=20261123-6&amp;sourceerror=20261126-1">
     <link rel="stylesheet" href="assets/editor-graphite.css?v=20261113-alicecopies1&amp;graphite=20261125-1">
-    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1&amp;saveux=20261123-6&amp;editorcompat=20261125-1&amp;noticesreturn=20261125-3&amp;overnight=20261126-1&amp;ready=20261126-1&amp;list=20261126-2&amp;sprite=20261126-1"></script>
+    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1&amp;saveux=20261123-6&amp;editorcompat=20261125-1&amp;noticesreturn=20261125-3&amp;overnight=20261126-1&amp;ready=20261126-1&amp;list=20261126-2&amp;sprite=20261126-1&amp;nightly=20261128-1"></script>
     <script type="module" src="assets/save-srw4-carryover-ui.mjs?v=20261113-alicecopies1&amp;carryover=20261117-1&amp;saveux=20261123-2&amp;editorcompat=20261125-1"></script>
     <script type="module" src="assets/user-guide.mjs?v=20261113-alicecopies1&amp;guide=20261126-2"></script>
-  <link rel="stylesheet" href="assets/saturn-theme.css?v=20261113-alicecopies1&amp;theme=20261126-3">
+  <link rel="stylesheet" href="assets/saturn-theme.css?v=20261113-alicecopies1&amp;theme=20261126-3&amp;nightly=20261128-1">
   <script type="module" src="assets/saturn-theme.mjs?v=20261113-alicecopies1&amp;theme=20261126-1"></script>
     <script type="module" src="assets/notice-return.mjs?v=20261113-alicecopies1&amp;noticesreturn=20261125-3"></script>
   </head>
@@ -137,6 +137,12 @@
                   <p id="fontHelp">이 버전은 폰트 선택을 지원하지 않습니다.</p>
                 </div>
               </div>
+              <section class="nightly-notice" id="nightlyNotice" hidden aria-label="Nightly 안내">
+                <strong>Nightly · 안정판 아님</strong>
+                <span>수시 갱신되는 검수판입니다. 플레이 전 세이브를 백업하세요.</span>
+                <label id="nightlyFTrackRow">F 연동 BIN 또는 F 본편 원본 (Rev B 21M Track 1)<input id="nightlyFTrack" type="file" accept=".bin"></label>
+                <span id="nightlyFileStatus" role="status"></span>
+              </section>
               <div class="release-detected" id="releaseDetected" hidden>
                 <p class="field-label" id="detectedLabel">패치본에서 감지한 값</p>
                 <p class="detected-value" id="detectedValue"></p>
@@ -372,7 +378,7 @@
                 <p class="workflow-session-brief" id="workflowSessionBrief" hidden></p>
               </div>
               <div class="workflow-action-list" role="group" aria-label="데이터 작업 선택">
-                <div class="workflow-action-item is-rom">
+                <div class="workflow-action-item is-rom" id="workflowRomAction">
                   <button class="primary-button workflow-action-btn is-rom" type="button" id="workflowOpenEditor" aria-describedby="workflowOpenEditorDesc" disabled>F 롬 에디터 열기</button>
                   <p class="workflow-action-desc" id="workflowOpenEditorDesc">기체·파일럿·무기·맵 수치를 직접 편집합니다.</p>
                 </div>
@@ -942,6 +948,16 @@
                     <p class="workflow-output-methods" id="workflowOutputMethods">‘폴더에 저장’은 두 파일을 함께 저장합니다. 다운로드로 받으려면 BIN과 CUE를 모두 받아 이름을 바꾸지 말고 같은 폴더에 두세요.</p>
                     <a class="download-link is-bin" id="editorDownloadBinLink">BIN 다운로드</a>
                     <a class="download-link is-cue" id="editorDownloadCueLink">CUE 다운로드</a>
+                    <section class="save-auto-carryover" id="autoCarryover" hidden>
+                      <p id="autoCarryoverStatus" role="status"></p>
+                      <select id="autoCarryoverSlot" aria-label="이어할 F 클리어 슬롯" hidden></select>
+                      <a class="download-link" id="autoCarryoverDownload" hidden>4차 연동 세이브 사본 다운로드</a>
+                      <details id="autoCarryoverDetails">
+                        <summary>4차 연동 세이브 연결</summary>
+                        <label>F 플레이에 사용한 4차 연동 BIN<input id="autoCarryoverF" type="file" accept=".bin"></label>
+                        <label>F 클리어 세이브<input id="autoCarryoverSave" type="file" accept=".bkr,.bcr,.sav,.srm,.bin,.gz"></label>
+                      </details>
+                    </section>
                     <span id="editorDownloadSummary"></span>
                     <button type="button" class="workflow-copy-hash" id="workflowCopyHash">검증값 복사</button>
                   </div>

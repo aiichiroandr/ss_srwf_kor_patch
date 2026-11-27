@@ -2545,7 +2545,10 @@ test("accepted families remain indexed; the explicit review family is separate a
       const review = visible.filter(row => row.state === 'REVIEW');
       assert.deepEqual(review, [], 'ordinary static site never requires private review artifacts');
       const families = [...new Set(indexed.map((row) => row.id.replace(/-[abc]$/, "")))];
-      assert.deepEqual(element("releaseSelect").children.map((option) => option.value), [...review.map(row => row.id.replace(/-[abc]$/, '')), ...families]);
+      const nightly = visible.filter(row => row.state === 'NIGHTLY');
+      assert.deepEqual(nightly.map(row=>row.id),gameId==='srwf-final'?['srwf-final-20261128-v0-4-nightly']:[]);
+      assert.equal(fresh.__testHooks.state.release.id, index.games.find(game=>game.id===gameId).defaultReleaseId);
+      assert.deepEqual(element("releaseSelect").children.map((option) => option.value), [...nightly.map(row=>row.id),...review.map(row => row.id.replace(/-[abc]$/, '')), ...families]);
       for (const family of families) {
         element("releaseSelect").value = family;
         await fresh.__testHooks.handleReleaseChange();

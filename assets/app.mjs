@@ -1,3 +1,6 @@
+import {createAutoCarryoverUI} from './save-auto-carryover-ui.mjs?v=20261113-alicecopies1&carryauto=20261128-1';
+import {probeLinkedNightlyDonor} from './nightly-donor.mjs?v=20261113-alicecopies1&nightly=20261128-1';
+import {NIGHTLY} from './nightly-build.mjs?v=20261113-alicecopies1&nightly=20261128-1';
 import {createBattlePreview} from './editor-battle-preview.mjs?v=20261113-alicecopies1&sprite=20261126-1';
 import {createSaveNameAuthority} from './save-name-support.mjs?v=20261113-alicecopies1';
 import {createSavePilotAuthority} from './save-pilot-support.mjs?v=20261113-alicecopies1';
@@ -558,6 +561,7 @@ const state = {
   workflowDirectOutput: false,
   workflowOutput: null,
   workflowSourceHandles: [],
+  workflowCompanionHandles: [],
   editorSourceFallback: null,
   workflowSaving: false,
   editorSetupOpen: false,
@@ -793,7 +797,38 @@ let localEditorSupport=null,localPreviewResources=null;
 const reviewSession=()=>Boolean(localEditorSupport?.isTarget(state.editorBaseTargetHash));
 const currentPreviewResources=()=>reviewSession()?localPreviewResources:previewResources;
 const localPreviewPage=()=>reviewSession()?localEditorSupport.previewPage:null;
-const groupFontReleases=rows=>groupPublicFontReleases(rows,{reviewIds:new Set(localEditorSupport?.rows?.map(row=>row.id)??[])});
+let nightlyDonor=null;
+let nightlyDonorLabel="";
+function setNightlyDonor(file,label){nightlyDonor=file;nightlyDonorLabel=label;}
+function activeNightlyDonor(){return byId("nightlyFTrack").files?.[0]??nightlyDonor;}
+async function reuseNightlyDonor(handles, signal){
+  if (nightlyDonor || !handles?.length) return;
+  // Only inspect files in the folder the person explicitly selected.
+  // These lightweight checks make a candidate available; the worker hashes
+  // original Track 1 or verifies all six linked movie assets before writing.
+  const matches=[];
+  for (const h of handles.slice(0,32)) {
+    if (signal?.aborted || nightlyDonor) return;
+    if (h.kind!=="file" || !/\.bin$/i.test(h.name)) continue;
+    try {
+      const f=await h.getFile();
+      if (f.size===NIGHTLY.descriptor.donorSize)matches.push([f,"이 폴더의 F 원본"]);
+      else if (f.size>NIGHTLY.source.size && f.size%2352===0) {
+        await probeLinkedNightlyDonor(f,NIGHTLY.movies);
+        matches.push([f,"이 폴더의 F 연동 BIN"]);
+      }
+    } catch { /* Unrelated file; leave selection unchanged. */ }
+  }
+  if (!signal?.aborted && !nightlyDonor && matches.length===1) {
+    setNightlyDonor(...matches[0]);
+    updateControls();
+  }
+}
+const NIGHTLY_ROW=Object.freeze({gameId:NIGHTLY.gameId,id:NIGHTLY.id,state:"NIGHTLY",label:"v0.4 Nightly"});
+const groupFontReleases=rows=>{
+  const groups=groupPublicFontReleases(rows.filter(row=>row!==NIGHTLY_ROW),{reviewIds:new Set(localEditorSupport?.rows?.map(row=>row.id)??[])});
+  return rows.includes(NIGHTLY_ROW) ? [{id:NIGHTLY_ROW.id,rows:[NIGHTLY_ROW],revisioned:false},...groups] : groups;
+};
 
 // Static review profiles do not change the accepted release index or its defaults.
 export function registerLocalEditorSupport(support){
@@ -1131,8 +1166,18 @@ elements.pilotHeroTargets.addEventListener("click", handleHeroEditorLink);
 elements.pilotHeroReturnButton.addEventListener("click", handleHeroEditorLink);
 document.addEventListener("keydown", handleEditorNavigationKey);
 elements.editorExportButton.addEventListener("click", () => navigateWorkflow("save"));
+let rememberedLinkedF=null;
+const autoCarryover=createAutoCarryoverUI({
+ root:byId("autoCarryover"),status:byId("autoCarryoverStatus"),details:byId("autoCarryoverDetails"),
+ fInput:byId("autoCarryoverF"),saveInput:byId("autoCarryoverSave"),slot:byId("autoCarryoverSlot"),download:byId("autoCarryoverDownload"),
+ createWorker:()=>new Worker(new URL("./save-srw4-carryover-worker.mjs?v=20261113-alicecopies1&carryauto=20261128-1",import.meta.url),{type:"module",name:"srwf-auto-carryover"})
+});
+function startAutoCarryover(bin){
+ void autoCarryover.start({bin,handles:state.workflowCompanionHandles,rememberedF:rememberedLinkedF});
+}
 elements.workflowOpenEditor.addEventListener("click", () => prepareWorkflow("editor"));
 elements.workflowSkipEditor.addEventListener("click", () => prepareWorkflow("save"));
+byId("nightlyFTrack").addEventListener("change",updateControls);
 elements.workflowSaveButton.addEventListener("click", exportEditorImage);
 const editorStorageUI=createEditorStorageUI({root:elements.editorStorageBudget,status:byId('editorStorageStatus'),list:byId('editorStorageRows'),note:byId('editorStorageNote')});
 elements.editorStorageCheck.addEventListener('click',checkEditorStorage);
@@ -1733,7 +1778,7 @@ function replaceFontOptions(row = null) {
   replaceFontPreviews(row);
   // 폰트별 릴리스가 없는 게임에서는 칸 자체를 뺀다. 한 화면 레이아웃이라
   // 쓸 수 없는 선택 칸이 카드 높이를 먹으면 패치 노트 버튼이 밀려 잘린다.
-  elements.fontSelector.hidden = !groupFontReleases(state.visibleReleaseRows)
+  elements.fontSelector.hidden = row===NIGHTLY_ROW || !groupFontReleases(state.visibleReleaseRows)
     .some((candidate) => candidate.revisioned);
 }
 
@@ -1859,7 +1904,7 @@ async function activateGame(gameId) {
   state.selectedGameId = game.id;
   elements.gameSelect.value = game.id;
   state.visibleReleaseRows = sortReleasesNewestFirst(
-    [...state.releaseRows,...(localEditorSupport?.isCompatible(game,state.stockProfiles)?localEditorSupport.rows:[])].filter((row) => row.gameId === game.id),
+    [...state.releaseRows,NIGHTLY_ROW,...(localEditorSupport?.isCompatible(game,state.stockProfiles)?localEditorSupport.rows:[])].filter((row) => row.gameId === game.id),
   );
   resetFileWorkflow();
   if (game.status === NO_ACCEPTED_RELEASE) {
@@ -1892,9 +1937,15 @@ async function loadSelectedRelease(row) {
 
   let release;
   try {
-    const manifestUrl = resolveLocalReference(row.manifest, SITE_ROOT_URL);
-    const manifest = await fetchJsonDocument(manifestUrl, row.manifestSha256);
-    release = normalizeReleaseManifest(manifest, row, manifestUrl);
+    if (row===NIGHTLY_ROW) {
+      const stock=state.stockProfiles.get(NIGHTLY.source.profileId);
+      if(stock?.id!==NIGHTLY.source.profileId||stock.sha256!==NIGHTLY.source.sha256||stock.size!==NIGHTLY.source.size)throw new PatcherError("SOURCE_PROFILE_MISMATCH","Invalid Nightly source");
+      release=Object.freeze({...NIGHTLY,patch:Object.freeze({...NIGHTLY.patch,url:resolveLocalReference(NIGHTLY.patch.url,SITE_ROOT_URL).href})});
+    } else {
+      const manifestUrl = resolveLocalReference(row.manifest, SITE_ROOT_URL);
+      const manifest = await fetchJsonDocument(manifestUrl, row.manifestSha256);
+      release = normalizeReleaseManifest(manifest, row, manifestUrl);
+    }
   } catch (error) {
     if (sequence !== state.releaseLoadSequence) {
       return false;
@@ -1910,12 +1961,13 @@ async function loadSelectedRelease(row) {
   state.availability = "ready";
   elements.releaseSelect.value = fontReleaseIdentity(row).groupId;
   replaceFontOptions(row);
-  elements.releaseState.textContent = release.review ? "검수본" : "ACCEPTED";
+  elements.releaseState.textContent = release.nightly ? "Nightly" : release.review ? "검수본" : "ACCEPTED";
   elements.releaseState.classList.add("is-ready");
   elements.sourceProfile.textContent = state.stockProfiles.get(release.source.profileId)?.label ?? "검증된 정품 원본";
   elements.targetName.textContent = release.target.filename;
   elements.publishedAt.textContent = formatPublishedAt(release.publishedAt);
   renderPatchNotesForRelease(release.id);
+  if(release.nightly)void reuseNightlyDonor(state.workflowCompanionHandles);
   showIdleSourceCopy();
 
   setWorkflowPhase("source");
@@ -2246,6 +2298,7 @@ function releaseVersionParts(releaseId) {
 
 // "v0.5(폰트 a)". 폰트가 없는 버전은 "v0.5".
 function releaseTag(releaseId) {
+  if(releaseId===NIGHTLY.id)return NIGHTLY.version;
   const parts = releaseVersionParts(releaseId);
   if (!parts) return "확인된 공개 패치";
   return parts.font ? `${parts.version}(폰트 ${parts.font})` : parts.version;
@@ -2265,7 +2318,7 @@ function editorLatestRow() {
 async function resolveEditorRelease() {
   // Folder recognition stays independent of the patch dropdown. Unknown
   // personal v0.3 files still need the accepted engine after choosing v0.4.
-  if (state.release && !state.release.review) return state.release;
+  if (state.release && !state.release.review && !state.release.nightly) return state.release;
   const row = editorLatestRow();
   if (!row) {
     throw new PatcherError("INDEX_STATE_CONFLICT", "The latest public release is unavailable");
@@ -2629,9 +2682,24 @@ function syncModeUi() {
       : "카트리지 세이브의 레벨·자금·개조·파츠를 수정합니다.";
   }
   const keepsCurrentEdits = workflowSaveKeepsCurrentEdits();
-  elements.workflowSkipEditor.disabled = !loaded || busy;
+  const nightly=stockChoices && korean && state.release?.nightly === true;
+  byId("nightlyNotice").hidden=!nightly;
+  const donor=activeNightlyDonor();
+  const donorMatchesSize=donor?.size===NIGHTLY.descriptor.donorSize||(donor?.size>NIGHTLY.source.size && donor.size%2352===0);
+  const donorFromSession=Boolean(nightlyDonor)&&!byId("nightlyFTrack").files?.[0];
+  byId("nightlyFTrackRow").hidden=donorFromSession;
+  byId("nightlyFileStatus").textContent=donor ? donorMatchesSize ? (donorFromSession ? nightlyDonorLabel+" 재사용 · 적용 때 확인" : "파일 선택됨 · 적용 때 확인") : "기존 F 연동 BIN 또는 F 본편 Rev B (21M) Track 1을 선택하세요." : "";
+  byId("nightlyFTrack").disabled=busy;
+  byId("workflowRomAction").hidden=nightly;
+  if(nightly && saveEntry){saveEntry.hidden=true;elements.saveEditorAction.hidden=true;}
+  if(nightly){
+    elements.workflowLanguageNote.textContent="이 빌드로 새 BIN/CUE를 만듭니다. Mona12(c) 고정.";
+    elements.workflowSessionBrief.textContent="F 완결편 정품 원본 · v0.4 Nightly";
+    elements.workflowEditorHeading.textContent="3. 패치 적용 및 저장";
+  }
+  elements.workflowSkipEditor.disabled = !loaded || busy || (nightly && !donorMatchesSize);
   elements.workflowSkipEditor.textContent = keepsCurrentEdits ? "현재 편집 포함 저장" : "편집 없이 저장";
-  elements.workflowSkipEditorDesc.textContent = loaded && !editable
+  elements.workflowSkipEditorDesc.textContent = nightly ? "원본은 그대로 두고 새 BIN/CUE를 만듭니다." : loaded && !editable
     ? "선택한 이전 버전 한글 패치의 BIN/CUE 저장 단계로 이동합니다."
     : keepsCurrentEdits
       ? `현재 편집한 변경 ${state.editorChangeCount.toLocaleString()}건을 포함한 BIN/CUE 저장 단계로 이동합니다.`
@@ -2650,6 +2718,7 @@ function syncModeUi() {
   renderEditorFallbackNotice();
   renderReleaseDetected(loaded && !stock);
   renderEditorSource();
+  if(nightly && loaded)byId("editorSourceMeta").textContent="F 완결편 정품 원본 · 그대로 보존";
   renderWaitNotes();
   if (screenShown && !editorScreenShown) restoreEditorScroll();
   editorScreenShown = screenShown;
@@ -3011,6 +3080,12 @@ async function saveWorkflowFolder() {
   const editorOutput = Boolean(session) && !state.workflowDirectOutput;
   let directory;
   let closedFiles = 0;
+  if(autoCarryover.pending()){
+    elements.workflowFolderStatus.hidden=false;
+    elements.workflowFolderStatus.textContent="4차 연동 세이브를 확인하고 있습니다. 잠시 뒤 다시 저장해 주세요.";
+    return;
+  }
+  const companion=autoCarryover.result();
   state.workflowSaving = true;
   updateControls();
   try {
@@ -3030,7 +3105,10 @@ async function saveWorkflowFolder() {
     await ensureDirectoryWritePermission(directory);
     const bin = await createUnusedFileHandle(directory, output.imageName, [output.cueName], true, state.workflowSourceHandles);
     const cue = await createUnusedFileHandle(directory, output.cueName, [], true, state.workflowSourceHandles);
-    for (const [handle, blob] of [[bin, output.bin], [cue, output.cue]]) {
+    const files=[[bin,output.bin],[cue,output.cue]];
+    const companionHandle=companion?await createUnusedFileHandle(directory,companion.name,[],false,state.workflowSourceHandles):null;
+    if(companionHandle)files.push([companionHandle,companion.blob]);
+    for (const [handle, blob] of files) {
       let writable;
       try {
         writable = await handle.createWritable({ keepExistingData: false });
@@ -3054,7 +3132,12 @@ async function saveWorkflowFolder() {
     if (editorOutput && state.workflowOutput === output && state.editorSessionToken === session && state.editorEditRevision === revision) {
       state.editorExportedRevision = revision;
     }
-    elements.workflowFolderStatus.textContent = "BIN과 CUE 두 파일을 폴더에 저장했습니다. 전체 파일 검증을 통과했습니다.";
+    if(companionHandle){
+      const actual=new Uint8Array(await (await companionHandle.getFile()).arrayBuffer());
+      const expected=new Uint8Array(await companion.blob.arrayBuffer());
+      if(actual.length!==expected.length||actual.some((v,i)=>v!==expected[i]))throw new PatcherError("WORKFLOW_OUTPUT_MISMATCH","Saved companion differs");
+    }
+    elements.workflowFolderStatus.textContent = companion ? "BIN/CUE와 4차 연동 승계용 사본을 폴더에 저장했습니다." : "BIN과 CUE 두 파일을 폴더에 저장했습니다. 전체 파일 검증을 통과했습니다.";
   } catch (error) {
     const reason = error?.code === "OUTPUT_SOURCE_CONFLICT" ? "입력 파일과 이름이 같습니다. 다른 폴더를 선택하세요."
       : error?.code === "WORKFLOW_OUTPUT_MISMATCH" ? "기록된 BIN/CUE가 검증된 결과와 다릅니다."
@@ -3270,6 +3353,7 @@ async function chooseFolderGame() {
 }
 
 async function openEditorFromFolder(directoryHandle) {
+  let companionHandles=[];
   const previous = state.editorSource;
   const sourceHandles = [];
   try {
@@ -3291,6 +3375,7 @@ async function openEditorFromFolder(directoryHandle) {
         imageGames.set(handle.name.toLowerCase(), gameId);
       }
     }
+    companionHandles = sourceHandles.slice();
     const game = found.size > 1 ? await chooseFolderGame() : [...found][0];
     if (found.size > 1) {
       if (!game) return;
@@ -3312,7 +3397,7 @@ async function openEditorFromFolder(directoryHandle) {
       if(review){
         try{
           const opened=await openLocalEditorFile({...review,signal:controller.signal,onProgress});
-          if(opened){state.workflowSourceHandles=sourceHandles;return;}
+          if(opened){state.workflowSourceHandles=sourceHandles;state.workflowCompanionHandles=companionHandles;return;}
           endEditorJob();state.editorSource=previous;updateControls();return;
         }catch(error){
           if(!review.probeOnly||error.name==='AbortError')throw error;
@@ -3359,7 +3444,7 @@ async function openEditorFromFolder(directoryHandle) {
     try{
       const opened=await openLocalEditorFile({file:patched.file,release,workerUrl:new URL('./editor-worker.mjs?v=20261113-alicecopies1&savefast=20261114-6&f65fix=20261116-1&editorcompat=20261125-1&sprite=20261126-1',import.meta.url).href,signal:controller.signal,
         onProgress:progress=>showEditorProgress({...EDITOR_STAGES.inspect,percent:progress.total?progress.processed/progress.total*100:null})});
-      if(opened){state.workflowSourceHandles=sourceHandles;return;}
+      if(opened){state.workflowSourceHandles=sourceHandles;state.workflowCompanionHandles=companionHandles;return;}
       endEditorJob();state.editorSource=previous;updateControls();return;
     }catch(error){if(error.name==='AbortError'){cancelEditorSource();return;}if(!stock){failEditorSource('BIN을 열 수 없습니다',error.message);return;}}
   }
@@ -3372,7 +3457,7 @@ async function openEditorFromFolder(directoryHandle) {
     return;
   }
   state.editorRelease = release;
-  runEditorAttempt({ release, stock, patched, order: editorAttemptOrder(stock, patched), next: 0, note: "", sourceHandles });
+  runEditorAttempt({ release, stock, patched, order: editorAttemptOrder(stock, patched), next: 0, note: "", sourceHandles, companionHandles });
 }
 
 // 어느 후보를 먼저 열지. 합본 BIN 하나(원본과 결과의 크기가 같은 게임)는 두 후보를 겸하므로 정품 원본으로 확인되는지 먼저 보고 아니면
@@ -3426,9 +3511,9 @@ function continueEditorPlan(plan, note) {
   return true;
 }
 
-function getEditorBuildWorker() {
+function getEditorBuildWorker(release) {
   if (state.editorBuildWorker) return state.editorBuildWorker;
-  const worker = new Worker(new URL(`./patch-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url), {
+  const worker = new Worker(new URL(release.nightly ? "./patch-worker-v3.mjs?v=20261113-alicecopies1&nightly=20261128-1" : `./patch-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url), {
     type: "module",
     name: "srwf-local-editor-build",
   });
@@ -3444,7 +3529,7 @@ function beginEditorBuild({ release, selection, plan }) {
   let downloadPlan;
   try {
     downloadPlan = createDownloadOutputPlan(release.target.filename, release.target.cueFilename);
-    worker = getEditorBuildWorker();
+    worker = getEditorBuildWorker(release);
   } catch (error) {
     console.error("The editor build could not start", error);
     failEditorSource("한글패치 적용을 시작하지 못했습니다", "브라우저가 파일 작업을 시작하지 못했습니다. 페이지를 새로 고친 뒤 다시 시도해 주세요.");
@@ -3459,6 +3544,7 @@ function beginEditorBuild({ release, selection, plan }) {
       type: "PREPARE_SOURCE",
       jobId,
       sourceFile: selection.blob,
+      ...(release.nightly ? {donorFile:activeNightlyDonor()} : {}),
       releaseKey: releaseKey(release),
       patchUrl: release.patch.url,
       descriptor: release.descriptor,
@@ -3576,9 +3662,10 @@ function handleEditorBuildMessage(event) {
     elements.editorDownloadCueLink.href = cueUrl;
     elements.editorDownloadCueLink.download = release.target.cueFilename;
     elements.editorDownloadSummary.textContent = `${formatBytes(result.outputBlob.size)} · 전체 검증 완료`;
-    elements.editorDownloadSummary.title = `${releaseTag(release.id)} · 승인 패치 결과 전체 SHA-256 일치 · ${result.targetSha256}`;
+    elements.editorDownloadSummary.title = `${releaseTag(release.id)} · 패치 결과 전체 SHA-256 일치 · ${result.targetSha256}`;
     elements.editorDownloadActions.hidden = false;
     state.workflowOutput = {bin: result.outputBlob, cue: cueBlob, imageName:release.target.filename, cueName:release.target.cueFilename, sha256:result.targetSha256};
+    if(release.nightly)startAutoCarryover(result.outputBlob);
     state.workflowDirectOutput = true;
     state.workflowStage = "save";
     state.workflowSetupReturnTarget = "skip-editor";
@@ -3605,6 +3692,10 @@ const SOURCE_MISMATCH_CODES = new Set([
 ]);
 
 function failEditorBuild(code, release) {
+  if(release?.nightly && (SOURCE_MISMATCH_CODES.has(code)||code==="DONOR_HASH_MISMATCH"||code==="DONOR_SIZE_MISMATCH")){
+    nightlyDonor=null;nightlyDonorLabel="";byId("nightlyFTrack").value="";
+    failEditorSource("Nightly 원본을 확인해 주세요","완결편 정품 원본과, 영상이 확인되는 기존 F 연동 BIN 또는 F 원본 Track 1을 선택하세요.");return;
+  }
   if (SOURCE_MISMATCH_CODES.has(code)) {
     // 합본 BIN 하나가 정품 원본이 아니면 한글패치를 적용한 파일일 수 있다: 같은 파일을 패치본으로 읽어 본다.
     if (continueEditorPlan(state.editorBuild?.plan, "")) return;
@@ -4088,6 +4179,7 @@ function clearDownloadArtifacts() {
 }
 
 function clearEditorDownloads() {
+  autoCarryover.clear();
   for (const url of state.editorDownloadUrls) {
     try {
       globalThis.URL.revokeObjectURL(url);
@@ -4144,6 +4236,7 @@ function clearEditorState() {
   state.workflowBaseKind = "korean";
   if (state.editorActive) endEditorJob();
   state.workflowSourceHandles = [];
+  state.workflowCompanionHandles = [];
   state.editorSourceFallback = null;
   state.editorSource = idleEditorSource();
   state.editorOrigin = null;
@@ -4514,6 +4607,7 @@ const F_V04_CUE_TRACKS = Object.freeze([
   "TRACK 04 AUDIO",
   "INDEX 01 54:26:37",
 ]);
+const NIGHTLY_CUE_TRACKS = Object.freeze(["TRACK 01 MODE1/2352","INDEX 01 00:00:00","TRACK 02 MODE2/2352","INDEX 00 17:03:64","INDEX 01 17:06:64","TRACK 03 AUDIO","INDEX 00 56:59:20","INDEX 01 57:01:20","TRACK 04 MODE1/2352","INDEX 01 57:21:20"]);
 const PATCHED_IMAGE_CUE_TRACKS = new Map([
   ["b2a67ed2a409c95de7226d33f2ab934012e93199afb7284bb710c81b6f0223b9", F_V04_CUE_TRACKS],
   ["85b9cbf349c421d621f3a6e6819d94f9ee1405137430046469562a2176e798a3", F_V04_CUE_TRACKS],
@@ -4536,7 +4630,7 @@ function buildPatchedImageCue(imageName, targetSha256, sessionTracks = null) {
   if (!BIN_FILENAME_PATTERN.test(imageName)) {
     throw new PatcherError("CUE_IMAGE_INVALID", "CUE image filename must be a safe BIN basename");
   }
-  const tracks = sessionTracks ?? PATCHED_IMAGE_CUE_TRACKS.get(targetSha256);
+  const tracks = sessionTracks ?? (targetSha256===NIGHTLY.target.sha256 ? NIGHTLY_CUE_TRACKS : PATCHED_IMAGE_CUE_TRACKS.get(targetSha256));
   if (!tracks) {
     throw new PatcherError("CUE_LAYOUT_MISSING", "The accepted target image has no pinned CUE track layout");
   }
@@ -4788,6 +4882,8 @@ function rememberEditorOutputReceipt(receipt) {
 // 편집용으로 읽을 BIN 하나를 편집 작업 스레드에 맡긴다. 지금 열려 있는 세션(있다면)은 새 BIN이 열릴 때까지 그대로이고,
 // 새 BIN이 거부되면 그대로 남는다. origin: "stock"(정품 원본에 한글패치를 적용한 결과) | "patched"(폴더에서 찾은 패치본).
 function connectEditorFCampaignSource(sourceBlob){
+ if(sourceBlob instanceof Blob && sourceBlob.size===578512032)
+  setNightlyDonor(sourceBlob.slice(0,NIGHTLY.descriptor.donorSize),"앞서 연결한 F 정품 원본");
  if(!state.editorSessionToken||anyJobBusy())return Promise.reject(Error('ROM을 먼저 열고 진행 중인 작업을 마쳐 주세요.'));
  if(!validateEditorForms({report:false}))return Promise.reject(Error(`${editorValidationIssue} 편집값을 확인한 뒤 다시 연결해 주세요.`));
  const type=sourceBlob?'F_CAMPAIGN_CONNECT':'F_CAMPAIGN_DISCONNECT',jobId=`f-campaign-${Date.now()}-${++state.editorSequence}`;
@@ -5155,7 +5251,14 @@ function handleEditorWorkerMessage(event) {
         ? Object.freeze({ ...context.plan.fallback, selectedName: state.editorSource.name,
           selectedKind: view.provenanceMode === "stock" ? "정품 원본" : native ? "원본 언어 편집본" : isPublic ? "공개 한글 패치본" : "개인 편집본" }) : null;
     }
-    if (context.plan?.sourceHandles) state.workflowSourceHandles = context.plan.sourceHandles;
+    if (context.plan?.sourceHandles) {
+      state.workflowSourceHandles = context.plan.sourceHandles;
+      state.workflowCompanionHandles = context.plan.companionHandles ?? context.plan.sourceHandles;
+    }
+    if (view.gameId==="srwf-f" && view.provenanceMode==="stock" && state.workflowStockSelection?.blob instanceof Blob) {
+      const f=state.workflowStockSelection.blob;
+      if(f.size===578512032)setNightlyDonor(f.slice(0,NIGHTLY.descriptor.donorSize),"앞서 연 F 정품 원본");
+    }
     state.editorProvenance = view.provenanceMode;
     // 이 세션의 CUE 트랙 구성. 폴더에서 읽은 사용자의 CUE가 있으면 그것을, 없으면 기반 공개
     // 버전에 고정된 구성을 쓴다. 고정 표(PATCHED_IMAGE_CUE_TRACKS)는 절대 바꾸지 않는다.
@@ -5164,6 +5267,8 @@ function handleEditorWorkerMessage(event) {
       kind: native ? "native" : fromStock ? "stock" : isPublic ? "accepted" : "personal",
       baseReleaseId: view.baseReleaseId,
     };
+    if(view.gameId==="srwf-f" && view.srw4Installed && context.plan?.patched?.file instanceof Blob)
+      rememberedLinkedF=context.plan.patched.file;
     installEditorRows(view);
     const note = context.plan?.note ?? "";
     endEditorJob();
@@ -9531,6 +9636,9 @@ function installEditorDownload(result) {
   // revoked, so a failed allocation above leaves the prior download intact.
   clearEditorDownloads();
   state.workflowOutput = {bin: result.outputBlob, cue: cueBlob, imageName, cueName, sha256: result.sha256};
+  const hasLinkedUnits=state.editorUnits.some(row=>row.srw4Native===true);
+  if(state.editorGameId==="srwf-final" && hasLinkedUnits)startAutoCarryover(result.outputBlob);
+  if(state.editorGameId==="srwf-f" && hasLinkedUnits)rememberedLinkedF=result.outputBlob;
   rememberEditorOutputReceipt(result.receipt);
   state.editorDownloadUrls = [binUrl, cueUrl];
   elements.editorDownloadBinLink.href = binUrl;
@@ -9906,7 +10014,10 @@ function finishBusyState() {
 }
 
 function renderPatchNotesForRelease(releaseId) {
-  const notes = getPatchNotesForRelease(releaseId);
+  const notes = releaseId===NIGHTLY.id ? {
+    version:NIGHTLY.version,items:[],
+    summary:"v0.4 Nightly · 수시 갱신 · 안정판 아님. 플레이 전 세이브 파일 사본을 보관하세요.\n\n1. 이번 빌드에서 확인\n- 77클리어 적 턴 멈춤 수정, 중단 저장 후 재개 확인.\n- 마징가 START 스킵과 엔딩 2편의 한글 자막·음향을 별도 검수.\n\n2. 이용 범위\n- 게임 본문 Mona12(c) 한 가지. 기존 롬 편집값 가져오기 및 Nightly 롬 재편집은 미지원.\n- 이미 F 연동된 BIN이나 앞서 연 F 원본의 영상을 재사용합니다. 해당 파일이 없다면 F 본편 Rev B (21M) Track 1을 한 번 연결합니다. 파일은 기기 밖으로 나가지 않습니다.\n\n3. 남은 검수\n- 4차 연동 저장은 그대로 불러오면 일부 기체가 잘못 들어옵니다. 같은 폴더에 F 연동 BIN과 클리어 세이브가 있으면, 저장 화면에서 완결편 전용 사본을 자동으로 만들어 줍니다.\n- 최종전 승리에서 엔딩까지의 정상 진행과 새턴 실기는 미검증."
+  } : getPatchNotesForRelease(releaseId);
   closePatchNotes();
   elements.patchNotesList.replaceChildren();
   state.renderedPatchNotesReleaseId = null;
@@ -9916,7 +10027,7 @@ function renderPatchNotesForRelease(releaseId) {
     return;
   }
 
-  const summaryOnly = isSummaryOnlyPatchNotesRelease(releaseId);
+  const summaryOnly = releaseId===NIGHTLY.id || isSummaryOnlyPatchNotesRelease(releaseId);
   setPatchNotesPresentation(summaryOnly, releaseId);
   state.patchNotesReleaseId = releaseId;
   elements.patchNotesVersion.textContent = notes.version;
@@ -9984,12 +10095,15 @@ function clearPatchNotes() {
 
 function openPatchNotes() {
   const releaseId = state.patchNotesReleaseId;
-  const notes = getPatchNotesForRelease(releaseId);
+  const notes = releaseId===NIGHTLY.id ? {
+    version:NIGHTLY.version,items:[],
+    summary:"v0.4 Nightly · 수시 갱신 · 안정판 아님. 플레이 전 세이브 파일 사본을 보관하세요.\n\n1. 이번 빌드에서 확인\n- 77클리어 적 턴 멈춤 수정, 중단 저장 후 재개 확인.\n- 마징가 START 스킵과 엔딩 2편의 한글 자막·음향을 별도 검수.\n\n2. 이용 범위\n- 게임 본문 Mona12(c) 한 가지. 기존 롬 편집값 가져오기 및 Nightly 롬 재편집은 미지원.\n- 이미 F 연동된 BIN이나 앞서 연 F 원본의 영상을 재사용합니다. 해당 파일이 없다면 F 본편 Rev B (21M) Track 1을 한 번 연결합니다. 파일은 기기 밖으로 나가지 않습니다.\n\n3. 남은 검수\n- 4차 연동 저장은 그대로 불러오면 일부 기체가 잘못 들어옵니다. 같은 폴더에 F 연동 BIN과 클리어 세이브가 있으면, 저장 화면에서 완결편 전용 사본을 자동으로 만들어 줍니다.\n- 최종전 승리에서 엔딩까지의 정상 진행과 새턴 실기는 미검증."
+  } : getPatchNotesForRelease(releaseId);
   if (!notes || elements.patchNotesToggle.disabled || !notes.items.every(hasSafePatchNoteImages)) {
     return;
   }
 
-  const summaryOnly = isSummaryOnlyPatchNotesRelease(releaseId);
+  const summaryOnly = releaseId===NIGHTLY.id || isSummaryOnlyPatchNotesRelease(releaseId);
   setPatchNotesPresentation(summaryOnly, releaseId);
   if (!summaryOnly && state.renderedPatchNotesReleaseId !== releaseId) {
     const fragment = document.createDocumentFragment();

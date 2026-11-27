@@ -16,6 +16,10 @@ import sys
 from typing import Any, Callable
 from urllib.parse import unquote, urlsplit
 import zlib
+try:
+    from .nightly_gate import nightly_artifact
+except ImportError:
+    from nightly_gate import nightly_artifact
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -2501,7 +2505,17 @@ def validate_index(files: list[Path]) -> None:
         complain(f"withdrawn acceptance receipt must not be indexed: {name}")
     for name in sorted(actual_manifests - referenced_manifests - withdrawn_manifests):
         complain(f"unindexed candidate release manifest is forbidden: {name}")
-    for name in sorted(actual_patches - referenced_patches - withdrawn_patches):
+    separate_nightly = set()
+    if "assets/nightly-build.mjs" in present:
+        try:
+            night = nightly_artifact(ROOT)
+            if night in referenced_patches or night in withdrawn_patches:
+                complain("Nightly must not be in the accepted release index or reuse a withdrawn asset")
+            elif night:
+                separate_nightly.add(night)
+        except (ValueError, KeyError, OSError, TypeError, struct.error) as exc:
+            complain(f"invalid Nightly asset: {exc}")
+    for name in sorted(actual_patches - referenced_patches - withdrawn_patches - separate_nightly):
         complain(f"unaccepted or unindexed .srwfp payload is forbidden: {name}")
     for name in sorted(actual_receipts - referenced_receipts - withdrawn_receipts):
         complain(f"unindexed acceptance receipt is forbidden: {name}")
