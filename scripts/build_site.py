@@ -112,7 +112,7 @@ def load_policy(path):
             require(name in known and name in policy['pins'] and isinstance(refs, list) and len(refs) == 1
                     and isinstance(refs[0], str) and urlsplit(refs[0]).path == known[name],
                     'Unknown withdrawn preview reference')
-    require(len(policy.get('releaseIds', [])) == 12 and len(set(policy['releaseIds'])) == 12, 'Exactly twelve approved releases are required')
+    require(len(policy.get('releaseIds', [])) == 6 and len(set(policy['releaseIds'])) == 6, 'Exactly six approved releases are required')
     return policy
 
 def snapshot(root, policy, artifact=False):
@@ -139,7 +139,7 @@ def check_dynamic(root, policy):
     names = set(policy['files'])
     index = read_json(root, 'manifest/releases.json', names)
     releases = index.get('releases', [])
-    require(len(releases) == 12 and {r['id'] for r in releases} == set(policy['releaseIds']), 'Indexed release preservation failed')
+    require(len(releases) == 6 and {r['id'] for r in releases} == set(policy['releaseIds']), 'Indexed release preservation failed')
     for row in releases:
         require(row.get('state') == 'ACCEPTED', 'Unaccepted indexed release')
         name = relative(row['manifest'])

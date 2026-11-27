@@ -204,6 +204,13 @@ const FINAL_STOCK_PROFILE = Object.freeze({
 const FINAL_RELEASE_ID = "srwf-final-20260814-v0-1";
 // 아래의 옛 manifest는 삭제된 파일과 독립적인 파서 시험 데이터다.
 const ARCHIVED_PATCH_NOTE_RELEASE_IDS = Object.freeze([
+  "srwf-f-20260915-v0-4-a",
+  "srwf-f-20260915-v0-4-b",
+  "srwf-f-20260915-v0-4-c",
+  "srwf-final-20260928-v0-2-a",
+  "srwf-final-20260928-v0-2-b",
+  "srwf-final-20260928-v0-2-c",
+
   "srwf-f-20260814-v0-1-1",
   "srwf-f-20260815-v0-1-2",
   "srwf-f-20260823-v0-3",
@@ -1111,9 +1118,7 @@ test("retained F v0.4 mobile download CUE uses its pinned four-track geometry", 
 test("accepted release manifests expose clean version-only BIN and CUE names", async () => {
   for (const [manifestName, imageName, cueName] of [
     ...[
-      ["srwf-f", "SRWF", "20260915", "0-4", "0.4"],
       ["srwf-f", "SRWF", "20260928", "0-5", "0.5"],
-      ["srwf-final", "SRWFIN", "20260928", "0-2", "0.2"],
       ["srwf-final", "SRWFIN", "20261005", "0-3", "0.3"],
     ].flatMap(([gameId, prefix, date, idVersion, version]) => ["a", "b", "c"].map((font) => [
       `${gameId}-${date}-v${idVersion}-${font}.json`,
@@ -1150,11 +1155,11 @@ test("each game exposes only its current and previous accepted font families", a
   assert.equal(game.defaultReleaseId, "srwf-f-20260928-v0-5-a");
   assert.deepEqual(
     fReleases.map((entry) => entry.id),
-    ["srwf-f-20260928-v0-5-a", "srwf-f-20260928-v0-5-b", "srwf-f-20260928-v0-5-c", "srwf-f-20260915-v0-4-a", "srwf-f-20260915-v0-4-b", "srwf-f-20260915-v0-4-c"],
+    ["srwf-f-20260928-v0-5-a", "srwf-f-20260928-v0-5-b", "srwf-f-20260928-v0-5-c"],
   );
   assert.deepEqual(
     fReleases.map((entry) => entry.label),
-    ["2026.09.28 · v0.5", "2026.09.28 · v0.5", "2026.09.28 · v0.5", "2026.09.15 · v0.4", "2026.09.15 · v0.4", "2026.09.15 · v0.4"],
+    ["2026.09.28 · v0.5", "2026.09.28 · v0.5", "2026.09.28 · v0.5"],
   );
   assert.equal(fReleases.every((entry) => entry.state === "ACCEPTED"), true);
   assert.equal(finalGame.status, "HAS_ACCEPTED_RELEASE");
@@ -1165,19 +1170,16 @@ test("each game exposes only its current and previous accepted font families", a
       "srwf-final-20261005-v0-3-a",
       "srwf-final-20261005-v0-3-b",
       "srwf-final-20261005-v0-3-c",
-      "srwf-final-20260928-v0-2-a",
-      "srwf-final-20260928-v0-2-b",
-      "srwf-final-20260928-v0-2-c",
     ],
   );
   assert.equal(finalReleases.every((entry) => entry.state === "ACCEPTED"), true);
-  assert.equal(index.releases.length, 12);
+  assert.equal(index.releases.length, 6);
   for (const releaseId of Object.keys(REMOVED_CUE_TARGETS)) {
     assert.ok(!index.releases.some((entry) => entry.id === releaseId), `${releaseId} must stay archived`);
   }
 });
 
-test("retained F v0.4 patched-image CUE has the pinned four-track geometry", () => {
+test("legacy F v0.4 patched-image CUE has the pinned four-track geometry", () => {
   const imageName = "SRWF-KOR-20260915-v0.4-a.bin";
   assert.equal(
     __testHooks.buildPatchedImageCue(imageName, F_V04_TARGET_SHA256),
@@ -1215,8 +1217,17 @@ test("every indexed release pins the CUE track layout of its accepted target ima
     indexedTargets.push(manifest.target.sha256);
     assert.ok(pinned.has(manifest.target.sha256), `${row.id} has no pinned CUE layout`);
   }
-  // 표에는 인덱스에 있는 결과 이미지만 둔다. 철회본이나 오타 해시가 남지 않게 한다.
-  assert.deepEqual([...pinned].sort(), [...new Set(indexedTargets)].sort());
+  // Keep the exact legacy CUE layouts for already-installed prior releases.
+  // These hashes are not selectable and have no downloadable patch payload.
+  const retiredTargetHashes = [
+    "f3292551e827ac66d4406a2994350342d9084a5d24a121a70185029fba574a3e",
+    "fe713fcab98279f8f6ffe6da45c145bcf75ab70ebe7361e733b71559b94f8589",
+    "5489ed4e2d980a0010ecffba3801621b88cf20d7aa317811eddcd37eff13fe5f",
+    "b882fec4d79b866bc5ff162fdf460e0eedf5b7b31033f7048f8cce9f3ffe357c",
+    "7a80036d11f66b0afd1110b5e34b1b673228ad5ac9350d6967e2f36716ed43e2",
+    "118450235e03d664241d926e2f02f87438670074d51827a953c0be1132d0b547",
+  ];
+  assert.deepEqual([...pinned].sort(), [...new Set([...indexedTargets, ...retiredTargetHashes])].sort());
 });
 
 test("CUE writer creates the exact fixed sibling file and commits its complete contents", async () => {
@@ -2525,7 +2536,7 @@ test("accepted families remain indexed; the explicit review family is separate a
     const fresh = await import(`../assets/app.mjs?retained-release-selection=${Date.now()}`);
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(fresh.__testHooks.state.availability, "ready");
-    assert.equal(fresh.__testHooks.state.releaseRows.length, 12);
+    assert.equal(fresh.__testHooks.state.releaseRows.length, 6);
     for (const gameId of ["srwf-f", "srwf-final"]) {
       await fresh.__testHooks.activateGame(gameId);
       const indexed = index.releases.filter((row) => row.gameId === gameId);

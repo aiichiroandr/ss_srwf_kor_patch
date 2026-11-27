@@ -289,13 +289,18 @@ RELEASE_ARCHIVE_PATH = "docs/RELEASE_ARCHIVE_20261011.json"
 # history rewrite it is 721eedd (docs/HISTORY_REWRITE_20261103.json).
 RELEASE_ARCHIVE_SOURCE_COMMIT = "8346a78c417f019ece70bfa3fd502d676ba26999"
 RELEASE_ARCHIVE_SHA256: str | None = "90034ed2b166b02a568d99123daf8e3657db4d8297858bd31f68e925f7b25770"
-RETAINED_RELEASE_FAMILIES = frozenset({
-    "srwf-f-20260928-v0-5", "srwf-f-20260915-v0-4",
-    "srwf-final-20261005-v0-3", "srwf-final-20260928-v0-2",
-})
+RETAINED_RELEASE_FAMILIES = frozenset({"srwf-f-20260928-v0-5", "srwf-final-20261005-v0-3"})
 RETAINED_RELEASE_IDS = frozenset(
     f"{family}-{font}" for family in RETAINED_RELEASE_FAMILIES for font in "abc"
 )
+RETIRED_RELEASE_FAMILIES = frozenset({"srwf-f-20260915-v0-4", "srwf-final-20260928-v0-2"})
+RETIRED_RELEASE_IDS = frozenset(
+    f"{family}-{font}" for family in RETIRED_RELEASE_FAMILIES for font in "abc"
+)
+ARCHIVE_20261011_RETAINED_RELEASE_IDS = RETAINED_RELEASE_IDS | RETIRED_RELEASE_IDS
+RETIREMENT_ARCHIVE_PATH = "docs/RELEASE_ARCHIVE_20261128.json"
+RETIREMENT_ARCHIVE_SOURCE_COMMIT = "e0545d174bc55925e57aead59d35e91ead9577a8"
+RETIREMENT_ARCHIVE_SHA256 = "33df4cba82686391e5a8e520462b177a374a387092ae50b3bceb0a67c103bcef"
 ARCHIVED_RELEASE_IDS = frozenset({
     "srwf-f-20260814-v0-1", "srwf-f-20260814-v0-1-1",
     "srwf-f-20260815-v0-1-2", "srwf-f-20260821-v0-2",
@@ -2273,22 +2278,22 @@ def validate_font_release_groups(releases: list[Any]) -> None:
 
 
 def validate_retained_release_families(releases: list[Any], games: list[Any]) -> None:
-    """Apply the reviewed two-family policy only to the archive-backed public catalog."""
+    """Apply the reviewed single-family policy only to the archive-backed public catalog."""
     ids = [row.get("id") for row in releases if isinstance(row, dict)]
-    if len(ids) != 12 or any(not isinstance(value, str) for value in ids) or set(ids) != RETAINED_RELEASE_IDS:
-        complain("manifest/releases.json: archive retention requires exactly the 12 retained release ids")
+    if len(ids) != len(RETAINED_RELEASE_IDS) or any(not isinstance(value, str) for value in ids) or set(ids) != RETAINED_RELEASE_IDS:
+        complain("manifest/releases.json: archive retention requires exactly the six retained release ids")
     for game_id in GAME_DEFINITIONS:
         groups: dict[str, list[str | None]] = {}
         for row in releases:
             if isinstance(row, dict) and row.get("gameId") == game_id and isinstance(row.get("id"), str):
                 family, font = font_release_identity(row)
                 groups.setdefault(family, []).append(font)
-        if len(groups) != 2 or any(sorted(fonts, key=str) != ["a", "b", "c"] for fonts in groups.values()):
-            complain(f"manifest/releases.json: {game_id} must retain two complete a/b/c version families")
+        if len(groups) != 1 or any(sorted(fonts, key=str) != ["a", "b", "c"] for fonts in groups.values()):
+            complain(f"manifest/releases.json: {game_id} must retain one complete a/b/c version family")
         expected_latest = "srwf-f-20260928-v0-5" if game_id == "srwf-f" else "srwf-final-20261005-v0-3"
         game = next((row for row in games if isinstance(row, dict) and row.get("id") == game_id), {})
         default = game.get("defaultReleaseId")
-        if not isinstance(default, str) or default.removesuffix("-a").removesuffix("-b").removesuffix("-c") != expected_latest:
+        if default != f"{expected_latest}-{'a' if game_id == 'srwf-f' else 'c'}":
             complain(f"manifest/releases.json: {game_id} default must use its retained latest family")
 
 
@@ -2429,7 +2434,7 @@ def validate_index(files: list[Path]) -> None:
             ids.add(row["id"])
             if game_id in release_ids_by_game:
                 release_ids_by_game[game_id].add(row["id"])
-        if archive_enabled and row.get("id") in ARCHIVED_RELEASE_IDS:
+        if archive_enabled and row.get("id") in (ARCHIVED_RELEASE_IDS | RETIRED_RELEASE_IDS):
             complain(f"archived release must not be indexed: {row['id']}")
             continue
         manifest_ref, patch_ref, receipt_ref = validate_release_manifest(row, stock_profiles_by_id)
@@ -2506,6 +2511,7 @@ def validate_withdrawn_release_artifacts(files: list[Path]) -> None:
     present = {relative(path): path for path in files}
     if RELEASE_ARCHIVE_PATH in present or RELEASE_ARCHIVE_SHA256 is not None:
         validate_release_archive(files)
+        validate_retirement_archive(files)
         return
     for name, expected_sha256 in WITHDRAWN_RELEASE_ARTIFACT_ALLOWLIST.items():
         path = present.get(name)
@@ -2515,6 +2521,82 @@ def validate_withdrawn_release_artifacts(files: list[Path]) -> None:
             complain(f"withdrawn historical artifact is not a regular file: {name}")
         elif sha256_file(path) != expected_sha256:
             complain(f"withdrawn historical artifact hash mismatch: {name}")
+
+
+def validate_retirement_archive(files: list[Path]) -> None:
+    """The November archive is separate; never change the original October ledger."""
+    present = {relative(path): path for path in files}
+    path = present.get(RETIREMENT_ARCHIVE_PATH)
+    if path is None or path.is_symlink() or not path.is_file():
+        complain("retirement archive: verified metadata is missing or not a regular file")
+        return
+    if sha256_file(path) != RETIREMENT_ARCHIVE_SHA256:
+        complain("retirement archive: verified metadata SHA-256 changed")
+        return
+    archive = load_json(path)
+    if not exact_keys(archive, {"schema", "sourceCommit", "retainedReleaseIds", "archivedReleases", "backup"}, "retirement archive"):
+        return
+    if archive["schema"] != "srwf-kor.release-retirement.v1" or archive["sourceCommit"] != RETIREMENT_ARCHIVE_SOURCE_COMMIT:
+        complain("retirement archive: schema or source commit changed")
+    if archive["retainedReleaseIds"] != sorted(RETAINED_RELEASE_IDS):
+        complain("retirement archive: retained release set changed")
+    backup = archive["backup"]
+    if not exact_keys(backup, {"storage", "fileName", "bytes", "sha256", "md5", "readbackVerified", "entries"}, "retirement archive backup"):
+        return
+    if (backup["storage"] != "private-google-drive"
+        or not isinstance(backup["fileName"], str) or not re.fullmatch(r"[A-Za-z0-9._-]+\.zip", backup["fileName"])
+        or type(backup["bytes"]) is not int or not 1 <= backup["bytes"] <= JS_SAFE_INTEGER_MAX
+        or not isinstance(backup["sha256"], str) or not HEX64.fullmatch(backup["sha256"])
+        or not isinstance(backup["md5"], str) or not re.fullmatch(r"[a-f0-9]{32}", backup["md5"])
+        or backup["readbackVerified"] is not True):
+        complain("retirement archive: backup must be verified from a complete Drive readback")
+    metadata_paths = {"manifest/releases.json", "scripts/site-policy.json", "docs/RELEASE_POLICY.md",
+                      RELEASE_ARCHIVE_PATH, "AGENTS.md"}
+    artifact_paths = {path for rid in RETIRED_RELEASE_IDS for path in archived_artifact_paths(rid)}
+
+    def read_entries(items, paths, label):
+        found = {}
+        if not isinstance(items, list):
+            complain(f"{label}: entries are missing")
+            return found
+        for item in items:
+            if not exact_keys(item, {"path", "bytes", "sha256"}, label):
+                continue
+            name, size, digest = item["path"], item["bytes"], item["sha256"]
+            if (not isinstance(name, str) or name not in paths or name in found
+                or type(size) is not int or not 1 <= size <= PATCH_MAX
+                or not isinstance(digest, str) or not HEX64.fullmatch(digest)):
+                complain(f"{label}: unexpected or invalid entry")
+                continue
+            found[name] = (size, digest)
+        if found.keys() != paths:
+            complain(f"{label}: exact entries are required")
+        return found
+
+    entries = read_entries(backup["entries"], metadata_paths | artifact_paths, "retirement archive backup entries")
+    records = archive["archivedReleases"]
+    if not isinstance(records, list):
+        complain("retirement archive: release records are missing")
+        return
+    seen = set()
+    for row in records:
+        if not exact_keys(row, {"id", "gameId", "previousState", "artifacts"}, "retirement archive release"):
+            continue
+        rid = row["id"]
+        if not isinstance(rid, str) or rid not in RETIRED_RELEASE_IDS or rid in seen:
+            complain("retirement archive: unexpected or duplicate retired release")
+            continue
+        seen.add(rid)
+        game_id = "srwf-final" if rid.startswith("srwf-final-") else "srwf-f"
+        if row["gameId"] != game_id or row["previousState"] != "INDEXED_ACCEPTED":
+            complain("retirement archive: historical game or release status changed")
+        for name, value in read_entries(row["artifacts"], archived_artifact_paths(rid), "retirement archive release").items():
+            if entries.get(name) != value:
+                complain(f"retirement archive: backup entry differs from release artifact: {name}")
+    if seen != RETIRED_RELEASE_IDS:
+        complain("retirement archive: missing retired releases")
+    for name in sorted(artifact_paths & present.keys()):
+        complain(f"archived release artifact must not be reintroduced: {name}")
 
 
 def validate_release_archive(files: list[Path]) -> None:
@@ -2533,7 +2615,7 @@ def validate_release_archive(files: list[Path]) -> None:
     if archive.get("schema") != "srwf-kor.release-archive.v1" or archive.get("sourceCommit") != RELEASE_ARCHIVE_SOURCE_COMMIT:
         complain("release archive: schema or source commit is not pinned")
     retained = archive.get("retainedReleaseIds")
-    if not isinstance(retained, list) or len(retained) != 12 or any(not isinstance(value, str) for value in retained) or set(retained) != RETAINED_RELEASE_IDS:
+    if not isinstance(retained, list) or len(retained) != 12 or any(not isinstance(value, str) for value in retained) or set(retained) != ARCHIVE_20261011_RETAINED_RELEASE_IDS:
         complain("release archive: retained release ids are not the reviewed 12 releases")
     records = archive.get("archivedReleases")
     if not isinstance(records, list) or len(records) != 9:

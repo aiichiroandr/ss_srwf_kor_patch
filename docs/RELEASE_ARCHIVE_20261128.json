@@ -1,0 +1,271 @@
+{
+  "schema": "srwf-kor.release-retirement.v1",
+  "sourceCommit": "e0545d174bc55925e57aead59d35e91ead9577a8",
+  "retainedReleaseIds": [
+    "srwf-f-20260928-v0-5-a",
+    "srwf-f-20260928-v0-5-b",
+    "srwf-f-20260928-v0-5-c",
+    "srwf-final-20261005-v0-3-a",
+    "srwf-final-20261005-v0-3-b",
+    "srwf-final-20261005-v0-3-c"
+  ],
+  "archivedReleases": [
+    {
+      "id": "srwf-f-20260915-v0-4-a",
+      "gameId": "srwf-f",
+      "previousState": "INDEXED_ACCEPTED",
+      "artifacts": [
+        {
+          "path": "releases/srwf-f-20260915-v0-4-a.json",
+          "bytes": 1221,
+          "sha256": "b4db01d8bb70c4910293e124a89f6645a1ce408020d9b4474eb3f533ec1bfd5e"
+        },
+        {
+          "path": "patches/srwf-f-20260915-v0-4-a.srwfp",
+          "bytes": 63992864,
+          "sha256": "f31ffbd24da40bc4355fa14878d0d24d80887e4ea2a6d88409099c9568ded0de"
+        },
+        {
+          "path": "receipts/srwf-f-20260915-v0-4-a.acceptance.json",
+          "bytes": 928,
+          "sha256": "8de9609f460d7696d1d2e6c1c58a3ba31464140d2c7b5497c5a304459366d017"
+        }
+      ]
+    },
+    {
+      "id": "srwf-f-20260915-v0-4-b",
+      "gameId": "srwf-f",
+      "previousState": "INDEXED_ACCEPTED",
+      "artifacts": [
+        {
+          "path": "releases/srwf-f-20260915-v0-4-b.json",
+          "bytes": 1221,
+          "sha256": "a3317c1c0cdf23d57f5422aca9c16506a42904f78a399f1374be6b7dcefc840d"
+        },
+        {
+          "path": "patches/srwf-f-20260915-v0-4-b.srwfp",
+          "bytes": 63991849,
+          "sha256": "d6fcea57763bad838b1cfc73fedec75e485ffd541fb9783de7e37a0186f6c920"
+        },
+        {
+          "path": "receipts/srwf-f-20260915-v0-4-b.acceptance.json",
+          "bytes": 928,
+          "sha256": "84a436ca53a06ca93551e0ad678aa663832f908502a8cc7bdad0755869f05e91"
+        }
+      ]
+    },
+    {
+      "id": "srwf-f-20260915-v0-4-c",
+      "gameId": "srwf-f",
+      "previousState": "INDEXED_ACCEPTED",
+      "artifacts": [
+        {
+          "path": "releases/srwf-f-20260915-v0-4-c.json",
+          "bytes": 1221,
+          "sha256": "be3c993c889c3af22d6e7265d56b8eba19497842f0308d6186b1e1b95db79f5e"
+        },
+        {
+          "path": "patches/srwf-f-20260915-v0-4-c.srwfp",
+          "bytes": 63994763,
+          "sha256": "71bac68e81558b2d4ef24f16408e11a058c23140d1cfb57b77a05fa6be1db94a"
+        },
+        {
+          "path": "receipts/srwf-f-20260915-v0-4-c.acceptance.json",
+          "bytes": 928,
+          "sha256": "5f2a993d021751ea93fce4e0b8811b1f7892fc4fb6d84571a5469064a159635a"
+        }
+      ]
+    },
+    {
+      "id": "srwf-final-20260928-v0-2-a",
+      "gameId": "srwf-final",
+      "previousState": "INDEXED_ACCEPTED",
+      "artifacts": [
+        {
+          "path": "releases/srwf-final-20260928-v0-2-a.json",
+          "bytes": 1239,
+          "sha256": "e59a9eaf51973535461d8d34066846ff8e4511addd5432473e61a52d5eeb04f1"
+        },
+        {
+          "path": "patches/srwf-final-20260928-v0-2-a.srwfp",
+          "bytes": 3632657,
+          "sha256": "ae7ec47edda7e3edb5a91ed612d2e644bc674c52c2fa7c317e113efbc9b4b9d4"
+        },
+        {
+          "path": "receipts/srwf-final-20260928-v0-2-a.acceptance.json",
+          "bytes": 970,
+          "sha256": "f802bd914622c56e166be427b80b0279252dfc90561fdae1c9737c450cdd08e3"
+        }
+      ]
+    },
+    {
+      "id": "srwf-final-20260928-v0-2-b",
+      "gameId": "srwf-final",
+      "previousState": "INDEXED_ACCEPTED",
+      "artifacts": [
+        {
+          "path": "releases/srwf-final-20260928-v0-2-b.json",
+          "bytes": 1239,
+          "sha256": "b0c7c13748bfb9237bf59e0b6c931c5d7140c1188b9ab9273cdb478ea3d47f20"
+        },
+        {
+          "path": "patches/srwf-final-20260928-v0-2-b.srwfp",
+          "bytes": 3714081,
+          "sha256": "be05f87a20780e434a8af9d30511a5edf8c3ed25fd024a451cc7a5e5355f6cb0"
+        },
+        {
+          "path": "receipts/srwf-final-20260928-v0-2-b.acceptance.json",
+          "bytes": 970,
+          "sha256": "80c05b70af006e311d2ec0a734ba77abececdfc27293250f1232e42f490e1e07"
+        }
+      ]
+    },
+    {
+      "id": "srwf-final-20260928-v0-2-c",
+      "gameId": "srwf-final",
+      "previousState": "INDEXED_ACCEPTED",
+      "artifacts": [
+        {
+          "path": "releases/srwf-final-20260928-v0-2-c.json",
+          "bytes": 1239,
+          "sha256": "d7f16e963cb268b07bcca5a61937b29bcdb98cf075acc7108d61d1cd47b714e5"
+        },
+        {
+          "path": "patches/srwf-final-20260928-v0-2-c.srwfp",
+          "bytes": 3716160,
+          "sha256": "6992caf9a7279ff850bd872c3757e62d7eab5fd0e6340eaafa8f154dd63fe792"
+        },
+        {
+          "path": "receipts/srwf-final-20260928-v0-2-c.acceptance.json",
+          "bytes": 970,
+          "sha256": "909e272f135be82f5cdeeceb136bfdd00c855bfa1e8b3a069c95804eed07348f"
+        }
+      ]
+    }
+  ],
+  "backup": {
+    "storage": "private-google-drive",
+    "fileName": "srwf-retired-F-v0.4-Final-v0.2-20261128.zip",
+    "bytes": 203057863,
+    "sha256": "aa126a13914ecefc58a0a7833ca178085c4dcf2feef6861fc3b12134ed04bef6",
+    "md5": "19660dae360c722d11045d2bc8c270ee",
+    "readbackVerified": true,
+    "entries": [
+      {
+        "path": "AGENTS.md",
+        "bytes": 10672,
+        "sha256": "6972074a0a8d87803c3d458d374a3742fe5c2745dde10d302f48ea1cf81472b2"
+      },
+      {
+        "path": "docs/RELEASE_ARCHIVE_20261011.json",
+        "bytes": 15857,
+        "sha256": "90034ed2b166b02a568d99123daf8e3657db4d8297858bd31f68e925f7b25770"
+      },
+      {
+        "path": "docs/RELEASE_POLICY.md",
+        "bytes": 15037,
+        "sha256": "3eabe8a33cea3ae482c70cd55a9d1df7c120a4335c0cea670694c6a1016a7922"
+      },
+      {
+        "path": "manifest/releases.json",
+        "bytes": 5016,
+        "sha256": "38ee10543d4b77a31f0cc231e1b7a485d8f22efacfdfb51375bfeee72837ece4"
+      },
+      {
+        "path": "patches/srwf-f-20260915-v0-4-a.srwfp",
+        "bytes": 63992864,
+        "sha256": "f31ffbd24da40bc4355fa14878d0d24d80887e4ea2a6d88409099c9568ded0de"
+      },
+      {
+        "path": "patches/srwf-f-20260915-v0-4-b.srwfp",
+        "bytes": 63991849,
+        "sha256": "d6fcea57763bad838b1cfc73fedec75e485ffd541fb9783de7e37a0186f6c920"
+      },
+      {
+        "path": "patches/srwf-f-20260915-v0-4-c.srwfp",
+        "bytes": 63994763,
+        "sha256": "71bac68e81558b2d4ef24f16408e11a058c23140d1cfb57b77a05fa6be1db94a"
+      },
+      {
+        "path": "patches/srwf-final-20260928-v0-2-a.srwfp",
+        "bytes": 3632657,
+        "sha256": "ae7ec47edda7e3edb5a91ed612d2e644bc674c52c2fa7c317e113efbc9b4b9d4"
+      },
+      {
+        "path": "patches/srwf-final-20260928-v0-2-b.srwfp",
+        "bytes": 3714081,
+        "sha256": "be05f87a20780e434a8af9d30511a5edf8c3ed25fd024a451cc7a5e5355f6cb0"
+      },
+      {
+        "path": "patches/srwf-final-20260928-v0-2-c.srwfp",
+        "bytes": 3716160,
+        "sha256": "6992caf9a7279ff850bd872c3757e62d7eab5fd0e6340eaafa8f154dd63fe792"
+      },
+      {
+        "path": "receipts/srwf-f-20260915-v0-4-a.acceptance.json",
+        "bytes": 928,
+        "sha256": "8de9609f460d7696d1d2e6c1c58a3ba31464140d2c7b5497c5a304459366d017"
+      },
+      {
+        "path": "receipts/srwf-f-20260915-v0-4-b.acceptance.json",
+        "bytes": 928,
+        "sha256": "84a436ca53a06ca93551e0ad678aa663832f908502a8cc7bdad0755869f05e91"
+      },
+      {
+        "path": "receipts/srwf-f-20260915-v0-4-c.acceptance.json",
+        "bytes": 928,
+        "sha256": "5f2a993d021751ea93fce4e0b8811b1f7892fc4fb6d84571a5469064a159635a"
+      },
+      {
+        "path": "receipts/srwf-final-20260928-v0-2-a.acceptance.json",
+        "bytes": 970,
+        "sha256": "f802bd914622c56e166be427b80b0279252dfc90561fdae1c9737c450cdd08e3"
+      },
+      {
+        "path": "receipts/srwf-final-20260928-v0-2-b.acceptance.json",
+        "bytes": 970,
+        "sha256": "80c05b70af006e311d2ec0a734ba77abececdfc27293250f1232e42f490e1e07"
+      },
+      {
+        "path": "receipts/srwf-final-20260928-v0-2-c.acceptance.json",
+        "bytes": 970,
+        "sha256": "909e272f135be82f5cdeeceb136bfdd00c855bfa1e8b3a069c95804eed07348f"
+      },
+      {
+        "path": "releases/srwf-f-20260915-v0-4-a.json",
+        "bytes": 1221,
+        "sha256": "b4db01d8bb70c4910293e124a89f6645a1ce408020d9b4474eb3f533ec1bfd5e"
+      },
+      {
+        "path": "releases/srwf-f-20260915-v0-4-b.json",
+        "bytes": 1221,
+        "sha256": "a3317c1c0cdf23d57f5422aca9c16506a42904f78a399f1374be6b7dcefc840d"
+      },
+      {
+        "path": "releases/srwf-f-20260915-v0-4-c.json",
+        "bytes": 1221,
+        "sha256": "be3c993c889c3af22d6e7265d56b8eba19497842f0308d6186b1e1b95db79f5e"
+      },
+      {
+        "path": "releases/srwf-final-20260928-v0-2-a.json",
+        "bytes": 1239,
+        "sha256": "e59a9eaf51973535461d8d34066846ff8e4511addd5432473e61a52d5eeb04f1"
+      },
+      {
+        "path": "releases/srwf-final-20260928-v0-2-b.json",
+        "bytes": 1239,
+        "sha256": "b0c7c13748bfb9237bf59e0b6c931c5d7140c1188b9ab9273cdb478ea3d47f20"
+      },
+      {
+        "path": "releases/srwf-final-20260928-v0-2-c.json",
+        "bytes": 1239,
+        "sha256": "d7f16e963cb268b07bcca5a61937b29bcdb98cf075acc7108d61d1cd47b714e5"
+      },
+      {
+        "path": "scripts/site-policy.json",
+        "bytes": 26192,
+        "sha256": "ffb7cf6c1734460d7bd22f6b9f8f5a6d6dc7763cf203e24d42116982f5790f55"
+      }
+    ]
+  }
+}

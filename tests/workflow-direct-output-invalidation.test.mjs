@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import test from "node:test";
 import { FakeElement, installFakeDom, loadHtml } from "./helpers/fake-dom.mjs";
 
@@ -79,12 +80,29 @@ class FakeWorker {
 
 const document = installFakeDom();
 const rootUrl = new URL("../", import.meta.url);
+// Exercise the historical direct-output UI contract without redistributing the
+// retired manifests or payloads. Output is mocked; only release transition and
+// result naming behavior are under test.
+const olderFixtureMap = new Map();
+const sample = JSON.parse(await readFile(new URL(`../releases/${FINAL_V03_C_ID}.json`, import.meta.url), "utf8"));
+const olderFixtureRows = [[FINAL_V02_A_ID, FINAL_V02_A_SHA, "a"], [FINAL_V02_C_ID, FINAL_V02_C_SHA, "c"]].map(([id, sha256, font]) => {
+  const manifestPath = `releases/${id}.json`;
+  const filename = `SRWFIN-KOR-20260928-v0.2-${font}`;
+  const bytes = Buffer.from(JSON.stringify({
+    ...sample, id, version: "v0.2", title: "Synthetic legacy build (not available publicly)",
+    target: { ...sample.target, filename: filename + ".bin", cueFilename: filename + ".cue", sha256 },
+    patch: { ...sample.patch, sha256: "b".repeat(64), url: `patches/${id}.srwfp` },
+  }));
+  olderFixtureMap.set(new URL(manifestPath, rootUrl).href, bytes);
+  return { id, gameId: "srwf-final", state: "ACCEPTED", label: "Historical test fixture",
+    manifest: manifestPath, manifestSha256: createHash("sha256").update(bytes).digest("hex") };
+});
 globalThis.fetch = async (url) => {
   const resolved = url instanceof URL ? url : new URL(String(url), rootUrl);
   if (!resolved.href.startsWith(rootUrl.href)) {
     throw new Error(`Unexpected fetch outside workspace: ${resolved.href}`);
   }
-  const bytes = await readFile(resolved);
+  const bytes = olderFixtureMap.get(resolved.href) ?? await readFile(resolved);
   return {
     ok: true,
     status: 200,
@@ -135,6 +153,7 @@ async function waitForReady(maxTicks = 100) {
 }
 
 await waitForReady();
+state.releaseRows = [...state.releaseRows, ...olderFixtureRows];
 await hooks.activateGame("srwf-final");
 
 test.after(() => {

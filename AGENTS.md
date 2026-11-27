@@ -6,10 +6,8 @@ This repository is the public, static distribution surface for an accepted
 SRWF Korean patch. It is not a continuation of an internal binary lineage and
 it is not a candidate-testing area.
 
-The current repository state is `HAS_ACCEPTED_RELEASE`. Keep the latest and
-immediately preceding accepted version family for each game, including all
-a/b/c font variants. The current retained families are F v0.5/v0.4 and
-F Final v0.3/v0.2. Defaults remain `srwf-f-20260928-v0-5-a` and
+The current repository state is `HAS_ACCEPTED_RELEASE`. Keep the latest accepted version family for each game, including all a/b/c
+font variants. The current retained families are F v0.5 and F Final v0.3. Defaults remain `srwf-f-20260928-v0-5-a` and
 `srwf-final-20261005-v0-3-c`.
 
 F G103 v0.5 and Final r116 v0.2 were accepted in the user's 2026-09-28
@@ -34,6 +32,8 @@ it does not constitute a release index or new acceptance. Historical patch
 notes and validation documents may remain, but archived artifacts and release
 rows must not be reintroduced. Future retention changes require the same
 verified-backup procedure and coordinated ledger, validator and test updates.
+The 2026-11-28 retirement of F v0.4 and F Final v0.2 is recorded separately in
+`docs/RELEASE_ARCHIVE_20261128.json`; the October ledger remains immutable.
 
 Withdrawal remains permanent. F `srwf-f-20260821-v0-2` violated v1 canonical
 form by carrying 1,873,210 non-differing bytes (`NON_DIFFERING_BYTE`); the broken

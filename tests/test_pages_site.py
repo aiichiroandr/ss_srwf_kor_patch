@@ -49,7 +49,7 @@ class SitePackagingTests(unittest.TestCase):
                    'weapon-preview/runtime/f-current.json':'6'*20}
         for name, version in manifests.items():put(name,json.dumps({'version':version,'files':['saturn.js','saturn.wasm']}))
         releases=[]
-        for i in range(12):
+        for i in range(6):
             identity=f'test-release-{i:02d}'; patch=f'patches/{identity}.srwfp';receipt=f'receipts/{identity}.acceptance.json';manifest=f'releases/{identity}.json'
             put(patch,b'authored sparse fixture');put(receipt,json.dumps({'releaseId':identity,'state':'ACCEPTED'}))
             put(manifest,json.dumps({'id':identity,'state':'ACCEPTED','patch':{'url':patch,'size':(self.root/patch).stat().st_size,'sha256':site.file_hash(self.root/patch)},

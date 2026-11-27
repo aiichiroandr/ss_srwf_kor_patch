@@ -100,7 +100,7 @@ def synthetic_release_archive() -> dict[str, Any]:
     file_id = "syntheticArchiveFile0123456789"
     return {"schema":"srwf-kor.release-archive.v1",
         "sourceCommit":verifier.RELEASE_ARCHIVE_SOURCE_COMMIT,
-        "retainedReleaseIds":sorted(verifier.RETAINED_RELEASE_IDS),
+        "retainedReleaseIds":sorted(verifier.ARCHIVE_20261011_RETAINED_RELEASE_IDS),
         "archivedReleases":records,
         "backup":{"folderUrl":"https://drive.google.com/drive/folders/syntheticArchiveFolder0123456789",
             "archiveFiles":[{"fileId":file_id, "fileName":"synthetic-release-archive.zip",
@@ -622,7 +622,7 @@ class RepositoryPolicyTests(unittest.TestCase):
                 path.write_bytes(b"synthetic restored historical artifact")
             with verifier_root(root), mock_patch.object(verifier, "RELEASE_ARCHIVE_SHA256", "a"*64):
                 verifier.validate_withdrawn_release_artifacts([path for path in root.rglob("*") if path.is_file()])
-                self.assertEqual(verifier.errors, ["release archive: verified archive metadata is missing or not a regular file"])
+                self.assertIn("release archive: verified archive metadata is missing or not a regular file", verifier.errors)
 
     def test_verified_archive_covers_every_removed_triplet_without_shipping_game_data(self) -> None:
         archive = synthetic_release_archive()
@@ -682,6 +682,36 @@ class RepositoryPolicyTests(unittest.TestCase):
                 errors = "\n".join(archive_errors(synthetic_release_archive(), reintroduced=name))
                 self.assertIn(f"archived release artifact must not be reintroduced: {name}", errors)
 
+    def test_november_retirement_requires_exact_readback_and_blocks_reintroduction(self) -> None:
+        pristine = json.loads((PROJECT_ROOT / verifier.RETIREMENT_ARCHIVE_PATH).read_text())
+        rid = "srwf-final-20260928-v0-2-c"
+        retired = f"patches/{rid}.srwfp"
+        for fault in ("none", "pin", "readback", "triplet", "reintroduced"):
+            with self.subTest(fault=fault), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                archive = json.loads(json.dumps(pristine))
+                ledger = root / verifier.RETIREMENT_ARCHIVE_PATH
+                if fault == "readback":
+                    archive["backup"]["readbackVerified"] = False
+                elif fault == "triplet":
+                    archive["backup"]["entries"] = [entry for entry in archive["backup"]["entries"] if entry["path"] != retired]
+                write_json(ledger, archive)
+                files = [ledger]
+                if fault == "reintroduced":
+                    path = root / retired
+                    path.parent.mkdir()
+                    path.write_bytes(b"synthetic reintroduction")
+                    files.append(path)
+                pin = "0"*64 if fault == "pin" else hashlib.sha256(ledger.read_bytes()).hexdigest()
+                with verifier_root(root), mock_patch.object(verifier, "RETIREMENT_ARCHIVE_SHA256", pin):
+                    verifier.validate_retirement_archive(files)
+                    if fault == "none":
+                        self.assertEqual(verifier.errors, [])
+                    elif fault == "reintroduced":
+                        self.assertIn(f"archived release artifact must not be reintroduced: {retired}", verifier.errors)
+                    else:
+                        self.assertTrue(verifier.errors)
+
     def test_archive_rejects_unsafe_entry_paths_game_files_and_drive_id_mismatch(self) -> None:
         for fault in ["../private.json", "/private.json", "game.bin", "payload.srwfp?upload=1", "url-id", "bool-size"]:
             with self.subTest(fault=fault):
@@ -692,7 +722,7 @@ class RepositoryPolicyTests(unittest.TestCase):
                 else: container["entries"][0]["path"] = fault
                 self.assertTrue(archive_errors(archive))
 
-    def test_retention_requires_two_complete_families_and_the_latest_default(self) -> None:
+    def test_retention_requires_one_complete_family_per_game_and_the_exact_default(self) -> None:
         index = json.loads((PROJECT_ROOT / "manifest/releases.json").read_text())
         releases = [row for row in index["releases"] if row["id"] in verifier.RETAINED_RELEASE_IDS]
         with verifier_root(PROJECT_ROOT):
@@ -706,7 +736,7 @@ class RepositoryPolicyTests(unittest.TestCase):
                 elif fault == "old-family": rows[0]["id"] = "srwf-final-20260921-v0-1-a"
                 elif fault == "duplicate": rows[1] = dict(rows[0])
                 elif fault == "wrong-game": rows[0]["gameId"] = "srwf-f"
-                else: games[0]["defaultReleaseId"] = "srwf-f-20260915-v0-4-a"
+                else: games[0]["defaultReleaseId"] = "srwf-f-20260928-v0-5-b"
                 with verifier_root(PROJECT_ROOT):
                     verifier.validate_retained_release_families(rows, games)
                     self.assertTrue(verifier.errors)

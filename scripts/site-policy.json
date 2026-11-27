@@ -8,7 +8,8 @@
     "docs/HISTORY_REWRITE_20261103.md",
     "docs/RELEASE_ARCHIVE_20261011.json",
     "docs/HISTORY_REWRITE_20261103.json",
-    "docs/web-editor-notices.html"
+    "docs/web-editor-notices.html",
+    "docs/RELEASE_ARCHIVE_20261128.json"
   ],
   "files": [
     "NOTICE.md",
@@ -372,44 +373,27 @@
     "docs/HISTORY_REWRITE_20261103.json",
     "docs/HISTORY_REWRITE_20261103.md",
     "docs/RELEASE_ARCHIVE_20261011.json",
+    "docs/RELEASE_ARCHIVE_20261128.json",
     "docs/WEB_PORT_CLIENT_RECOMP.md",
     "docs/WEB_PORT_TEST.md",
     "docs/web-editor-notices.html",
     "index.html",
     "manifest/releases.json",
-    "patches/srwf-f-20260915-v0-4-a.srwfp",
-    "patches/srwf-f-20260915-v0-4-b.srwfp",
-    "patches/srwf-f-20260915-v0-4-c.srwfp",
     "patches/srwf-f-20260928-v0-5-a.srwfp",
     "patches/srwf-f-20260928-v0-5-b.srwfp",
     "patches/srwf-f-20260928-v0-5-c.srwfp",
-    "patches/srwf-final-20260928-v0-2-a.srwfp",
-    "patches/srwf-final-20260928-v0-2-b.srwfp",
-    "patches/srwf-final-20260928-v0-2-c.srwfp",
     "patches/srwf-final-20261005-v0-3-a.srwfp",
     "patches/srwf-final-20261005-v0-3-b.srwfp",
     "patches/srwf-final-20261005-v0-3-c.srwfp",
-    "receipts/srwf-f-20260915-v0-4-a.acceptance.json",
-    "receipts/srwf-f-20260915-v0-4-b.acceptance.json",
-    "receipts/srwf-f-20260915-v0-4-c.acceptance.json",
     "receipts/srwf-f-20260928-v0-5-a.acceptance.json",
     "receipts/srwf-f-20260928-v0-5-b.acceptance.json",
     "receipts/srwf-f-20260928-v0-5-c.acceptance.json",
-    "receipts/srwf-final-20260928-v0-2-a.acceptance.json",
-    "receipts/srwf-final-20260928-v0-2-b.acceptance.json",
-    "receipts/srwf-final-20260928-v0-2-c.acceptance.json",
     "receipts/srwf-final-20261005-v0-3-a.acceptance.json",
     "receipts/srwf-final-20261005-v0-3-b.acceptance.json",
     "receipts/srwf-final-20261005-v0-3-c.acceptance.json",
-    "releases/srwf-f-20260915-v0-4-a.json",
-    "releases/srwf-f-20260915-v0-4-b.json",
-    "releases/srwf-f-20260915-v0-4-c.json",
     "releases/srwf-f-20260928-v0-5-a.json",
     "releases/srwf-f-20260928-v0-5-b.json",
     "releases/srwf-f-20260928-v0-5-c.json",
-    "releases/srwf-final-20260928-v0-2-a.json",
-    "releases/srwf-final-20260928-v0-2-b.json",
-    "releases/srwf-final-20260928-v0-2-c.json",
     "releases/srwf-final-20261005-v0-3-a.json",
     "releases/srwf-final-20261005-v0-3-b.json",
     "releases/srwf-final-20261005-v0-3-c.json",
@@ -428,20 +412,8 @@
   ],
   "pins": {
     "manifest/releases.json": {
-      "bytes": 5016,
-      "sha256": "38ee10543d4b77a31f0cc231e1b7a485d8f22efacfdfb51375bfeee72837ece4"
-    },
-    "patches/srwf-f-20260915-v0-4-a.srwfp": {
-      "bytes": 63992864,
-      "sha256": "f31ffbd24da40bc4355fa14878d0d24d80887e4ea2a6d88409099c9568ded0de"
-    },
-    "patches/srwf-f-20260915-v0-4-b.srwfp": {
-      "bytes": 63991849,
-      "sha256": "d6fcea57763bad838b1cfc73fedec75e485ffd541fb9783de7e37a0186f6c920"
-    },
-    "patches/srwf-f-20260915-v0-4-c.srwfp": {
-      "bytes": 63994763,
-      "sha256": "71bac68e81558b2d4ef24f16408e11a058c23140d1cfb57b77a05fa6be1db94a"
+      "bytes": 3240,
+      "sha256": "104446b9afbd710567e5eadeeb79c378d029ada20a504f7e41d2d5f99ea420e7"
     },
     "patches/srwf-f-20260928-v0-5-a.srwfp": {
       "bytes": 69587546,
@@ -455,18 +427,6 @@
       "bytes": 69592331,
       "sha256": "9981ea581a400807fbc6dc6c935dba39f18615f0223ded23c4675ed7f5d78f1d"
     },
-    "patches/srwf-final-20260928-v0-2-a.srwfp": {
-      "bytes": 3632657,
-      "sha256": "ae7ec47edda7e3edb5a91ed612d2e644bc674c52c2fa7c317e113efbc9b4b9d4"
-    },
-    "patches/srwf-final-20260928-v0-2-b.srwfp": {
-      "bytes": 3714081,
-      "sha256": "be05f87a20780e434a8af9d30511a5edf8c3ed25fd024a451cc7a5e5355f6cb0"
-    },
-    "patches/srwf-final-20260928-v0-2-c.srwfp": {
-      "bytes": 3716160,
-      "sha256": "6992caf9a7279ff850bd872c3757e62d7eab5fd0e6340eaafa8f154dd63fe792"
-    },
     "patches/srwf-final-20261005-v0-3-a.srwfp": {
       "bytes": 3634793,
       "sha256": "8df497a949f8f6f45c2b14a55cdbcf24b76a40afb46d736e6905675cee0da7ab"
@@ -478,18 +438,6 @@
     "patches/srwf-final-20261005-v0-3-c.srwfp": {
       "bytes": 3718378,
       "sha256": "f35cf3b4ec5d9da5dd864b86b42e993dd7c1648065d37f3717b4513829bfa87c"
-    },
-    "receipts/srwf-f-20260915-v0-4-a.acceptance.json": {
-      "bytes": 928,
-      "sha256": "8de9609f460d7696d1d2e6c1c58a3ba31464140d2c7b5497c5a304459366d017"
-    },
-    "receipts/srwf-f-20260915-v0-4-b.acceptance.json": {
-      "bytes": 928,
-      "sha256": "84a436ca53a06ca93551e0ad678aa663832f908502a8cc7bdad0755869f05e91"
-    },
-    "receipts/srwf-f-20260915-v0-4-c.acceptance.json": {
-      "bytes": 928,
-      "sha256": "5f2a993d021751ea93fce4e0b8811b1f7892fc4fb6d84571a5469064a159635a"
     },
     "receipts/srwf-f-20260928-v0-5-a.acceptance.json": {
       "bytes": 966,
@@ -503,18 +451,6 @@
       "bytes": 966,
       "sha256": "08b0cf5db0aa1e669dfc4c6a4a4db8b9a5ba988a9cd86372b34a90113d102bf3"
     },
-    "receipts/srwf-final-20260928-v0-2-a.acceptance.json": {
-      "bytes": 970,
-      "sha256": "f802bd914622c56e166be427b80b0279252dfc90561fdae1c9737c450cdd08e3"
-    },
-    "receipts/srwf-final-20260928-v0-2-b.acceptance.json": {
-      "bytes": 970,
-      "sha256": "80c05b70af006e311d2ec0a734ba77abececdfc27293250f1232e42f490e1e07"
-    },
-    "receipts/srwf-final-20260928-v0-2-c.acceptance.json": {
-      "bytes": 970,
-      "sha256": "909e272f135be82f5cdeeceb136bfdd00c855bfa1e8b3a069c95804eed07348f"
-    },
     "receipts/srwf-final-20261005-v0-3-a.acceptance.json": {
       "bytes": 1018,
       "sha256": "b999625850f0835da874fdd80d218082afc8ff4ddbbc699c77d34b16bf65ac54"
@@ -527,18 +463,6 @@
       "bytes": 965,
       "sha256": "75d5199357c443589f226dec62c27d799adf775bd4d35acb5924c770eb85f39a"
     },
-    "releases/srwf-f-20260915-v0-4-a.json": {
-      "bytes": 1221,
-      "sha256": "b4db01d8bb70c4910293e124a89f6645a1ce408020d9b4474eb3f533ec1bfd5e"
-    },
-    "releases/srwf-f-20260915-v0-4-b.json": {
-      "bytes": 1221,
-      "sha256": "a3317c1c0cdf23d57f5422aca9c16506a42904f78a399f1374be6b7dcefc840d"
-    },
-    "releases/srwf-f-20260915-v0-4-c.json": {
-      "bytes": 1221,
-      "sha256": "be3c993c889c3af22d6e7265d56b8eba19497842f0308d6186b1e1b95db79f5e"
-    },
     "releases/srwf-f-20260928-v0-5-a.json": {
       "bytes": 1221,
       "sha256": "97d5311fcb740f5acd6b5573bbe8c0b9362878abbb44e5312f95fb6942b45fde"
@@ -550,18 +474,6 @@
     "releases/srwf-f-20260928-v0-5-c.json": {
       "bytes": 1221,
       "sha256": "d1e2d20dd3490ee40760c9ce885f4788a127f2153b753f47c8537b511c99a87f"
-    },
-    "releases/srwf-final-20260928-v0-2-a.json": {
-      "bytes": 1239,
-      "sha256": "e59a9eaf51973535461d8d34066846ff8e4511addd5432473e61a52d5eeb04f1"
-    },
-    "releases/srwf-final-20260928-v0-2-b.json": {
-      "bytes": 1239,
-      "sha256": "b0c7c13748bfb9237bf59e0b6c931c5d7140c1188b9ab9273cdb478ea3d47f20"
-    },
-    "releases/srwf-final-20260928-v0-2-c.json": {
-      "bytes": 1239,
-      "sha256": "d7f16e963cb268b07bcca5a61937b29bcdb98cf075acc7108d61d1cd47b714e5"
     },
     "releases/srwf-final-20261005-v0-3-a.json": {
       "bytes": 1270,
@@ -606,24 +518,22 @@
     "assets/editor-preview-resources.mjs": {
       "bytes": 6327,
       "sha256": "9b5c9ce31e4608608c69ab2cc83c79baf3334ac50be30caba592406316b09261"
+    },
+    "docs/RELEASE_ARCHIVE_20261128.json": {
+      "bytes": 9369,
+      "sha256": "33df4cba82686391e5a8e520462b177a374a387092ae50b3bceb0a67c103bcef"
     }
   },
   "runtimeSets": [],
   "runtimeManifests": {},
   "runtimeNotices": [],
   "releaseIds": [
-    "srwf-f-20260915-v0-4-a",
-    "srwf-f-20260915-v0-4-b",
-    "srwf-f-20260915-v0-4-c",
-    "srwf-f-20260928-v0-5-a",
-    "srwf-f-20260928-v0-5-b",
-    "srwf-f-20260928-v0-5-c",
-    "srwf-final-20260928-v0-2-a",
-    "srwf-final-20260928-v0-2-b",
-    "srwf-final-20260928-v0-2-c",
     "srwf-final-20261005-v0-3-a",
     "srwf-final-20261005-v0-3-b",
-    "srwf-final-20261005-v0-3-c"
+    "srwf-final-20261005-v0-3-c",
+    "srwf-f-20260928-v0-5-a",
+    "srwf-f-20260928-v0-5-b",
+    "srwf-f-20260928-v0-5-c"
   ],
   "runtimeWorkers": {},
   "runtimeState": "WITHDRAWN",

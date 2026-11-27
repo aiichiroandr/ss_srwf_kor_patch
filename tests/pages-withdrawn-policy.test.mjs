@@ -16,7 +16,7 @@ try:
   c.put(name,data);p['files'].append(name);p['pins'][name]={'bytes':len(data.encode()),'sha256':b.file_hash(c.root/name)}
  p['files']=sorted(p['files']);p['withdrawnPreviewReferences']={'assets/editor-preview-resources.mjs':['../weapon-preview/runtime-worker-loader.mjs?v=test']}
  c.save_policy();p=b.load_policy(c.policy_path);lock=b.create_lock(c.root,p);b.build_site(c.root,c.output,p,lock,copy_mode='copy');b.verify_site(c.output,p,lock)
- assert not list(c.output.rglob('*.wasm'));assert len(p['releaseIds'])==12
+ assert not list(c.output.rglob('*.wasm'));assert len(p['releaseIds'])==6
  c.put('assets/editor-public-features.mjs','export const flags={runtimePreview:true};')
  try:b.check_references(c.root,p)
  except b.PackageError:pass
