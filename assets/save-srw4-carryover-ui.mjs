@@ -1,3 +1,4 @@
+import {carryoverDownloadName,carryoverFormatLabel} from './save-carryover-format.mjs?v=20261113-alicecopies1&carryformat=20261128-1';
 const byId=id=>document.getElementById(id);
 const root=byId('srw4CarryoverDialog');
 if(root){
@@ -7,13 +8,14 @@ if(root){
     attest=byId('srw4CarryoverAttest'),verify=byId('srw4CarryoverVerify'),status=byId('srw4CarryoverStatus'),
     slots=byId('srw4CarryoverSlots'),select=byId('srw4CarryoverSlot'),create=byId('srw4CarryoverCreate'),
     cancel=byId('srw4CarryoverCancel'),result=byId('srw4CarryoverResult'),download=byId('srw4CarryoverDownload'),
-    edits=byId('srw4CarryoverEdits');
+    edits=byId('srw4CarryoverEdits'),filename=byId('srw4CarryoverFilenameValue'),formatLabel=byId('srw4CarryoverFilenameFormat');
   let worker=null,url=null,busy=false,validated=false,lastOpener=null;
   const note=(message,error=false)=>{status.textContent=message;status.classList.toggle('is-error',error);};
   const canVerify=()=>Boolean(f.files?.[0]&&final.files?.[0]&&save.files?.[0]&&attest.checked);
   function clearResult(){
     if(url)URL.revokeObjectURL(url);
-    url=null;download.removeAttribute('href');result.hidden=true;edits.replaceChildren();
+    url=null;download.removeAttribute('href');download.removeAttribute('download');result.hidden=true;edits.replaceChildren();
+    if(filename)filename.textContent='';if(formatLabel)formatLabel.textContent='';
   }
   function sync(){
     verify.disabled=busy||!canVerify();
@@ -36,7 +38,7 @@ if(root){
     if(busy||!canVerify())return;
     reset();busy=true;
     try{
-      const current=new Worker(new URL('./save-srw4-carryover-worker.mjs?v=20261113-alicecopies1&carryover=20261117-1&editorcompat=20261125-1',import.meta.url),{type:'module',name:'srwf-clear-save-carryover'});
+      const current=new Worker(new URL('./save-srw4-carryover-worker.mjs?v=20261113-alicecopies1&carryover=20261117-1&editorcompat=20261125-1&carryformat=20261128-1',import.meta.url),{type:'module',name:'srwf-clear-save-carryover'});
       worker=current;
       current.addEventListener('error',()=>{
         if(worker!==current)return;
@@ -57,7 +59,10 @@ if(root){
         }else if(data.type==='COMPLETE'){
           clearResult();
           url=URL.createObjectURL(new Blob([data.bytes],{type:'application/octet-stream'}));
-          download.href=url;download.download=`FINAL-승계전용-${save.files?.[0]?.name??'save.bcr'}`;
+          const name=carryoverDownloadName(save.files?.[0]?.name,data.format);
+          download.href=url;download.download=name;
+          if(filename)filename.textContent=name;
+          if(formatLabel){const format=carryoverFormatLabel(data.format);formatLabel.textContent=format?'('+format+')':'';}
           for(const edit of data.edits){const li=document.createElement('li');li.textContent=`${edit.name} · #${edit.from} → #${edit.to}`;edits.append(li);}
           note('승계용 복사본을 만들었습니다. 원본은 변경하지 않았습니다.');result.hidden=false;
         }

@@ -1,6 +1,6 @@
-import {createAutoCarryoverUI} from './save-auto-carryover-ui.mjs?v=20261113-alicecopies1&carryauto=20261128-1';
+import {createAutoCarryoverUI} from './save-auto-carryover-ui.mjs?v=20261113-alicecopies1&carryfilename=20261128-1';
 import {probeLinkedNightlyDonor} from './nightly-donor.mjs?v=20261113-alicecopies1&nightly=20261128-1';
-import {NIGHTLY} from './nightly-build.mjs?v=20261113-alicecopies1&nightly=20261128-1';
+import {NIGHTLY} from './nightly-build.mjs?v=20261113-alicecopies1&nightly=20261128-2';
 import {createBattlePreview} from './editor-battle-preview.mjs?v=20261113-alicecopies1&sprite=20261126-1';
 import {createSaveNameAuthority} from './save-name-support.mjs?v=20261113-alicecopies1';
 import {createSavePilotAuthority} from './save-pilot-support.mjs?v=20261113-alicecopies1';
@@ -1169,8 +1169,9 @@ elements.editorExportButton.addEventListener("click", () => navigateWorkflow("sa
 let rememberedLinkedF=null;
 const autoCarryover=createAutoCarryoverUI({
  root:byId("autoCarryover"),status:byId("autoCarryoverStatus"),details:byId("autoCarryoverDetails"),
- fInput:byId("autoCarryoverF"),saveInput:byId("autoCarryoverSave"),slot:byId("autoCarryoverSlot"),download:byId("autoCarryoverDownload"),
- createWorker:()=>new Worker(new URL("./save-srw4-carryover-worker.mjs?v=20261113-alicecopies1&carryauto=20261128-1",import.meta.url),{type:"module",name:"srwf-auto-carryover"})
+ fInput:byId("autoCarryoverF"),saveInput:byId("autoCarryoverSave"),slot:byId("autoCarryoverSlot"),download:byId("autoCarryoverDownload"),filename:byId("autoCarryoverFilename"),
+ filenameValue:byId("autoCarryoverFilenameValue"),filenameFormat:byId("autoCarryoverFilenameFormat"),
+ createWorker:()=>new Worker(new URL("./save-srw4-carryover-worker.mjs?v=20261113-alicecopies1&carryformat=20261128-2",import.meta.url),{type:"module",name:"srwf-auto-carryover"})
 });
 function startAutoCarryover(bin){
  void autoCarryover.start({bin,handles:state.workflowCompanionHandles,rememberedF:rememberedLinkedF});
@@ -1940,7 +1941,7 @@ async function loadSelectedRelease(row) {
     if (row===NIGHTLY_ROW) {
       const stock=state.stockProfiles.get(NIGHTLY.source.profileId);
       if(stock?.id!==NIGHTLY.source.profileId||stock.sha256!==NIGHTLY.source.sha256||stock.size!==NIGHTLY.source.size)throw new PatcherError("SOURCE_PROFILE_MISMATCH","Invalid Nightly source");
-      release=Object.freeze({...NIGHTLY,patch:Object.freeze({...NIGHTLY.patch,url:resolveLocalReference(NIGHTLY.patch.url,SITE_ROOT_URL).href})});
+      release=Object.freeze({...NIGHTLY,patch:Object.freeze({...NIGHTLY.patch,url:resolveLocalReference(NIGHTLY.patch.url,SITE_ROOT_URL).href+'?build='+NIGHTLY.patch.sha256})});
     } else {
       const manifestUrl = resolveLocalReference(row.manifest, SITE_ROOT_URL);
       const manifest = await fetchJsonDocument(manifestUrl, row.manifestSha256);
@@ -3513,7 +3514,7 @@ function continueEditorPlan(plan, note) {
 
 function getEditorBuildWorker(release) {
   if (state.editorBuildWorker) return state.editorBuildWorker;
-  const worker = new Worker(new URL(release.nightly ? "./patch-worker-v3.mjs?v=20261113-alicecopies1&nightly=20261128-1" : `./patch-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url), {
+  const worker = new Worker(new URL(release.nightly ? "./patch-worker-v3.mjs?v=20261113-alicecopies1&nightly=20261128-2" : `./patch-worker.mjs?v=${STATIC_ASSET_REVISION}`, import.meta.url), {
     type: "module",
     name: "srwf-local-editor-build",
   });
@@ -10016,7 +10017,7 @@ function finishBusyState() {
 function renderPatchNotesForRelease(releaseId) {
   const notes = releaseId===NIGHTLY.id ? {
     version:NIGHTLY.version,items:[],
-    summary:"v0.4 Nightly · 수시 갱신 · 안정판 아님. 플레이 전 세이브 파일 사본을 보관하세요.\n\n1. 이번 빌드에서 확인\n- 77클리어 적 턴 멈춤 수정, 중단 저장 후 재개 확인.\n- 마징가 START 스킵과 엔딩 2편의 한글 자막·음향을 별도 검수.\n\n2. 이용 범위\n- 게임 본문 Mona12(c) 한 가지. 기존 롬 편집값 가져오기 및 Nightly 롬 재편집은 미지원.\n- 이미 F 연동된 BIN이나 앞서 연 F 원본의 영상을 재사용합니다. 해당 파일이 없다면 F 본편 Rev B (21M) Track 1을 한 번 연결합니다. 파일은 기기 밖으로 나가지 않습니다.\n\n3. 남은 검수\n- 4차 연동 저장은 그대로 불러오면 일부 기체가 잘못 들어옵니다. 같은 폴더에 F 연동 BIN과 클리어 세이브가 있으면, 저장 화면에서 완결편 전용 사본을 자동으로 만들어 줍니다.\n- 최종전 승리에서 엔딩까지의 정상 진행과 새턴 실기는 미검증."
+    summary:"v0.4 Nightly · 수시 갱신 · 안정판 아님. 플레이 전 세이브 파일 사본을 보관하세요.\n\n1. 이번 빌드에서 확인\n- 인게임 개선의 ON/OFF 토글 9개는 기본 ON. 배속·표시 대상 등의 선택값은 유지.\n- 77클리어 적 턴 멈춤 수정, 중단 저장 후 재개 확인.\n- 마징가 START 스킵과 엔딩 2편의 한글 자막·음향을 별도 검수.\n\n2. 이용 범위\n- 게임 본문 Mona12(c) 한 가지. 기존 롬 편집값 가져오기 및 Nightly 롬 재편집은 미지원.\n- 이미 F 연동된 BIN이나 앞서 연 F 원본의 영상을 재사용합니다. 해당 파일이 없다면 F 본편 Rev B (21M) Track 1을 한 번 연결합니다. 파일은 기기 밖으로 나가지 않습니다.\n\n3. 남은 검수\n- 4차 연동 저장은 그대로 불러오면 일부 기체가 잘못 들어옵니다. 같은 폴더에 F 연동 BIN과 클리어 세이브가 있으면, 저장 화면에서 완결편 전용 사본을 자동으로 만들어 줍니다.\n- 최종전 승리에서 엔딩까지의 정상 진행과 새턴 실기는 미검증."
   } : getPatchNotesForRelease(releaseId);
   closePatchNotes();
   elements.patchNotesList.replaceChildren();
@@ -10097,7 +10098,7 @@ function openPatchNotes() {
   const releaseId = state.patchNotesReleaseId;
   const notes = releaseId===NIGHTLY.id ? {
     version:NIGHTLY.version,items:[],
-    summary:"v0.4 Nightly · 수시 갱신 · 안정판 아님. 플레이 전 세이브 파일 사본을 보관하세요.\n\n1. 이번 빌드에서 확인\n- 77클리어 적 턴 멈춤 수정, 중단 저장 후 재개 확인.\n- 마징가 START 스킵과 엔딩 2편의 한글 자막·음향을 별도 검수.\n\n2. 이용 범위\n- 게임 본문 Mona12(c) 한 가지. 기존 롬 편집값 가져오기 및 Nightly 롬 재편집은 미지원.\n- 이미 F 연동된 BIN이나 앞서 연 F 원본의 영상을 재사용합니다. 해당 파일이 없다면 F 본편 Rev B (21M) Track 1을 한 번 연결합니다. 파일은 기기 밖으로 나가지 않습니다.\n\n3. 남은 검수\n- 4차 연동 저장은 그대로 불러오면 일부 기체가 잘못 들어옵니다. 같은 폴더에 F 연동 BIN과 클리어 세이브가 있으면, 저장 화면에서 완결편 전용 사본을 자동으로 만들어 줍니다.\n- 최종전 승리에서 엔딩까지의 정상 진행과 새턴 실기는 미검증."
+    summary:"v0.4 Nightly · 수시 갱신 · 안정판 아님. 플레이 전 세이브 파일 사본을 보관하세요.\n\n1. 이번 빌드에서 확인\n- 인게임 개선의 ON/OFF 토글 9개는 기본 ON. 배속·표시 대상 등의 선택값은 유지.\n- 77클리어 적 턴 멈춤 수정, 중단 저장 후 재개 확인.\n- 마징가 START 스킵과 엔딩 2편의 한글 자막·음향을 별도 검수.\n\n2. 이용 범위\n- 게임 본문 Mona12(c) 한 가지. 기존 롬 편집값 가져오기 및 Nightly 롬 재편집은 미지원.\n- 이미 F 연동된 BIN이나 앞서 연 F 원본의 영상을 재사용합니다. 해당 파일이 없다면 F 본편 Rev B (21M) Track 1을 한 번 연결합니다. 파일은 기기 밖으로 나가지 않습니다.\n\n3. 남은 검수\n- 4차 연동 저장은 그대로 불러오면 일부 기체가 잘못 들어옵니다. 같은 폴더에 F 연동 BIN과 클리어 세이브가 있으면, 저장 화면에서 완결편 전용 사본을 자동으로 만들어 줍니다.\n- 최종전 승리에서 엔딩까지의 정상 진행과 새턴 실기는 미검증."
   } : getPatchNotesForRelease(releaseId);
   if (!notes || elements.patchNotesToggle.disabled || !notes.items.every(hasSafePatchNoteImages)) {
     return;

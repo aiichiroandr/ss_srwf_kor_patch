@@ -1,3 +1,4 @@
+import {carryoverDownloadName,carryoverFormatLabel,possibleCarryoverFile,isCarryoverSaveInput} from './save-carryover-format.mjs?v=20261113-alicecopies1&carryformat=20261128-1';
 const MAX_SAVE=8*1024*1024;
 const asFile=h=>h.kind==='file'&&typeof h.getFile==='function';
 const readHeader=async f=>new TextDecoder('latin1').decode(await f.slice(16,128).arrayBuffer());
@@ -6,29 +7,29 @@ async function isFDisc(f){
  const header=await readHeader(f);
  return header.startsWith('SEGA SEGASATURN')&&header.includes('T-20610G');
 }
-const isSaveFile=f=>f.size>0&&f.size<=MAX_SAVE&&!/^FINAL-승계전용-/i.test(f.name)&&/\.(bkr|bcr|sav|srm|gz)$/i.test(f.name);
 export async function findAutomaticCarryoverInputs(handles,{rememberedF,stale=()=>false}={}){
  const sources=[],saves=[];
  if(rememberedF)sources.push(rememberedF);
  for(const handle of (Array.isArray(handles)?handles.slice(0,96):[])){
   if(stale())return {};
-  if(!asFile(handle)||!/\.(bin|bkr|bcr|sav|srm|gz)$/i.test(handle.name))continue;
+  if(!asFile(handle)||!possibleCarryoverFile(handle.name))continue;
   try {
    const file=await handle.getFile();
-   if(isSaveFile(file))saves.push(file);
+   if(await isCarryoverSaveInput(file,MAX_SAVE))saves.push(file);
    else if(!rememberedF&&/\.bin$/i.test(file.name)&&await isFDisc(file))sources.push(file);
   } catch {/* Unreadable or unrelated input file. */}
  }
  if(stale())return {};
  return {f:sources.length===1?sources[0]:null,save:saves.length===1?saves[0]:null,ambiguous:sources.length>1||saves.length>1};
 }
-export function createAutoCarryoverUI({root,status,details,fInput,saveInput,slot,download,createWorker}){
+export function createAutoCarryoverUI({root,status,details,fInput,saveInput,slot,download,filename,filenameValue,filenameFormat,createWorker}){
  let out=null,seq=0,worker=null,url=null,companion=null,pending=false,detected={};
  function resetView(){
   worker?.terminate();worker=null;
   if(url)URL.revokeObjectURL(url);
   url=null;companion=null;pending=false;
   download.hidden=true;download.removeAttribute('href');download.removeAttribute('download');
+  filenameValue.textContent='';filenameFormat.textContent='';filename.hidden=true;
   slot.hidden=true;slot.replaceChildren?.();
  }
  function clear(){
@@ -63,10 +64,12 @@ export function createAutoCarryoverUI({root,status,details,fInput,saveInput,slot
     w.terminate();worker=null;
     if(data.type==='COMPLETE'&&data.bytes instanceof Uint8Array&&data.bytes.length>0&&data.bytes.length<=MAX_SAVE){
      const blob=new Blob([data.bytes],{type:'application/octet-stream'});
-     const suffix=(save.name?.match(/\.(?:bkr|bcr|srm|sav|gz)$/i)?.[0]??'.bcr').toLowerCase();
-     const label=(save.name??'save').replace(/[\\/:*?"<>|\u0000-\u001f]/g,'-').slice(0,75);
-     const name='FINAL-승계전용-'+(label.toLowerCase().endsWith(suffix)?label:label+suffix);
+     const name=carryoverDownloadName(save.name,data.format);
      companion={blob,name};url=URL.createObjectURL(blob);
+     filenameValue.textContent=name;
+     const format=carryoverFormatLabel(data.format);
+     filenameFormat.textContent=format?'('+format+')':'';
+     filename.hidden=false;
      download.href=url;download.download=name;download.hidden=false;details.open=false;
      status.textContent='4차 연동 승계용 사본을 만들었습니다. 원본은 그대로입니다. 이 사본은 완결편에서만 쓰세요.';
     }else if(data.type==='NO_LINKED_SAVE'){

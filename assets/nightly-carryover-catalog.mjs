@@ -8,7 +8,7 @@ import {readWeaponCloneManifest} from './editor-weapon-clone.mjs?v=20261113-alic
 import {expandCompactUnitStorage} from './editor-unit-compact.mjs?v=20261113-alicecopies1&nightly=20261128-1';
 // Dedicated receiving catalog. It never registers an editor base,
 // returns a session, opens changed/derived Nightly media, or writes any disc.
-const NIGHT='d410df9bc9f268b671d83af54bc0cb1ccbd2bfea21172d6c1a3109f876f6b69c';
+const NIGHT='4df9ab12c1bded4d07ceae37a13fa45b8644e00bae75df9a56f277087061c39a';
 const families=[
  [430,'s-gundam','S건담',1,0,'s-cruiser',430,498],
  [431,'s-g-cruiser','S건담G크루저',1,1,'s-cruiser',430,502],

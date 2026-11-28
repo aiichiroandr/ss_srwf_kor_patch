@@ -59,6 +59,14 @@ BIN의 ALICE 연동이 필요하며, 개조된 무기의 저장 칸이나 장착
 양쪽 BIN에서 유일하게 확인할 수 없거나, 변경할 기체의 구성 링크·탑승 상태가
 검증된 단일 기체 형태와 맞지 않으면 원본을 유지하고 출력을 거부합니다. 에뮬 스테이트, SSF의
 개별 저장 파일, 추가 세이브 포맷은 이 기능의 대상이 아닙니다.
+사본 버튼 위에 실제 파일명과 내장/카트리지, 압축 여부를 표시합니다.
+Mednafen·RetroArch Beetle Saturn의 .bkr(내장)·.bcr(카트리지), Kronos의 표준 .ram 및 Beetle 공유 모드는 지원 RAM 크기와 헤더가 맞아야 합니다.
+Ymir 등의 raw 또는 FF 인터리브와 gzip 포장은 그대로 보존합니다. 같은 폴더에서 확장자만 보고 세이브를 고르지 않고, 백업 RAM 서명 또는 gzip 헤더를 먼저 확인합니다.
+SSF의 개별 저장과 스테이트는 직접 지원하지 않습니다. 다른 에뮬로 옮길 경우 확장자만 바꾸는 건 포맷 변환이 아닙니다.
+현재 에뮬레이터의 완결편용 저장 위치와 파일명은 설정에 따라 다릅니다. 원본을 백업하고, 에뮬레이터를 종료한 뒤 완결편의 별도 프로필에서 사용하세요.
+출처: [Beetle Saturn 저장 경로](https://docs.libretro.com/library/beetle_saturn/#directories), [Kronos 저장 경로](https://docs.libretro.com/library/kronos/#savefiles), [Kronos 저장 경로 구현](https://github.com/libretro/yabause/blob/kronos/yabause/src/libretro/libretro.c).
+Ymir는 별도 완결편 프로필에서 .bkr 사본을 내부 백업 RAM 설정에, 카트리지 사본은 백업 RAM 카트리지 장착 메뉴에 지정할 수 있습니다. 확장자만 바꿔서 넣을 필요는 없습니다. [Ymir 백업 RAM 안내](https://github.com/ymir-emu/Ymir/releases/tag/v0.1.5)
+이 형식의 읽기·내보내기 검증과 에뮬레이터별 게임 내 불러오기·재저장 검증은 별개입니다.
 사용자가 가진 게임 파일과 저장은 모두 이 기기 안에서만 읽습니다.
 
 ### F ALICE 연동 범위와 검증

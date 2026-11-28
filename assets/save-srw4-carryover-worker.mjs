@@ -35,7 +35,7 @@ export async function prepareSrw4Carryover({fDisc,finalDisc,save:saveFile},{onPr
   const keys=new Set(slots.map(r=>r.key));
   return Object.freeze({slots,async build(key){
     if(!keys.has(key))throw Error('확인한 F 클리어 슬롯을 다시 선택하세요.');
-    return save.exportSrw4CarryoverCopy(key,source,target);
+    return {...await save.exportSrw4CarryoverCopy(key,source,target),format:save.format};
   }});
 }
 
@@ -55,13 +55,13 @@ export async function prepareAutomaticCarryover({fDisc,finalDisc,save:saveFile},
  if(!linked.length)return Object.freeze({slots:[],build:null});
  onProgress('저장할 완결편 BIN에서 4차 기체 확인 중…');
  const target=finalDisc.size===644650272
-  ? await (await import('./nightly-carryover-catalog.mjs?v=20261113-alicecopies1&nightly=20261128-1')).readNightlyCarryoverCatalog(finalDisc)
+  ? await (await import('./nightly-carryover-catalog.mjs?v=20261113-alicecopies1&nightly=20261128-2')).readNightlyCarryoverCatalog(finalDisc)
   : await readCatalog(finalDisc,'srwf-final');
  const slots=Object.freeze(linked.map(({key,name,totalTurns})=>Object.freeze({key,name,totalTurns})));
  const keys=new Set(slots.map(row=>row.key));
- return Object.freeze({slots,build(key){
+ return Object.freeze({slots,async build(key){
   if(!keys.has(key))throw Error('확인한 4차 연동 클리어 슬롯만 옮길 수 있습니다.');
-  return model.exportSrw4CarryoverCopy(key,source,target);
+  return {...await model.exportSrw4CarryoverCopy(key,source,target),format:model.format};
  }});
 }
 

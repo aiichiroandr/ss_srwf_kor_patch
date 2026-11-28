@@ -19,10 +19,10 @@
     <link rel="stylesheet" href="assets/editor-battle-preview.css?v=20261113-alicecopies1&amp;sprite=20261126-1">
     <link rel="stylesheet" href="assets/editor-runtime.css?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;carryover=20261117-1&amp;saveux=20261123-6&amp;sourceerror=20261126-1">
     <link rel="stylesheet" href="assets/editor-graphite.css?v=20261113-alicecopies1&amp;graphite=20261125-1">
-    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1&amp;saveux=20261123-6&amp;editorcompat=20261125-1&amp;noticesreturn=20261125-3&amp;overnight=20261126-1&amp;ready=20261126-1&amp;list=20261126-2&amp;sprite=20261126-1&amp;nightly=20261128-1"></script>
-    <script type="module" src="assets/save-srw4-carryover-ui.mjs?v=20261113-alicecopies1&amp;carryover=20261117-1&amp;saveux=20261123-2&amp;editorcompat=20261125-1"></script>
+    <script type="module" src="assets/app.mjs?v=20261113-alicecopies1&amp;savefast=20261114-6&amp;f65fix=20261116-1&amp;saveturns=20261116-1&amp;saveux=20261123-6&amp;editorcompat=20261125-1&amp;noticesreturn=20261125-3&amp;overnight=20261126-1&amp;ready=20261126-1&amp;list=20261126-2&amp;sprite=20261126-1&amp;nightly=20261128-2&amp;carryfilename=20261128-1"></script>
+    <script type="module" src="assets/save-srw4-carryover-ui.mjs?v=20261113-alicecopies1&amp;carryformat=20261128-1&amp;carryover=20261117-1&amp;saveux=20261123-2&amp;editorcompat=20261125-1"></script>
     <script type="module" src="assets/user-guide.mjs?v=20261113-alicecopies1&amp;guide=20261126-2"></script>
-  <link rel="stylesheet" href="assets/saturn-theme.css?v=20261113-alicecopies1&amp;theme=20261126-3&amp;nightly=20261128-1">
+  <link rel="stylesheet" href="assets/saturn-theme.css?v=20261113-alicecopies1&amp;theme=20261126-3&amp;nightly=20261128-1&amp;carryfilename=20261128-1">
   <script type="module" src="assets/saturn-theme.mjs?v=20261113-alicecopies1&amp;theme=20261126-1"></script>
     <script type="module" src="assets/notice-return.mjs?v=20261113-alicecopies1&amp;noticesreturn=20261125-3"></script>
   </head>
@@ -951,11 +951,13 @@
                     <section class="save-auto-carryover" id="autoCarryover" hidden>
                       <p id="autoCarryoverStatus" role="status"></p>
                       <select id="autoCarryoverSlot" aria-label="이어할 F 클리어 슬롯" hidden></select>
-                      <a class="download-link" id="autoCarryoverDownload" hidden>4차 연동 세이브 사본 다운로드</a>
+                      <p class="save-auto-carryover-filename" id="autoCarryoverFilename" hidden>저장 파일명: <bdi id="autoCarryoverFilenameValue"></bdi> <span id="autoCarryoverFilenameFormat"></span></p>
+                      <a class="download-link" id="autoCarryoverDownload" aria-describedby="autoCarryoverFilename" hidden>4차 연동 세이브 사본 다운로드</a>
                       <details id="autoCarryoverDetails">
                         <summary>4차 연동 세이브 연결</summary>
                         <label>F 플레이에 사용한 4차 연동 BIN<input id="autoCarryoverF" type="file" accept=".bin"></label>
-                        <label>F 클리어 세이브<input id="autoCarryoverSave" type="file" accept=".bkr,.bcr,.sav,.srm,.bin,.gz"></label>
+                        <p>Mednafen·Beetle Saturn의 .bkr(내장)·.bcr(카트리지), Kronos 기본 .ram 등 검증된 백업 RAM을 원래 형식으로 저장합니다. 에뮬 스테이트와 SSF 개별 저장은 지원하지 않습니다.</p>
+                        <label>F 클리어 세이브<input id="autoCarryoverSave" type="file" accept=".bkr,.bcr,.sav,.srm,.ram,.bin,.gz"></label>
                       </details>
                     </section>
                     <span id="editorDownloadSummary"></span>
@@ -1214,7 +1216,7 @@
           <div class="save-file-selection">
             <p id="saveFileGuide" class="save-file-guide">현재 선택한 ROM으로 플레이할 때 사용하는 세이브 파일을 선택해 주세요.</p>
             <div class="save-file-toolbar">
-              <label class="record-tool save-file-picker">세이브 파일 열기<input id="saveFileInput" type="file" accept=".bcr,.bkr,.bin,.sav,.srm,.gz" aria-label="카트리지 세이브 파일 선택" aria-describedby="saveFileGuide"></label>
+              <label class="record-tool save-file-picker">세이브 파일 열기<input id="saveFileInput" type="file" accept=".bcr,.bkr,.bin,.ram,.sav,.srm,.gz" aria-label="백업 RAM 세이브 파일 선택" aria-describedby="saveFileGuide"></label>
               <div class="save-file-info"><strong id="saveFileName">카트리지 파일을 선택하세요</strong><span id="saveFileFormat">Ymir · RetroArch · Mednafen</span></div>
               <label class="save-slot-select-label">편집할 저장<select id="saveRecordSelect" disabled aria-label="편집할 게임 저장"></select></label>
             </div>
@@ -1239,7 +1241,7 @@
               <p>카트리지 파일을 열고 편집할 저장 슬롯을 고르면 파일럿·보유 기체·이름·자금을 바로 수정할 수 있습니다.</p>
             </div>
             <ol class="save-empty-flow">
-              <li class="save-empty-card"><strong>1. 세이브 열기</strong><span>상단에서 일반 카트리지 저장(.bcr · .bkr · .bin · .sav · .srm · .gz)을 선택하세요.</span></li>
+              <li class="save-empty-card"><strong>1. 세이브 열기</strong><span>상단에서 일반 저장 파일(.bkr · .bcr · .ram · .bin · .sav · .srm · .gz)을 선택하세요.</span></li>
               <li class="save-empty-card"><strong>2. 슬롯·항목 수정</strong><span>슬롯을 고른 뒤 파일럿·보유 기체·이름·자금·총 턴 수를 편집하세요.</span></li>
               <li class="save-empty-card"><strong>3. 수정본 저장</strong><span>원본은 보존되며, 필요 시 맞는 BIN/CUE와 함께 ZIP으로 저장합니다.</span></li>
             </ol>
@@ -1312,7 +1314,7 @@
             <div class="carryover-fields">
               <label class="carryover-file-field"><span>플레이에 쓴 F 제4차 연동 BIN</span><input id="srw4CarryoverF" type="file" accept=".bin"></label>
               <label class="carryover-file-field"><span>이어할 완결편 제4차 연동 BIN</span><input id="srw4CarryoverFinal" type="file" accept=".bin"></label>
-              <label class="carryover-file-field"><span>F 클리어 일반 저장 (백업 RAM 사본)</span><input id="srw4CarryoverSave" type="file"></label>
+              <label class="carryover-file-field"><span>F 클리어 일반 저장 (백업 RAM 사본)</span><input id="srw4CarryoverSave" type="file" accept=".bkr,.bcr,.sav,.srm,.ram,.bin,.gz"></label>
             </div>
             <label class="carryover-attest"><input id="srw4CarryoverAttest" type="checkbox"><span>이 F 저장을 만들 때 실제로 사용한 F BIN을 선택했습니다.</span></label>
             <details class="carryover-help">
@@ -1337,7 +1339,8 @@
             <h3>3. 승계 전용 복사본 준비 완료</h3>
             <ul id="srw4CarryoverEdits"></ul>
             <p class="carryover-warning"><strong>이 복사본을 F에서 열지 마세요. 원본에 덮어쓰지 마세요.</strong> 에뮬레이터를 끈 뒤 별도 완결편 프로필에 복사본을 넣고, 검증한 완결편 BIN/CUE로 F 클리어 슬롯을 불러오세요. 승계 후에는 게임에서 완결편 일반 저장을 새로 만드세요.</p>
-            <a class="record-tool carryover-download" id="srw4CarryoverDownload">완결편 승계 전용 복사본 받기</a>
+            <p class="save-auto-carryover-filename" id="srw4CarryoverFilename">저장 파일명: <bdi id="srw4CarryoverFilenameValue"></bdi> <span id="srw4CarryoverFilenameFormat"></span></p>
+            <a class="record-tool carryover-download" id="srw4CarryoverDownload" aria-describedby="srw4CarryoverFilename">완결편 승계 전용 복사본 받기</a>
           </section>
         </div>
       </div>

@@ -280,5 +280,7 @@ html[data-srwf-theme="graphite"] body[data-view="setup"] .patch-console::after {
 .save-auto-carryover{flex:1 0 100%;min-width:0;padding:.65rem .75rem;border:1px solid var(--line);border-radius:8px;font-size:.85rem}
 .save-auto-carryover[hidden],.save-auto-carryover [hidden]{display:none!important}
 .save-auto-carryover p{margin:0 0 .35rem}
+.save-auto-carryover-filename{overflow-wrap:anywhere;user-select:text}
+.save-auto-carryover-filename bdi{font-weight:700}
 .save-auto-carryover label{display:block;margin-top:.5rem}
 .save-auto-carryover input{display:block;max-width:100%;min-width:0}

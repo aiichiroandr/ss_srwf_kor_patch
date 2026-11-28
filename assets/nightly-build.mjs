@@ -14,12 +14,12 @@ export const NIGHTLY = Object.freeze({
     "filename": "SRWFIN-KOR-v0.4-nightly-20261128.bin",
     "cueFilename": "SRWFIN-KOR-v0.4-nightly-20261128.cue",
     "size": 644650272,
-    "sha256": "d410df9bc9f268b671d83af54bc0cb1ccbd2bfea21172d6c1a3109f876f6b69c"
+    "sha256": "4df9ab12c1bded4d07ceae37a13fa45b8644e00bae75df9a56f277087061c39a"
   },
   "patch": {
     "url": "patches/srwf-final-20261128-v0-4-nightly.srwfp",
-    "size": 25335221,
-    "sha256": "74b1f96a2162bda76204aef45809fc8f31165251dedec8f0c23f4803c6c8d1f5",
+    "size": 25335209,
+    "sha256": "25be3dea1e28917553d53eb1e3c3e4b7c13c4969b5bd1f3ef2beb5f4fc5c0be9",
     "format": "srwf.sparse-byte-delta.v3"
   },
   "descriptor": {
@@ -29,9 +29,9 @@ export const NIGHTLY = Object.freeze({
     "donorSize": 238711536,
     "donorSha256": "66fe113b6c0d99dc74c9f32e587466877719ecd67a59a7c1adea1b71f5e5707a",
     "targetSize": 644650272,
-    "targetSha256": "d410df9bc9f268b671d83af54bc0cb1ccbd2bfea21172d6c1a3109f876f6b69c",
-    "patchSize": 25335221,
-    "patchSha256": "74b1f96a2162bda76204aef45809fc8f31165251dedec8f0c23f4803c6c8d1f5"
+    "targetSha256": "4df9ab12c1bded4d07ceae37a13fa45b8644e00bae75df9a56f277087061c39a",
+    "patchSize": 25335209,
+    "patchSha256": "25be3dea1e28917553d53eb1e3c3e4b7c13c4969b5bd1f3ef2beb5f4fc5c0be9"
   },
   "movies": [
     {

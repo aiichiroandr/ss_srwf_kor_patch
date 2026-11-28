@@ -319,6 +319,7 @@
     "assets/saturn-theme.css",
     "assets/saturn-theme.mjs",
     "assets/save-auto-carryover-ui.mjs",
+    "assets/save-carryover-format.mjs",
     "assets/save-check.mjs",
     "assets/save-compatibility.mjs",
     "assets/save-core.mjs",
@@ -532,11 +533,11 @@
     },
     "assets/nightly-build.mjs": {
       "bytes": 2430,
-      "sha256": "81590f40050c089cf951e5c2567246890380ac8f7e9fe7611ba6c13d9b5f2085"
+      "sha256": "c6974d70bf95716afcda1ad0627af9d358ebdd77f305d4c59f268cb1642052b7"
     },
     "assets/nightly-carryover-catalog.mjs": {
       "bytes": 4827,
-      "sha256": "941f511493a9a6834881be1b39ea0e0e32bb97ebfb23902cc7f376fe49e0e4f5"
+      "sha256": "063b466e9c1344f3b64f270288b17cd22b982f7fec20f515f435f5625e73253d"
     },
     "assets/nightly-donor.mjs": {
       "bytes": 4290,
@@ -547,16 +548,20 @@
       "sha256": "b857743f46a26bc7d6981a9adb820c6d02ebc15ff53bac74e63039aae75a0802"
     },
     "assets/patch-worker-v3.mjs": {
-      "bytes": 3167,
-      "sha256": "25d1a41bafbc9b5bdd64515261ce40e328c115bbd91dbd3a7301551ca34af796"
+      "bytes": 3216,
+      "sha256": "8fd7230fde3498a08b3023a7dc2b0e33ad42df71ed46462463abbb72a2369800"
     },
     "assets/save-auto-carryover-ui.mjs": {
-      "bytes": 5903,
-      "sha256": "f2cab9071a0befd69345d6cc420eda8df3c7c006fd1ce19c0ffdcfc8998a875d"
+      "bytes": 6039,
+      "sha256": "fe5cb4aa0d18e7cc790e8d41b84fa78e94a2d7bdbde0f2bc034c3003928cfb84"
     },
     "patches/srwf-final-20261128-v0-4-nightly.srwfp": {
-      "bytes": 25335221,
-      "sha256": "74b1f96a2162bda76204aef45809fc8f31165251dedec8f0c23f4803c6c8d1f5"
+      "bytes": 25335209,
+      "sha256": "25be3dea1e28917553d53eb1e3c3e4b7c13c4969b5bd1f3ef2beb5f4fc5c0be9"
+    },
+    "assets/save-carryover-format.mjs": {
+      "bytes": 1985,
+      "sha256": "399036529d1676fa13eb9dc36f454c6d29fdaa0296ab758f8f57e293f289246b"
     }
   },
   "runtimeSets": [],

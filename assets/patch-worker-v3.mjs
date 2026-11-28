@@ -1,4 +1,4 @@
-import {NIGHTLY} from './nightly-build.mjs?v=20261113-alicecopies1&nightly=20261128-1';
+import {NIGHTLY} from './nightly-build.mjs?v=20261113-alicecopies1&nightly=20261128-2';
 import {parsePatchV3,buildV3Download} from './patch-core-v3.mjs?v=20261113-alicecopies1&nightly=20261128-1';
 let prepared=null,active=null;
 const tell=(jobId,type,info={})=>postMessage({jobId,type,...info});
@@ -15,6 +15,7 @@ self.addEventListener('message',async({data:m})=>{
    if(m.releaseKey!==NIGHTLY.id+':'+d.patchSha256||Object.keys(m.descriptor??{}).length!==Object.keys(d).length||Object.entries(d).some(([k,v])=>m.descriptor[k]!==v))throw Object.assign(Error('Nightly identity mismatch'),{code:'PATCH_DESCRIPTOR_INVALID'});
    if(m.sourceFile?.size!==d.sourceSize||!(m.donorFile instanceof Blob))throw Object.assign(Error('Nightly original size mismatch'),{code:'SOURCE_SIZE_MISMATCH'});
    const url=new URL(NIGHTLY.patch.url,new URL('../',self.location.href));
+   url.searchParams.set('build', d.patchSha256);
    tell(id,'phase',{phase:'patch-download'});
    const res=await fetch(url,{signal,redirect:'error',referrerPolicy:'no-referrer'});
    if(!res.ok||!res.body)throw Object.assign(Error('Nightly patch unavailable'),{code:'PATCH_FETCH_FAILED'});
